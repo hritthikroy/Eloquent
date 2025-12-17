@@ -962,6 +962,12 @@
       }
     });
 
+    // Listen for wake word status updates from main process
+    ipcRenderer.on('wake-word-status', (_, status) => {
+      console.log('Wake word status:', status);
+      // Could update UI to show active listening state
+    });
+
     // Function to update wake word toggle state
     function updateWakeWordToggle(enabled) {
       const toggle = document.getElementById('wakeWordDetection');
@@ -1115,8 +1121,9 @@
 
     // Also update API usage when recording completes (for tracking both APIs in rewrite mode)
     ipcRenderer.on('recording-complete', (_, data) => {
-      // Refresh history
-      loadHistory();
+      console.log('Recording complete:', data);
+      // Refresh history - the main process will send updated history-data
+      // No need to call loadHistory() as it's sent automatically
     });
 
     // Auto-refresh every minute to check for day change
@@ -1135,6 +1142,8 @@
       const historyList = document.getElementById('historyList');
       const emptyHistory = document.getElementById('emptyHistory');
 
+      console.log('Displaying history:', history.length, 'items, search:', searchTerm);
+
       // Filter by search term
       let filtered = history;
       if (searchTerm) {
@@ -1143,6 +1152,8 @@
           (item.originalText && item.originalText.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       }
+
+      console.log('Filtered history:', filtered.length, 'items');
 
       if (filtered.length === 0) {
         historyList.innerHTML = '';
@@ -1352,6 +1363,7 @@
 
     // Listen for history updates
     ipcRenderer.on('history-data', (_, history) => {
+      console.log('Received history data:', history ? history.length : 0, 'items');
       historyData = history || []; // Ensure history is always an array
       displayHistory(historyData);
     });
