@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval';">
   <title>Eloquent - Voice to Text</title>
   <style>
     * {
@@ -426,27 +427,45 @@
     <div id="home-section">
       <h1>Welcome to Eloquent</h1>
       <p class="subtitle">Transform your voice into text with AI-powered transcription</p>
-      <div class="card">
-        <h3>⌨️ Recording Shortcuts</h3>
+      <div class="card" style="border: 2px solid rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.1);">
+        <h3>⌨️ Super Simple Shortcuts!</h3>
         <div class="input-group">
-          <label>Standard Transcription</label>
-          <div class="shortcut-display">Double tap D</div>
+          <label style="color: #a855f7; font-weight: 600;">Alt+Shift+Space - Start AI Rewrite (BEST!)</label>
+          <div class="shortcut-display" style="background: rgba(168, 85, 247, 0.2); border-color: #a855f7; font-size: 16px;">Alt+Shift+Space</div>
         </div>
         <div class="input-group">
-          <label>AI Rewrite Mode</label>
-          <div class="shortcut-display">⌥D (Option + D)</div>
+          <label>Alt+Space - Start Standard Mode</label>
+          <div class="shortcut-display" style="font-size: 16px;">Alt+Space</div>
+        </div>
+        <div class="input-group">
+          <label style="color: #10b981; font-weight: 600;">Esc - Stop Recording (Both Modes)</label>
+          <div class="shortcut-display" style="background: rgba(16, 185, 129, 0.2); border-color: #10b981;">Esc</div>
         </div>
       </div>
       <div class="card">
         <h3>🚀 Quick Start</h3>
         <p style="color: rgba(255, 255, 255, 0.85); line-height: 1.7; font-size: 15px;">
-          1. Press <strong style="color: white;">D D</strong> (double tap) to start recording<br>
+          1. Press <strong style="color: #a855f7;">Alt+Shift+Space</strong> to start recording<br>
           2. Speak your text<br>
-          3. Press <strong style="color: white;">D D</strong> again to stop and paste<br><br>
-          Use <strong style="color: white;">⌥D</strong> for AI-powered rewriting!
+          3. Press <strong style="color: #10b981;">Esc</strong> to stop<br>
+          4. ✨ AI-enhanced text automatically pastes!<br><br>
+          <em style="color: rgba(255, 255, 255, 0.6);">Use <strong style="color: white;">Alt+Space</strong> for standard mode (faster, no AI)</em>
         </p>
       </div>
 
+      <!-- Most Recent Transcription Display -->
+      <div class="card" style="border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.08);">
+        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+          <span>📝 Most Recent Transcription</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="copyLastTranscription" style="padding: 4px 8px; background: rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.5); border-radius: 4px; color: white; font-size: 11px; cursor: pointer; display: none;" onclick="copyLastTranscriptionText()">📋 Copy</button>
+            <span id="lastTranscriptionTime" style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">No transcription yet</span>
+          </div>
+        </h3>
+        <div id="lastTranscriptionText" style="min-height: 60px; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; color: rgba(255, 255, 255, 0.9); line-height: 1.5; font-size: 15px; border: 1px solid rgba(255, 255, 255, 0.1);">
+          Your most recent transcription will appear here...
+        </div>
+      </div>
     </div>
 
     <div id="history-section" style="display: none;">
@@ -813,21 +832,30 @@
       const totalCost = whisperCost + llamaCost;
 
       // Update Whisper API display
-      document.getElementById('whisperCount').textContent = `${usage.whisper} / ${MAX_DAILY_REQUESTS}`;
+      const whisperCountEl = document.getElementById('whisperCount');
+      if (whisperCountEl) whisperCountEl.textContent = `${usage.whisper} / ${MAX_DAILY_REQUESTS}`;
       const whisperPercentage = Math.min((usage.whisper / MAX_DAILY_REQUESTS) * 100, 100);
-      document.getElementById('whisperProgressBar').style.width = whisperPercentage + '%';
-      document.getElementById('whisperRemaining').textContent = `${MAX_DAILY_REQUESTS - usage.whisper} requests remaining`;
-      document.getElementById('whisperCost').textContent = `$${whisperCost.toFixed(3)} used`;
+      const whisperProgressBarEl = document.getElementById('whisperProgressBar');
+      if (whisperProgressBarEl) whisperProgressBarEl.style.width = whisperPercentage + '%';
+      const whisperRemainingEl = document.getElementById('whisperRemaining');
+      if (whisperRemainingEl) whisperRemainingEl.textContent = `${MAX_DAILY_REQUESTS - usage.whisper} requests remaining`;
+      const whisperCostEl = document.getElementById('whisperCost');
+      if (whisperCostEl) whisperCostEl.textContent = `$${whisperCost.toFixed(3)} used`;
 
       // Update Llama API display
-      document.getElementById('llamaCount').textContent = `${usage.llama} / ${MAX_DAILY_REQUESTS}`;
+      const llamaCountEl = document.getElementById('llamaCount');
+      if (llamaCountEl) llamaCountEl.textContent = `${usage.llama} / ${MAX_DAILY_REQUESTS}`;
       const llamaPercentage = Math.min((usage.llama / MAX_DAILY_REQUESTS) * 100, 100);
-      document.getElementById('llamaProgressBar').style.width = llamaPercentage + '%';
-      document.getElementById('llamaRemaining').textContent = `${MAX_DAILY_REQUESTS - usage.llama} requests remaining`;
-      document.getElementById('llamaCost').textContent = `$${llamaCost.toFixed(3)} used`;
+      const llamaProgressBarEl = document.getElementById('llamaProgressBar');
+      if (llamaProgressBarEl) llamaProgressBarEl.style.width = llamaPercentage + '%';
+      const llamaRemainingEl = document.getElementById('llamaRemaining');
+      if (llamaRemainingEl) llamaRemainingEl.textContent = `${MAX_DAILY_REQUESTS - usage.llama} requests remaining`;
+      const llamaCostEl = document.getElementById('llamaCost');
+      if (llamaCostEl) llamaCostEl.textContent = `$${llamaCost.toFixed(3)} used`;
 
       // Update total cost
-      document.getElementById('totalCost').textContent = `$${totalCost.toFixed(3)}`;
+      const totalCostEl = document.getElementById('totalCost');
+      if (totalCostEl) totalCostEl.textContent = `$${totalCost.toFixed(3)}`;
 
       // Color-code progress bars based on usage
       updateProgressBarColors('whisperProgressBar', 'whisperCost', 'whisperCount', whisperPercentage);
@@ -1142,7 +1170,64 @@
       console.log('Received history data:', history ? history.length : 0, 'items');
       historyData = history || []; // Ensure history is always an array
       displayHistory(historyData);
+
+      // Update the most recent transcription display
+      updateLastTranscriptionDisplay(historyData);
     });
+
+    // Also listen for history-updated event for real-time updates
+    ipcRenderer.on('history-updated', (_, history) => {
+      console.log('Received history-updated event:', history ? history.length : 0, 'items');
+      historyData = history || []; // Ensure history is always an array
+      displayHistory(historyData);
+
+      // Update the most recent transcription display
+      updateLastTranscriptionDisplay(historyData);
+    });
+
+    // Update the most recent transcription display
+    function updateLastTranscriptionDisplay(history) {
+      if (history && history.length > 0) {
+        const latest = history[0]; // Most recent is at index 0
+        const textElement = document.getElementById('lastTranscriptionText');
+        const timeElement = document.getElementById('lastTranscriptionTime');
+        const copyButton = document.getElementById('copyLastTranscription');
+
+        if (textElement && latest.text) {
+          textElement.innerHTML = escapeHtml(latest.text);
+          // Store the raw text for copying
+          textElement.setAttribute('data-raw-text', latest.text);
+        }
+
+        if (timeElement && latest.timestamp) {
+          const date = new Date(latest.timestamp);
+          timeElement.textContent = date.toLocaleTimeString();
+        }
+
+        if (copyButton) {
+          copyButton.style.display = 'block';
+        }
+      }
+    }
+
+    // Copy last transcription to clipboard
+    function copyLastTranscriptionText() {
+      const textElement = document.getElementById('lastTranscriptionText');
+      if (textElement) {
+        const text = textElement.getAttribute('data-raw-text') || textElement.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          const copyButton = document.getElementById('copyLastTranscription');
+          const originalText = copyButton.textContent;
+          copyButton.textContent = '✅ Copied!';
+          setTimeout(() => {
+            copyButton.textContent = originalText;
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy text: ', err);
+          alert('Failed to copy text to clipboard');
+        });
+      }
+    }
 
     // Load history on page load
     loadHistory();

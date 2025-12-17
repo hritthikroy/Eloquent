@@ -6,6 +6,10 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --mac",
+    "build:mac": "electron-builder --mac --universal",
+    "build:dmg": "electron-builder --mac dmg",
+    "build:zip": "electron-builder --mac zip",
+    "dist": "electron-builder --mac --universal",
     "fix-permissions": "./fix_permissions.sh",
     "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'"
   },
@@ -21,9 +25,58 @@
   "build": {
     "appId": "com.eloquent.app",
     "productName": "Eloquent",
+    "copyright": "Copyright © 2024",
+    "files": [
+      "main.js",
+      "dashboard.html",
+      "overlay.html",
+      "ai-prompts.js",
+      "utils.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
     "mac": {
       "category": "public.app-category.productivity",
-      "target": "dmg"
-    }
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        },
+        {
+          "target": "zip",
+          "arch": ["universal"]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "minimumSystemVersion": "10.15.0",
+      "type": "distribution"
+    },
+    "dmg": {
+      "title": "Eloquent ${version}",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "compression": "maximum",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
   }
 }

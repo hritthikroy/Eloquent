@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval';">
   <title>Recording</title>
   <style>
     * {
@@ -352,7 +353,16 @@
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
-      timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      
+      // Show minimum recording indicator for first second
+      if (elapsed < 1) {
+        timer.textContent = `${mins}:${secs.toString().padStart(2, '0')} (min 1s)`;
+        timer.style.color = '#ffaa00';
+      } else {
+        timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        timer.style.color = '#999';
+      }
+      
       updateTimeLeft();
     }
 
@@ -385,6 +395,21 @@
       if (mode === 'rewrite') {
         modeBadge.style.display = 'block';
       }
+    });
+
+    // Status updates
+    ipcRenderer.on('status', (_, status) => {
+      timer.textContent = status;
+      timer.style.color = '#00d4ff';
+      timer.style.fontWeight = '800';
+    });
+
+    // Error handling
+    ipcRenderer.on('error', (_, errorMsg) => {
+      timer.textContent = 'Error!';
+      timer.style.color = '#ff3b30';
+      timer.style.fontWeight = '800';
+      console.error('Recording error:', errorMsg);
     });
 
     // Cancel

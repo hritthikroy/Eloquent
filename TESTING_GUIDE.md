@@ -133,8 +133,8 @@ play test.wav
 2. Ensure Electron/VoicyClone is enabled
 
 **Test D: Test with Different Modes**
-- Standard mode (double-tap D): Fast, basic
-- Rewrite mode (⌥D): Slower, better quality
+- Standard mode (F1): Fast, basic
+- Rewrite mode (F2): Slower, better quality
 - With auto grammar: Medium speed, good quality
 
 ## Performance Benchmarks

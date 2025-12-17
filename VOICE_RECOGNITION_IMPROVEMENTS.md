@@ -107,12 +107,12 @@ CONFIG.aiMode = 'grammar'; // For grammar-only fixes
 2. **Use natural pauses** - Helps with sentence detection
 3. **Add technical terms** - Use custom dictionary for jargon
 4. **Enable auto grammar fix** - For casual speech
-5. **Use rewrite mode** - For maximum quality (⌥D shortcut)
+5. **Use rewrite mode** - For maximum quality (F2 shortcut)
 
 ### Troubleshooting:
 - **Still getting errors?** Add problem words to custom dictionary
 - **Too slow?** Disable auto grammar fix for speed
-- **Need perfection?** Use rewrite mode (⌥D) instead of standard mode
+- **Need perfection?** Use rewrite mode (F2) instead of standard mode
 
 ## Performance Impact
 

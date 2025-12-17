@@ -72,8 +72,8 @@
 - ✅ Quick dictation
 
 ### Modes:
-1. **Standard Mode (DD)** - Fast, accurate transcription
-2. **Rewrite Mode (⌥D)** - AI-enhanced professional output
+1. **Standard Mode (F1)** - Fast, accurate transcription
+2. **Rewrite Mode (F2)** - AI-enhanced professional output
 3. **With Grammar Fix** - Automatic sentence completion and correction
 
 ## 📦 Installation
@@ -175,7 +175,7 @@ None! All reported issues have been fixed in v2.0.
 1. **Speak clearly** with natural pauses
 2. **Add technical terms** to custom dictionary
 3. **Enable auto grammar fix** for professional output
-4. **Use rewrite mode** (⌥D) for important text
+4. **Use rewrite mode** (F2) for important text
 5. **Check microphone permissions** in System Settings
 
 ## 🙏 Credits

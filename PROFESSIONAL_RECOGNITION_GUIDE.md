@@ -136,13 +136,13 @@ The new triple-retry mechanism should fix this, but if issues persist:
 ### Recognition Still Poor?
 1. **Speak Clearly:** Enunciate words properly
 2. **Add to Dictionary:** Add problematic words to custom dictionary
-3. **Use Rewrite Mode:** Press ⌥D for AI enhancement
+3. **Use Rewrite Mode:** Press F2 for AI enhancement
 4. **Enable Grammar Fix:** Should be on by default
 5. **Check Microphone:** Ensure good audio quality
 
 ### Text Has Errors?
 1. **Add to Dictionary:** Add frequently misrecognized words
-2. **Use Rewrite Mode:** AI will fix more errors
+2. **Use Rewrite Mode (F2):** AI will fix more errors
 3. **Report Issues:** Note what you said vs. what was transcribed
 
 ## Performance

@@ -16,7 +16,7 @@ let currentMode = 'standard';
 // Configuration - Store your API keys here (supports up to 5 keys for 200 minutes/day)
 const CONFIG = {
   apiKeys: [
-    '', // API Key 1 (required) - Add your Groq API key here
+    '', // API Key 1 - Add your Groq API key here or in dashboard
     '', // API Key 2 (optional)
     '', // API Key 3 (optional)
     '', // API Key 4 (optional)
@@ -29,9 +29,13 @@ const CONFIG = {
   autoGrammarFix: true, // ENABLED - Automatic grammar fixes for better accuracy (can be disabled in settings)
 };
 
-// Recording state
+// Recording state with enhanced protection
 let isRecording = false;
+let isProcessing = false; // Prevent multiple stop calls
 let isCreatingOverlay = false; // Prevent race conditions
+let overlayCreationLock = false; // Additional lock for extra protection
+let lastOverlayCreationTime = 0; // Track last creation time
+let recordingStartTime = 0; // Track when recording actually started
 
 // Get active API key based on usage
 function getActiveAPIKey() {
@@ -139,8 +143,8 @@ async function requestMicrophonePermission() {
         const result = await dialog.showMessageBox({
           type: 'warning',
           title: 'Microphone Permission Required',
-          message: 'VoicyClone needs microphone access to record your voice.',
-          detail: 'Please grant microphone permission in System Settings.\n\nGo to: System Settings > Privacy & Security > Microphone\n\nThen enable "Electron" or "VoicyClone".',
+          message: 'Eloquent needs microphone access to record your voice.',
+          detail: 'Please grant microphone permission in System Settings.\n\nGo to: System Settings > Privacy & Security > Microphone\n\nThen enable "Electron" or "Eloquent".',
           buttons: ['Open System Settings', 'I\'ll Do It Later'],
           defaultId: 0,
           cancelId: 1
@@ -175,8 +179,8 @@ function checkAccessibilityPermission() {
     dialog.showMessageBox({
       type: 'info',
       title: 'Accessibility Permission Needed',
-      message: 'VoicyClone needs Accessibility permission to paste text.',
-      detail: 'To enable:\n\n1. Go to System Settings > Privacy & Security > Accessibility\n2. Click the lock icon to unlock\n3. Click "+" and add Electron/VoicyClone\n4. Toggle it ON\n\nWithout this, text pasting won\'t work.',
+      message: 'Eloquent needs Accessibility permission to paste text.',
+      detail: 'To enable:\n\n1. Go to System Settings > Privacy & Security > Accessibility\n2. Click the lock icon to unlock\n3. Click "+" and add Electron/Eloquent\n4. Toggle it ON\n\nWithout this, text pasting won\'t work.',
       buttons: ['Open System Settings', 'OK']
     }).then(result => {
       if (result.response === 0) {
@@ -188,6 +192,15 @@ function checkAccessibilityPermission() {
   }
 }
 
+// Suppress all unhandled errors and rejections to prevent system dialogs
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled rejection:', reason);
+});
+
 app.whenReady().then(async () => {
   // Request permissions first
   await requestMicrophonePermission();
@@ -196,73 +209,189 @@ app.whenReady().then(async () => {
   // Then create UI
   createTray();
   registerShortcuts();
-  // Show dashboard on first launch
-  createDashboard();
+  // Dashboard opens only when user clicks menu bar icon or selects "Open Dashboard"
+  // Don't auto-open on startup - keep it minimal and non-intrusive
 });
 
 function createTray() {
-  // Create a simple 16x16 icon
-  const icon = nativeImage.createFromBuffer(Buffer.alloc(16 * 16 * 4, 128));
+  // Create a proper menu bar icon with microphone symbol
+  const iconSize = 16;
+  const canvas = Buffer.alloc(iconSize * iconSize * 4);
+  
+  // Draw a simple microphone icon (white on transparent)
+  for (let y = 0; y < iconSize; y++) {
+    for (let x = 0; x < iconSize; x++) {
+      const idx = (y * iconSize + x) * 4;
+      
+      // Draw microphone shape
+      const centerX = iconSize / 2;
+      const centerY = iconSize / 2;
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      // Microphone body (oval)
+      if (dy < 2 && dy > -4 && Math.abs(dx) < 3) {
+        canvas[idx] = 255;     // R
+        canvas[idx + 1] = 255; // G
+        canvas[idx + 2] = 255; // B
+        canvas[idx + 3] = 255; // A
+      }
+      // Microphone stand
+      else if (dy >= 2 && dy < 6 && Math.abs(dx) < 1) {
+        canvas[idx] = 255;
+        canvas[idx + 1] = 255;
+        canvas[idx + 2] = 255;
+        canvas[idx + 3] = 255;
+      }
+      // Microphone base
+      else if (dy >= 5 && dy < 7 && Math.abs(dx) < 3) {
+        canvas[idx] = 255;
+        canvas[idx + 1] = 255;
+        canvas[idx + 2] = 255;
+        canvas[idx + 3] = 255;
+      }
+    }
+  }
+  
+  const icon = nativeImage.createFromBuffer(canvas, {
+    width: iconSize,
+    height: iconSize
+  });
   icon.setTemplateImage(true);
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
+    { label: '🎤 Eloquent Voice Dictation', enabled: false },
+    { type: 'separator' },
     { label: 'Open Dashboard', click: () => createDashboard() },
+    { type: 'separator' },
     { 
-      label: 'Start Recording (⌥D)', 
+      label: 'Start AI Rewrite (Alt+Shift+Space)', 
       click: () => {
         if (!overlayWindow && !isCreatingOverlay) {
+          playSound('start');
+          createOverlay('rewrite');
+        }
+      }
+    },
+    { 
+      label: 'Start Standard (Alt+Space)', 
+      click: () => {
+        if (!overlayWindow && !isCreatingOverlay) {
+          playSound('start');
           createOverlay('standard');
         }
       }
     },
+    { type: 'separator' },
+    { label: '💡 Tip: Press Esc to stop recording', enabled: false },
     { type: 'separator' },
     { label: 'Settings', click: () => createDashboard() },
     { type: 'separator' },
     { label: 'Quit Eloquent', click: () => app.quit() }
   ]);
 
-  tray.setToolTip('VoicyClone');
+  tray.setToolTip('Eloquent - Voice to Text');
   tray.setContextMenu(contextMenu);
 }
 
-// Double-tap detection
-let lastDTapTime = 0;
-const DOUBLE_TAP_DELAY = 300; // 300ms window for double tap
+// Enhanced sound system with better audio feedback
+function playSound(type) {
+  const sounds = {
+    start: '/System/Library/Sounds/Tink.aiff',
+    success: '/System/Library/Sounds/Glass.aiff',
+    error: '/System/Library/Sounds/Basso.aiff',
+    cancel: '/System/Library/Sounds/Funk.aiff',
+    notification: '/System/Library/Sounds/Ping.aiff'
+  };
+
+  const soundFile = sounds[type] || sounds.notification;
+  
+  // Play sound with volume control (70% volume for better UX)
+  exec(`afplay "${soundFile}" -v 0.7`, (error) => {
+    if (error) {
+      console.error(`Sound playback error (${type}):`, error.message);
+    }
+  });
+}
+
+// Enhanced shortcut system with debounce to prevent duplicates
+let lastShortcutTime = 0;
+const SHORTCUT_DEBOUNCE = 500; // 500ms debounce to prevent duplicate triggers
+let shortcutLock = false;
+
+// Debounced shortcut handler
+function handleShortcut(action, mode = 'standard') {
+  const now = Date.now();
+  
+  // Prevent rapid-fire shortcuts
+  if (shortcutLock || (now - lastShortcutTime < SHORTCUT_DEBOUNCE)) {
+    console.log('⚠️ Shortcut debounced - too fast');
+    return;
+  }
+  
+  lastShortcutTime = now;
+  shortcutLock = true;
+  
+  // Release lock after debounce period
+  setTimeout(() => {
+    shortcutLock = false;
+  }, SHORTCUT_DEBOUNCE);
+  
+  // Execute action
+  if (action === 'start') {
+    // Only start recording if not already recording
+    if (!overlayWindow && !isCreatingOverlay) {
+      console.log(`🎤 Starting ${mode} mode`);
+      playSound('start');
+      createOverlay(mode);
+    } else {
+      console.log('⚠️ Already recording - bringing overlay to front');
+      // Just bring existing overlay to front silently
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.focus();
+        overlayWindow.show();
+      }
+    }
+  } else if (action === 'stop') {
+    // Stop and process recording - only if there's an active recording and not already processing
+    if (overlayWindow && !overlayWindow.isDestroyed() && recordingProcess && !isProcessing) {
+      console.log('🛑 Stopping recording (Esc pressed)');
+      overlayWindow.webContents.send('status', 'Stopping...');
+      stopRecording();
+    } else if (isProcessing) {
+      console.log('⚠️ Already processing recording');
+    } else {
+      console.log('⚠️ No active recording to stop');
+    }
+  }
+}
 
 function registerShortcuts() {
   // Unregister all existing shortcuts first to prevent duplicates
   globalShortcut.unregisterAll();
   
-  // Double tap D for standard transcription
-  globalShortcut.register('D', () => {
-    const now = Date.now();
-    const timeSinceLastTap = now - lastDTapTime;
-    
-    if (timeSinceLastTap < DOUBLE_TAP_DELAY) {
-      // Double tap detected!
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        stopRecording();
-      } else if (!isCreatingOverlay) {
-        createOverlay('standard');
-      }
-      lastDTapTime = 0; // Reset
-    } else {
-      // First tap
-      lastDTapTime = now;
-    }
+  // SUPER SIMPLE - Press once to start, Esc to stop!
+  
+  // Alt+Shift+Space - Start AI Rewrite mode
+  globalShortcut.register('Alt+Shift+Space', () => {
+    handleShortcut('start', 'rewrite');
   });
 
-  // AI Rewrite mode: Option + D
-  globalShortcut.register('Alt+D', () => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      stopRecording();
-    } else if (!isCreatingOverlay) {
-      createOverlay('rewrite');
-    }
+  // Alt+Space - Start Standard transcription
+  globalShortcut.register('Alt+Space', () => {
+    handleShortcut('start', 'standard');
   });
 
-  console.log('✅ Keyboard shortcuts registered (Double-tap D for standard, ⌥D for AI)');
+  // Escape - Stop recording and process
+  globalShortcut.register('Escape', () => {
+    handleShortcut('stop');
+  });
+
+  console.log('✅ Keyboard shortcuts registered (SUPER SIMPLE):');
+  console.log('   Alt+Shift+Space - Start AI Rewrite mode');
+  console.log('   Alt+Space - Start Standard mode');
+  console.log('   Esc - Stop recording (for both modes)');
 }
 
 // Toggle wake word listening mode
@@ -579,16 +708,45 @@ function stopWakeWordListening() {
 function createOverlay(mode = 'standard') {
   currentMode = mode;
 
-  // CRITICAL FIX: Prevent duplicate recordings with double-check
+  // CRITICAL FIX: Prevent duplicate recordings with multiple checks
+  const now = Date.now();
+  
+  // Check 1: Creation lock
+  if (overlayCreationLock) {
+    console.log('⚠️ BLOCKED: Overlay creation locked');
+    return;
+  }
+  
+  // Check 2: Already creating
   if (isCreatingOverlay) {
-    console.log('⚠️ Already creating overlay - ignoring duplicate request');
+    console.log('⚠️ BLOCKED: Already creating overlay');
     return;
   }
 
+  // Check 3: Window already exists
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    console.log('⚠️ Recording already in progress - ignoring duplicate request');
-    overlayWindow.focus(); // Bring existing window to front
-    return; // Don't create another overlay if one exists
+    console.log('⚠️ BLOCKED: Recording already in progress');
+    overlayWindow.focus();
+    overlayWindow.show();
+    return;
+  }
+  
+  // Check 4: Time-based protection (prevent rapid creation)
+  if (now - lastOverlayCreationTime < 1000) {
+    console.log('⚠️ BLOCKED: Too soon after last creation');
+    return;
+  }
+
+  // Check 5: Verify no overlay window exists (scan all windows)
+  const existingOverlay = BrowserWindow.getAllWindows().find(win => 
+    win.getTitle() === '' && win.getBounds().height === 60
+  );
+  if (existingOverlay) {
+    console.log('⚠️ BLOCKED: Overlay window already exists - reusing it');
+    overlayWindow = existingOverlay;
+    overlayWindow.focus();
+    overlayWindow.show();
+    return;
   }
 
   // Stop any existing recording process (safety check)
@@ -598,14 +756,18 @@ function createOverlay(mode = 'standard') {
     recordingProcess = null;
   }
 
-  // Set flag to prevent race conditions
+  // Set ALL locks IMMEDIATELY to prevent race conditions
+  overlayCreationLock = true;
   isCreatingOverlay = true;
+  lastOverlayCreationTime = now;
+  console.log('🔒 Overlay creation LOCKED (all protections active)');
   
-  // Safety timeout: reset flag after 3 seconds if something goes wrong
+  // Safety timeout: reset ALL flags after 3 seconds if something goes wrong
   const safetyTimeout = setTimeout(() => {
-    if (isCreatingOverlay) {
-      console.log('⚠️ Safety timeout: resetting isCreatingOverlay flag');
+    if (isCreatingOverlay || overlayCreationLock) {
+      console.log('⚠️ Safety timeout: resetting ALL creation flags');
       isCreatingOverlay = false;
+      overlayCreationLock = false;
     }
   }, 3000);
 
@@ -625,6 +787,9 @@ function createOverlay(mode = 'standard') {
       contextIsolation: false
     }
   });
+  
+  // Track recording start time
+  overlayWindow.recordingStartTime = Date.now();
 
   overlayWindow.loadFile('overlay.html');
   overlayWindow.center();
@@ -637,14 +802,18 @@ function createOverlay(mode = 'standard') {
     clearTimeout(safetyTimeout); // Clear safety timeout
     overlayWindow.webContents.send('set-mode', mode);
     startRecording();
-    // Clear the creation flag after window is fully loaded
+    // Clear the creation flags after window is fully loaded
     isCreatingOverlay = false;
+    overlayCreationLock = false;
+    console.log('🔓 Overlay creation UNLOCKED (window loaded)');
   });
 
   overlayWindow.on('closed', () => {
     clearTimeout(safetyTimeout); // Clear safety timeout
     overlayWindow = null;
     isCreatingOverlay = false; // Reset flag when window closes
+    overlayCreationLock = false; // Reset lock when window closes
+    console.log('🔓 Overlay creation UNLOCKED (window closed)');
   });
 }
 
@@ -681,28 +850,33 @@ function startRecording() {
   }
 
   audioFile = path.join(app.getPath('temp'), `voicy-${Date.now()}.wav`);
+  console.log('📁 Audio file path:', audioFile);
+  
+  // Record the actual start time
+  recordingStartTime = Date.now();
 
-  // Play start sound
-  exec('afplay /System/Library/Sounds/Tink.aiff');
+  // Play start sound with better audio
+  playSound('start');
   console.log('🎵 Recording started');
 
-  // ENHANCED audio recording with professional-grade settings
-  // Optimized for maximum speech clarity and recognition accuracy
+  // Simplified, reliable audio recording with proper sample rate
+  console.log('🎤 Starting sox recording...');
   recordingProcess = spawn('rec', [
-    '-r', '16000',      // 16kHz sample rate (Whisper optimal)
+    '-r', '16000',      // Sample rate: 16kHz (standard for speech)
     '-c', '1',          // Mono channel
     '-b', '16',         // 16-bit depth
-    '-e', 'signed-integer',  // Encoding type
-    audioFile,
-    // Advanced audio processing chain for crystal-clear voice
-    'highpass', '80',   // Remove deep bass/rumble (speech starts at ~80Hz)
-    'lowpass', '8000',  // Keep full speech spectrum (up to 8kHz)
-    'compand', '0.05,0.2', '6:-70,-60,-20', '-5', '-90', '0.1',  // Dynamic range compression
-    'gain', '-n', '-3', // Normalize and prevent clipping
-    'treble', '2',      // Boost clarity
-    'rate', '16k'       // Ensure consistent sample rate
-    // NO TIME LIMIT - Record as long as you want!
+    audioFile,          // Output file
+    'trim', '0'         // Start immediately, no time limit
   ]);
+
+  // Add better logging for the recording process
+  recordingProcess.stdout.on('data', (data) => {
+    console.log('📊 Sox stdout:', data.toString());
+  });
+
+  recordingProcess.stderr.on('data', (data) => {
+    console.log('📊 Sox stderr:', data.toString());
+  });
 
   // Simulate waveform animation
   let amplitudeInterval = setInterval(() => {
@@ -719,44 +893,144 @@ function startRecording() {
   });
 
   recordingProcess.on('error', (err) => {
-    console.error('Recording error:', err);
+    console.error('Recording process error:', err);
     clearInterval(amplitudeInterval);
+    isProcessing = false;
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('error', 'Recording failed. Install sox: brew install sox');
+      overlayWindow.webContents.send('error', 'Recording failed. Please install sox: brew install sox');
     }
+  });
+
+  recordingProcess.on('exit', (code, signal) => {
+    console.log(`Recording process exited with code ${code}, signal ${signal}`);
+    clearInterval(amplitudeInterval);
   });
 }
 
 async function stopRecording() {
-  const recordingStartTime = Date.now();
+  // Prevent multiple calls
+  if (isProcessing) {
+    console.log('⚠️ Already processing recording');
+    return;
+  }
+
+  if (!recordingProcess && !audioFile) {
+    console.log('⚠️ No active recording to stop');
+    return;
+  }
+
+  isProcessing = true;
   let recordingDuration = 0;
 
+  // Calculate actual recording time BEFORE stopping (use global recordingStartTime)
+  const actualRecordingTime = Date.now() - recordingStartTime;
+  console.log(`⏱️ Recording duration: ${actualRecordingTime}ms`);
+  
+  // Check recording duration first
+  if (actualRecordingTime < 1000) {
+    console.log('⚠️ Recording too short - need at least 1 second');
+    
+    // Stop recording process
+    if (recordingProcess) {
+      recordingProcess.kill('SIGINT');
+      recordingProcess = null;
+    }
+    
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('status', 'Recording too short - please record for at least 1 second');
+      setTimeout(() => {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.close();
+          overlayWindow = null;
+        }
+      }, 2000);
+    }
+    playSound('error');
+    isProcessing = false;
+    return;
+  }
+
+  // Stop recording process
   if (recordingProcess) {
     recordingProcess.kill('SIGINT');
     recordingProcess = null;
   }
 
-  if (overlayWindow) {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send('status', 'Processing...');
   }
 
-  // Wait for file to be written (reduced from 500ms to 200ms for speed)
-  await new Promise(r => setTimeout(r, 200));
+  // Wait for file to be written (longer wait for sox to finish)
+  await new Promise(r => setTimeout(r, 1000));
 
   try {
+    // Check if audio file exists and has content
+    if (!fs.existsSync(audioFile)) {
+      throw new Error('Audio file was not created. Please check if sox is installed: brew install sox');
+    }
+
+    const stats = fs.statSync(audioFile);
+    console.log(`📊 Audio file size: ${stats.size} bytes`);
+    
+    // Check if recording has actual audio content (WAV header is 44 bytes, need at least 10KB for meaningful audio)
+    if (stats.size < 10000) {
+      throw new Error('Recording too short or empty. Please speak longer and louder.');
+    }
+
     const apiKey = getActiveAPIKey();
-    if (!apiKey) {
-      throw new Error('No API keys configured. Please add at least one API key in settings.');
+    if (!apiKey || apiKey === 'YOUR_GROQ_API_KEY_HERE') {
+      throw new Error('Please configure your Groq API key in Settings to use voice transcription.');
     }
 
     // Calculate recording duration from audio file
-    if (fs.existsSync(audioFile)) {
-      const stats = fs.statSync(audioFile);
-      // Estimate duration: 16kHz mono 16-bit = 32000 bytes/sec
-      recordingDuration = Math.round((stats.size - 44) / 32000); // Subtract WAV header
+    recordingDuration = Math.round((stats.size - 44) / 32000); // Subtract WAV header
+    console.log(`⏱️ Estimated duration: ${recordingDuration} seconds`);
+
+    // Check if this is a test mode (no API key configured)
+    if (apiKey === 'YOUR_GROQ_API_KEY_HERE') {
+      // Test mode - simulate transcription
+      console.log('🧪 Test mode: Simulating transcription...');
+      const finalText = 'This is a test transcription. Please configure your Groq API key in Settings for real voice recognition.';
+      
+      // Paste test text
+      pasteTextRobust(finalText);
+      playSound('success');
+      
+      // Save to history
+      const historyEntry = {
+        id: Date.now(),
+        text: finalText,
+        originalText: finalText,
+        mode: currentMode,
+        timestamp: new Date().toISOString(),
+        duration: recordingDuration
+      };
+      saveToHistory(historyEntry);
+
+      // Update dashboard
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.webContents.send('recording-complete', {
+          duration: recordingDuration,
+          mode: currentMode,
+          history: historyEntry
+        });
+        const updatedHistory = getHistory();
+        dashboardWindow.webContents.send('history-data', updatedHistory);
+        dashboardWindow.webContents.send('history-updated', updatedHistory); // Send consistent event
+      }
+      
+      // Close overlay
+      if (overlayWindow) {
+        overlayWindow.close();
+        overlayWindow = null;
+      }
+      
+      // Clean up
+      fs.unlink(audioFile, () => { });
+      return;
     }
 
-    // Transcribe audio with enhanced processing
+    // Real transcription with API
     console.log('🎤 Transcribing audio...');
     const text = await transcribe(audioFile);
     console.log(`✅ Raw transcription: "${text.substring(0, 100)}..."`);
@@ -798,9 +1072,22 @@ async function stopRecording() {
     // Paste text using ultra-robust mechanism
     pasteTextRobust(finalText);
 
-    // Play success sound
-    exec('afplay /System/Library/Sounds/Glass.aiff');
+    // Play success sound with better audio
+    playSound('success');
     console.log('🎵 Recording completed successfully');
+    console.log(`📋 Pasted text: "${finalText.substring(0, 100)}${finalText.length > 100 ? '...' : ''}"`);
+    
+    // Show success notification in overlay before closing
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('status', '✅ Text pasted successfully!');
+      // Wait a moment before closing to show success message
+      setTimeout(() => {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.close();
+          overlayWindow = null;
+        }
+      }, 1500);
+    }
 
     // Track API usage time
     trackAPIUsage(recordingDuration);
@@ -824,28 +1111,43 @@ async function stopRecording() {
         history: historyEntry
       });
       // Send updated history immediately
-      dashboardWindow.webContents.send('history-data', getHistory());
+      const updatedHistory = getHistory();
+      dashboardWindow.webContents.send('history-data', updatedHistory);
+      dashboardWindow.webContents.send('history-updated', updatedHistory); // Send consistent event
     }
 
-    // Close overlay
-    if (overlayWindow) {
-      overlayWindow.close();
-      overlayWindow = null;
-    }
-
+    // Overlay is closed in the success notification above
     // Clean up audio file
     fs.unlink(audioFile, () => { });
 
   } catch (error) {
     console.error('Processing error:', error);
     
-    // Play error sound
-    exec('afplay /System/Library/Sounds/Basso.aiff');
+    // Play error sound with better audio
+    playSound('error');
     console.log('🔴 Recording error:', error.message);
     
-    if (overlayWindow) {
+    // Show error message
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('error', error.message);
+      
+      // Close overlay after showing error (2 seconds)
+      setTimeout(() => {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.close();
+          overlayWindow = null;
+        }
+      }, 2000);
     }
+    
+    // Clean up audio file
+    if (audioFile && fs.existsSync(audioFile)) {
+      fs.unlink(audioFile, () => { });
+    }
+  } finally {
+    // Always reset processing flag
+    isProcessing = false;
+    audioFile = null;
   }
 }
 
@@ -856,8 +1158,10 @@ async function transcribe(filePath) {
   }
 
   const stats = fs.statSync(filePath);
-  if (stats.size < 1000) {
-    throw new Error('Recording too short. Please speak longer.');
+  
+  // Check for meaningful audio content - WAV header is 44 bytes, need at least 10KB for speech
+  if (stats.size < 10000) {
+    throw new Error('Recording too short or empty. Please speak longer and louder.');
   }
 
   // ENHANCED MULTI-STRATEGY TRANSCRIPTION
@@ -1090,13 +1394,16 @@ function postProcessTranscription(text) {
 
   // Apply corrections (case-insensitive for most, case-sensitive for some)
   for (const [wrong, right] of Object.entries(corrections)) {
+    // Escape special regex characters in the search string
+    const escapedWrong = wrong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
     // Use case-insensitive for word corrections
     if (wrong.includes(' ')) {
       // For phrases with spaces, use case-sensitive to avoid over-correction
-      text = text.replace(new RegExp(wrong, 'g'), right);
+      text = text.replace(new RegExp(escapedWrong, 'g'), right);
     } else {
       // For single words, use case-insensitive
-      const regex = new RegExp('\\b' + wrong + '\\b', 'gi');
+      const regex = new RegExp('\\b' + escapedWrong + '\\b', 'gi');
       text = text.replace(regex, right);
     }
   }
@@ -1221,8 +1528,7 @@ function pasteText(text) {
         exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
           if (error) {
             console.error('Third paste attempt failed:', error.message);
-            // Show notification if all attempts failed
-            exec(`osascript -e 'display notification "Text copied to clipboard. Please paste manually (⌘V)" with title "VoicyClone"'`);
+            // Silently fail - text is in clipboard
           }
         });
 
@@ -1258,13 +1564,9 @@ function pasteTextRobust(text) {
     clipboard.writeText(text);
   }
 
-  // Use AppleScript with explicit delays and triple-retry
+  // Use AppleScript with single paste (reliable and clean)
   const script = `
     tell application "System Events"
-      delay 0.1
-      keystroke "v" using command down
-      delay 0.15
-      keystroke "v" using command down
       delay 0.15
       keystroke "v" using command down
     end tell
@@ -1272,21 +1574,18 @@ function pasteTextRobust(text) {
 
   exec(`osascript -e '${script.replace(/'/g, "'\"'\"'")}'`, (error) => {
     if (error) {
-      console.error('Robust paste error:', error);
-      // Ultimate fallback: try simple paste multiple times
+      console.error('Paste error:', error);
+      // Fallback: try simple paste once
       exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`);
-      setTimeout(() => {
-        exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`);
-      }, 200);
     }
 
-    // Restore clipboard after all attempts
+    // Restore clipboard after paste
     if (preserveClipboard) {
-      setTimeout(() => clipboard.writeText(oldClipboard), 600);
+      setTimeout(() => clipboard.writeText(oldClipboard), 400);
     }
   });
 
-  console.log(`✅ Ultra-robust paste: ${text.length} characters with triple-retry`);
+  console.log(`✅ Pasted ${text.length} characters`);
 }
 
 // History management
@@ -1311,6 +1610,13 @@ function saveToHistory(entry) {
 
     // Save back to file
     fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
+    
+    // Notify dashboard of new history entry
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('history-updated', history);
+    }
+    
+    console.log(`✅ History saved: ${entry.text.substring(0, 50)}...`);
   } catch (error) {
     console.error('Error saving history:', error);
   }
@@ -1319,14 +1625,21 @@ function saveToHistory(entry) {
 function getHistory() {
   try {
     const historyFile = path.join(app.getPath('userData'), 'history.json');
+    console.log('📁 History file path:', historyFile);
+
     if (fs.existsSync(historyFile)) {
       const data = fs.readFileSync(historyFile, 'utf8');
-      return JSON.parse(data);
+      const history = JSON.parse(data);
+      console.log(`📋 Loaded ${history.length} history items`);
+      return history;
+    } else {
+      console.log('📋 No history file found, returning empty array');
+      return [];
     }
   } catch (error) {
     console.error('Error loading history:', error);
+    return [];
   }
-  return [];
 }
 
 function clearHistory() {
@@ -1335,6 +1648,14 @@ function clearHistory() {
     if (fs.existsSync(historyFile)) {
       fs.unlinkSync(historyFile);
     }
+
+    // Notify dashboard that history was cleared with empty array
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('history-data', []);
+      dashboardWindow.webContents.send('history-updated', []); // Consistent event
+    }
+
+    console.log('✅ History cleared');
   } catch (error) {
     console.error('Error clearing history:', error);
   }
@@ -1387,11 +1708,15 @@ ipcMain.on('update-dictionary', (event, dictionary) => {
 });
 
 ipcMain.on('get-history', (event) => {
-  event.reply('history-data', getHistory());
+  const history = getHistory();
+  console.log(`📋 Sending ${history.length} history items to dashboard`);
+  event.reply('history-data', history);
 });
 
 ipcMain.on('clear-history', (event) => {
+  console.log('🗑️ Clearing all history');
   clearHistory();
+  // The clearHistory function already sends the events, but let's ensure consistency
   event.reply('history-data', []);
 });
 
@@ -1399,9 +1724,22 @@ ipcMain.on('delete-history-item', (event, id) => {
   try {
     const historyFile = path.join(app.getPath('userData'), 'history.json');
     let history = getHistory();
+    const beforeCount = history.length;
     history = history.filter(item => item.id !== id);
+    const afterCount = history.length;
+
+    // Write the updated history back to file
     fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
+
+    console.log(`🗑️ Deleted history item (${beforeCount} → ${afterCount} items)`);
+
+    // Notify dashboard of updated history
     event.reply('history-data', history);
+
+    // Also notify via history-updated channel for consistency
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('history-updated', history);
+    }
   } catch (error) {
     console.error('Error deleting history item:', error);
   }

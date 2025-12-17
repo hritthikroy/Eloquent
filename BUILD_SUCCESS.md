@@ -79,7 +79,7 @@ open dist/Eloquent-2.0.0-arm64.dmg
 - [ ] App launches without errors
 - [ ] Dashboard opens properly
 - [ ] Can add API keys in settings
-- [ ] Recording works (double-tap D)
+- [ ] Recording works (F1)
 - [ ] Text pastes correctly
 - [ ] Voice recognition is accurate
 - [ ] No console errors

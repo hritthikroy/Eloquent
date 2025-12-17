@@ -78,16 +78,17 @@ npm start
 
 ## Usage
 
-### Keyboard Shortcuts
-- **Double-tap D** - Standard transcription (fast, accurate)
-- **⌥D (Option + D)** - AI Rewrite mode (best quality)
-- **Esc** - Cancel recording
+### Keyboard Shortcuts (SUPER SIMPLE!)
+- **Alt+Shift+Space** - Start AI Rewrite mode (BEST!)
+- **Alt+Space** - Start Standard transcription (faster)
+- **Esc** - Stop recording (both modes)
 
 ### Recording Tips
-1. Speak clearly and naturally
-2. Use natural pauses between sentences
-3. Add technical terms to custom dictionary
-4. Enable auto grammar fix for professional output
+1. Press shortcut to start, Esc to stop (super simple!)
+2. Speak clearly and naturally
+3. Use natural pauses between sentences
+4. Add technical terms to custom dictionary
+5. Enable auto grammar fix for professional output
 
 ## Features
 
