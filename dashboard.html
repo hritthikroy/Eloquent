@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eloquent - Voice to Text</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+      background: #1e293b;
+      color: #1d1d1f;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 40px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: #3b82f6;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-bottom: 32px;
+      padding: 0 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .sidebar-section {
+      margin-bottom: 28px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      padding: 0 12px;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.85);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .sidebar-item:hover::before {
+      opacity: 1;
+    }
+
+    .sidebar-item:hover {
+      transform: translateX(4px);
+      color: white;
+    }
+
+    .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.3);
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .sidebar-item svg {
+      width: 20px;
+      height: 20px;
+      opacity: 0.9;
+      transition: transform 0.3s;
+    }
+
+    .sidebar-item:hover svg {
+      transform: scale(1.1);
+    }
+
+    .content {
+      flex: 1;
+      padding: 40px;
+      overflow-y: auto;
+      position: relative;
+      z-index: 1;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: #3b82f6;
+      border-radius: 10px;
+    }
+
+    .content h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+      letter-spacing: -1px;
+    }
+
+    .content .subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 32px;
+      font-weight: 400;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .card:hover::before {
+      left: 100%;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .gradient-text {
+      color: #3b82f6;
+      font-weight: 700;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.9);
+      letter-spacing: 0.3px;
+    }
+
+    .input-group input,
+    .input-group textarea,
+    .input-group select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+    }
+
+    .input-group input::placeholder,
+    .input-group textarea::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .input-group input:focus,
+    .input-group textarea:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: rgba(59, 130, 246, 0.6);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .input-group select option {
+      background: #2d3748;
+      color: white;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      letter-spacing: 0.3px;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .shortcut-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 10px;
+      font-family: 'SF Mono', 'Monaco', monospace;
+      font-size: 14px;
+      color: white;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle:last-child {
+      border-bottom: none;
+    }
+
+    .toggle-switch {
+      width: 52px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .toggle-switch.active {
+      background: #3b82f6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 3px;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(24px);
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .input-group select option {
+        background: #1a202c;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <div class="logo">Eloquent</div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Main</div>
+      <div class="sidebar-item active" onclick="showSection('home')">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+        </svg>
+        Home
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Tools</div>
+      <div class="sidebar-item" onclick="showSection('history')">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+        </svg>
+        History
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Support</div>
+      <div class="sidebar-item" onclick="showSection('settings')">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+        </svg>
+        Settings
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="home-section">
+      <h1>Welcome to Eloquent</h1>
+      <p class="subtitle">Transform your voice into text with AI-powered transcription</p>
+      <div class="card">
+        <h3>⌨️ Recording Shortcuts</h3>
+        <div class="input-group">
+          <label>Standard Transcription</label>
+          <div class="shortcut-display">Double tap D</div>
+        </div>
+        <div class="input-group">
+          <label>AI Rewrite Mode</label>
+          <div class="shortcut-display">⌥D (Option + D)</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🚀 Quick Start</h3>
+        <p style="color: rgba(255, 255, 255, 0.85); line-height: 1.7; font-size: 15px;">
+          1. Press <strong style="color: white;">D D</strong> (double tap) to start recording<br>
+          2. Speak your text<br>
+          3. Press <strong style="color: white;">D D</strong> again to stop and paste<br><br>
+          Use <strong style="color: white;">⌥D</strong> for AI-powered rewriting!
+        </p>
+      </div>
+
+    </div>
+
+    <div id="history-section" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h1 style="margin: 0;">History</h1>
+        <button class="btn" onclick="clearAllHistory()"
+          style="background: rgba(255, 59, 48, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 59, 48, 0.3); padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 10px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;"
+          onmouseover="this.style.background='rgba(255, 59, 48, 0.25)'; this.style.borderColor='rgba(255, 59, 48, 0.5)'; this.style.transform='scale(1.05)';"
+          onmouseout="this.style.background='rgba(255, 59, 48, 0.15)'; this.style.borderColor='rgba(255, 59, 48, 0.3)'; this.style.transform='scale(1)';">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Clear All
+        </button>
+      </div>
+
+      <!-- Search Bar -->
+      <div style="margin-bottom: 20px;">
+        <input type="text" id="historySearch" placeholder="Search transcriptions..."
+          style="width: 100%; padding: 14px 18px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; backdrop-filter: blur(10px); transition: all 0.3s;"
+          onfocus="this.style.borderColor='rgba(59, 130, 246, 0.6)'; this.style.background='rgba(255, 255, 255, 0.15)'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)';"
+          onblur="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.background='rgba(255, 255, 255, 0.1)'; this.style.boxShadow='none';">
+      </div>
+
+      <!-- History List -->
+      <div id="historyList" style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- History items will be inserted here -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyHistory" class="card"
+        style="text-align: center; padding: 60px 20px; display: none; border: 1px solid rgba(255, 255, 255, 0.15);">
+        <div style="font-size: 56px; margin-bottom: 16px; opacity: 0.3;">🎤</div>
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: white;">No transcriptions yet</h3>
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin: 0;">Press <strong
+            style="color: #60a5fa;">D D</strong> (double tap) to start
+          your first recording</p>
+      </div>
+    </div>
+
+    <div id="settings-section" style="display: none;">
+      <h1>Settings</h1>
+
+      <!-- Recording language -->
+      <div class="card" style="border: 1px solid rgba(255, 255, 255, 0.15);">
+        <h3 style="font-size: 16px; margin-bottom: 6px; color: white;">🌍 Recording Language</h3>
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 12px;">Increase the accuracy of the
+          transcription by
+          selecting the language of the recording.</p>
+        <div class="input-group" style="margin: 0;">
+          <select id="language"
+            style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white;">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+            <option value="ru">Russian</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="zh">Chinese</option>
+            <option value="ar">Arabic</option>
+            <option value="hi">Hindi</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- AI Intelligence Mode -->
+      <div class="card"
+        style="border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.08);">
+        <h3 style="font-size: 16px; margin-bottom: 6px; color: white;">🤖 AI Intelligence Mode</h3>
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 12px;">Choose how AI transforms your
+          speech. Each mode is
+          optimized for different use cases.</p>
+        <div class="input-group" style="margin: 0;">
+          <select id="aiMode"
+            style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; font-weight: 500; background: rgba(255, 255, 255, 0.1); color: white;">
+            <option value="qn">✨ QN - Text Optimizer (Recommended)</option>
+            <option value="code">💻 Code Mode (Auto-Detect Language)</option>
+            <option value="grammar">📝 Grammar Fix Only</option>
+          </select>
+        </div>
+        <div
+          style="margin-top: 12px; padding: 10px; background: rgba(139, 92, 246, 0.15); border-radius: 6px; border-left: 3px solid #8b5cf6;">
+          <p id="aiModeDescription"
+            style="font-size: 12px; color: rgba(255, 255, 255, 0.85); margin: 0; line-height: 1.5;">
+            <strong style="color: #a78bfa;">Smart Mode:</strong> Automatically detects your intent and optimizes
+            accordingly. Perfect for general use.
+          </p>
+        </div>
+      </div>
+
+      <!-- API Configuration -->
+      <div class="card"
+        style="border: 1px solid rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.08);">
+        <h3 style="font-size: 16px; margin-bottom: 6px; color: white;">🔑 API Configuration</h3>
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin-bottom: 16px;">
+          Add up to 5 Groq API keys for <strong style="color: #60a5fa;">200 minutes/day</strong> total recording time
+          (40 min per key).
+        </p>
+
+        <!-- API Keys Input -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+          <div class="input-group" style="margin: 0;">
+            <label
+              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
+              <span
+                style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
+                1</span>
+              Groq API Key #1 (Required)
+            </label>
+            <input type="password" id="apiKey1" placeholder="gsk_..."
+              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
+          </div>
+
+          <div class="input-group" style="margin: 0;">
+            <label
+              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
+              <span
+                style="background: #6366f1; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
+                2</span>
+              Groq API Key #2 (Optional)
+            </label>
+            <input type="password" id="apiKey2" placeholder="gsk_... (optional)"
+              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
+          </div>
+
+          <div class="input-group" style="margin: 0;">
+            <label
+              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
+              <span
+                style="background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
+                3</span>
+              Groq API Key #3 (Optional)
+            </label>
+            <input type="password" id="apiKey3" placeholder="gsk_... (optional)"
+              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
+          </div>
+
+          <div class="input-group" style="margin: 0;">
+            <label
+              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
+              <span
+                style="background: #a855f7; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
+                4</span>
+              Groq API Key #4 (Optional)
+            </label>
+            <input type="password" id="apiKey4" placeholder="gsk_... (optional)"
+              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
+          </div>
+
+          <div class="input-group" style="margin: 0;">
+            <label
+              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
+              <span
+                style="background: #d946ef; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
+                5</span>
+              Groq API Key #5 (Optional)
+            </label>
+            <input type="password" id="apiKey5" placeholder="gsk_... (optional)"
+              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
+          </div>
+        </div>
+
+        <div
+          style="padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 3px solid #60a5fa; margin-bottom: 16px;">
+          <p style="font-size: 12px; color: rgba(255, 255, 255, 0.85); margin: 0; line-height: 1.5;">
+            💡 <strong>Tip:</strong> Get your free API keys at <a href="https://console.groq.com" target="_blank"
+              style="color: #60a5fa; text-decoration: underline;">console.groq.com</a>. Each key gives you 40
+            minutes/day. Add 5 keys = 200 minutes/day!
+          </p>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+
+      <!-- Keyboard Shortcuts Info -->
+      <div class="card" style="border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.05);">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: white;">⌨️ Keyboard Shortcuts</h3>
+        <div style="display: grid; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">Standard transcription</span>
+            <code
+              style="background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.2); color: #60a5fa;">D D</div>work code>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">AI rewrite mode</span>
+            <code
+              style="background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.2); color: #a78bfa;">⌥D</code>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">Cancel recording</span>
+            <code
+              style="background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.9);">Esc</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="card" style="border: 1px solid rgba(255, 255, 255, 0.15);">
+        <h3 style="font-size: 16px; margin-bottom: 12px; color: white;">About Eloquent</h3>
+        <div style="color: rgba(255, 255, 255, 0.8); font-size: 14px; line-height: 1.6;">
+          <p style="margin-bottom: 8px;"><strong style="color: white;">Version:</strong> 1.0.0</p>
+          <p style="margin-bottom: 8px;"><strong style="color: white;">Powered by:</strong> Groq Whisper API</p>
+          <p style="margin-bottom: 8px;"><strong style="color: white;">AI Model:</strong> Llama 3.3 70B</p>
+          <p style="margin: 0;"><strong style="color: white;">Privacy:</strong> All data stored locally</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="utils.js"></script>
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    function showSection(name) {
+      document.querySelectorAll('[id$="-section"]').forEach(el => el.style.display = 'none');
+      document.getElementById(name + '-section').style.display = 'block';
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+      event.target.closest('.sidebar-item').classList.add('active');
+      
+      // Refresh history when switching to history section
+      if (name === 'history') {
+        loadHistory();
+      }
+    }
+
+    function saveSettings() {
+      const apiKeys = [
+        document.getElementById('apiKey1').value || '',
+        document.getElementById('apiKey2').value || '',
+        document.getElementById('apiKey3').value || '',
+        document.getElementById('apiKey4').value || '',
+        document.getElementById('apiKey5').value || ''
+      ];
+      const language = document.getElementById('language').value;
+      const aiMode = document.getElementById('aiMode').value;
+
+      // Count valid keys
+      const validKeyCount = apiKeys.filter(key => key.trim() !== '').length;
+      const totalMinutes = validKeyCount * 40;
+
+      ipcRenderer.send('save-config', {
+        apiKeys,
+        language,
+        aiMode
+      });
+
+      // Update the daily limit display immediately
+      updateDailyLimitDisplay(apiKeys);
+
+      alert(`Settings saved! ✅\n\n✨ AI Mode: ${document.getElementById('aiMode').selectedOptions[0].text}\n🔑 API Keys: ${validKeyCount} configured\n⏱️ Daily Limit: ${totalMinutes} minutes`);
+    }
+
+    // Load config on start
+    ipcRenderer.send('get-config');
+    ipcRenderer.on('config', (_, config) => {
+      // Load API keys
+      if (config.apiKeys && Array.isArray(config.apiKeys)) {
+        document.getElementById('apiKey1').value = config.apiKeys[0] || '';
+        document.getElementById('apiKey2').value = config.apiKeys[1] || '';
+        document.getElementById('apiKey3').value = config.apiKeys[2] || '';
+        document.getElementById('apiKey4').value = config.apiKeys[3] || '';
+        document.getElementById('apiKey5').value = config.apiKeys[4] || '';
+
+        // Update daily limit display based on configured keys
+        updateDailyLimitDisplay(config.apiKeys);
+      }
+      if (config.language) document.getElementById('language').value = config.language;
+      if (config.aiMode) {
+        document.getElementById('aiMode').value = config.aiMode;
+        updateAIModeDescription(config.aiMode);
+      }
+    });
+
+    // Function to update daily limit display based on API key count
+    function updateDailyLimitDisplay(apiKeys) {
+      // Count valid API keys (non-empty)
+      const validKeyCount = apiKeys.filter(key => key && key.trim() !== '').length;
+      const totalMinutes = validKeyCount * 40;
+
+      // Update description (check if element exists)
+      const descEl = document.getElementById('sessionDescription');
+      if (descEl) {
+        if (validKeyCount === 1) {
+          descEl.innerHTML = 'Track your daily recording sessions. You have <strong style="color: #60a5fa;">40 minutes/day</strong> with 1 API key.';
+        } else if (validKeyCount > 1) {
+          descEl.innerHTML = `Track your daily recording sessions. With ${validKeyCount} API keys, you get <strong style="color: #60a5fa;">${totalMinutes} minutes/day</strong> total recording time.`;
+        } else {
+          descEl.innerHTML = 'Track your daily recording sessions. <strong style="color: #ff6b6b;">Add API keys in Settings</strong> to enable recording.';
+        }
+      }
+
+      // Update progress display (check if elements exist)
+      const timeProgressEl = document.getElementById('timeProgress');
+      if (timeProgressEl) {
+        timeProgressEl.textContent = `0 / ${totalMinutes} min`;
+      }
+      
+      const timeRemainingEl = document.getElementById('timeRemaining');
+      if (timeRemainingEl) {
+        timeRemainingEl.textContent = `${totalMinutes} minutes remaining`;
+      }
+
+      // Update API key count display (check if element exists)
+      const keyCountEl = document.getElementById('apiKeyCount');
+      if (keyCountEl) {
+        keyCountEl.textContent = validKeyCount === 1 ? '1 API Key' : `${validKeyCount} API Keys`;
+      }
+    }
+
+    // AI Mode descriptions (Optimized - 3 Essential Modes Only)
+    const aiModeDescriptions = {
+      qn: '<strong style="color: #a855f7;">QN - Text Optimizer (RECOMMENDED):</strong> Best for 95% of use cases. Transforms ANY text into clear, professional writing. Eliminates filler words, fixes grammar, enhances structure. Perfect for emails, reports, messages, notes.',
+      code: '<strong style="color: #a855f7;">Code Mode:</strong> Auto-detects programming language (JavaScript, Python, Go, Java, HTML/CSS, React, etc.) and optimizes code accordingly. Best for developers and technical writing.',
+      grammar: '<strong style="color: #a855f7;">Grammar Fix Only:</strong> Light corrections - fixes spelling, grammar, and punctuation while preserving your natural speaking style. Best for quick, casual transcription.'
+    };
+
+    function updateAIModeDescription(mode) {
+      document.getElementById('aiModeDescription').innerHTML = aiModeDescriptions[mode] || aiModeDescriptions.smart;
+    }
+
+    // Update description when AI mode changes
+    document.getElementById('aiMode').addEventListener('change', (e) => {
+      updateAIModeDescription(e.target.value);
+    });
+
+
+    // API Usage tracking functions
+    const MAX_DAILY_REQUESTS = 14400; // 14,400 requests per day per API
+    const WHISPER_COST_PER_REQUEST = 0.0005; // $0.0005 per request
+    const LLAMA_COST_PER_REQUEST = 0.0005;   // $0.0005 per request
+
+    function getAPIUsage() {
+      const today = new Date().toISOString().split('T')[0];
+      const stored = JSON.parse(localStorage.getItem('apiUsage') || '{}');
+
+      // Reset if new day
+      if (stored.date !== today) {
+        return {
+          date: today,
+          whisper: 0,
+          llama: 0
+        };
+      }
+
+      return stored;
+    }
+
+    function saveAPIUsage(usage) {
+      localStorage.setItem('apiUsage', JSON.stringify(usage));
+    }
+
+    function updateAPIUsageDisplay() {
+      const usage = getAPIUsage();
+
+      // Calculate costs
+      const whisperCost = usage.whisper * WHISPER_COST_PER_REQUEST;
+      const llamaCost = usage.llama * LLAMA_COST_PER_REQUEST;
+      const totalCost = whisperCost + llamaCost;
+
+      // Update Whisper API display
+      document.getElementById('whisperCount').textContent = `${usage.whisper} / ${MAX_DAILY_REQUESTS}`;
+      const whisperPercentage = Math.min((usage.whisper / MAX_DAILY_REQUESTS) * 100, 100);
+      document.getElementById('whisperProgressBar').style.width = whisperPercentage + '%';
+      document.getElementById('whisperRemaining').textContent = `${MAX_DAILY_REQUESTS - usage.whisper} requests remaining`;
+      document.getElementById('whisperCost').textContent = `$${whisperCost.toFixed(3)} used`;
+
+      // Update Llama API display
+      document.getElementById('llamaCount').textContent = `${usage.llama} / ${MAX_DAILY_REQUESTS}`;
+      const llamaPercentage = Math.min((usage.llama / MAX_DAILY_REQUESTS) * 100, 100);
+      document.getElementById('llamaProgressBar').style.width = llamaPercentage + '%';
+      document.getElementById('llamaRemaining').textContent = `${MAX_DAILY_REQUESTS - usage.llama} requests remaining`;
+      document.getElementById('llamaCost').textContent = `$${llamaCost.toFixed(3)} used`;
+
+      // Update total cost
+      document.getElementById('totalCost').textContent = `$${totalCost.toFixed(3)}`;
+
+      // Color-code progress bars based on usage
+      updateProgressBarColors('whisperProgressBar', 'whisperCost', 'whisperCount', whisperPercentage);
+      updateProgressBarColors('llamaProgressBar', 'llamaCost', 'llamaCount', llamaPercentage);
+    }
+
+    function updateProgressBarColors(progressBarId, costId, countId, percentage) {
+      const progressBar = document.getElementById(progressBarId);
+      const costElement = document.getElementById(costId);
+      const countElement = document.getElementById(countId);
+
+      // Check if elements exist before updating
+      if (!progressBar || !costElement || !countElement) {
+        return;
+      }
+
+      if (percentage > 90) {
+        // Critical - red
+        progressBar.style.background = '#ff3b30';
+        costElement.style.color = '#ff3b30';
+        countElement.style.color = '#ff3b30';
+      } else if (percentage > 70) {
+        // Warning - orange
+        progressBar.style.background = '#ffaa00';
+        costElement.style.color = '#ffaa00';
+        countElement.style.color = '#ffaa00';
+      } else {
+        // Normal - blue/purple
+        if (progressBarId === 'whisperProgressBar') {
+          progressBar.style.background = '#3b82f6';
+        } else {
+          progressBar.style.background = '#8b5cf6';
+        }
+        costElement.style.color = null; // Use default color
+        countElement.style.color = null; // Use default color
+      }
+    }
+
+    // Update display on load (wrapped in try-catch to prevent errors)
+    try {
+      updateAPIUsageDisplay();
+    } catch (error) {
+      console.log('API usage display not available');
+    }
+
+    // Listen for API request events from main process
+    ipcRenderer.on('api-request', (_, apiType) => {
+      const usage = getAPIUsage();
+
+      if (apiType === 'whisper') {
+        usage.whisper++;
+      } else if (apiType === 'llama') {
+        usage.llama++;
+      }
+
+      saveAPIUsage(usage);
+      try {
+        updateAPIUsageDisplay();
+      } catch (error) {
+        // Silently ignore if elements don't exist
+      }
+    });
+
+    // Also update API usage when recording completes (for tracking both APIs in rewrite mode)
+    ipcRenderer.on('recording-complete', (_, data) => {
+      console.log('Recording complete:', data);
+      // Refresh history - the main process will send updated history-data
+      // No need to call loadHistory() as it's sent automatically
+    });
+
+    // Auto-refresh every minute to check for day change
+    setInterval(() => {
+      try {
+        updateAPIUsageDisplay();
+      } catch (error) {
+        // Silently ignore if elements don't exist
+      }
+    }, 60000);
+
+    // History Management
+    let historyData = [];
+
+    function loadHistory() {
+      ipcRenderer.send('get-history');
+    }
+
+    function displayHistory(history = historyData, searchTerm = '') {
+      const historyList = document.getElementById('historyList');
+      const emptyHistory = document.getElementById('emptyHistory');
+
+      console.log('Displaying history:', history.length, 'items, search:', searchTerm);
+
+      // Filter by search term
+      let filtered = history;
+      if (searchTerm) {
+        filtered = history.filter(item =>
+          item.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.originalText && item.originalText.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+      }
+
+      console.log('Filtered history:', filtered.length, 'items');
+
+      if (filtered.length === 0) {
+        historyList.innerHTML = '';
+        emptyHistory.style.display = 'block';
+        return;
+      }
+
+      emptyHistory.style.display = 'none';
+      historyList.innerHTML = filtered.map(item => {
+        const date = new Date(item.timestamp);
+        const timeAgo = getTimeAgo(date);
+        const fullDate = date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        const isAI = item.mode === 'rewrite';
+        const modeBadge = isAI
+          ? '<span style="background: #8b5cf6; color: white; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); text-transform: uppercase;">✨ AI Enhanced</span>'
+          : '<span style="background: #3b82f6; color: white; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); text-transform: uppercase;">🎤 Standard</span>';
+
+        return `
+          <div class="card" style="
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            position: relative; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: default;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+          " 
+          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(0, 0, 0, 0.2)'; this.style.borderColor='rgba(255, 255, 255, 0.25)';" 
+          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(0, 0, 0, 0.1)'; this.style.borderColor='rgba(255, 255, 255, 0.15)';">
+            
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                ${modeBadge}
+                <span style="color: rgba(255, 255, 255, 0.6); font-size: 12px; font-weight: 500;" title="${fullDate}">${timeAgo}</span>
+                ${item.duration ? `<span style="color: rgba(255, 255, 255, 0.3); font-size: 12px;">•</span><span style="color: rgba(255, 255, 255, 0.6); font-size: 12px; font-weight: 500;">${item.duration}s</span>` : ''}
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button onclick="copyToClipboard('${item.id}')" 
+                  style="
+                    padding: 8px 16px; 
+                    background: rgba(59, 130, 246, 0.15); 
+                    border: 1px solid rgba(59, 130, 246, 0.3);
+                    border-radius: 8px; 
+                    cursor: pointer; 
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #60a5fa;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                  "
+                  onmouseover="this.style.background='rgba(59, 130, 246, 0.25)'; this.style.borderColor='rgba(59, 130, 246, 0.5)'; this.style.transform='scale(1.05)';" 
+                  onmouseout="this.style.background='rgba(59, 130, 246, 0.15)'; this.style.borderColor='rgba(59, 130, 246, 0.3)'; this.style.transform='scale(1)';">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy
+                </button>
+                <button onclick="deleteHistoryItem(${item.id})" 
+                  style="
+                    padding: 8px 14px; 
+                    background: rgba(255, 59, 48, 0.15); 
+                    border: 1px solid rgba(255, 59, 48, 0.3);
+                    border-radius: 8px; 
+                    cursor: pointer; 
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #ff6b6b; 
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                  "
+                  onmouseover="this.style.background='rgba(255, 59, 48, 0.25)'; this.style.borderColor='rgba(255, 59, 48, 0.5)'; this.style.transform='scale(1.05)';" 
+                  onmouseout="this.style.background='rgba(255, 59, 48, 0.15)'; this.style.borderColor='rgba(255, 59, 48, 0.3)'; this.style.transform='scale(1)';">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                  Delete
+                </button>
+              </div>
+            </div>
+            
+            <!-- Text Content -->
+            <div style="
+              background: rgba(255, 255, 255, 0.05); 
+              padding: 16px 18px; 
+              border-radius: 10px; 
+              font-size: 14px; 
+              line-height: 1.7; 
+              color: rgba(255, 255, 255, 0.9); 
+              max-height: 200px; 
+              overflow-y: auto;
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              font-weight: 400;
+            ">
+              ${escapeHtml(item.text)}
+            </div>
+            
+            <!-- Original Text (for AI rewrites) -->
+            ${isAI && item.originalText && item.originalText !== item.text ? `
+              <details style="margin-top: 12px;">
+                <summary style="
+                  cursor: pointer; 
+                  font-size: 12px; 
+                  color: #666; 
+                  padding: 6px 0;
+                  font-weight: 500;
+                  user-select: none;
+                  transition: color 0.15s;
+                "
+                onmouseover="this.style.color='#333';"
+                onmouseout="this.style.color='#666';">
+                  📝 Show original transcription
+                </summary>
+                <div style="
+                  margin-top: 10px; 
+                  padding: 12px 14px; 
+                  background: rgba(168, 85, 247, 0.04); 
+                  border-radius: 6px; 
+                  font-size: 13px; 
+                  color: #666;
+                  line-height: 1.6;
+                  border-left: 3px solid #a855f7;
+                ">
+                  ${escapeHtml(item.originalText)}
+                </div>
+              </details>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+
+      if (seconds < 60) return 'Just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+
+      return date.toLocaleDateString();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function copyToClipboard(id) {
+      const item = historyData.find(h => h.id == id);
+      if (item) {
+        navigator.clipboard.writeText(item.text).then(() => {
+          // Find the specific button by looking for the copy button within the history item containing this id
+          const historyItems = document.querySelectorAll('#historyList .card');
+          for (let card of historyItems) {
+            const copyBtn = card.querySelector(`button[onclick*="copyToClipboard('${id}')"]`);
+            if (copyBtn) {
+              const originalText = copyBtn.innerHTML;
+              copyBtn.innerHTML = '✅ Copied!';
+              setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+              }, 1500);
+              break;
+            }
+          }
+        }).catch(err => {
+          console.error('Failed to copy text: ', err);
+          alert('Failed to copy text to clipboard');
+        });
+      }
+    }
+
+    function deleteHistoryItem(id) {
+      if (confirm('Delete this transcription?')) {
+        ipcRenderer.send('delete-history-item', id);
+      }
+    }
+
+    function clearAllHistory() {
+      if (confirm('Clear all history? This cannot be undone.')) {
+        ipcRenderer.send('clear-history');
+      }
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('historySearch');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        displayHistory(historyData, e.target.value);
+      });
+    }
+
+    // Listen for history updates
+    ipcRenderer.on('history-data', (_, history) => {
+      console.log('Received history data:', history ? history.length : 0, 'items');
+      historyData = history || []; // Ensure history is always an array
+      displayHistory(historyData);
+    });
+
+    // Load history on page load
+    loadHistory();
+  </script>
+</body>
+
+</html>
