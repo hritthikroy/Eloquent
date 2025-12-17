@@ -16,7 +16,7 @@ let currentMode = 'standard';
 // Configuration - Store your API keys here (supports up to 5 keys for 200 minutes/day)
 const CONFIG = {
   apiKeys: [
-    '', // API Key 1 - Get your free key at https://console.groq.com
+    process.env.GROQ_API_KEY || '', // API Key 1 - Set in dashboard or environment
     '', // API Key 2 (optional)
     '', // API Key 3 (optional)
     '', // API Key 4 (optional)
@@ -27,15 +27,17 @@ const CONFIG = {
   aiMode: 'qn', // AI rewriting mode: qn (default), code, grammar - OPTIMIZED (removed 5 redundant modes)
   preserveClipboard: false, // Default: false for instant pasting with zero latency
   autoGrammarFix: true, // Automatically apply grammar fixes to all transcriptions
-  // Wake Word Detection Settings
-  enableWakeWord: false, // Enable wake word detection mode
-  wakeWord: 'hey queen', // Wake word to trigger recording (customizable)
-  wakeWordTimeout: 5 // Seconds to listen for wake word before canceling
+  // Voice Command Settings
+  enableVoiceCommands: true, // Enable voice command mode
+  startCommand: 'come', // Voice command to start recording
+  stopCommand: 'stop', // Voice command to stop recording
+  commandListenTimeout: 30 // Seconds to listen for commands
 };
 
-// Wake word listening state
-let isWakeWordListening = false;
-let wakeWordWindow = null;
+// Voice command listening state
+let isVoiceCommandListening = false;
+let voiceCommandProcess = null;
+let isRecordingViaVoice = false;
 
 // Get active API key based on usage
 function getActiveAPIKey() {
@@ -214,9 +216,11 @@ function createTray() {
     { label: 'Open Dashboard', click: () => createDashboard() },
     { label: 'Start Recording (⌥D)', click: () => createOverlay('standard') },
     { type: 'separator' },
+    { label: '🎤 Toggle Voice Commands (⌥V)', click: () => toggleVoiceCommandListening() },
+    { type: 'separator' },
     { label: 'Settings', click: () => createDashboard() },
     { type: 'separator' },
-    { label: 'Quit VoicyClone', click: () => app.quit() }
+    { label: 'Quit Eloquent', click: () => app.quit() }
   ]);
 
   tray.setToolTip('VoicyClone');
@@ -242,9 +246,9 @@ function registerShortcuts() {
     }
   });
 
-  // Wake Word Mode: Option + W (Toggle always-listening mode)
-  globalShortcut.register('Alt+W', () => {
-    toggleWakeWordListening();
+  // Voice Command Mode: Option + V (Toggle voice command listening)
+  globalShortcut.register('Alt+V', () => {
+    toggleVoiceCommandListening();
   });
 }
 
@@ -561,6 +565,175 @@ function stopWakeWordListening() {
 
 // Variable to hold the wake word detection process
 let wakeWordListeningProcess = null;
+
+// ============================================
+// VOICE COMMAND SYSTEM - Say "come" to start, "stop" to stop
+// ============================================
+
+function toggleVoiceCommandListening() {
+  isVoiceCommandListening = !isVoiceCommandListening;
+
+  if (isVoiceCommandListening) {
+    console.log(`🎤 Voice commands ENABLED - Say "${CONFIG.startCommand}" to start, "${CONFIG.stopCommand}" to stop`);
+    if (tray) {
+      tray.setTitle('🎤');
+    }
+    startVoiceCommandListening();
+    
+    // Show notification
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Voice Commands Active',
+      message: `🎤 Listening for voice commands...`,
+      detail: `Say "${CONFIG.startCommand}" to start recording\nSay "${CONFIG.stopCommand}" to stop and paste\n\nPress ⌥V to disable.`,
+      buttons: ['OK']
+    });
+  } else {
+    console.log('🔇 Voice commands DISABLED');
+    if (tray) {
+      tray.setTitle('');
+    }
+    stopVoiceCommandListening();
+  }
+}
+
+function startVoiceCommandListening() {
+  if (voiceCommandProcess) {
+    voiceCommandProcess.kill();
+  }
+
+  const tempAudioFile = path.join(app.getPath('temp'), `voice-cmd-${Date.now()}.wav`);
+
+  // Record short audio clips to detect commands
+  voiceCommandProcess = spawn('rec', [
+    '-r', '16000',
+    '-c', '1',
+    '-b', '16',
+    tempAudioFile,
+    'silence', '1', '0.1', '1%',  // Start on speech
+    '1', '0.3', '1%',              // Minimum 0.3s of speech
+    'trim', '0', '3'               // Max 3 seconds
+  ]);
+
+  const timeout = setTimeout(() => {
+    if (voiceCommandProcess) {
+      voiceCommandProcess.kill();
+      fs.unlink(tempAudioFile, () => {});
+    }
+  }, 5000);
+
+  voiceCommandProcess.on('close', async () => {
+    clearTimeout(timeout);
+    voiceCommandProcess = null;
+
+    if (isVoiceCommandListening) {
+      // Check if file has content
+      if (fs.existsSync(tempAudioFile)) {
+        const stats = fs.statSync(tempAudioFile);
+        if (stats.size > 5000) {
+          try {
+            // Transcribe the audio to detect command
+            const command = await detectVoiceCommand(tempAudioFile);
+            console.log('Detected command:', command);
+            
+            if (command) {
+              handleVoiceCommand(command);
+            }
+          } catch (error) {
+            console.error('Voice command detection error:', error);
+          }
+        }
+        fs.unlink(tempAudioFile, () => {});
+      }
+
+      // Continue listening
+      setTimeout(startVoiceCommandListening, 100);
+    }
+  });
+
+  voiceCommandProcess.on('error', (err) => {
+    console.error('Voice command process error:', err);
+    voiceCommandProcess = null;
+    fs.unlink(tempAudioFile, () => {});
+    
+    if (isVoiceCommandListening) {
+      setTimeout(startVoiceCommandListening, 1000);
+    }
+  });
+}
+
+async function detectVoiceCommand(audioFile) {
+  try {
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('file', fs.createReadStream(audioFile), {
+      filename: 'command.wav',
+      contentType: 'audio/wav'
+    });
+    form.append('model', 'whisper-large-v3-turbo');
+    form.append('language', 'en');
+    form.append('response_format', 'text');
+    form.append('temperature', '0');
+
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/audio/transcriptions',
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          'Authorization': `Bearer ${getActiveAPIKey()}`
+        },
+        timeout: 10000
+      }
+    );
+
+    const text = response.data.toLowerCase().trim();
+    console.log('Voice command transcription:', text);
+    
+    // Check for start command
+    if (text.includes(CONFIG.startCommand.toLowerCase())) {
+      return 'start';
+    }
+    // Check for stop command
+    if (text.includes(CONFIG.stopCommand.toLowerCase())) {
+      return 'stop';
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Command detection error:', error.message);
+    return null;
+  }
+}
+
+function handleVoiceCommand(command) {
+  if (command === 'start') {
+    if (!isRecordingViaVoice && !overlayWindow) {
+      console.log('✅ START command detected - Starting recording');
+      isRecordingViaVoice = true;
+      createOverlay('standard');
+    }
+  } else if (command === 'stop') {
+    if (isRecordingViaVoice && overlayWindow) {
+      console.log('✅ STOP command detected - Stopping recording');
+      isRecordingViaVoice = false;
+      stopRecording();
+    }
+  }
+}
+
+function stopVoiceCommandListening() {
+  if (voiceCommandProcess) {
+    voiceCommandProcess.kill();
+    voiceCommandProcess = null;
+  }
+  isVoiceCommandListening = false;
+  isRecordingViaVoice = false;
+}
+
+// ============================================
+// END VOICE COMMAND SYSTEM
+// ============================================
 
 function createOverlay(mode = 'standard') {
   currentMode = mode;
