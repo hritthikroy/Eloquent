@@ -1,0 +1,107 @@
+{
+  "name": "eloquent",
+  "version": "2.0.0",
+  "description": "Professional voice-to-text macOS application with enhanced AI recognition and ultra-reliable pasting",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "build:optimized": "electron-builder --mac --arm64 --config.compression=maximum",
+    "build:intel": "electron-builder --mac --x64 --config.compression=maximum",
+    "build:universal": "electron-builder --mac --universal --config.compression=maximum",
+    "build:all": "npm run build:optimized && npm run build:intel",
+    "prebuild": "npm run clean && npm run minify",
+    "clean": "rm -rf dist",
+    "minify": "echo 'Minification step - add terser here if needed'",
+    "analyze": "npx electron-builder --dir --config.compression=store && du -sh dist/mac*/Eloquent.app/Contents/Resources/app.asar",
+    "size-check": "ls -lh dist/*.dmg dist/*.zip 2>/dev/null || echo 'No build files found'"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "form-data": "^4.0.0"
+  },
+  "build": {
+    "appId": "com.eloquent.app",
+    "productName": "Eloquent",
+    "copyright": "Copyright © 2024",
+    "compression": "maximum",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "electronCompile": false,
+    "removePackageScripts": true,
+    "files": [
+      "main.js",
+      "dashboard.html",
+      "overlay.html",
+      "admin.html",
+      "ai-prompts.js",
+      "utils.js",
+      "performance-monitor.js",
+      "assets/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/*.md",
+      "!**/README*",
+      "!**/.DS_Store",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/__tests__/**",
+      "!**/node_modules/.cache/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["arm64"]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "minimumSystemVersion": "11.0.0",
+      "type": "distribution",
+      "icon": "assets/icon.icns"
+    },
+    "dmg": {
+      "format": "ULFO",
+      "compressionLevel": 9,
+      "title": "Eloquent ${version}",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "electronDownload": {
+      "cache": "./electron-cache"
+    }
+  }
+}
