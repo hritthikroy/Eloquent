@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Environment      string
 	Port             string
+	BaseURL          string
 	SupabaseURL      string
 	SupabaseKey      string
 	GroqAPIKey       string
@@ -58,6 +59,7 @@ func New() *Config {
 	return &Config{
 		Environment:      getEnv("NODE_ENV", "development"),
 		Port:             getEnv("PORT", "3000"),
+		BaseURL:          getEnv("ELOQUENT_API_URL", "http://localhost:3000"),
 		SupabaseURL:      getEnv("SUPABASE_URL", ""),
 		SupabaseKey:      getEnv("SUPABASE_SERVICE_KEY", ""),
 		GroqAPIKey:       getEnv("GROQ_API_KEY", ""),

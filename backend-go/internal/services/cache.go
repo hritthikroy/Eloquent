@@ -154,3 +154,30 @@ func CacheTranscription(audioHash string, result interface{}) {
 func GetCachedTranscription(audioHash string) (interface{}, bool) {
 	return GetCache().Get("transcription:" + audioHash)
 }
+
+// CacheService wrapper for dependency injection
+type CacheService struct {
+	cache *Cache
+}
+
+func NewCacheService() *CacheService {
+	return &CacheService{
+		cache: GetCache(),
+	}
+}
+
+func (cs *CacheService) Set(key string, value interface{}, ttl time.Duration) {
+	cs.cache.Set(key, value, ttl)
+}
+
+func (cs *CacheService) Get(key string) (interface{}, bool) {
+	return cs.cache.Get(key)
+}
+
+func (cs *CacheService) Delete(key string) {
+	cs.cache.Delete(key)
+}
+
+func (cs *CacheService) Clear() {
+	cs.cache.Clear()
+}

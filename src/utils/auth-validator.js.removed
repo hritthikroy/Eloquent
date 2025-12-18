@@ -1,0 +1,145 @@
+// Authentication validation utilities
+// Provides centralized validation for auth states and data
+
+class AuthValidator {
+  static validateUser(user) {
+    if (!user || typeof user !== 'object') {
+      return { valid: false, error: 'User data is missing or invalid' };
+    }
+
+    if (!user.email || typeof user.email !== 'string') {
+      return { valid: false, error: 'User email is required' };
+    }
+
+    if (!user.id) {
+      return { valid: false, error: 'User ID is required' };
+    }
+
+    return { valid: true };
+  }
+
+  static validateSubscription(subscription) {
+    if (!subscription || typeof subscription !== 'object') {
+      return { valid: false, error: 'Subscription data is missing' };
+    }
+
+    const validPlans = ['free', 'starter', 'pro', 'unlimited', 'enterprise'];
+    if (!validPlans.includes(subscription.plan)) {
+      return { valid: false, error: 'Invalid subscription plan' };
+    }
+
+    const validStatuses = ['none', 'active', 'inactive', 'cancelled', 'past_due'];
+    if (!validStatuses.includes(subscription.status)) {
+      return { valid: false, error: 'Invalid subscription status' };
+    }
+
+    return { valid: true };
+  }
+
+  static validateUsage(usage) {
+    if (!usage || typeof usage !== 'object') {
+      return { valid: false, error: 'Usage data is missing' };
+    }
+
+    if (typeof usage.currentMonth !== 'number' || usage.currentMonth < 0) {
+      return { valid: false, error: 'Invalid current month usage' };
+    }
+
+    if (typeof usage.totalMinutes !== 'number' || usage.totalMinutes < 0) {
+      return { valid: false, error: 'Invalid total minutes' };
+    }
+
+    if (usage.limit !== -1 && (typeof usage.limit !== 'number' || usage.limit < 0)) {
+      return { valid: false, error: 'Invalid usage limit' };
+    }
+
+    return { valid: true };
+  }
+
+  static validateSession(session) {
+    if (!session || typeof session !== 'object') {
+      return { valid: false, error: 'Session data is missing' };
+    }
+
+    if (!session.access_token || typeof session.access_token !== 'string') {
+      return { valid: false, error: 'Access token is missing or invalid' };
+    }
+
+    // Check if token is expired (basic check)
+    if (session.expires_at) {
+      const expiresAt = new Date(session.expires_at * 1000);
+      if (expiresAt < new Date()) {
+        return { valid: false, error: 'Session has expired' };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  static validateAuthState(authState) {
+    const errors = [];
+
+    if (authState.isAuthenticated) {
+      const userValidation = this.validateUser(authState.user);
+      if (!userValidation.valid) {
+        errors.push(`User: ${userValidation.error}`);
+      }
+
+      const subscriptionValidation = this.validateSubscription(authState.subscription);
+      if (!subscriptionValidation.valid) {
+        errors.push(`Subscription: ${subscriptionValidation.error}`);
+      }
+
+      const usageValidation = this.validateUsage(authState.usage);
+      if (!usageValidation.valid) {
+        errors.push(`Usage: ${usageValidation.error}`);
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors: errors
+    };
+  }
+
+  static sanitizeUser(user) {
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || user.full_name || user.email.split('@')[0],
+      role: user.role || 'user',
+      settings: user.settings || {},
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
+  }
+
+  static sanitizeSubscription(subscription) {
+    if (!subscription) {
+      return { plan: 'free', status: 'none' };
+    }
+
+    return {
+      plan: subscription.plan || 'free',
+      status: subscription.status || 'none',
+      created_at: subscription.created_at,
+      updated_at: subscription.updated_at
+    };
+  }
+
+  static sanitizeUsage(usage) {
+    if (!usage) {
+      return { currentMonth: 0, totalMinutes: 0, limit: 60 };
+    }
+
+    return {
+      currentMonth: Math.max(0, usage.currentMonth || 0),
+      totalMinutes: Math.max(0, usage.totalMinutes || 0),
+      limit: usage.limit === -1 ? -1 : Math.max(0, usage.limit || 60)
+    };
+  }
+}
+
+module.exports = AuthValidator;

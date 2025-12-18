@@ -18,7 +18,7 @@ const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const AI_PROMPTS = require('./utils/ai-prompts');
 const performanceMonitor = require('./services/performance-monitor');
-const authService = require('./services/auth-bridge');
+const authService = require('./services/auth-service');
 const { isAdminUser } = require('./utils/admin-check');
 const FastStartup = require('./utils/fast-startup');
 

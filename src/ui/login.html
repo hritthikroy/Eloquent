@@ -318,21 +318,39 @@
             ipcRenderer.send('auth-complete', result);
           }, 500);
         } else {
-          let errorMsg = result.error || 'Sign in failed';
-          if (errorMsg.includes('your-project.supabase.co') || errorMsg.includes('your-anon-key')) {
-            errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials in .env file.';
-          }
-          showError(errorMsg);
+          handleAuthError(result.error);
         }
       } catch (error) {
-        let errorMsg = error.message || 'Sign in failed';
-        if (errorMsg.includes('your-project.supabase.co') || errorMsg.includes('your-anon-key')) {
-          errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials in .env file.';
-        }
-        showError(errorMsg);
+        console.error('Sign in error:', error);
+        handleAuthError(error.message || 'Unexpected error occurred');
       } finally {
         setLoading(false);
       }
+    }
+
+    function handleAuthError(errorMessage) {
+      // Standardized error handling
+      const errorMap = {
+        'your-project.supabase.co': 'Google Sign-in not configured. Please set up Supabase credentials.',
+        'your-anon-key': 'Google Sign-in not configured. Please set up Supabase credentials.',
+        'timeout': 'Connection timeout. Please check your internet connection.',
+        'network': 'Network error. Please check your internet connection.',
+        'Invalid API key': 'Invalid configuration. Please check your setup.',
+        'not configured': 'Authentication not properly configured.',
+        'connection': 'Unable to connect. Please try again.'
+      };
+
+      let displayError = errorMessage || 'Sign in failed';
+      
+      // Find matching error pattern
+      for (const [pattern, message] of Object.entries(errorMap)) {
+        if (displayError.toLowerCase().includes(pattern.toLowerCase())) {
+          displayError = message;
+          break;
+        }
+      }
+
+      showError(displayError);
     }
 
 

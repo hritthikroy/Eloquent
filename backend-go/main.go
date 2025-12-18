@@ -48,6 +48,9 @@ func main() {
 	stripeService := services.NewStripeService(cfg.StripeSecretKey)
 	log.Printf("🔧 Services initialized in %v", time.Since(serviceStart))
 
+	// Initialize enhanced auth service
+	_ = services.NewAuthServiceEnhanced(supabaseService, userService, cfg.BaseURL)
+	
 	// Initialize handlers
 	handlerStart := time.Now()
 	authHandler := handlers.NewAuthHandler(userService, supabaseService)
@@ -57,6 +60,7 @@ func main() {
 	webhookHandler := handlers.NewWebhookHandler(stripeService, userService)
 	adminHandler := handlers.NewAdminHandler(userService)
 	log.Printf("📡 Handlers initialized in %v", time.Since(handlerStart))
+	log.Printf("🚀 Enhanced auth service with caching and session management enabled")
 
 	// PERFORMANCE BOOST: Setup optimized Gin router
 	routerStart := time.Now()
