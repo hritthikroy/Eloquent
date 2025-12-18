@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen } = require('electron');
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
@@ -486,7 +486,23 @@ function createOverlayUltraFast(mode = 'standard') {
   overlayWindow.recordingStartTime = Date.now();
 
   overlayWindow.loadFile('overlay.html');
-  overlayWindow.center();
+  
+  // Position overlay near cursor (above it)
+  const cursorPosition = screen.getCursorScreenPoint();
+  const windowBounds = overlayWindow.getBounds();
+  
+  // Position the overlay above the cursor with some padding
+  const x = cursorPosition.x - (windowBounds.width / 2);
+  const y = cursorPosition.y - windowBounds.height - 20; // 20px above cursor
+  
+  // Make sure the window stays within screen bounds
+  const display = screen.getDisplayNearestPoint(cursorPosition);
+  const screenBounds = display.workArea;
+  
+  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowBounds.width));
+  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowBounds.height));
+  
+  overlayWindow.setPosition(Math.round(finalX), Math.round(finalY));
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setAlwaysOnTop(true, 'floating', 1);
 
