@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+    
+    <!-- Shine gradient -->
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    
+    <!-- Grille line group -->
+    <g id="grille">
+      <line x1="27" y1="19" x2="37" y2="19" stroke="#a0aec0" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="27" y1="23" x2="37" y2="23" stroke="#a0aec0" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="27" y1="27" x2="37" y2="27" stroke="#a0aec0" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="27" y1="31" x2="37" y2="31" stroke="#a0aec0" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Sound wave group -->
+    <g id="soundWave">
+      <path d="M16 24 Q11 32 16 40" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+      <path d="M11 20 Q4 32 11 44" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+    </g>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bg)"/>
+  
+  <!-- Shine overlay -->
+  <ellipse cx="24" cy="20" rx="18" ry="14" fill="url(#shine)"/>
+  
+  <!-- Microphone body -->
+  <rect x="24" y="14" width="16" height="24" rx="8" fill="#ffffff"/>
+  
+  <!-- Microphone grille -->
+  <use href="#grille"/>
+  
+  <!-- Microphone stand -->
+  <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round">
+    <path d="M18 30 Q18 44 32 44 Q46 44 46 30"/>
+    <line x1="32" y1="44" x2="32" y2="50"/>
+    <line x1="24" y1="50" x2="40" y2="50"/>
+  </g>
+  
+  <!-- Sound waves -->
+  <use href="#soundWave"/>
+  <use href="#soundWave" transform="scale(-1,1) translate(-64,0)"/>
+  
+  <!-- Recording indicator -->
+  <circle cx="32" cy="19" r="2.5" fill="#ff4757"/>
+</svg>

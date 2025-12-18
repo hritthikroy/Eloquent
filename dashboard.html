@@ -64,12 +64,21 @@
     }
 
     .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
       font-size: 24px;
       font-weight: 700;
       color: #3b82f6;
       margin-bottom: 32px;
       padding: 0 12px;
       letter-spacing: -0.5px;
+    }
+    
+    .logo img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
     }
 
     .sidebar-section {
@@ -391,7 +400,22 @@
 
 <body>
   <div class="sidebar">
-    <div class="logo">Eloquent</div>
+    <div class="logo">
+      <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#3b82f6"/>
+            <stop offset="100%" style="stop-color:#8b5cf6"/>
+          </linearGradient>
+        </defs>
+        <circle cx="32" cy="32" r="30" fill="url(#bgGrad)"/>
+        <rect x="24" y="16" width="16" height="22" rx="8" fill="#ffffff"/>
+        <path d="M20 32 Q20 44 32 44 Q44 44 44 32" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="32" y1="44" x2="32" y2="50" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="25" y1="50" x2="39" y2="50" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <span>Eloquent</span>
+    </div>
     <div class="sidebar-section">
       <div class="sidebar-title">Main</div>
       <div class="sidebar-item active" onclick="showSection('home')">
@@ -546,9 +570,12 @@
         <div class="input-group" style="margin: 0;">
           <select id="aiMode"
             style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; font-weight: 500; background: rgba(255, 255, 255, 0.1); color: white;">
-            <option value="qn">✨ QN - Text Optimizer (Recommended)</option>
-            <option value="code">💻 Code Mode (Auto-Detect Language)</option>
-            <option value="grammar">📝 Grammar Fix Only</option>
+            <option value="qn">✨ QN - Professional Rewriter (Recommended)</option>
+            <option value="creative">🎨 Creative - Engaging Content</option>
+            <option value="concise">⚡ Concise - Short & Punchy</option>
+            <option value="email">📧 Email - Professional Emails</option>
+            <option value="code">💻 Code - Programming Assistant</option>
+            <option value="grammar">📝 Grammar - Light Fixes Only</option>
           </select>
         </div>
         <div
@@ -570,75 +597,15 @@
           (40 min per key).
         </p>
 
-        <!-- API Keys Input -->
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
-          <div class="input-group" style="margin: 0;">
-            <label
-              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
-              <span
-                style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
-                1</span>
-              Groq API Key #1 (Required)
-            </label>
-            <input type="password" id="apiKey1" placeholder="gsk_..."
-              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
-          </div>
-
-          <div class="input-group" style="margin: 0;">
-            <label
-              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
-              <span
-                style="background: #6366f1; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
-                2</span>
-              Groq API Key #2 (Optional)
-            </label>
-            <input type="password" id="apiKey2" placeholder="gsk_... (optional)"
-              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
-          </div>
-
-          <div class="input-group" style="margin: 0;">
-            <label
-              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
-              <span
-                style="background: #8b5cf6; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
-                3</span>
-              Groq API Key #3 (Optional)
-            </label>
-            <input type="password" id="apiKey3" placeholder="gsk_... (optional)"
-              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
-          </div>
-
-          <div class="input-group" style="margin: 0;">
-            <label
-              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
-              <span
-                style="background: #a855f7; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
-                4</span>
-              Groq API Key #4 (Optional)
-            </label>
-            <input type="password" id="apiKey4" placeholder="gsk_... (optional)"
-              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
-          </div>
-
-          <div class="input-group" style="margin: 0;">
-            <label
-              style="font-size: 13px; color: rgba(255, 255, 255, 0.85); display: flex; align-items: center; gap: 8px;">
-              <span
-                style="background: #d946ef; color: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">KEY
-                5</span>
-              Groq API Key #5 (Optional)
-            </label>
-            <input type="password" id="apiKey5" placeholder="gsk_... (optional)"
-              style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; font-family: 'SF Mono', monospace;" />
-          </div>
-        </div>
-
+        <!-- API Status (Read-only) -->
         <div
-          style="padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 3px solid #60a5fa; margin-bottom: 16px;">
-          <p style="font-size: 12px; color: rgba(255, 255, 255, 0.85); margin: 0; line-height: 1.5;">
-            💡 <strong>Tip:</strong> Get your free API keys at <a href="https://console.groq.com" target="_blank"
-              style="color: #60a5fa; text-decoration: underline;">console.groq.com</a>. Each key gives you 40
-            minutes/day. Add 5 keys = 200 minutes/day!
+          style="padding: 16px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 3px solid #10b981; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="color: #10b981; font-size: 18px;">✅</span>
+            <h4 style="color: #10b981; margin: 0; font-size: 14px; font-weight: 600;">API Configuration</h4>
+          </div>
+          <p style="font-size: 13px; color: rgba(255, 255, 255, 0.85); margin: 0; line-height: 1.5;">
+            API access is managed by your administrator. Contact your admin if you need API access or have usage questions.
           </p>
         </div>
 
@@ -646,27 +613,7 @@
       </div>
 
 
-      <!-- Keyboard Shortcuts Info -->
-      <div class="card" style="border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.05);">
-        <h3 style="font-size: 16px; margin-bottom: 12px; color: white;">⌨️ Keyboard Shortcuts</h3>
-        <div style="display: grid; gap: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">Standard transcription</span>
-            <code
-              style="background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.2); color: #60a5fa;">D D</div>work code>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">AI rewrite mode</span>
-            <code
-              style="background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.2); color: #a78bfa;">⌥D</code>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">Cancel recording</span>
-            <code
-              style="background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.9);">Esc</code>
-          </div>
-        </div>
-      </div>
+
 
       <!-- About -->
       <div class="card" style="border: 1px solid rgba(255, 255, 255, 0.15);">
@@ -698,46 +645,21 @@
     }
 
     function saveSettings() {
-      const apiKeys = [
-        document.getElementById('apiKey1').value || '',
-        document.getElementById('apiKey2').value || '',
-        document.getElementById('apiKey3').value || '',
-        document.getElementById('apiKey4').value || '',
-        document.getElementById('apiKey5').value || ''
-      ];
       const language = document.getElementById('language').value;
       const aiMode = document.getElementById('aiMode').value;
 
-      // Count valid keys
-      const validKeyCount = apiKeys.filter(key => key.trim() !== '').length;
-      const totalMinutes = validKeyCount * 40;
-
       ipcRenderer.send('save-config', {
-        apiKeys,
         language,
         aiMode
       });
 
-      // Update the daily limit display immediately
-      updateDailyLimitDisplay(apiKeys);
-
-      alert(`Settings saved! ✅\n\n✨ AI Mode: ${document.getElementById('aiMode').selectedOptions[0].text}\n🔑 API Keys: ${validKeyCount} configured\n⏱️ Daily Limit: ${totalMinutes} minutes`);
+      alert(`Settings saved! ✅\n\n✨ AI Mode: ${document.getElementById('aiMode').selectedOptions[0].text}\n🌐 Language: ${language}`);
     }
 
     // Load config on start
     ipcRenderer.send('get-config');
     ipcRenderer.on('config', (_, config) => {
-      // Load API keys
-      if (config.apiKeys && Array.isArray(config.apiKeys)) {
-        document.getElementById('apiKey1').value = config.apiKeys[0] || '';
-        document.getElementById('apiKey2').value = config.apiKeys[1] || '';
-        document.getElementById('apiKey3').value = config.apiKeys[2] || '';
-        document.getElementById('apiKey4').value = config.apiKeys[3] || '';
-        document.getElementById('apiKey5').value = config.apiKeys[4] || '';
-
-        // Update daily limit display based on configured keys
-        updateDailyLimitDisplay(config.apiKeys);
-      }
+      // Load user settings (no API keys)
       if (config.language) document.getElementById('language').value = config.language;
       if (config.aiMode) {
         document.getElementById('aiMode').value = config.aiMode;
@@ -781,11 +703,14 @@
       }
     }
 
-    // AI Mode descriptions (Optimized - 3 Essential Modes Only)
+    // AI Mode descriptions - True Rewriting Modes
     const aiModeDescriptions = {
-      qn: '<strong style="color: #a855f7;">QN - Text Optimizer (RECOMMENDED):</strong> Best for 95% of use cases. Transforms ANY text into clear, professional writing. Eliminates filler words, fixes grammar, enhances structure. Perfect for emails, reports, messages, notes.',
-      code: '<strong style="color: #a855f7;">Code Mode:</strong> Auto-detects programming language (JavaScript, Python, Go, Java, HTML/CSS, React, etc.) and optimizes code accordingly. Best for developers and technical writing.',
-      grammar: '<strong style="color: #a855f7;">Grammar Fix Only:</strong> Light corrections - fixes spelling, grammar, and punctuation while preserving your natural speaking style. Best for quick, casual transcription.'
+      qn: '<strong style="color: #a855f7;">QN - Professional Rewriter:</strong> REWRITES your speech into polished, professional content. Restructures sentences, improves word choice, and transforms rough dictation into publication-ready text.',
+      creative: '<strong style="color: #a855f7;">Creative Mode:</strong> Makes your content engaging and compelling. Adds vivid language, strong verbs, and memorable phrases while keeping it natural.',
+      concise: '<strong style="color: #a855f7;">Concise Mode:</strong> Cuts the fluff. Reduces word count by 30-50%, removes redundancy, and makes every word count. Perfect for busy readers.',
+      email: '<strong style="color: #a855f7;">Email Mode:</strong> Transforms voice into professional emails. Adds proper greeting, structures the body, and includes appropriate sign-off.',
+      code: '<strong style="color: #a855f7;">Code Mode:</strong> Converts spoken descriptions into actual working code. Auto-detects language and writes production-ready implementations.',
+      grammar: '<strong style="color: #a855f7;">Grammar Only:</strong> Light touch - just fixes spelling, grammar, and punctuation. Preserves your natural voice and style. Use when you want minimal changes.'
     };
 
     function updateAIModeDescription(mode) {

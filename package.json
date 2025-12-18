@@ -30,8 +30,11 @@
       "main.js",
       "dashboard.html",
       "overlay.html",
+      "admin.html",
       "ai-prompts.js",
       "utils.js",
+      "performance-monitor.js",
+      "assets/**/*",
       "package.json"
     ],
     "directories": {

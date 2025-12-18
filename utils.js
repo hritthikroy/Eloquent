@@ -1,4 +1,4 @@
-// Shared utilities for VoicyClone
+// Shared utilities for Eloquent
 // This file contains common functions used across multiple files
 
 // Time formatting

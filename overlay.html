@@ -13,228 +13,135 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
       -webkit-app-region: drag;
       user-select: none;
       overflow: hidden;
+      background: transparent;
     }
 
-    /* Ultra-Compact Recording Overlay */
+    /* Pill-shaped overlay like the reference image */
     .overlay {
-      width: 280px;
-      height: 60px;
-      background: linear-gradient(135deg, rgba(20, 20, 25, 0.98), rgba(30, 30, 40, 0.98));
-      backdrop-filter: blur(60px) saturate(180%);
-      -webkit-backdrop-filter: blur(60px) saturate(180%);
-      border-radius: 10px;
-      box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.6),
-        0 0 0 0.5px rgba(255, 255, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      display: flex;
-      flex-direction: column;
-      padding: 8px 12px;
-      gap: 6px;
+      height: 40px;
+      background: #1e293b;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 10px;
       position: relative;
       overflow: hidden;
     }
 
-    /* Gradient Accent Border */
-    .overlay::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, #00d4ff, #a855f7, #00d4ff);
-      background-size: 200% 100%;
-      animation: gradientShift 3s ease infinite;
-    }
-
-    @keyframes gradientShift {
-
-      0%,
-      100% {
-        background-position: 0% 50%;
-      }
-
-      50% {
-        background-position: 100% 50%;
-      }
-    }
-
-    /* Top Row */
-    .top-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 16px;
-    }
-
-    /* Mode Badge */
-    .mode-badge {
-      background: linear-gradient(135deg, #a855f7, #7c3aed);
-      color: white;
-      padding: 2px 7px;
-      border-radius: 4px;
-      font-size: 8px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
-      display: none;
-    }
-
-    /* Timer */
-    .timer {
-      font-size: 10px;
-      color: #999;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.3px;
-    }
-
-    /* Close Button */
-    .close-btn {
-      -webkit-app-region: no-drag;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: rgba(255, 59, 48, 0.15);
-      border: none;
-      color: #ff3b30;
-      font-size: 11px;
-      cursor: pointer;
+    /* Recording indicator - pulsing ring */
+    .rec-indicator {
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      position: relative;
     }
 
-    .close-btn:hover {
-      background: rgba(255, 59, 48, 0.25);
-      transform: scale(1.1);
-    }
-
-    /* Waveform Canvas */
-    #waveformCanvas {
-      width: 100%;
-      height: 22px;
-      border-radius: 4px;
-    }
-
-    /* Time Left Row */
-    .time-left-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      height: 10px;
-    }
-
-    .time-left-label {
-      font-size: 7px;
-      color: #666;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      white-space: nowrap;
-    }
-
-    .time-left-bar-container {
-      flex: 1;
-      height: 3px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .time-left-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #00d4ff, #0099ff);
-      border-radius: 2px;
-      transition: width 1s linear, background 0.3s;
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-    }
-
-    .time-left-text {
-      font-size: 8px;
-      color: #00d4ff;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-      text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-    }
-
-    /* Recording Pulse */
-    .recording-pulse {
-      position: absolute;
-      top: 8px;
-      right: 38px;
-      width: 4px;
-      height: 4px;
+    .rec-ring {
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
-      background: #ff3b30;
-      box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
-      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      border: 2px solid #22c55e;
+      position: absolute;
+      animation: ringPulse 1.5s ease-in-out infinite;
     }
 
-    @keyframes pulse-ring {
+    .rec-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
 
-      0%,
-      100% {
-        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
-      }
+    .overlay.rewrite .rec-ring {
+      border-color: #a855f7;
+    }
 
-      50% {
-        box-shadow: 0 0 0 5px rgba(255, 59, 48, 0);
-      }
+    .overlay.rewrite .rec-dot {
+      background: #a855f7;
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Label text */
+    .rec-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      white-space: nowrap;
+    }
+
+    /* Waveform - compact inline */
+    .waveform {
+      height: 20px;
+      width: 60px;
+      flex-shrink: 0;
+    }
+
+    #waveCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Timer badge */
+    .timer {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      font-variant-numeric: tabular-nums;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    /* Entrance animation */
+    .overlay {
+      animation: slideIn 0.2s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 
 <body>
-  <div class="overlay">
-    <!-- Recording Pulse -->
-    <div class="recording-pulse"></div>
-
-    <!-- Top Row -->
-    <div class="top-row">
-      <div class="mode-badge" id="modeBadge">AI</div>
-      <div class="timer" id="timer">0:00</div>
-      <button class="close-btn" onclick="cancel()" title="Cancel [Esc]">✕</button>
+  <div class="overlay" id="overlay">
+    <div class="rec-indicator">
+      <div class="rec-ring"></div>
+      <div class="rec-dot"></div>
     </div>
 
-    <!-- Waveform Canvas -->
-    <canvas id="waveformCanvas"></canvas>
+    <span class="rec-label">Recording</span>
 
-    <!-- Time Left Row -->
-    <div class="time-left-row">
-      <div class="time-left-label">⏱️ LEFT</div>
-      <div class="time-left-bar-container">
-        <div class="time-left-bar" id="timeLeftBar"></div>
-      </div>
-      <div class="time-left-text" id="timeLeftText">...</div>
+    <div class="waveform">
+      <canvas id="waveCanvas"></canvas>
     </div>
+
+    <div class="timer" id="timer">0:00</div>
   </div>
 
-  <script src="utils.js"></script>
   <script>
     const { ipcRenderer } = require('electron');
-    const canvas = document.getElementById('waveformCanvas');
+    const canvas = document.getElementById('waveCanvas');
     const ctx = canvas.getContext('2d');
-    const modeBadge = document.getElementById('modeBadge');
     const timer = document.getElementById('timer');
-    const timeLeftBar = document.getElementById('timeLeftBar');
-    const timeLeftText = document.getElementById('timeLeftText');
-
-    // Set canvas size for compact overlay
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = 256 * dpr;  // Compact width
-    canvas.height = 22 * dpr;  // Compact height
-    canvas.style.width = '256px';
-    canvas.style.height = '22px';
-    ctx.scale(dpr, dpr);
+    const overlay = document.getElementById('overlay');
 
     let mode = 'standard';
     let audioContext;
@@ -242,110 +149,105 @@
     let dataArray;
     let animationId;
     let startTime = Date.now();
-    let maxRecordingTime = 2400;
-    let usedTime = 0;
+    let canvasW = 60;
+    let canvasH = 20;
 
-    // Load real values
-    function loadRealValues() {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const stats = JSON.parse(localStorage.getItem('recordingStats') || '{}');
-
-        if (stats.date === today) {
-          usedTime = (stats.standardTime || 0) + (stats.rewriteTime || 0);
-          console.log('Loaded:', usedTime);
-        } else {
-          usedTime = 0;
-        }
-
-        updateTimeLeft();
-      } catch (err) {
-        console.error('Error:', err);
-        usedTime = 0;
-        updateTimeLeft();
-      }
+    // Setup canvas after DOM ready
+    function setupCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvasW * dpr;
+      canvas.height = canvasH * dpr;
+      canvas.style.width = canvasW + 'px';
+      canvas.style.height = canvasH + 'px';
+      ctx.scale(dpr, dpr);
     }
+
+    // Smooth bar heights (6 bars, mirrored to make 12)
+    let barHeights = new Array(6).fill(2);
 
     // Initialize audio
     async function initAudio() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioContext = new AudioContext();
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
+        audioContext = new AudioContext({ latencyHint: 'interactive' });
         const source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 64;
         analyser.smoothingTimeConstant = 0.85;
         source.connect(analyser);
-
         dataArray = new Uint8Array(analyser.frequencyBinCount);
-        drawWaveform();
+        animate();
       } catch (err) {
         console.error('Mic error:', err);
-        drawFakeWaveform();
+        animateFake();
       }
     }
 
-    // Shared bar rendering function for compact overlay
-    function drawBars(values) {
-      ctx.clearRect(0, 0, 256, 22);
+    // Real audio animation
+    function animate() {
+      animationId = requestAnimationFrame(animate);
+      analyser.getByteFrequencyData(dataArray);
 
-      const barCount = 40;  // Fewer bars for compact width
-      const barWidth = 3;   // Thinner bars
-      const gap = 2.5;
-      const centerY = 11;   // Center for 22px height
-
-      for (let i = 0; i < barCount; i++) {
-        const barHeight = Math.max(values[i], 2);
-
-        const gradient = ctx.createLinearGradient(0, centerY - barHeight / 2, 0, centerY + barHeight / 2);
-        if (mode === 'rewrite') {
-          gradient.addColorStop(0, '#a855f7');
-          gradient.addColorStop(1, '#7c3aed');
-        } else {
-          gradient.addColorStop(0, '#00d4ff');
-          gradient.addColorStop(1, '#0099ff');
-        }
-
-        ctx.fillStyle = gradient;
-        ctx.shadowBlur = 3;
-        ctx.shadowColor = mode === 'rewrite' ? '#a855f7' : '#00d4ff';
-        ctx.fillRect(i * (barWidth + gap), centerY - barHeight / 2, barWidth, barHeight);
+      // Map frequency data to 6 bars (center has highest energy)
+      for (let i = 0; i < 6; i++) {
+        const idx = Math.floor((i / 6) * dataArray.length);
+        const target = (dataArray[idx] / 255) * 16 + 2;
+        barHeights[i] = barHeights[i] * 0.7 + target * 0.3;
       }
 
+      drawBars();
       updateTimer();
     }
 
-    // Draw waveform from real audio (compact)
-    function drawWaveform() {
-      animationId = requestAnimationFrame(drawWaveform);
-      analyser.getByteFrequencyData(dataArray);
-
-      const values = [];
-      for (let i = 0; i < 40; i++) {  // 40 bars for compact width
-        const dataIndex = Math.floor(i * dataArray.length / 40);
-        const value = dataArray[dataIndex] / 255;
-        values.push(value * 18);  // Slightly smaller bars
+    // Fake animation fallback
+    function animateFake() {
+      let t = 0;
+      function loop() {
+        animationId = requestAnimationFrame(loop);
+        for (let i = 0; i < 6; i++) {
+          // Center bars (i=0) are tallest, outer bars shorter
+          const centerFactor = 1 - (i / 6) * 0.4;
+          const target = (Math.sin(t * 0.06 + i * 0.5) * 6 + 10) * centerFactor;
+          barHeights[i] = barHeights[i] * 0.8 + target * 0.2;
+        }
+        drawBars();
+        updateTimer();
+        t++;
       }
-
-      drawBars(values);
+      loop();
     }
 
-    // Fallback animation for compact overlay
-    function drawFakeWaveform() {
-      let frame = 0;
-      function animate() {
-        animationId = requestAnimationFrame(animate);
+    // Draw mirrored bars expanding from center outward
+    function drawBars() {
+      ctx.clearRect(0, 0, canvasW, canvasH);
 
-        const values = [];
-        for (let i = 0; i < 40; i++) {  // 40 bars for compact width
-          const value = (Math.sin(frame * 0.05 + i * 0.3) * 0.5 + 0.5) * 0.6;
-          values.push(value * 16);  // Slightly smaller bars
-        }
+      const halfBars = 6; // 6 bars on each side
+      const barWidth = 2;
+      const gap = 3;
+      const centerX = canvasW / 2;
+      const centerY = canvasH / 2;
 
-        drawBars(values);
-        frame++;
+      const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
+
+      // Draw bars from center outward (mirrored left and right)
+      for (let i = 0; i < halfBars; i++) {
+        const h = Math.max(barHeights[i] * 0.6, 2);
+        const offset = (i * (barWidth + gap)) + gap / 2;
+
+        ctx.fillStyle = color;
+
+        // Right side bar
+        ctx.beginPath();
+        ctx.roundRect(centerX + offset, centerY - h / 2, barWidth, h, 1);
+        ctx.fill();
+
+        // Left side bar (mirrored)
+        ctx.beginPath();
+        ctx.roundRect(centerX - offset - barWidth, centerY - h / 2, barWidth, h, 1);
+        ctx.fill();
       }
-      animate();
     }
 
     // Update timer
@@ -353,74 +255,43 @@
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
-      
-      // Show minimum recording indicator for first second
-      if (elapsed < 1) {
-        timer.textContent = `${mins}:${secs.toString().padStart(2, '0')} (min 1s)`;
-        timer.style.color = '#ffaa00';
-      } else {
-        timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-        timer.style.color = '#999';
-      }
-      
-      updateTimeLeft();
-    }
-
-    // Update time left
-    function updateTimeLeft() {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const currentUsed = usedTime + elapsed;
-      const remaining = maxRecordingTime - currentUsed;
-      const percentage = (currentUsed / maxRecordingTime) * 100;
-
-      timeLeftBar.style.width = Math.min(percentage, 100) + '%';
-      timeLeftText.textContent = `${currentUsed}/${maxRecordingTime}s`;
-
-      if (remaining < 60) {
-        timeLeftBar.style.background = 'linear-gradient(90deg, #ff3b30, #cc0000)';
-        timeLeftBar.style.boxShadow = '0 0 8px rgba(255, 59, 48, 0.5)';
-        timeLeftText.style.color = '#ff3b30';
-        timeLeftText.style.textShadow = '0 0 8px rgba(255, 59, 48, 0.5)';
-      } else if (remaining < 300) {
-        timeLeftBar.style.background = 'linear-gradient(90deg, #ffaa00, #ff8800)';
-        timeLeftBar.style.boxShadow = '0 0 8px rgba(255, 170, 0, 0.5)';
-        timeLeftText.style.color = '#ffaa00';
-        timeLeftText.style.textShadow = '0 0 8px rgba(255, 170, 0, 0.5)';
-      }
+      timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
     // Set mode
     ipcRenderer.on('set-mode', (_, m) => {
       mode = m;
-      if (mode === 'rewrite') {
-        modeBadge.style.display = 'block';
-      }
+      overlay.classList.toggle('rewrite', m === 'rewrite');
     });
 
     // Status updates
     ipcRenderer.on('status', (_, status) => {
       timer.textContent = status;
-      timer.style.color = '#00d4ff';
-      timer.style.fontWeight = '800';
     });
 
     // Error handling
     ipcRenderer.on('error', (_, errorMsg) => {
-      timer.textContent = 'Error!';
-      timer.style.color = '#ff3b30';
-      timer.style.fontWeight = '800';
-      console.error('Recording error:', errorMsg);
+      timer.textContent = 'Error';
+      timer.style.color = '#ef4444';
     });
 
-    // Cancel
+    // Cancel recording
     function cancel() {
       if (audioContext) audioContext.close();
       if (animationId) cancelAnimationFrame(animationId);
       window.close();
     }
 
+    // ESC to cancel
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancel();
+      }
+    });
+
     // Initialize
-    loadRealValues();
+    setupCanvas();
     initAudio();
 
     // Cleanup

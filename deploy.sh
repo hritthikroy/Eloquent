@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# VoicyClone Deployment Script
+# Eloquent Deployment Script
 # This script helps you deploy to GitHub with automated builds
 
 set -e
 
-echo "🚀 VoicyClone Deployment Script"
+echo "🚀 Eloquent Deployment Script"
 echo "================================"
 echo ""
 
