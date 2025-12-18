@@ -570,11 +570,7 @@
         <div class="input-group" style="margin: 0;">
           <select id="aiMode"
             style="width: 100%; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; font-size: 14px; font-weight: 500; background: rgba(255, 255, 255, 0.1); color: white;">
-            <option value="qn">✨ QN - Professional Rewriter (Recommended)</option>
-            <option value="creative">🎨 Creative - Engaging Content</option>
-            <option value="concise">⚡ Concise - Short & Punchy</option>
-            <option value="email">📧 Email - Professional Emails</option>
-            <option value="code">💻 Code - Programming Assistant</option>
+            <option value="auto">🤖 Auto - Smart Detection (Recommended)</option>
             <option value="grammar">📝 Grammar - Light Fixes Only</option>
           </select>
         </div>
@@ -703,13 +699,9 @@
       }
     }
 
-    // AI Mode descriptions - True Rewriting Modes
+    // AI Mode descriptions - Smart Modes
     const aiModeDescriptions = {
-      qn: '<strong style="color: #a855f7;">QN - Professional Rewriter:</strong> REWRITES your speech into polished, professional content. Restructures sentences, improves word choice, and transforms rough dictation into publication-ready text.',
-      creative: '<strong style="color: #a855f7;">Creative Mode:</strong> Makes your content engaging and compelling. Adds vivid language, strong verbs, and memorable phrases while keeping it natural.',
-      concise: '<strong style="color: #a855f7;">Concise Mode:</strong> Cuts the fluff. Reduces word count by 30-50%, removes redundancy, and makes every word count. Perfect for busy readers.',
-      email: '<strong style="color: #a855f7;">Email Mode:</strong> Transforms voice into professional emails. Adds proper greeting, structures the body, and includes appropriate sign-off.',
-      code: '<strong style="color: #a855f7;">Code Mode:</strong> Converts spoken descriptions into actual working code. Auto-detects language and writes production-ready implementations.',
+      auto: '<strong style="color: #a855f7;">Auto - Smart Detection:</strong> Automatically detects your content type and applies the perfect level of enhancement. Light fixes for good text, full rewriting for rough speech. The intelligent choice for all situations.',
       grammar: '<strong style="color: #a855f7;">Grammar Only:</strong> Light touch - just fixes spelling, grammar, and punctuation. Preserves your natural voice and style. Use when you want minimal changes.'
     };
 

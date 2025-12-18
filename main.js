@@ -35,7 +35,7 @@ const CONFIG = {
   ],
   language: 'en',
   customDictionary: '', // Custom words for better recognition
-  aiMode: 'qn', // AI rewriting mode: qn (default), code, grammar - OPTIMIZED (removed 5 redundant modes)
+  aiMode: 'auto', // AI rewriting mode: auto (smart detection), grammar - OPTIMIZED
   preserveClipboard: false, // Default: false for instant pasting with zero latency
   autoGrammarFix: true, // ENABLED - Automatic grammar fixes for better accuracy (can be disabled in settings)
   autoPasteMode: 'direct', // 'clipboard' (manual Cmd+V) or 'direct' (automatic paste at cursor)
@@ -1383,8 +1383,8 @@ async function rewrite(text) {
   // Get the appropriate AI prompt based on mode
   const aiPrompt = AI_PROMPTS[CONFIG.aiMode] || AI_PROMPTS.qn;
   
-  // Adjust temperature based on mode - creative modes need higher temp
-  const creativeTemp = ['creative', 'qn'].includes(CONFIG.aiMode) ? 0.5 : 0.3;
+  // Adjust temperature based on mode
+  const creativeTemp = CONFIG.aiMode === 'auto' ? 0.4 : 0.3;
 
   const response = await axios.post(
     'https://api.groq.com/openai/v1/chat/completions',
