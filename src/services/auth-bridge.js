@@ -34,17 +34,30 @@ class AuthBridge {
     }
 
     try {
-      // Use native fetch for better performance than the JS Supabase client
-      const response = await this.makeRequest('GET', '/api/auth/google/url', null, 5000);
+      // For production, we need to create the Supabase OAuth URL directly
+      // since our Go backend doesn't have a /google/url endpoint
+      const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
+      const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key';
       
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to get OAuth URL');
+      // Check if we have valid Supabase credentials
+      if (supabaseUrl.includes('your-project.supabase.co') || supabaseAnonKey === 'your-anon-key') {
+        // Development mode fallback
+        console.log('🔧 No Supabase credentials - using development mode');
+        return { 
+          success: true, 
+          url: 'about:blank',
+          isDevelopment: true 
+        };
       }
+
+      // Create Supabase OAuth URL directly
+      const redirectUrl = process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/success';
+      const oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
       return {
         success: true,
-        url: response.url,
-        isProduction: !response.url.includes('localhost')
+        url: oauthUrl,
+        isProduction: !redirectUrl.includes('localhost')
       };
     } catch (error) {
       console.error('Google sign-in error:', error);
@@ -58,10 +71,51 @@ class AuthBridge {
   // Handle OAuth callback with Go backend processing
   async handleOAuthCallback(session) {
     try {
+      // In development mode, simulate successful callback
+      if (this.isDevelopmentMode) {
+        const devResult = {
+          success: true,
+          user: {
+            id: 'dev-user',
+            email: 'hritthikin@gmail.com',
+            name: 'Development User',
+            role: 'admin'
+          },
+          subscription: { plan: 'enterprise', status: 'active' },
+          usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
+        };
+        this.cacheSession('current', devResult);
+        return devResult;
+      }
+
+      // For production, we need to get user data from Supabase first
+      // then send it to our Go backend
+      let userData = session.user;
+      
+      // If we don't have user data, we need to fetch it from Supabase
+      if (!userData && session.access_token) {
+        try {
+          const supabaseUrl = process.env.SUPABASE_URL;
+          const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'apikey': process.env.SUPABASE_ANON_KEY
+            }
+          });
+          
+          if (userResponse.ok) {
+            userData = await userResponse.json();
+          }
+        } catch (err) {
+          console.warn('Could not fetch user data from Supabase:', err);
+        }
+      }
+
+      // Send to our Go backend
       const response = await this.makeRequest('POST', '/api/auth/google', {
         access_token: session.access_token,
         refresh_token: session.refresh_token,
-        user: session.user,
+        user: userData,
         deviceId: this.deviceID
       }, 10000);
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -402,6 +403,21 @@ func main() {
 			admin.PUT("/users/bulk", adminHandler.BulkUpdateUsers)
 		}
 	}
+
+	// Add catch-all handler for unknown routes
+	r.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			log.Printf("⚠️  Unknown API endpoint requested: %s %s", c.Request.Method, c.Request.URL.Path)
+			c.JSON(404, gin.H{
+				"error": "API endpoint not found",
+				"path":  c.Request.URL.Path,
+				"hint":  "Check API documentation for available endpoints",
+			})
+		} else {
+			// For non-API routes, redirect to home
+			c.Redirect(302, "/")
+		}
+	})
 
 	log.Printf("🎯 Router setup completed in %v", time.Since(routerStart))
 

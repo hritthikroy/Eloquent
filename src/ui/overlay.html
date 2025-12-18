@@ -376,6 +376,9 @@
 
     // Update timer
     function updateTimer() {
+      if (!startTime) {
+        startTime = Date.now(); // Initialize if not set
+      }
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const mins = Math.floor(elapsed / 60);
       const secs = elapsed % 60;
@@ -435,6 +438,12 @@
 
     // Initialize
     setupCanvas();
+    startTime = Date.now(); // Ensure timer starts immediately
+    updateTimer(); // Show initial time
+    
+    // Fallback timer update every second (in case animation fails)
+    setInterval(updateTimer, 1000);
+    
     initAudio();
 
     // Cleanup

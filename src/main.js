@@ -1968,6 +1968,28 @@ ipcMain.handle('auth-google', async () => {
       return authResult;
     }
 
+    // Handle development mode directly
+    if (authResult.isDevelopment) {
+      console.log('🔧 Development mode - simulating successful authentication');
+      
+      // Simulate successful authentication
+      const devResult = await authService.handleOAuthCallback({
+        access_token: 'dev-token',
+        refresh_token: 'dev-refresh-token'
+      });
+      
+      if (devResult.success) {
+        isAuthenticated = true;
+        if (devResult.user?.settings) {
+          CONFIG.language = devResult.user.settings.language || CONFIG.language;
+          CONFIG.aiMode = devResult.user.settings.aiMode || CONFIG.aiMode;
+          CONFIG.autoGrammarFix = devResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+        }
+      }
+      
+      return devResult;
+    }
+
     return new Promise((resolve) => {
       let resolved = false;
       let authWindow = null;
