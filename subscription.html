@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eloquent - Upgrade</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      min-height: 100vh;
+      color: white;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    .header { text-align: center; margin-bottom: 40px; }
+    .header h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px; }
+    .header p { color: rgba(255, 255, 255, 0.7); font-size: 18px; }
+
+    .usage-banner {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 12px;
+      padding: 16px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .billing-toggle {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 4px;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .billing-option {
+      padding: 12px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .billing-option.active { background: #3b82f6; color: white; }
+    .billing-option .save {
+      background: #22c55e;
+      color: white;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+
+    .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    @media (max-width: 900px) { .plans { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .plans { grid-template-columns: 1fr; } }
+
+    .plan {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .plan:hover { transform: translateY(-4px); border-color: rgba(255, 255, 255, 0.25); }
+    .plan.popular { border-color: #3b82f6; box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); }
+    .plan.popular::before {
+      content: 'BEST VALUE';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3b82f6;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .plan-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .plan-desc { color: rgba(255, 255, 255, 0.5); font-size: 13px; margin-bottom: 16px; }
+
+    .plan-price { margin-bottom: 20px; }
+    .price-amount { font-size: 36px; font-weight: 700; }
+    .price-period { color: rgba(255, 255, 255, 0.6); font-size: 14px; }
+    .price-yearly { color: #22c55e; font-size: 12px; margin-top: 4px; }
+
+    .plan-features { list-style: none; margin-bottom: 24px; }
+    .plan-features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+    }
+    .plan-features li::before { content: '✓'; color: #22c55e; font-weight: bold; }
+
+    .plan-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .plan-btn.primary { background: #3b82f6; color: white; }
+    .plan-btn.primary:hover { background: #2563eb; }
+    .plan-btn.secondary { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .plan-btn.secondary:hover { background: rgba(255, 255, 255, 0.15); }
+    .plan-btn.current { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); cursor: default; }
+
+    .guarantee {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+    }
+    .guarantee h3 { font-size: 16px; margin-bottom: 6px; }
+    .guarantee p { color: rgba(255, 255, 255, 0.6); font-size: 13px; }
+
+    .comparison { margin-top: 48px; text-align: center; }
+    .comparison h3 { font-size: 20px; margin-bottom: 8px; }
+    .comparison p { color: rgba(255, 255, 255, 0.6); font-size: 14px; margin-bottom: 24px; }
+    .comparison-table {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 13px;
+    }
+    .comparison-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .comparison-row:last-child { border-bottom: none; }
+    .comparison-row span:first-child { color: rgba(255, 255, 255, 0.7); }
+
+    .back-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    .back-btn:hover { background: rgba(255, 255, 255, 0.15); }
+  </style>
+</head>
+<body>
+  <button class="back-btn" onclick="goBack()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Back
+  </button>
+
+  <div class="container">
+    <div class="header">
+      <h1>Simple, Affordable Pricing</h1>
+      <p>Start free, upgrade only when you need more</p>
+    </div>
+
+    <div id="usage-banner" class="usage-banner" style="display: none;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="usage-text">You've used 45 of 60 minutes this month</span>
+    </div>
+
+    <div class="billing-toggle">
+      <div class="billing-option active" onclick="setBilling('month')">Monthly</div>
+      <div class="billing-option" onclick="setBilling('year')">Yearly <span class="save">Save 33%</span></div>
+    </div>
+
+    <div class="plans">
+      <!-- Free Plan -->
+      <div class="plan">
+        <div class="plan-name">Free</div>
+        <div class="plan-desc">Try it out</div>
+        <div class="plan-price">
+          <span class="price-amount">$0</span>
+          <span class="price-period">/month</span>
+        </div>
+        <ul class="plan-features">
+          <li><strong>1 hour</strong> per month</li>
+          <li>Basic transcription</li>
+          <li>Standard shortcuts</li>
+          <li>2 devices</li>
+        </ul>
+        <button class="plan-btn current" id="free-btn">Current Plan</button>
+      </div>
+
+      <!-- Starter Plan -->
+      <div class="plan">
+        <div class="plan-name">Starter</div>
+        <div class="plan-desc">For casual users</div>
+        <div class="plan-price">
+          <span class="price-amount" id="starter-price">$2.99</span>
+          <span class="price-period">/month</span>
+          <div class="price-yearly" id="starter-yearly">or $24/year (save $12)</div>
+        </div>
+        <ul class="plan-features">
+          <li><strong>3 hours</strong> per month</li>
+          <li>AI rewriting</li>
+          <li>Grammar correction</li>
+          <li>3 devices</li>
+        </ul>
+        <button class="plan-btn secondary" onclick="subscribe('starter')">Get Starter</button>
+      </div>
+
+      <!-- Pro Plan -->
+      <div class="plan popular">
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">Most popular</div>
+        <div class="plan-price">
+          <span class="price-amount" id="pro-price">$5.99</span>
+          <span class="price-period">/month</span>
+          <div class="price-yearly" id="pro-yearly">or $48/year (save $24)</div>
+        </div>
+        <ul class="plan-features">
+          <li><strong>10 hours</strong> per month</li>
+          <li>Everything in Starter</li>
+          <li>Custom shortcuts</li>
+          <li>Priority support</li>
+          <li>5 devices</li>
+        </ul>
+        <button class="plan-btn primary" onclick="subscribe('pro')">Get Pro</button>
+      </div>
+
+      <!-- Unlimited Plan -->
+      <div class="plan">
+        <div class="plan-name">Unlimited</div>
+        <div class="plan-desc">Power users</div>
+        <div class="plan-price">
+          <span class="price-amount" id="unlimited-price">$9.99</span>
+          <span class="price-period">/month</span>
+          <div class="price-yearly" id="unlimited-yearly">or $79/year (save $41)</div>
+        </div>
+        <ul class="plan-features">
+          <li><strong>Unlimited</strong> usage</li>
+          <li>Everything in Pro</li>
+          <li>API access</li>
+          <li>Early access features</li>
+          <li>10 devices</li>
+        </ul>
+        <button class="plan-btn secondary" onclick="subscribe('unlimited')">Get Unlimited</button>
+      </div>
+    </div>
+
+    <div class="guarantee">
+      <h3>💰 7-Day Money-Back Guarantee</h3>
+      <p>Not satisfied? Get a full refund within 7 days, no questions asked.</p>
+    </div>
+
+    <div class="comparison">
+      <h3>Why upgrade?</h3>
+      <p>See how much time you can save</p>
+      <div class="comparison-table">
+        <div class="comparison-row">
+          <span>Average email (30 seconds speaking)</span>
+          <span>Free: 120 emails/mo | Pro: 1,200 emails/mo</span>
+        </div>
+        <div class="comparison-row">
+          <span>Meeting notes (5 min speaking)</span>
+          <span>Free: 12 meetings/mo | Pro: 120 meetings/mo</span>
+        </div>
+        <div class="comparison-row">
+          <span>Blog post draft (10 min speaking)</span>
+          <span>Free: 6 posts/mo | Pro: 60 posts/mo</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    let billingInterval = 'month';
+    let currentPlan = 'free';
+
+    const prices = {
+      starter: { month: '$2.99', year: '$2.00' },
+      pro: { month: '$5.99', year: '$4.00' },
+      unlimited: { month: '$9.99', year: '$6.58' }
+    };
+
+    const yearlyTotals = {
+      starter: '$24',
+      pro: '$48',
+      unlimited: '$79'
+    };
+
+    // Load current subscription info
+    ipcRenderer.invoke('get-subscription').then(data => {
+      if (data) {
+        currentPlan = data.plan || 'free';
+        updatePlanButtons();
+        
+        if (data.usage) {
+          const banner = document.getElementById('usage-banner');
+          const text = document.getElementById('usage-text');
+          const used = data.usage.currentMonth || 0;
+          const limit = data.usage.limit || 60;
+          
+          if (limit !== -1 && used > limit * 0.5) {
+            text.textContent = `You've used ${used} of ${limit} minutes this month`;
+            banner.style.display = 'flex';
+          }
+        }
+      }
+    });
+
+    function setBilling(interval) {
+      billingInterval = interval;
+      
+      document.querySelectorAll('.billing-option').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      if (interval === 'year') {
+        document.getElementById('starter-price').textContent = prices.starter.year;
+        document.getElementById('pro-price').textContent = prices.pro.year;
+        document.getElementById('unlimited-price').textContent = prices.unlimited.year;
+        document.getElementById('starter-yearly').textContent = `billed ${yearlyTotals.starter}/year`;
+        document.getElementById('pro-yearly').textContent = `billed ${yearlyTotals.pro}/year`;
+        document.getElementById('unlimited-yearly').textContent = `billed ${yearlyTotals.unlimited}/year`;
+      } else {
+        document.getElementById('starter-price').textContent = prices.starter.month;
+        document.getElementById('pro-price').textContent = prices.pro.month;
+        document.getElementById('unlimited-price').textContent = prices.unlimited.month;
+        document.getElementById('starter-yearly').textContent = `or $24/year (save $12)`;
+        document.getElementById('pro-yearly').textContent = `or $48/year (save $24)`;
+        document.getElementById('unlimited-yearly').textContent = `or $79/year (save $41)`;
+      }
+    }
+
+    function updatePlanButtons() {
+      const buttons = {
+        free: document.getElementById('free-btn')
+      };
+      
+      document.querySelectorAll('.plan-btn').forEach(btn => {
+        btn.classList.remove('current');
+        if (btn.id !== 'free-btn') {
+          btn.classList.add('secondary');
+          btn.classList.remove('primary');
+        }
+      });
+      
+      if (currentPlan === 'free') {
+        buttons.free.textContent = 'Current Plan';
+        buttons.free.classList.add('current');
+      }
+    }
+
+    async function subscribe(plan) {
+      try {
+        const result = await ipcRenderer.invoke('create-checkout', { 
+          plan, 
+          interval: billingInterval 
+        });
+        
+        if (result.url) {
+          require('electron').shell.openExternal(result.url);
+        } else if (result.error) {
+          alert(result.error);
+        }
+      } catch (error) {
+        alert('Failed to start checkout: ' + error.message);
+      }
+    }
+
+    function goBack() {
+      ipcRenderer.send('close-subscription-window');
+    }
+  </script>
+</body>
+</html>

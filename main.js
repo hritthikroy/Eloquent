@@ -7,22 +7,26 @@
 // - Backup ESC shortcuts for reliable stopping
 // - Removed redundant checks and safety delays
 
-const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell } = require('electron');
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const AI_PROMPTS = require('./ai-prompts');
 const performanceMonitor = require('./performance-monitor');
+const authService = require('./auth-service');
 
 let overlayWindow = null;
 let dashboardWindow = null;
 let adminWindow = null;
+let loginWindow = null;
+let subscriptionWindow = null;
 let tray = null;
 let recording = null;
 let audioFile = null;
 let recordingProcess = null;
 let currentMode = 'standard';
+let isAuthenticated = false;
 
 // OPTIMIZED: Configuration for maximum performance and accuracy
 const CONFIG = {
@@ -280,6 +284,27 @@ app.whenReady().then(async () => {
   loadConfigFromFile();
   loadAdminConfigFromFile();
   
+  // Initialize auth service
+  console.log('🔐 Initializing authentication...');
+  authService.init();
+  
+  // Check for existing authentication
+  const authResult = await authService.validateSession();
+  if (authResult.valid) {
+    console.log('✅ User authenticated:', authResult.user?.email || 'cached');
+    isAuthenticated = true;
+    
+    // Update CONFIG with user settings if available
+    if (authResult.user?.settings) {
+      CONFIG.language = authResult.user.settings.language || CONFIG.language;
+      CONFIG.aiMode = authResult.user.settings.aiMode || CONFIG.aiMode;
+      CONFIG.autoGrammarFix = authResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+    }
+  } else {
+    console.log('📝 No valid authentication found');
+    isAuthenticated = false;
+  }
+  
   // Request permissions
   console.log('🔐 Checking microphone permission...');
   await requestMicrophonePermission();
@@ -297,13 +322,31 @@ app.whenReady().then(async () => {
   console.log('✅ Eloquent is ready! Look for the microphone icon in your menu bar.');
   console.log('🎤 Press Alt+Space to start recording, Esc to stop');
   
-  // Show API key status
-  const validKeys = CONFIG.apiKeys.filter(k => k && k.trim()).length;
-  if (validKeys === 0) {
-    console.log('⚠️ No API keys configured - app will run in test mode');
-    console.log('💡 Open dashboard to add your Groq API key for real transcription');
+  // Show authentication status and require login
+  if (isAuthenticated) {
+    const subscription = authService.getSubscription();
+    const usage = authService.getUsage();
+    console.log(`👤 Logged in as: ${authResult.user?.email}`);
+    console.log(`📊 Plan: ${subscription?.plan || 'free'}`);
+    if (usage) {
+      console.log(`⏱️ Usage: ${usage.currentMonth}/${usage.limit === -1 ? '∞' : usage.limit} minutes`);
+    }
   } else {
-    console.log(`🔑 ${validKeys} API key(s) configured - ready for transcription`);
+    // REQUIRE SIGN-IN - show login window on startup
+    console.log('🔒 Sign-in required - opening login window');
+    setTimeout(() => {
+      createLoginWindow();
+    }, 500);
+  }
+  
+  // Legacy fallback check (keeping for reference but not used)
+  if (false) {
+    const validKeys = CONFIG.apiKeys.filter(k => k && k.trim()).length;
+    if (validKeys === 0) {
+      console.log('⚠️ No API keys configured');
+    } else {
+      console.log(`🔑 ${validKeys} API key(s) configured - ready for transcription`);
+    }
   }
 });
 
@@ -414,10 +457,40 @@ function createTray() {
     return;
   }
 
-  const contextMenu = Menu.buildFromTemplate([
+  // Build dynamic menu based on auth state
+  const user = authService.getUser();
+  const subscription = authService.getSubscription();
+  const usage = authService.getUsage();
+  const plan = subscription?.plan || 'free';
+  
+  const menuTemplate = [
     { label: '🎤 Eloquent Voice Dictation', enabled: false },
     { type: 'separator' },
-    { label: 'Open Dashboard', click: () => createDashboard() },
+  ];
+  
+  // Auth section
+  if (isAuthenticated && user) {
+    menuTemplate.push(
+      { label: `👤 ${user.email}`, enabled: false },
+      { label: `📊 Plan: ${plan.charAt(0).toUpperCase() + plan.slice(1)}`, enabled: false }
+    );
+    if (usage && usage.limit !== -1) {
+      const remaining = usage.limit - usage.currentMonth;
+      menuTemplate.push({ label: `⏱️ ${remaining} min remaining`, enabled: false });
+    }
+    menuTemplate.push(
+      { type: 'separator' },
+      { label: 'Open Dashboard', click: () => createDashboard() },
+      { label: plan === 'free' ? '⭐ Upgrade to Pro' : 'Manage Subscription', click: () => createSubscriptionWindow() }
+    );
+  } else {
+    menuTemplate.push(
+      { label: '🔑 Sign In / Sign Up', click: () => createLoginWindow() },
+      { label: 'Open Dashboard', click: () => createDashboard() }
+    );
+  }
+  
+  menuTemplate.push(
     { label: 'Admin Panel', click: () => createAdminPanel() },
     { type: 'separator' },
     { 
@@ -454,10 +527,27 @@ function createTray() {
     { type: 'separator' },
     { label: '💡 Tip: Press Esc to stop recording', enabled: false },
     { type: 'separator' },
-    { label: 'Settings', click: () => createDashboard() },
+    { label: 'Settings', click: () => createDashboard() }
+  );
+  
+  // Logout option if authenticated
+  if (isAuthenticated) {
+    menuTemplate.push({ 
+      label: '🚪 Sign Out', 
+      click: () => {
+        authService.logout();
+        isAuthenticated = false;
+        createTray(); // Refresh menu
+      }
+    });
+  }
+  
+  menuTemplate.push(
     { type: 'separator' },
     { label: 'Quit Eloquent', click: () => app.quit() }
-  ]);
+  );
+  
+  const contextMenu = Menu.buildFromTemplate(menuTemplate);
 
   if (tray) {
     tray.setToolTip('Eloquent - Voice to Text');
@@ -917,6 +1007,14 @@ function stopWakeWordListening() {
 // ULTRA-FAST overlay creation - optimized for instant response
 function createOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
+
+  // REQUIRE AUTHENTICATION - user must sign in to use
+  if (!isAuthenticated) {
+    console.log('🔒 Authentication required - opening login');
+    showNotification('Sign In Required', 'Please sign in with Google to use Eloquent');
+    createLoginWindow();
+    return;
+  }
 
   // INSTANT creation - minimal essential checks only
   if (isCreatingOverlay) {
@@ -2019,6 +2117,262 @@ ipcMain.on('hide-overlay', () => {
 ipcMain.on('get-config', (event) => {
   event.reply('config', CONFIG);
 });
+
+// ============================================
+// AUTHENTICATION IPC HANDLERS
+// ============================================
+
+// Supabase Google OAuth handler
+ipcMain.handle('auth-google', async () => {
+  try {
+    // Get OAuth URL from Supabase
+    const authResult = await authService.signInWithGoogle();
+    
+    if (!authResult.success) {
+      return authResult;
+    }
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      let authWindow = null;
+
+      authWindow = new BrowserWindow({
+        width: 500,
+        height: 700,
+        show: true,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+
+      authWindow.loadURL(authResult.url);
+
+      // Listen for successful authentication
+      authWindow.webContents.on('will-redirect', async (event, url) => {
+        if (resolved) return;
+        
+        // Check if this is the callback with session data
+        if (url.includes('/auth/callback') && url.includes('access_token')) {
+          resolved = true;
+          event.preventDefault();
+          
+          try {
+            // Parse the URL fragment for session data
+            const urlObj = new URL(url);
+            const fragment = urlObj.hash.substring(1);
+            const params = new URLSearchParams(fragment);
+            
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+            
+            if (accessToken) {
+              // Show loading state
+              authWindow.loadURL(`data:text/html,
+                <html>
+                  <head>
+                    <style>
+                      body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #1e293b, #0f172a); color: white; }
+                      .container { text-align: center; }
+                      h1 { font-size: 24px; margin-bottom: 10px; }
+                      p { color: rgba(255,255,255,0.7); }
+                      .spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+                      @keyframes spin { to { transform: rotate(360deg); } }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="container">
+                      <div class="spinner"></div>
+                      <h1>Signing you in...</h1>
+                      <p>Please wait</p>
+                    </div>
+                  </body>
+                </html>
+              `);
+
+              // Handle the OAuth callback
+              const result = await authService.handleOAuthCallback({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              });
+              
+              if (result.success) {
+                isAuthenticated = true;
+                if (result.user?.settings) {
+                  CONFIG.language = result.user.settings.language || CONFIG.language;
+                  CONFIG.aiMode = result.user.settings.aiMode || CONFIG.aiMode;
+                  CONFIG.autoGrammarFix = result.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+                }
+              }
+
+              setTimeout(() => {
+                if (!authWindow.isDestroyed()) authWindow.close();
+              }, 500);
+              
+              resolve(result);
+            } else {
+              if (!authWindow.isDestroyed()) authWindow.close();
+              resolve({ success: false, error: 'No access token received' });
+            }
+          } catch (err) {
+            if (!authWindow.isDestroyed()) authWindow.close();
+            resolve({ success: false, error: err.message });
+          }
+        }
+      });
+
+      // Handle window close
+      authWindow.on('closed', () => {
+        if (!resolved) {
+          resolved = true;
+          resolve({ success: false, error: 'Sign-in window was closed' });
+        }
+      });
+    });
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Auth complete - close login window
+ipcMain.on('auth-complete', (event, result) => {
+  isAuthenticated = true;
+  if (loginWindow && !loginWindow.isDestroyed()) {
+    loginWindow.close();
+    loginWindow = null;
+  }
+  // Refresh tray menu to show logged-in state
+  createTray();
+  // Open dashboard
+  createDashboard();
+});
+
+// Sign-in is required - no skip option
+
+// Get current auth status
+ipcMain.handle('get-auth-status', async () => {
+  return {
+    isAuthenticated,
+    user: authService.getUser(),
+    subscription: authService.getSubscription(),
+    usage: authService.getUsage()
+  };
+});
+
+// Get subscription info
+ipcMain.handle('get-subscription', async () => {
+  return {
+    plan: authService.getSubscription()?.plan || 'free',
+    status: authService.getSubscription()?.status || 'none',
+    usage: authService.getUsage(),
+    limits: authService.getUsageLimits()
+  };
+});
+
+// Create checkout session
+ipcMain.handle('create-checkout', async (event, { plan, interval }) => {
+  if (!isAuthenticated) {
+    return { error: 'Please sign in first' };
+  }
+  
+  try {
+    const token = authService.token;
+    const response = await axios.post(
+      `${authService.baseURL}/api/subscriptions/create-checkout`,
+      { plan, interval },
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (error) {
+    return { error: error.response?.data?.error || error.message };
+  }
+});
+
+// Check usage before transcription
+ipcMain.handle('check-usage', async (event, minutesNeeded = 1) => {
+  return await authService.checkUsage(minutesNeeded);
+});
+
+// Logout handler
+ipcMain.on('auth-logout', () => {
+  authService.logout();
+  isAuthenticated = false;
+  // Refresh tray menu
+  createTray();
+});
+
+// Close subscription window
+ipcMain.on('close-subscription-window', () => {
+  if (subscriptionWindow && !subscriptionWindow.isDestroyed()) {
+    subscriptionWindow.close();
+    subscriptionWindow = null;
+  }
+});
+
+// Open billing portal
+ipcMain.handle('open-billing-portal', async () => {
+  await authService.openBillingPortal();
+});
+
+// Forgot password
+ipcMain.on('forgot-password', (event, email) => {
+  shell.openExternal(`${authService.baseURL.replace('/api', '')}/forgot-password?email=${encodeURIComponent(email || '')}`);
+});
+
+// ============================================
+// LOGIN WINDOW
+// ============================================
+
+function createLoginWindow() {
+  if (loginWindow) {
+    loginWindow.focus();
+    return;
+  }
+
+  loginWindow = new BrowserWindow({
+    width: 460,
+    height: 700,
+    resizable: false,
+    titleBarStyle: 'hiddenInset',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  loginWindow.loadFile('login.html');
+
+  loginWindow.on('closed', () => {
+    loginWindow = null;
+  });
+}
+
+// ============================================
+// SUBSCRIPTION WINDOW
+// ============================================
+
+function createSubscriptionWindow() {
+  if (subscriptionWindow) {
+    subscriptionWindow.focus();
+    return;
+  }
+
+  subscriptionWindow = new BrowserWindow({
+    width: 1100,
+    height: 800,
+    titleBarStyle: 'hiddenInset',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  subscriptionWindow.loadFile('subscription.html');
+
+  subscriptionWindow.on('closed', () => {
+    subscriptionWindow = null;
+  });
+}
 
 ipcMain.on('save-config', (event, newConfig) => {
   console.log('💾 Saving configuration:', newConfig);

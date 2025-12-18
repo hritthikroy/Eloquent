@@ -1,23 +1,33 @@
 {
   "name": "eloquent",
-  "version": "2.0.0",
-  "description": "Professional voice-to-text macOS application with enhanced AI recognition and ultra-reliable pasting",
+  "version": "2.1.0",
+  "description": "Professional voice-to-text macOS application with enhanced AI recognition, subscription management, and ultra-reliable pasting",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
     "build": "electron-builder --mac",
     "build:mac": "electron-builder --mac --universal",
+    "build:arm64": "electron-builder --mac --arm64",
+    "build:x64": "electron-builder --mac --x64",
     "build:dmg": "electron-builder --mac dmg",
     "build:zip": "electron-builder --mac zip",
+    "build:signed": "electron-builder --mac --universal --publish never",
     "dist": "electron-builder --mac --universal",
     "fix-permissions": "./fix_permissions.sh",
-    "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'"
+    "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'",
+    "backend:dev": "cd backend-go && go run main.go",
+    "backend:start": "cd backend-go && ./eloquent-backend",
+    "backend:build": "cd backend-go && go build -o eloquent-backend .",
+    "start:full": "./start-go-app.sh"
   },
   "devDependencies": {
+    "@electron/notarize": "^2.2.0",
     "electron": "^28.0.0",
     "electron-builder": "^24.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.88.0",
     "axios": "^1.6.0",
     "form-data": "^4.0.0",
     "node-record-lpcm16": "^1.0.1"
@@ -25,12 +35,16 @@
   "build": {
     "appId": "com.eloquent.app",
     "productName": "Eloquent",
-    "copyright": "Copyright © 2024",
+    "copyright": "Copyright © 2024 Eloquent",
+    "afterSign": "scripts/notarize.js",
     "files": [
       "main.js",
+      "auth-service.js",
       "dashboard.html",
       "overlay.html",
       "admin.html",
+      "login.html",
+      "subscription.html",
       "ai-prompts.js",
       "utils.js",
       "performance-monitor.js",
@@ -47,11 +61,15 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["universal"]
+          "arch": [
+            "universal"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["universal"]
+          "arch": [
+            "universal"
+          ]
         }
       ],
       "hardenedRuntime": true,
