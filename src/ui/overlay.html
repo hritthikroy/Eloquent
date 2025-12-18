@@ -329,11 +329,10 @@
         drawBars();
         t++;
         
-        // Update timer less frequently but show quick status
+        // Update timer less frequently
         frameCount++;
         if (frameCount % 15 === 0) {
-          const messages = ['Quick!', 'Flash!', 'Pop!', 'Zap!'];
-          timer.textContent = messages[Math.floor(Math.random() * messages.length)];
+          updateTimer(); // Use actual timer instead of random messages
         }
       }
       loop();
@@ -402,8 +401,8 @@
         canvasH = 16;
         setupCanvas();
         
-        // Show quick status
-        timer.textContent = 'Quick!';
+        // Initialize timer for quick mode
+        updateTimer();
         
         // Start quick animation immediately
         animateQuickPopup();
@@ -419,6 +418,8 @@
     ipcRenderer.on('error', (_, errorMsg) => {
       timer.textContent = 'Error';
       timer.style.color = '#ef4444';
+      // Stop the timer updates when there's an error
+      if (animationId) cancelAnimationFrame(animationId);
     });
 
     // Cancel recording
