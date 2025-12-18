@@ -239,6 +239,10 @@
         <span class="loading"><span class="spinner"></span></span>
       </button>
 
+      <button class="btn btn-secondary" onclick="continueWithoutAccount()">
+        Continue in Development Mode
+      </button>
+
       <div class="features">
         <div class="feature">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -306,15 +310,27 @@
         const result = await ipcRenderer.invoke('auth-google');
         
         if (result.success) {
-          showSuccess('Sign in successful! Redirecting...');
+          if (result.isDevelopment) {
+            showSuccess('Development mode activated! Redirecting...');
+          } else {
+            showSuccess('Sign in successful! Redirecting...');
+          }
           setTimeout(() => {
             ipcRenderer.send('auth-complete', result);
           }, 500);
         } else {
-          showError(result.error || 'Sign in failed');
+          let errorMsg = result.error || 'Sign in failed';
+          if (errorMsg.includes('your-project.supabase.co') || errorMsg.includes('your-anon-key')) {
+            errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials or use Development Mode.';
+          }
+          showError(errorMsg);
         }
       } catch (error) {
-        showError(error.message || 'Sign in failed');
+        let errorMsg = error.message || 'Sign in failed';
+        if (errorMsg.includes('your-project.supabase.co') || errorMsg.includes('your-anon-key')) {
+          errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials or use Development Mode.';
+        }
+        showError(errorMsg);
       } finally {
         setLoading(false);
       }

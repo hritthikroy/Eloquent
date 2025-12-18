@@ -1,73 +1,180 @@
 #!/bin/bash
 
-echo "🚀 Deploying Eloquent Go Backend to Heroku..."
+# Eloquent Backend - Heroku Deployment Script
+# This script automates the deployment process to Heroku
+
+echo "🚀 Eloquent Backend - Heroku Deployment"
+echo "======================================="
+echo ""
 
 # Check if we're in the right directory
-if [ ! -f "backend-go/go.mod" ]; then
-    echo "❌ Please run this script from the EloquentElectron directory"
+if [ ! -f "backend-go/main.go" ]; then
+    echo "❌ Error: Please run this script from the EloquentElectron directory"
+    echo "   Current directory should contain backend-go/main.go"
     exit 1
 fi
-
-# Navigate to backend-go
-cd backend-go
 
 # Check if Heroku CLI is installed
 if ! command -v heroku &> /dev/null; then
-    echo "❌ Heroku CLI not found. Please install it first:"
-    echo "   https://devcenter.heroku.com/articles/heroku-cli"
+    echo "❌ Heroku CLI not found!"
+    echo "📥 Please install it from: https://devcenter.heroku.com/articles/heroku-cli"
     exit 1
 fi
 
-# Check if logged in to Heroku
+# Check if logged into Heroku
 if ! heroku auth:whoami &> /dev/null; then
-    echo "🔐 Please login to Heroku first:"
+    echo "🔐 Please log in to Heroku first:"
     heroku login
 fi
 
-# Check if git repo exists
+echo "✅ Heroku CLI found and authenticated"
+echo ""
+
+# Navigate to backend directory
+cd backend-go
+
+# Check if git is initialized
 if [ ! -d ".git" ]; then
     echo "📁 Initializing git repository..."
     git init
     git add .
-    git commit -m "Initial commit for Heroku deployment"
+    git commit -m "Initial backend commit for Heroku deployment"
 fi
 
-# Get app name
-read -p "Enter your Heroku app name (e.g., eloquent-api-2024): " APP_NAME
+echo "📋 Heroku App Configuration"
+echo "=========================="
+echo ""
+
+# Ask for app name
+read -p "Enter Heroku app name (or press Enter for auto-generated): " APP_NAME
 
 if [ -z "$APP_NAME" ]; then
-    echo "❌ App name is required"
-    exit 1
+    echo "🎲 Creating app with auto-generated name..."
+    heroku create
+else
+    echo "🏗️ Creating app: $APP_NAME"
+    heroku create "$APP_NAME"
 fi
 
-# Create Heroku app
-echo "🏗️ Creating Heroku app: $APP_NAME"
-heroku create $APP_NAME
+# Get the actual app name (in case it was auto-generated)
+ACTUAL_APP_NAME=$(heroku apps:info --json | grep -o '"name":"[^"]*' | cut -d'"' -f4)
+echo "✅ App created: $ACTUAL_APP_NAME"
+echo ""
 
-# Set basic environment variables
 # Set Go buildpack
 echo "🔧 Setting Go buildpack..."
-heroku buildpacks:set heroku/go --app $APP_NAME
-
-echo "⚙️ Setting environment variables..."
-heroku config:set NODE_ENV=production --app $APP_NAME
-heroku config:set APP_URL=https://$APP_NAME.herokuapp.com --app $APP_NAME
+heroku buildpacks:set heroku/go
 
 echo ""
-echo "✅ Heroku app created successfully!"
+echo "🔑 Environment Variables Setup"
+echo "============================="
 echo ""
-echo "📋 Next steps:"
-echo "1. Set up Supabase project at https://supabase.com"
-echo "2. Get Groq API key at https://console.groq.com"
-echo "3. Get Stripe keys at https://dashboard.stripe.com"
-echo "4. Set environment variables:"
-echo "   heroku config:set SUPABASE_URL=https://your-project.supabase.co --app $APP_NAME"
-echo "   heroku config:set SUPABASE_SERVICE_KEY=your-service-key --app $APP_NAME"
-echo "   heroku config:set GROQ_API_KEY=gsk_your_groq_key --app $APP_NAME"
-echo "   heroku config:set STRIPE_SECRET_KEY=sk_your_stripe_key --app $APP_NAME"
-echo "   heroku config:set STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret --app $APP_NAME"
-echo "5. Deploy with: git push heroku main"
+echo "You need to provide the following credentials:"
 echo ""
-echo "📖 Full guide: See HEROKU_DEPLOY.md"
+
+# Supabase URL
+read -p "Supabase URL (https://your-project.supabase.co): " SUPABASE_URL
+if [ -n "$SUPABASE_URL" ]; then
+    heroku config:set SUPABASE_URL="$SUPABASE_URL"
+fi
+
+# Supabase Anon Key
+read -p "Supabase Anon Key (eyJ...): " SUPABASE_ANON_KEY
+if [ -n "$SUPABASE_ANON_KEY" ]; then
+    heroku config:set SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+fi
+
+# Supabase Service Key
+read -p "Supabase Service Key (eyJ...): " SUPABASE_SERVICE_KEY
+if [ -n "$SUPABASE_SERVICE_KEY" ]; then
+    heroku config:set SUPABASE_SERVICE_KEY="$SUPABASE_SERVICE_KEY"
+fi
+
+# Groq API Key
+read -p "Groq API Key (gsk_...): " GROQ_API_KEY
+if [ -n "$GROQ_API_KEY" ]; then
+    heroku config:set GROQ_API_KEY="$GROQ_API_KEY"
+fi
+
+# Set production environment
+heroku config:set ENVIRONMENT=production
+
 echo ""
-echo "🌐 Your app will be available at: https://$APP_NAME.herokuapp.com"
+echo "💳 Payment Configuration (Optional)"
+echo "=================================="
+read -p "Stripe Secret Key (optional, press Enter to skip): " STRIPE_SECRET_KEY
+if [ -n "$STRIPE_SECRET_KEY" ]; then
+    heroku config:set STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY"
+    
+    read -p "Stripe Webhook Secret (whsec_...): " STRIPE_WEBHOOK_SECRET
+    if [ -n "$STRIPE_WEBHOOK_SECRET" ]; then
+        heroku config:set STRIPE_WEBHOOK_SECRET="$STRIPE_WEBHOOK_SECRET"
+    fi
+fi
+
+echo ""
+echo "🌐 CORS Configuration"
+echo "===================="
+read -p "Allowed Origins (comma-separated, or * for all): " ALLOWED_ORIGINS
+if [ -n "$ALLOWED_ORIGINS" ]; then
+    heroku config:set ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+else
+    # Default to allow all for development
+    heroku config:set ALLOWED_ORIGINS="*"
+fi
+
+echo ""
+echo "🚀 Deploying to Heroku..."
+echo "========================"
+
+# Deploy
+git add .
+git commit -m "Deploy to Heroku" --allow-empty
+git push heroku main
+
+echo ""
+echo "🔍 Checking deployment status..."
+
+# Wait a moment for deployment to complete
+sleep 5
+
+# Check if app is running
+if heroku ps | grep -q "web.*up"; then
+    echo "✅ Deployment successful!"
+    
+    # Get app URL
+    APP_URL=$(heroku info -s | grep web_url | cut -d= -f2)
+    echo ""
+    echo "🌐 Your API is now live at: $APP_URL"
+    echo ""
+    
+    # Test health endpoint
+    echo "🏥 Testing health endpoint..."
+    if curl -s "${APP_URL}health" | grep -q "ok"; then
+        echo "✅ Health check passed!"
+    else
+        echo "⚠️ Health check failed - check logs with: heroku logs --tail"
+    fi
+    
+    echo ""
+    echo "📱 Update your Electron app configuration:"
+    echo "   ELOQUENT_API_URL=$APP_URL"
+    echo ""
+    echo "🔧 Useful commands:"
+    echo "   heroku logs --tail          # View real-time logs"
+    echo "   heroku ps                   # Check dyno status"
+    echo "   heroku config               # View environment variables"
+    echo "   heroku restart              # Restart the app"
+    echo ""
+    
+else
+    echo "❌ Deployment may have failed"
+    echo "📋 Check logs with: heroku logs --tail"
+    echo "🔧 Common issues:"
+    echo "   - Missing environment variables"
+    echo "   - Build errors"
+    echo "   - Port binding issues"
+fi
+
+echo ""
+echo "📚 For more help, see HEROKU_DEPLOYMENT.md"

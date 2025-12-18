@@ -10,6 +10,20 @@ type Config struct {
 	GroqAPIKey       string
 	StripeSecretKey  string
 	StripeWebhookKey string
+	
+	// PayPal
+	PayPalClientID     string
+	PayPalClientSecret string
+	PayPalSandbox      bool
+	
+	// Razorpay
+	RazorpayKeyID     string
+	RazorpayKeySecret string
+	
+	// Square
+	SquareAccessToken string
+	SquareEnvironment string
+	SquareLocationID  string
 }
 
 func New() *Config {
@@ -21,6 +35,20 @@ func New() *Config {
 		GroqAPIKey:       getEnv("GROQ_API_KEY", ""),
 		StripeSecretKey:  getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookKey: getEnv("STRIPE_WEBHOOK_SECRET", ""),
+		
+		// PayPal
+		PayPalClientID:     getEnv("PAYPAL_CLIENT_ID", ""),
+		PayPalClientSecret: getEnv("PAYPAL_CLIENT_SECRET", ""),
+		PayPalSandbox:      getEnv("PAYPAL_SANDBOX", "true") == "true",
+		
+		// Razorpay
+		RazorpayKeyID:     getEnv("RAZORPAY_KEY_ID", ""),
+		RazorpayKeySecret: getEnv("RAZORPAY_KEY_SECRET", ""),
+		
+		// Square
+		SquareAccessToken: getEnv("SQUARE_ACCESS_TOKEN", ""),
+		SquareEnvironment: getEnv("SQUARE_ENVIRONMENT", "sandbox"),
+		SquareLocationID:  getEnv("SQUARE_LOCATION_ID", ""),
 	}
 }
 

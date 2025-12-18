@@ -21,15 +21,24 @@ class AuthService {
     
     // Check if we're in development mode with placeholder credentials
     this.isDevelopmentMode = this.supabaseUrl.includes('your-project.supabase.co') || 
-                            this.supabaseAnonKey === 'your-anon-key';
+                            this.supabaseAnonKey === 'your-anon-key' ||
+                            this.supabaseUrl.includes('localhost') ||
+                            !this.supabaseUrl.startsWith('https://') ||
+                            this.supabaseUrl === 'https://your-project.supabase.co';
     
     if (this.isDevelopmentMode) {
       console.log('🔧 Development mode detected - using mock authentication');
+      console.log('💡 Supabase URL:', this.supabaseUrl);
+      console.log('💡 To enable production mode:');
+      console.log('   1. Run: ./setup-production.sh');
+      console.log('   2. Or manually edit .env with real Supabase credentials');
+      
       // Set up mock user for development
       this.currentUser = {
         id: 'dev-user',
         email: 'developer@localhost',
-        name: 'Development User'
+        name: 'Development User',
+        role: 'admin' // Grant admin access in development mode
       };
       this.subscription = {
         plan: 'pro',
@@ -37,10 +46,13 @@ class AuthService {
       };
       this.usage = {
         currentMonth: 0,
-        totalMinutes: 0
+        totalMinutes: 0,
+        limit: -1 // Unlimited in dev mode
       };
     } else {
-      // Initialize Supabase client only if we have real credentials
+      // Production mode - initialize Supabase client with real credentials
+      console.log('🚀 Production mode detected - using real Google OAuth');
+      console.log('💡 Supabase URL:', this.supabaseUrl);
       this.supabase = createClient(this.supabaseUrl, this.supabaseAnonKey);
     }
   }
@@ -63,6 +75,7 @@ class AuthService {
     // In development mode, simulate successful sign-in
     if (this.isDevelopmentMode) {
       console.log('🔧 Development mode - simulating Google sign-in');
+      console.log('💡 To enable real Google sign-in, configure Supabase credentials in .env');
       return { 
         success: true, 
         url: 'about:blank',
@@ -71,18 +84,39 @@ class AuthService {
     }
     
     try {
-      const { data, error } = await this.supabase.auth.signInWithOAuth({
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase connection timeout - check your internet connection')), 10000)
+      );
+      
+      const authPromise = this.supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'http://localhost:3000/auth/callback'
+          redirectTo: process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/callback'
         }
       });
+
+      const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
       if (error) throw error;
       return { success: true, url: data.url };
     } catch (error) {
       console.error('Google sign-in error:', error);
-      return { success: false, error: error.message };
+      console.log('💡 Tip: Use "Continue in Development Mode" to bypass OAuth');
+      
+      // Provide more helpful error messages
+      let userFriendlyError = error.message;
+      if (error.message.includes('timeout')) {
+        userFriendlyError = 'Connection timeout. Please check your internet connection and try again.';
+      } else if (error.message.includes('Invalid API key') || error.message.includes('unauthorized')) {
+        userFriendlyError = 'Invalid Supabase configuration. Please check your API keys.';
+      } else if (error.message.includes('fetch')) {
+        userFriendlyError = 'Network error. Please check your internet connection.';
+      } else if (error.message.includes('your-project.supabase.co')) {
+        userFriendlyError = 'Google Sign-in not configured. Please set up Supabase credentials or use Development Mode.';
+      }
+      
+      return { success: false, error: userFriendlyError };
     }
   }
 
@@ -273,6 +307,11 @@ class AuthService {
     return !this.subscription || this.subscription.plan === 'free';
   }
 
+  // Check if user is admin
+  isAdmin() {
+    return this.currentUser?.role === 'admin';
+  }
+
   // Open upgrade page
   openUpgradePage() {
     shell.openExternal(`${this.baseURL.replace('/api', '')}/upgrade`);
@@ -313,8 +352,10 @@ class AuthService {
     this.init();
     
     try {
-      // Sign out from Supabase
-      await this.supabase.auth.signOut();
+      // Sign out from Supabase (only if not in development mode)
+      if (!this.isDevelopmentMode && this.supabase) {
+        await this.supabase.auth.signOut();
+      }
     } catch (error) {
       console.error('Supabase logout error:', error);
     }

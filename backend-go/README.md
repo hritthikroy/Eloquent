@@ -50,7 +50,7 @@ go mod tidy
 
 3. Copy environment variables:
 ```bash
-cp .env.example .env
+touch .env
 ```
 
 4. Update `.env` with your credentials:
@@ -128,7 +128,7 @@ docker run -p 3000:3000 --env-file .env eloquent-backend
 
 ## Configuration
 
-The application uses environment variables for configuration. See `.env.example` for all available options.
+The application uses environment variables for configuration. Create a `.env` file with your configuration.
 
 ### Required Environment Variables
 

@@ -4,7 +4,7 @@ import (
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/customer"
-	"github.com/stripe/stripe-go/v76/billingportal/session"
+	billingportalsession "github.com/stripe/stripe-go/v76/billingportal/session"
 )
 
 type StripeService struct {

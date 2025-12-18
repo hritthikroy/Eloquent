@@ -1,11 +1,7 @@
-// ULTRA-FAST VOICE DICTATION - OPTIMIZED FOR INSTANT RESPONSE
-// Performance optimizations:
-// - 50ms shortcut debounce (down from 500ms) for instant feel
-// - Minimal logging in critical paths for maximum speed
-// - Ultra-fast overlay creation with optimized window settings
-// - Instant recording start with streamlined audio setup
-// - Backup ESC shortcuts for reliable stopping
-// - Removed redundant checks and safety delays
+// ELOQUENT ELECTRON - VOICE DICTATION APP
+
+// Load environment variables
+require('dotenv').config();
 
 const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell } = require('electron');
 const path = require('path');
@@ -16,11 +12,13 @@ const AI_PROMPTS = require('./ai-prompts');
 const performanceMonitor = require('./performance-monitor');
 const authService = require('./auth-service');
 
+
 let overlayWindow = null;
 let dashboardWindow = null;
 let adminWindow = null;
 let loginWindow = null;
 let subscriptionWindow = null;
+
 let tray = null;
 let recording = null;
 let audioFile = null;
@@ -28,7 +26,7 @@ let recordingProcess = null;
 let currentMode = 'standard';
 let isAuthenticated = false;
 
-// OPTIMIZED: Configuration for maximum performance and accuracy
+// Application configuration
 const CONFIG = {
   apiKeys: [
     '', // API Key 1 - Managed by admin
@@ -38,23 +36,11 @@ const CONFIG = {
     ''  // API Key 5 (optional)
   ],
   language: 'en',
-  customDictionary: '', // Custom words for better recognition
-  aiMode: 'auto', // AI rewriting mode: auto (smart detection), grammar - OPTIMIZED
-  preserveClipboard: false, // Default: false for instant pasting with zero latency
-  autoGrammarFix: true, // ENABLED - Automatic grammar fixes for better accuracy (can be disabled in settings)
-  autoPasteMode: 'direct', // 'clipboard' (manual Cmd+V) or 'direct' (automatic paste at cursor)
-  
-  // OPTIMIZED: Performance and voice detection settings
-  voiceActivityDetection: true, // Enable advanced voice activity detection
-  enhancedAudioProcessing: true, // Enable audio enhancement filters
-  lowLatencyMode: true, // Optimize for minimal latency
-  voiceSensitivity: 0.7, // Voice detection sensitivity (0.0-1.0)
-  noiseReduction: true, // Enable noise reduction
-  audioCompression: true, // Enable dynamic range compression
-  fastTranscription: true, // Use optimized transcription settings
-  realTimeProcessing: true, // Enable real-time audio processing
-  bufferOptimization: true, // Optimize audio buffer sizes
-  streamingMode: false, // Disable streaming for lower latency (batch processing is faster)
+  customDictionary: '',
+  aiMode: 'auto',
+  preserveClipboard: false,
+  autoGrammarFix: true,
+  autoPasteMode: 'direct'
 };
 
 // Admin configuration
@@ -66,19 +52,19 @@ const ADMIN_CONFIG = {
   apiRequests: []
 };
 
-// Recording state with enhanced protection
+// Recording state
 let isRecording = false;
-let isProcessing = false; // Prevent multiple stop calls
-let isCreatingOverlay = false; // Prevent race conditions
-let overlayCreationLock = false; // Additional lock for extra protection
-let lastOverlayCreationTime = 0; // Track last creation time
-let recordingStartTime = 0; // Track when recording actually started
+let isProcessing = false;
+let isCreatingOverlay = false;
+let overlayCreationLock = false;
+let lastOverlayCreationTime = 0;
+let recordingStartTime = 0;
 
 // Get active API key based on usage
 function getActiveAPIKey() {
   const validKeys = CONFIG.apiKeys.filter(key => key && key.trim() !== '');
   if (validKeys.length === 0) {
-    return null; // Return null instead of throwing error - let caller handle test mode
+    throw new Error('No API keys configured');
   }
 
   // Get usage data from file
@@ -279,10 +265,11 @@ process.on('unhandledRejection', (reason, promise) => {
 app.whenReady().then(async () => {
   console.log('🚀 App is ready, starting initialization...');
   
+
+  
   // Load saved configuration first
   console.log('📁 Loading saved configuration...');
-  loadConfigFromFile();
-  loadAdminConfigFromFile();
+  // Functions will be called after they are defined
   
   // Initialize auth service
   console.log('🔐 Initializing authentication...');
@@ -339,15 +326,7 @@ app.whenReady().then(async () => {
     }, 500);
   }
   
-  // Legacy fallback check (keeping for reference but not used)
-  if (false) {
-    const validKeys = CONFIG.apiKeys.filter(k => k && k.trim()).length;
-    if (validKeys === 0) {
-      console.log('⚠️ No API keys configured');
-    } else {
-      console.log(`🔑 ${validKeys} API key(s) configured - ready for transcription`);
-    }
-  }
+
 });
 
 function createTray() {
@@ -480,19 +459,34 @@ function createTray() {
     }
     menuTemplate.push(
       { type: 'separator' },
-      { label: 'Open Dashboard', click: () => createDashboard() },
-      { label: plan === 'free' ? '⭐ Upgrade to Pro' : 'Manage Subscription', click: () => createSubscriptionWindow() }
+      { label: 'Open Dashboard', click: () => createDashboard() }
     );
+    
+    // Only show subscription management for non-admin users
+    if (!authService.isAdmin()) {
+      menuTemplate.push(
+        { label: plan === 'free' ? '⭐ Upgrade to Pro' : 'Manage Subscription', click: () => createSubscriptionWindow() }
+      );
+    }
   } else {
     menuTemplate.push(
       { label: '🔑 Sign In / Sign Up', click: () => createLoginWindow() },
-      { label: 'Open Dashboard', click: () => createDashboard() }
+      { label: 'Open Dashboard', click: () => createDashboard() },
+
     );
   }
   
+  // Only show admin panel for admin users
+  if (isAuthenticated && authService.isAdmin()) {
+    menuTemplate.push(
+      { label: 'Admin Panel', click: () => createAdminPanel() },
+      { type: 'separator' }
+    );
+  } else {
+    menuTemplate.push({ type: 'separator' });
+  }
+  
   menuTemplate.push(
-    { label: 'Admin Panel', click: () => createAdminPanel() },
-    { type: 'separator' },
     { 
       label: 'Start AI Rewrite (Alt+Shift+Space)', 
       click: () => {
@@ -590,51 +584,35 @@ function playSound(type) {
   });
 }
 
-// ULTRA-FAST shortcut system - optimized for instant response
+// Shortcut system
 let lastShortcutTime = 0;
-const SHORTCUT_DEBOUNCE = 25; // Ultra-fast 25ms debounce for instant feel
+const SHORTCUT_DEBOUNCE = 25;
 let shortcutLock = false;
 
-// Ultra-fast shortcut handler - minimal logging for maximum speed
 function handleShortcut(action, mode = 'standard') {
   const now = Date.now();
   
-  // Ultra-fast debounce - only prevent true duplicates
   if (shortcutLock || (now - lastShortcutTime < SHORTCUT_DEBOUNCE)) {
-    console.log('🔒 Shortcut debounced - preventing duplicate');
-    return; // Silent return for speed
+    return;
   }
   
   lastShortcutTime = now;
   shortcutLock = true;
   
-  console.log(`🎯 Shortcut triggered: ${action} (${mode})`);
-  
-  // Ultra-fast lock release
   setTimeout(() => {
     shortcutLock = false;
   }, SHORTCUT_DEBOUNCE);
   
-  // ULTRA-FAST execution - minimal checks for instant response
   if (action === 'start') {
-    // Instant start - only essential check
     if (!overlayWindow && !isCreatingOverlay) {
-      console.log('🚀 Creating new overlay window');
-      // Start immediately - sound and overlay in parallel for zero latency
-      setImmediate(() => playSound('start')); // Non-blocking sound
+      setImmediate(() => playSound('start'));
       createOverlayUltraFast(mode);
     } else if (overlayWindow && !overlayWindow.isDestroyed()) {
-      console.log('🔍 Focusing existing overlay window');
-      // Instant focus - no logging delay
       overlayWindow.focus();
       overlayWindow.show();
-    } else {
-      console.log('⚠️ Overlay window in invalid state, skipping');
     }
   } else if (action === 'stop') {
-    // INSTANT stop - call the proper stopRecording function
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      console.log('🛑 Stopping recording');
       overlayWindow.webContents.send('status', 'Stopping...');
       stopRecording();
     }
@@ -678,370 +656,48 @@ function registerShortcuts() {
     createDashboard();
   });
 
-  console.log('✅ ULTRA-FAST shortcuts registered:');
-  console.log(`   Alt+Shift+Space (AI Rewrite): ${rewriteRegistered ? 'SUCCESS' : 'FAILED'}`);
-  console.log(`   Alt+Space (Standard): ${standardRegistered ? 'SUCCESS' : 'FAILED'}`);
-  console.log(`   Escape (Stop): ${escapeRegistered ? 'SUCCESS' : 'FAILED'}`);
-  console.log(`   Cmd+Escape (Stop Backup): ${escapeBackup ? 'SUCCESS' : 'FAILED'}`);
-  console.log(`   Cmd+Shift+A (Admin Panel): ${adminRegistered ? 'SUCCESS' : 'FAILED'}`);
-  console.log(`   Cmd+Shift+D (Dashboard): ${dashboardRegistered ? 'SUCCESS' : 'FAILED'}`);
+
+
+  console.log('✅ Shortcuts registered:');
+  console.log(`   Alt+Shift+Space (AI Rewrite): ${rewriteRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Alt+Space (Standard): ${standardRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Escape (Stop): ${escapeRegistered ? 'OK' : 'FAILED'}`);
   
   if (!rewriteRegistered || !standardRegistered || !escapeRegistered) {
-    console.error('❌ Some shortcuts failed to register - check for conflicts');
-  } else {
-    console.log('🚀 ULTRA-FAST mode activated - shortcuts optimized for instant response!');
+    console.error('❌ Some shortcuts failed to register');
   }
 }
 
-// Toggle wake word listening mode
-function toggleWakeWordListening() {
-  if (!CONFIG.enableWakeWord) {
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Wake Word Detection Disabled',
-      message: 'Enable wake word detection in Settings first!',
-      detail: `Go to Settings and enable "Wake Word Detection" to use this feature.\n\nDefault wake word: "${CONFIG.wakeWord}"`
-    });
-    return;
-  }
 
-  isWakeWordListening = !isWakeWordListening;
 
-  if (isWakeWordListening) {
-    console.log('Starting wake word listening mode...');
-    startWakeWordListening();
-  } else {
-    console.log('Stopping wake word listening mode...');
-    stopWakeWordListening();
-  }
-}
-
-// Start wake word listening - continuous audio monitoring with efficient detection
-function startWakeWordListening() {
-  if (wakeWordListeningProcess) {
-    wakeWordListeningProcess.kill();
-  }
-
-  console.log(`Starting wake word listening for: "${CONFIG.wakeWord}"`);
-
-  // Use a more efficient approach: record with intelligent silence detection
-  // This captures speech segments only when there's meaningful audio
-  const tempAudioFile = path.join(app.getPath('temp'), `wake-${Date.now()}.wav`);
-
-  // Start recording with intelligent silence detection to capture only speech
-  wakeWordListeningProcess = spawn('rec', [
-    '-r', '16000',      // Sample rate
-    '-c', '1',          // Mono
-    '-b', '16',         // Bit depth
-    '-d',               // Record from default device
-    tempAudioFile,
-    'silence', '1', '0.2', '2%',   // Start recording after 0.2s below 2% amplitude
-    '1', '0.5', '2%',              // Record at least 0.5s above 2% amplitude
-    'silence', '1', '1.0', '2%',   // Stop after 1.0s below 2% amplitude
-    'trim', '0', '4'               // Maximum 4 seconds per capture
-  ]);
-
-  // Set timeout to kill the process if it runs too long (safety measure)
-  const timeout = setTimeout(() => {
-    if (wakeWordListeningProcess) {
-      wakeWordListeningProcess.kill();
-      // Clean up any abandoned files
-      fs.unlink(tempAudioFile, () => {});
-    }
-  }, (CONFIG.wakeWordTimeout + 2) * 1000); // 2s extra for safety
-
-  wakeWordListeningProcess.on('close', (code) => {
-    clearTimeout(timeout);
-    wakeWordListeningProcess = null;
-
-    if (isWakeWordListening) {
-      // Process the recorded audio for wake word detection only if it has content
-      if (fs.existsSync(tempAudioFile)) {
-        const stats = fs.statSync(tempAudioFile);
-
-        // Only process if the file has significant content (not just noise)
-        if (stats.size > 7000) { // Increased threshold for better quality
-          console.log(`Processing ${Math.round(stats.size/32)}ms of audio for wake word...`);
-
-          // Check for wake word in the captured audio
-          checkForWakeWord(tempAudioFile).finally(() => {
-            // Always clean up the temporary file
-            fs.unlink(tempAudioFile, (err) => {
-              if (err) console.error('Error deleting temp file:', err);
-            });
-          });
-        } else {
-          // If no meaningful audio, just clean up
-          fs.unlink(tempAudioFile, (err) => {
-            if (err) console.error('Error deleting temp file:', err);
-          });
-        }
-      }
-
-      // Continue listening if still in wake word mode
-      setTimeout(startWakeWordListening, 500); // Slightly longer pause for efficiency
-    }
-  });
-
-  wakeWordListeningProcess.on('error', (err) => {
-    console.error('Wake word listening process error:', err);
-    wakeWordListeningProcess = null;
-
-    // Clean up any abandoned files
-    fs.unlink(tempAudioFile, () => {});
-
-    if (isWakeWordListening) {
-      setTimeout(startWakeWordListening, 1000);
-    }
-  });
-}
-
-// Function to check if audio contains the wake word using efficient methods
-async function checkForWakeWord(audioFilePath) {
-  return new Promise((resolve, reject) => {
-    try {
-      // Check if the configured wake word is enabled
-      if (!CONFIG.enableWakeWord || !CONFIG.wakeWord) {
-        resolve();
-        return;
-      }
-
-      // First, check if the audio file has content
-      const stats = fs.statSync(audioFilePath);
-      if (stats.size < 4000) { // Too small to contain speech
-        resolve();
-        return;
-      }
-
-      // For a more efficient approach, we'll implement a simulated keyword spotting
-      // In a real application, we would use a dedicated wake word detection library
-      // like Picovoice Porcupine, but for this implementation we'll use a
-      // more efficient approach than full transcription
-
-      // Calculate audio features to estimate if the wake word might be present
-      // This is a simplified approach that could be expanded with more advanced audio analysis
-
-      // For demonstration, we'll use a more efficient approach by implementing
-      // a system that first checks for speech patterns before full transcription
-
-      // Create a simple audio analysis by looking at the file characteristics
-      // and then only doing full transcription if it looks promising
-      const wakeWord = CONFIG.wakeWord.toLowerCase();
-
-      // Since we can't easily analyze audio content without a proper library,
-      // we'll take a compromise approach: use a much faster, lightweight
-      // transcription with a smaller model or use a local speech detection
-
-      // For this implementation, let's create a more efficient local check:
-      // 1. Analyze the audio file size and duration to estimate speech content
-      // 2. Run a very basic speech recognition with reduced complexity
-
-      // Estimate duration: 16kHz, 16-bit, mono = ~32KB per second
-      const estimatedDuration = stats.size / 32000; // bytes per second approx
-
-      // If the audio length seems reasonable for a wake word phrase (0.5s to 2s)
-      if (estimatedDuration >= 0.5 && estimatedDuration <= 2.5) {
-        // At this point, for a real application with efficiency in mind,
-        // we would implement an actual lightweight keyword spotting.
-        // For this example, I'll implement a compromise:
-        // Use a shorter timeout transcription and only for validation
-
-        // Use a fast transcription to check for the wake word
-        transcribeForWakeWord(audioFilePath).then(detected => {
-          if (detected) {
-            console.log(`Wake word "${CONFIG.wakeWord}" detected! Starting recording...`);
-
-            // Stop wake word listening temporarily to avoid multiple triggers
-            const wasListening = isWakeWordListening;
-            if (wasListening) {
-              stopWakeWordListening(); // This sets isWakeWordListening to false
-            }
-
-            // Create the recording overlay first
-            createOverlay('standard');
-
-            // Restart listening after recording is done, only if it was originally enabled
-            setTimeout(() => {
-              if (CONFIG.enableWakeWord && wasListening) {
-                isWakeWordListening = true; // Set the flag before starting
-                startWakeWordListening();
-              }
-            }, 8000); // Wait 8 seconds after recording starts to avoid immediate retrigger
-          }
-          resolve();
-        }).catch(err => {
-          console.error('Error in wake word transcription:', err.message);
-          resolve();
-        });
-      } else {
-        // Audio too short or too long for a wake word, skip transcription
-        resolve();
-      }
-    } catch (error) {
-      console.error('Error in wake word check setup:', error.message);
-      resolve(); // Continue listening despite error
-    }
-  });
-}
-
-// Helper function to do a quick transcription check (optimized for speed)
-async function transcribeForWakeWord(audioFilePath) {
-  try {
-    // Check if we have a valid API key
-    const firstValidKey = getActiveAPIKey();
-    if (!firstValidKey) {
-      console.error('No valid API key available for wake word check');
-      return false;
-    }
-
-    const FormData = require('form-data');
-    const form = new FormData();
-    form.append('file', fs.createReadStream(audioFilePath), {
-      filename: 'wake_check.wav',
-      contentType: 'audio/wav'
-    });
-    form.append('model', 'whisper-large-v3-turbo');
-    form.append('language', CONFIG.language);
-    form.append('response_format', 'text');
-
-    const response = await axios.post(
-      'https://api.groq.com/openai/v1/audio/transcriptions',
-      form,
-      {
-        headers: {
-          ...form.getHeaders(),
-          'Authorization': `Bearer ${firstValidKey}`
-        },
-        timeout: 8000, // Much shorter timeout for efficiency
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity
-      }
-    );
-
-    const transcription = response.data.trim().toLowerCase();
-    const wakeWord = CONFIG.wakeWord.toLowerCase();
-
-    // Check if the transcription contains the wake word with some fuzziness
-    // to account for potential transcription errors
-    return fuzzyMatch(transcription, wakeWord);
-  } catch (error) {
-    console.error('Transcription error in wake word check:', error.message);
-    return false;
-  }
-}
-
-// Simple fuzzy matching to account for transcription variations
-function fuzzyMatch(text, pattern) {
-  // Normalize both strings
-  text = text.toLowerCase().trim();
-  pattern = pattern.toLowerCase().trim();
-
-  // Simple approach: check if pattern is contained in text
-  if (text.includes(pattern)) {
-    return true;
-  }
-
-  // More sophisticated: check for words in pattern appearing in text
-  // even if with slight variations or context
-  const patternWords = pattern.split(/\s+/);
-  const textWords = text.split(/\s+/);
-
-  // Check if all words in pattern are present in text (in any order)
-  return patternWords.every(pWord =>
-    textWords.some(tWord =>
-      tWord.includes(pWord) || pWord.includes(tWord) ||
-      levenshteinDistance(pWord, tWord) <= 2  // Allow 1-2 character differences
-    )
-  );
-}
-
-// Levenshtein distance for fuzzy string matching
-function levenshteinDistance(str1, str2) {
-  const matrix = [];
-
-  if (str1.length === 0) return str2.length;
-  if (str2.length === 0) return str1.length;
-
-  for (let i = 0; i <= str2.length; i++) {
-    matrix[i] = [i];
-  }
-
-  for (let j = 0; j <= str1.length; j++) {
-    matrix[0][j] = j;
-  }
-
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
-        );
-      }
-    }
-  }
-
-  return matrix[str2.length][str1.length];
-}
-
-// Stop wake word listening
-function stopWakeWordListening() {
-  console.log('Stopping wake word listening');
-  if (wakeWordListeningProcess) {
-    wakeWordListeningProcess.kill();
-    wakeWordListeningProcess = null;
-  }
-
-  // Show notification and update dashboard
-  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-    dashboardWindow.webContents.send('wake-word-status', 'stopped');
-  }
-
-  // Reset the listening flag
-  isWakeWordListening = false;
-}
-
-// ULTRA-FAST overlay creation - optimized for instant response
+// Overlay creation
 function createOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
 
-  // REQUIRE AUTHENTICATION - user must sign in to use
   if (!isAuthenticated) {
-    console.log('🔒 Authentication required - opening login');
     showNotification('Sign In Required', 'Please sign in with Google to use Eloquent');
     createLoginWindow();
     return;
   }
 
-  // INSTANT creation - minimal essential checks only
   if (isCreatingOverlay) {
-    console.log('⚠️ Already creating overlay, skipping');
-    return; // Single essential check
+    return;
   }
   
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    console.log('⚠️ Overlay window already exists, focusing instead');
     overlayWindow.focus();
     overlayWindow.show();
     return;
   }
   
-  console.log(`🎬 Creating overlay window (${mode} mode)`);
-  
-  // Stop existing process immediately
   if (recordingProcess) {
     recordingProcess.kill();
     recordingProcess = null;
   }
 
-  // Set lock instantly
   isCreatingOverlay = true;
   lastOverlayCreationTime = Date.now();
   
-  // ULTRA-FAST window creation with maximum performance settings
   overlayWindow = new BrowserWindow({
     width: 280,
     height: 50,
@@ -1050,36 +706,32 @@ function createOverlayUltraFast(mode = 'standard') {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    hasShadow: false, // Disabled for faster rendering
+    hasShadow: false,
     focusable: false,
     acceptFirstMouse: false,
-    show: false, // Don't show until ready - prevents flicker
-    paintWhenInitiallyHidden: false, // Optimize initial rendering
+    show: false,
+    paintWhenInitiallyHidden: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      backgroundThrottling: false, // Prevent throttling for instant response
-      offscreen: false, // Ensure fast rendering
-      preload: false, // Skip preload for faster startup
-      enableRemoteModule: false, // Disable for performance
-      experimentalFeatures: false // Disable experimental features for stability
+      backgroundThrottling: false,
+      offscreen: false,
+      preload: false,
+      enableRemoteModule: false,
+      experimentalFeatures: false
     }
   });
   
   overlayWindow.recordingStartTime = Date.now();
 
-  // ULTRA-FAST loading and positioning
   overlayWindow.loadFile('overlay.html');
   
-  // Position overlay near cursor (above it)
   const cursorPosition = screen.getCursorScreenPoint();
   const windowBounds = overlayWindow.getBounds();
   
-  // Position the overlay above the cursor with some padding
   const x = cursorPosition.x - (windowBounds.width / 2);
-  const y = cursorPosition.y - windowBounds.height - 20; // 20px above cursor
+  const y = cursorPosition.y - windowBounds.height - 20;
   
-  // Make sure the window stays within screen bounds
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
   
@@ -1090,12 +742,11 @@ function createOverlayUltraFast(mode = 'standard') {
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setAlwaysOnTop(true, 'floating', 1);
 
-  // INSTANT response - start recording immediately when ready
   overlayWindow.webContents.on('did-finish-load', () => {
     overlayWindow.webContents.send('set-mode', mode);
-    overlayWindow.show(); // Show only when ready
-    startRecording(); // Ultra-fast recording start
-    isCreatingOverlay = false; // Release lock instantly
+    overlayWindow.show();
+    startRecording();
+    isCreatingOverlay = false;
   });
 
   overlayWindow.on('closed', () => {
@@ -1106,8 +757,6 @@ function createOverlayUltraFast(mode = 'standard') {
 
 // Alias for backward compatibility
 const createOverlay = createOverlayUltraFast;
-
-// Removed stopRecordingUltraFast - using single stopRecording function for reliability
 
 function createDashboard() {
   if (dashboardWindow) {
@@ -1134,11 +783,38 @@ function createDashboard() {
   });
 }
 
+
+
 function createAdminPanel() {
+  // Check if user is authenticated and has admin role
+  if (!isAuthenticated) {
+    console.log('🚫 Admin panel access denied: User not authenticated');
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'Access Denied',
+      message: 'You must be logged in to access the admin panel.',
+      buttons: ['OK']
+    });
+    return;
+  }
+
+  if (!authService.isAdmin()) {
+    console.log('🚫 Admin panel access denied: User is not an admin');
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'Access Denied',
+      message: 'You do not have permission to access the admin panel.',
+      buttons: ['OK']
+    });
+    return;
+  }
+
   if (adminWindow) {
     adminWindow.focus();
     return;
   }
+
+  console.log('✅ Admin panel access granted for:', authService.getUser()?.email);
 
   adminWindow = new BrowserWindow({
     width: 1200,
@@ -1159,41 +835,7 @@ function createAdminPanel() {
   });
 }
 
-// ULTRA-FAST recording start - optimized for instant response
-function startRecordingFast() {
-  if (recordingProcess) return; // Single essential check
 
-  // INSTANT setup - no logging delays
-  audioFile = path.join(app.getPath('temp'), `eloquent-${Date.now()}.wav`);
-  recordingStartTime = Date.now();
-  
-  // Start recording immediately with minimal overhead
-  recordingProcess = spawn('rec', [
-    '-r', '16000', '-c', '1', '-b', '16', '-t', 'wav',
-    audioFile,
-    'highpass', '80', 'lowpass', '8000',
-    'trim', '0'
-  ]);
-
-  // Ultra-fast amplitude updates for responsive UI
-  let amplitudeInterval = setInterval(() => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      const amplitude = Math.random() * 0.4 + 0.1;
-      overlayWindow.webContents.send('amplitude', amplitude);
-    } else {
-      clearInterval(amplitudeInterval);
-    }
-  }, 30); // Even faster updates for ultra-responsive feel
-
-  recordingProcess.on('close', () => clearInterval(amplitudeInterval));
-  recordingProcess.on('error', () => {
-    clearInterval(amplitudeInterval);
-    isProcessing = false;
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('error', 'Recording failed');
-    }
-  });
-}
 
 function startRecording() {
   // Prevent duplicate recording processes
@@ -1202,34 +844,23 @@ function startRecording() {
     return;
   }
 
-  // OPTIMIZED: Start performance monitoring
   performanceMonitor.startRecording();
 
   audioFile = path.join(app.getPath('temp'), `eloquent-${Date.now()}.wav`);
-  console.log('📁 Audio file path:', audioFile);
-  
-  // Record the actual start time
   recordingStartTime = Date.now();
 
-  // Play start sound with better audio
   playSound('start');
-  console.log('🎵 Recording started');
-  
-  // Measure recording latency
   performanceMonitor.measureRecordingLatency();
-
-  // OPTIMIZED: High-performance audio recording with voice activity detection
-  console.log('🎤 Starting optimized sox recording...');
   recordingProcess = spawn('rec', [
-    '-r', '16000',      // Sample rate: 16kHz (optimal for speech recognition)
-    '-c', '1',          // Mono channel
-    '-b', '16',         // 16-bit depth
-    '-t', 'wav',        // WAV format for faster processing
-    audioFile,          // Output file
-    'highpass', '80',   // Remove low-frequency noise
-    'lowpass', '8000',  // Remove high-frequency noise (speech is 80Hz-8kHz)
-    'compand', '0.02,0.20', '-60,-60,-30,-15,-20,-10,-5,-8,0,-7', '-3', '-90', '0.1', // Dynamic range compression
-    'trim', '0'         // Start immediately, no time limit
+    '-r', '16000',
+    '-c', '1',
+    '-b', '16',
+    '-t', 'wav',
+    audioFile,
+    'highpass', '80',
+    'lowpass', '8000',
+    'compand', '0.02,0.20', '-60,-60,-30,-15,-20,-10,-5,-8,0,-7', '-3', '-90', '0.1',
+    'trim', '0'
   ]);
 
   // Add better logging for the recording process
@@ -1241,15 +872,11 @@ function startRecording() {
     console.log('📊 Sox stderr:', data.toString());
   });
 
-  // OPTIMIZED: Real-time voice activity detection with audio analysis
   let amplitudeInterval = setInterval(() => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      // Enhanced amplitude calculation with voice activity detection
       const baseAmplitude = Math.random() * 0.3 + 0.1;
-      const voiceBoost = Math.random() > 0.7 ? Math.random() * 0.4 : 0; // Simulate voice activity
+      const voiceBoost = Math.random() > 0.7 ? Math.random() * 0.4 : 0;
       const amplitude = Math.min(baseAmplitude + voiceBoost, 1.0);
-      
-      // Detect voice activity based on amplitude patterns
       const hasVoiceActivity = amplitude > 0.25;
       
       overlayWindow.webContents.send('amplitude', amplitude);
@@ -1257,7 +884,7 @@ function startRecording() {
     } else {
       clearInterval(amplitudeInterval);
     }
-  }, 50); // Faster updates for better responsiveness
+  }, 50);
 
   recordingProcess.on('close', () => {
     clearInterval(amplitudeInterval);
@@ -1287,6 +914,9 @@ async function stopRecording() {
 
   isProcessing = true;
   console.log('🛑 Stopping recording...');
+  
+  // Calculate recording duration
+  const recordingDuration = recordingStartTime ? Date.now() - recordingStartTime : 0;
 
   // Stop recording process
   if (recordingProcess) {
@@ -1324,27 +954,25 @@ async function stopRecording() {
     let finalText;
     let originalText = '';
 
-    // Test mode or real transcription
-    if (!apiKey || apiKey.trim() === '' || apiKey === 'YOUR_GROQ_API_KEY_HERE') {
-      console.log('🧪 Test mode');
-      finalText = 'This is a test transcription. Configure your Groq API key in Settings for real voice recognition.';
-      originalText = finalText;
+    // Require API key for transcription
+    if (!apiKey || apiKey.trim() === '') {
+      throw new Error('API key not configured. Please add your Groq API key in Settings.');
+    }
+
+    console.log('🎤 Transcribing...');
+    originalText = await transcribe(audioFile);
+    
+    if (currentMode === 'rewrite') {
+      console.log('🤖 AI rewriting...');
+      finalText = await rewrite(originalText);
     } else {
-      console.log('🎤 Transcribing...');
-      originalText = await transcribe(audioFile);
-      
-      if (currentMode === 'rewrite') {
-        console.log('🤖 AI rewriting...');
-        finalText = await rewrite(originalText);
-      } else {
-        finalText = originalText;
-        if (CONFIG.autoGrammarFix) {
-          try {
-            finalText = await applyGrammarFixes(originalText);
-          } catch (error) {
-            console.warn('Grammar fix failed:', error.message);
-            finalText = originalText;
-          }
+      finalText = originalText;
+      if (CONFIG.autoGrammarFix) {
+        try {
+          finalText = await applyGrammarFixes(originalText);
+        } catch (error) {
+          console.warn('Grammar fix failed:', error.message);
+          finalText = originalText;
         }
       }
     }
@@ -1396,7 +1024,7 @@ async function stopRecording() {
 
   } catch (error) {
     console.error('❌ Recording failed:', error.message);
-    
+
     playSound('error');
     
     if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1424,9 +1052,8 @@ async function stopRecording() {
   }
 }
 
-// FIXED: Simplified and reliable transcription
+// Transcription function
 async function transcribe(filePath) {
-  // Basic validation
   if (!fs.existsSync(filePath)) {
     throw new Error('Audio file not found');
   }
@@ -1436,9 +1063,6 @@ async function transcribe(filePath) {
     throw new Error('Recording too short. Please speak for at least 1 second.');
   }
 
-  console.log(`🎤 Transcribing ${Math.round(stats.size/1000)}KB audio file...`);
-
-  // Use single, reliable transcription method
   const FormData = require('form-data');
   const form = new FormData();
   
@@ -1466,12 +1090,10 @@ async function transcribe(filePath) {
     }
   );
 
-  // Track API usage
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
     dashboardWindow.webContents.send('api-request', 'whisper');
   }
   
-  // Log API request for admin panel
   logApiRequest('whisper', 'success', Date.now() - recordingStartTime);
 
   let text = response.data;
@@ -1479,17 +1101,13 @@ async function transcribe(filePath) {
     text = text.text || '';
   }
 
-  // Basic cleanup and post-processing
   text = postProcessTranscription(text.trim());
   if (!text) {
     throw new Error('No speech detected. Please try again.');
   }
 
-  console.log(`✅ Transcribed: "${text.substring(0, 100)}..."`);
   return text;
 }
-
-// Removed overly complex transcription function - using simple reliable method above
 
 async function rewrite(text) {
   const startTime = Date.now();
@@ -1535,12 +1153,9 @@ async function rewrite(text) {
 function postProcessTranscription(text) {
   if (!text || typeof text !== 'string') return text;
 
-  // Remove extra whitespace
   text = text.trim().replace(/\s+/g, ' ');
 
-  // Fix common transcription errors (comprehensive professional list)
   const corrections = {
-    // Common misrecognitions from voice dictation
     'recognigar': 'recognizer',
     'recognage': 'recognize',
     'parfectly': 'perfectly',
@@ -1550,8 +1165,6 @@ function postProcessTranscription(text) {
     'tha ': 'the ',
     'approch': 'approach',
     'ifferent': 'different',
-    
-    // Professional terminology
     'recognise': 'recognize',
     'recogniser': 'recognizer',
     'recognation': 'recognition',
@@ -1560,13 +1173,8 @@ function postProcessTranscription(text) {
     'profesionally': 'professionally',
     'dictashun': 'dictation',
     'dictatation': 'dictation',
-    
-    // Voice/audio terms
-    'eloquent': 'eloquent',
     'vocie': 'voice',
     'voyce': 'voice',
-    
-    // Common words
     'proparly': 'properly',
     'properley': 'properly',
     'sentense': 'sentence',
@@ -1580,8 +1188,6 @@ function postProcessTranscription(text) {
     'texting': 'text',
     'pased': 'pasted',
     'pasteing': 'pasting',
-    
-    // Common word confusions (be careful with context)
     ' there ': ' their ',
     ' your ': ' you\'re ',
     ' its ': ' it\'s ',
@@ -1593,8 +1199,6 @@ function postProcessTranscription(text) {
     ' youre ': ' you\'re ',
     ' theyre ': ' they\'re ',
     ' were ': ' we\'re ',
-    
-    // Fix spacing around punctuation
     ' ,': ',',
     ' .': '.',
     ' ?': '?',
@@ -1701,67 +1305,7 @@ Now fix this text:`;
   return response.data.choices[0].message.content;
 }
 
-function pasteText(text) {
-  // Check if user wants to preserve clipboard (default: false for speed)
-  const preserveClipboard = CONFIG.preserveClipboard || false;
 
-  let oldClipboard = '';
-  if (preserveClipboard) {
-    // Save current clipboard only if user enabled this feature
-    oldClipboard = clipboard.readText();
-  }
-
-  // ULTRA-ROBUST PASTE MECHANISM with triple-retry logic
-  // This ensures text ALWAYS pastes reliably, even with focus issues
-
-  // Step 1: Set clipboard immediately with verification
-  clipboard.writeText(text);
-  
-  // Verify clipboard was set correctly
-  const clipboardCheck = clipboard.readText();
-  if (clipboardCheck !== text) {
-    console.warn('⚠️ Clipboard verification failed, retrying...');
-    clipboard.writeText(text);
-  }
-
-  // Step 2: Wait for clipboard to be fully ready (100ms for reliability)
-  setTimeout(() => {
-    // Step 3: First paste attempt with error handling
-    exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
-      if (error) {
-        console.error('First paste attempt failed:', error.message);
-      }
-    });
-
-    // Step 4: Second paste attempt after 150ms (primary fallback)
-    setTimeout(() => {
-      exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
-        if (error) {
-          console.error('Second paste attempt failed:', error.message);
-        }
-      });
-
-      // Step 5: Third paste attempt after 300ms (final fallback)
-      setTimeout(() => {
-        exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down'`, (error) => {
-          if (error) {
-            console.error('Third paste attempt failed:', error.message);
-            // Silently fail - text is in clipboard
-          }
-        });
-
-        // Step 6: Restore clipboard if needed (after all paste attempts)
-        if (preserveClipboard) {
-          setTimeout(() => {
-            clipboard.writeText(oldClipboard);
-          }, 500);
-        }
-      }, 150);
-    }, 150);
-  }, 100);
-
-  console.log(`✅ Pasting text (${text.length} characters) with triple-retry mechanism`);
-}
 
 // ENHANCED: Smart auto-paste system with multiple fallback methods
 function pasteTextRobust(text) {
@@ -1842,36 +1386,6 @@ function pasteTextRobust(text) {
   }
 }
 
-// Legacy function removed - all paste methods now in pasteTextRobust
-
-// Handle auto-paste failure with helpful guidance
-function handleAutoPasteFailed() {
-  console.log('📋 Auto-paste not available - using clipboard fallback');
-  
-  // Check if accessibility permission might be the issue
-  if (process.platform === 'darwin') {
-    const isTrusted = systemPreferences.isTrustedAccessibilityClient(false);
-    
-    if (!isTrusted) {
-      // Prompt to enable accessibility with option to open settings
-      showNotification('🔧 Enable Auto-Paste', 'Text in clipboard. Enable Electron in Accessibility settings for auto-paste.');
-      
-      // Offer to open settings (only once per session)
-      if (!global.accessibilityPromptShown) {
-        global.accessibilityPromptShown = true;
-        promptAccessibilityPermission();
-      }
-    } else {
-      // Permission is granted but still failing - might need app restart
-      showNotification('📋 Text Ready', 'Press Cmd+V to paste. Try restarting the app if auto-paste doesn\'t work.');
-    }
-  } else {
-    showNotification('📋 Text Ready', 'Press Cmd+V to paste');
-  }
-}
-
-// Removed overly complex auto-paste functions - using simple reliable method above
-
 // Show system notification with better UX
 function showNotification(title, body) {
   try {
@@ -1915,7 +1429,7 @@ function saveConfigToFile() {
       aiMode: CONFIG.aiMode,
       preserveClipboard: CONFIG.preserveClipboard,
       autoGrammarFix: CONFIG.autoGrammarFix,
-      enableWakeWord: CONFIG.enableWakeWord,
+
       customDictionary: CONFIG.customDictionary
     };
     
@@ -1985,7 +1499,7 @@ function loadConfigFromFile() {
       if (savedConfig.aiMode) CONFIG.aiMode = savedConfig.aiMode;
       if (savedConfig.preserveClipboard !== undefined) CONFIG.preserveClipboard = savedConfig.preserveClipboard;
       if (savedConfig.autoGrammarFix !== undefined) CONFIG.autoGrammarFix = savedConfig.autoGrammarFix;
-      if (savedConfig.enableWakeWord !== undefined) CONFIG.enableWakeWord = savedConfig.enableWakeWord;
+
       if (savedConfig.customDictionary) CONFIG.customDictionary = savedConfig.customDictionary;
       
       const validKeys = CONFIG.apiKeys.filter(k => k && k.trim()).length;
@@ -1998,6 +1512,10 @@ function loadConfigFromFile() {
     console.log('📋 Using default configuration');
   }
 }
+
+// Load configuration on startup
+loadConfigFromFile();
+loadAdminConfigFromFile();
 
 // FIXED: Simplified and reliable history management
 function saveToHistory(entry) {
@@ -2247,7 +1765,8 @@ ipcMain.on('auth-complete', (event, result) => {
   createDashboard();
 });
 
-// Sign-in is required - no skip option
+
+
 
 // Get current auth status
 ipcMain.handle('get-auth-status', async () => {
@@ -2319,6 +1838,95 @@ ipcMain.on('forgot-password', (event, email) => {
   shell.openExternal(`${authService.baseURL.replace('/api', '')}/forgot-password?email=${encodeURIComponent(email || '')}`);
 });
 
+// New Google Sign-in handlers for dashboard
+ipcMain.on('check-auth-status', (event) => {
+  console.log('🔍 Checking authentication status');
+  const user = authService.getUser();
+  event.reply('auth-status', {
+    isAuthenticated: authService.isAuthenticated(),
+    user: user
+  });
+});
+
+ipcMain.on('initiate-google-signin', async (event) => {
+  console.log('🔐 Initiating Google Sign-in');
+  try {
+    const result = await authService.signInWithGoogle();
+    if (result.success) {
+      // Open the OAuth URL in the default browser
+      shell.openExternal(result.url);
+    }
+  } catch (error) {
+    console.error('Google Sign-in error:', error);
+  }
+});
+
+ipcMain.on('sign-out', async (event) => {
+  console.log('👋 Signing out user');
+  try {
+    await authService.logout();
+    isAuthenticated = false;
+    event.reply('auth-status', {
+      isAuthenticated: false,
+      user: null
+    });
+  } catch (error) {
+    console.error('Sign-out error:', error);
+  }
+});
+
+// Plan management handlers
+ipcMain.on('check-subscription-status', (event) => {
+  console.log('💳 Checking subscription status');
+  const subscription = authService.getSubscription();
+  event.reply('subscription-status', {
+    planName: subscription?.plan || 'Free Plan',
+    status: subscription?.status || 'inactive',
+    currentPeriodEnd: subscription?.currentPeriodEnd
+  });
+});
+
+ipcMain.on('subscribe-to-plan', async (event, planType) => {
+  console.log('💰 Subscribing to plan:', planType);
+  try {
+    if (!authService.isAuthenticated()) {
+      // Redirect to sign-in first
+      event.reply('auth-status', {
+        isAuthenticated: false,
+        user: null
+      });
+      return;
+    }
+    
+    // Open subscription page in browser
+    const subscriptionUrl = `${authService.baseURL.replace('/api', '')}/subscribe?plan=${planType}`;
+    shell.openExternal(subscriptionUrl);
+  } catch (error) {
+    console.error('Subscription error:', error);
+  }
+});
+
+ipcMain.on('manage-subscription', async (event) => {
+  console.log('⚙️ Opening subscription management');
+  try {
+    if (!authService.isAuthenticated()) {
+      event.reply('auth-status', {
+        isAuthenticated: false,
+        user: null
+      });
+      return;
+    }
+    
+    // Open billing portal
+    await authService.openBillingPortal();
+  } catch (error) {
+    console.error('Manage subscription error:', error);
+    // Fallback to opening account page
+    const accountUrl = `${authService.baseURL.replace('/api', '')}/account`;
+    shell.openExternal(accountUrl);
+  }
+});
+
 // ============================================
 // LOGIN WINDOW
 // ============================================
@@ -2387,7 +1995,7 @@ ipcMain.on('save-config', (event, newConfig) => {
   if (newConfig.aiMode) CONFIG.aiMode = newConfig.aiMode;
   if (newConfig.preserveClipboard !== undefined) CONFIG.preserveClipboard = newConfig.preserveClipboard;
   if (newConfig.autoGrammarFix !== undefined) CONFIG.autoGrammarFix = newConfig.autoGrammarFix;
-  if (newConfig.enableWakeWord !== undefined) CONFIG.enableWakeWord = newConfig.enableWakeWord;
+
   
   // Save configuration to file
   saveConfigToFile();
@@ -2439,7 +2047,14 @@ ipcMain.on('delete-history-item', (event, id) => {
 
 
 // Admin IPC handlers
+ipcMain.handle('admin-verify-access', async () => {
+  return isAuthenticated && authService.isAdmin();
+});
+
 ipcMain.handle('admin-get-config', async () => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
   return {
     masterApiKey: ADMIN_CONFIG.masterApiKey || '',
     dailyLimit: ADMIN_CONFIG.dailyLimit || 1000,
@@ -2448,6 +2063,10 @@ ipcMain.handle('admin-get-config', async () => {
 });
 
 ipcMain.handle('admin-save-config', async (event, newAdminConfig) => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   console.log('💾 Saving admin configuration:', newAdminConfig);
   
   if (newAdminConfig.masterApiKey) ADMIN_CONFIG.masterApiKey = newAdminConfig.masterApiKey;
@@ -2466,6 +2085,10 @@ ipcMain.handle('admin-save-config', async (event, newAdminConfig) => {
 });
 
 ipcMain.handle('admin-get-stats', async () => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   const today = new Date().toISOString().split('T')[0];
   const todayRequests = ADMIN_CONFIG.apiRequests.filter(req => 
     req.timestamp.startsWith(today)
@@ -2490,6 +2113,10 @@ ipcMain.handle('admin-get-stats', async () => {
 });
 
 ipcMain.handle('admin-get-users', async () => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   return ADMIN_CONFIG.users.map(user => ({
     ...user,
     requestCount: ADMIN_CONFIG.apiRequests.filter(req => req.userId === user.id).length
@@ -2497,6 +2124,10 @@ ipcMain.handle('admin-get-users', async () => {
 });
 
 ipcMain.handle('admin-add-user', async (event, userData) => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   const newUser = {
     id: Date.now().toString(),
     email: userData.email,
@@ -2511,6 +2142,10 @@ ipcMain.handle('admin-add-user', async (event, userData) => {
 });
 
 ipcMain.handle('admin-remove-user', async (event, userId) => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   ADMIN_CONFIG.users = ADMIN_CONFIG.users.filter(user => user.id !== userId);
   // Also remove user's API requests
   ADMIN_CONFIG.apiRequests = ADMIN_CONFIG.apiRequests.filter(req => req.userId !== userId);
@@ -2520,12 +2155,20 @@ ipcMain.handle('admin-remove-user', async (event, userId) => {
 });
 
 ipcMain.handle('admin-get-requests', async () => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   return ADMIN_CONFIG.apiRequests
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
     .slice(0, 100); // Return last 100 requests
 });
 
 ipcMain.handle('admin-clear-logs', async () => {
+  if (!isAuthenticated || !authService.isAdmin()) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
   ADMIN_CONFIG.apiRequests = [];
   saveAdminConfigToFile();
   

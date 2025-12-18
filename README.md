@@ -40,8 +40,8 @@ cd ..
 
 3. **Configure environment**
 ```bash
-# Copy environment template
-cp backend-go/.env.example backend-go/.env
+# Create environment file
+touch backend-go/.env
 
 # Edit with your credentials:
 # - SUPABASE_URL
@@ -50,10 +50,19 @@ cp backend-go/.env.example backend-go/.env
 # - STRIPE_SECRET_KEY
 ```
 
-4. **Start the application**
+4. **Configure Production Mode** (Optional)
+```bash
+# Quick interactive setup
+npm run configure-production
+
+# Or check current status
+npm run check-production
+```
+
+5. **Start the application**
 ```bash
 # Option 1: Start everything at once
-./start-go-app.sh
+npm run start:full
 
 # Option 2: Start manually
 # Terminal 1: Go backend
@@ -62,6 +71,38 @@ cd backend-go && go run main.go
 # Terminal 2: Electron app
 npm start
 ```
+
+## 🚀 Production Mode Setup
+
+Eloquent supports two modes:
+
+### 🔧 Development Mode (Default)
+- Mock authentication (no real Google sign-in)
+- Works offline
+- Good for testing
+
+### 🚀 Production Mode
+- Real Google OAuth authentication
+- User accounts and subscriptions
+- Cloud data storage
+
+### Quick Configuration
+```bash
+# Interactive setup wizard
+npm run configure-production
+
+# Check current status
+npm run check-production
+
+# Validate configuration
+npm run validate-production
+```
+
+**Required credentials:**
+- **Groq API Key** (free at [console.groq.com](https://console.groq.com))
+- **Supabase Anon Key** (from [your dashboard](https://supabase.com/dashboard/project/apphxfvhpqogsquqlaol))
+
+See `PRODUCTION_MODE_GUIDE.md` for detailed instructions.
 
 ## 🏗️ Architecture
 
@@ -194,7 +235,8 @@ ELOQUENT_API_URL=https://your-api.com   # Production
 - `Alt + Shift + Space` - Start AI rewrite mode
 - `Escape` - Stop recording
 - `Cmd + Shift + D` - Open dashboard
-- `Cmd + Shift + A` - Open admin panel
+
+- `Cmd + Shift + A` - Open admin panel (admin users only)
 
 ### **Features**
 - **Auto-paste**: Text appears at cursor automatically
@@ -202,6 +244,32 @@ ELOQUENT_API_URL=https://your-api.com   # Production
 - **Usage Limits**: Track monthly usage by plan
 - **Multiple Languages**: Support for various languages
 - **Subscription Management**: Stripe-powered billing
+- **Analytics Dashboard**: Real-time usage insights and performance metrics
+
+## 🔐 Admin Panel
+
+The admin panel provides system administrators with tools to manage API configuration, monitor usage, and manage users.
+
+### **Access Control**
+- **Authentication Required**: Users must be logged in to access admin features
+- **Admin Role Required**: Only users with admin privileges can access the panel
+- **Development Mode**: In development, the mock user automatically has admin access
+
+### **Admin Features**
+- **API Configuration**: Manage Groq API keys and rate limits
+- **User Management**: Add/remove users and view activity
+- **Usage Monitoring**: Real-time API request statistics
+- **Request Logs**: View detailed API request history
+
+### **Accessing Admin Panel**
+1. **Tray Menu**: Right-click tray icon → "Admin Panel" (if admin)
+2. **Keyboard Shortcut**: `Cmd + Shift + A` (if admin)
+3. **Access Denied**: Non-admin users will see an access denied message
+
+### **Development Setup**
+In development mode, the mock user automatically has admin privileges. In production, admin roles should be managed through your backend database by setting the user's `role` field to `'admin'`.
+
+
 
 ## 🛠️ Troubleshooting
 

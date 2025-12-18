@@ -22,7 +22,7 @@ func NewWebhookHandler(stripeService *services.StripeService, userService *servi
 }
 
 func (h *WebhookHandler) StripeWebhook(c *gin.Context) {
-	body, err := io.ReadAll(c.Request.Body)
+	_, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return

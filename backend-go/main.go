@@ -44,12 +44,7 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"app://eloquent", "https://eloquentapp.com"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-	}))
+	r.Use(cors.Default())
 
 	// Rate limiting middleware
 	r.Use(middleware.RateLimit())

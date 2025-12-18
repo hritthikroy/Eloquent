@@ -1,7 +1,6 @@
 package services
 
 import (
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -173,22 +172,13 @@ func (s *UserService) GetUsageHistory(userID string, limit int) ([]*models.Usage
 	return []*models.UsageLog{}, nil
 }
 
-// JSON marshaling for database storage
-func (u *models.User) Value() (driver.Value, error) {
+// JSON marshaling helpers
+func UserToJSON(u *models.User) ([]byte, error) {
 	return json.Marshal(u)
 }
 
-func (u *models.User) Scan(value interface{}) error {
-	if value == nil {
-		return nil
-	}
-	
-	switch v := value.(type) {
-	case []byte:
-		return json.Unmarshal(v, u)
-	case string:
-		return json.Unmarshal([]byte(v), u)
-	default:
-		return fmt.Errorf("cannot scan %T into User", value)
-	}
+func UserFromJSON(data []byte) (*models.User, error) {
+	var u models.User
+	err := json.Unmarshal(data, &u)
+	return &u, err
 }

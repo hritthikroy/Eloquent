@@ -1,142 +1,93 @@
 #!/bin/bash
 
-# Eloquent Production Setup Script
-# This script helps you set up the complete production environment
+# Eloquent - Production Mode Setup Script
+# This script helps you configure production mode with real Google OAuth
 
-echo "🚀 Eloquent Production Setup"
-echo "============================"
+echo "🚀 Eloquent - Production Mode Setup"
+echo "===================================="
 echo ""
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-print_step() {
-    echo -e "${BLUE}[STEP]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[✓]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[!]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[✗]${NC} $1"
-}
-
-# Check prerequisites
-print_step "Checking prerequisites..."
-
-# Check Node.js
-if command -v node &> /dev/null; then
-    NODE_VERSION=$(node -v)
-    print_success "Node.js installed: $NODE_VERSION"
-else
-    print_error "Node.js not found. Please install Node.js 18+ from https://nodejs.org"
+# Check if .env.production exists
+if [ ! -f ".env.production" ]; then
+    echo "❌ .env.production template not found!"
+    echo "Please make sure you're in the EloquentElectron directory"
     exit 1
 fi
 
-# Check npm
-if command -v npm &> /dev/null; then
-    NPM_VERSION=$(npm -v)
-    print_success "npm installed: $NPM_VERSION"
-else
-    print_error "npm not found"
-    exit 1
-fi
-
+echo "📋 This script will help you set up production mode with real Google OAuth."
 echo ""
-print_step "Installing Electron app dependencies..."
-npm install
-print_success "Electron dependencies installed"
-
-echo ""
-print_step "Installing backend dependencies..."
-cd backend
-npm install
-cd ..
-print_success "Backend dependencies installed"
-
-echo ""
-echo "============================"
-echo "📋 MANUAL SETUP REQUIRED"
-echo "============================"
-echo ""
-echo "Please complete the following steps manually:"
-echo ""
-echo "1. 🗄️  DATABASE SETUP (MongoDB Atlas)"
-echo "   - Go to https://cloud.mongodb.com"
-echo "   - Create a free cluster"
-echo "   - Create database user"
-echo "   - Get connection string"
-echo ""
-echo "2. 💳 STRIPE SETUP"
-echo "   - Go to https://dashboard.stripe.com"
-echo "   - Create products: 'Eloquent Pro' and 'Eloquent Business'"
-echo "   - Create prices for monthly and yearly billing"
-echo "   - Set up webhook endpoint"
-echo ""
-echo "3. 🔑 GROQ API KEY"
-echo "   - Go to https://console.groq.com"
-echo "   - Create an API key"
-echo ""
-echo "4. 🍎 APPLE DEVELOPER (for code signing)"
-echo "   - Enroll at https://developer.apple.com"
-echo "   - Create Developer ID Application certificate"
-echo "   - Generate app-specific password at https://appleid.apple.com"
-echo ""
-echo "============================"
+echo "📚 Before continuing, you need:"
+echo "   1. Supabase project created at supabase.com"
+echo "   2. Google Cloud Console project with OAuth credentials"
+echo "   3. Google OAuth configured in Supabase dashboard"
 echo ""
 
-# Create .env file for backend
-print_step "Creating backend .env file..."
+read -p "Do you have all the requirements above? (y/n): " -n 1 -r
+echo ""
 
-if [ -f "backend/.env" ]; then
-    print_warning "backend/.env already exists. Skipping..."
-else
-    cp backend/.env.example backend/.env
-    print_success "Created backend/.env from template"
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo ""
-    echo "📝 Please edit backend/.env with your credentials:"
-    echo "   - MONGODB_URI"
-    echo "   - JWT_SECRET (generate with: openssl rand -hex 64)"
-    echo "   - STRIPE_SECRET_KEY"
-    echo "   - STRIPE_WEBHOOK_SECRET"
-    echo "   - STRIPE_PRICE_* (4 price IDs)"
-    echo "   - GROQ_API_KEY"
+    echo "📖 Please follow the setup guide first:"
+    echo "   - Read PRODUCTION_SETUP.md for detailed instructions"
+    echo "   - Set up Supabase project"
+    echo "   - Configure Google OAuth"
+    echo "   - Then run this script again"
+    echo ""
+    exit 1
 fi
 
 echo ""
-echo "============================"
-echo "🎯 NEXT STEPS"
-echo "============================"
+echo "🔧 Setting up production environment..."
+
+# Backup existing .env if it exists
+if [ -f ".env" ]; then
+    echo "📁 Backing up existing .env to .env.backup"
+    cp .env .env.backup
+fi
+
+# Copy production template
+echo "📋 Creating .env from production template..."
+cp .env.production .env
+
 echo ""
-echo "1. Edit backend/.env with your credentials"
+echo "✅ Production template created!"
 echo ""
-echo "2. Start the backend locally:"
-echo "   cd backend && npm run dev"
+echo "🔑 Now you need to edit .env with your real credentials:"
 echo ""
-echo "3. Test the Electron app:"
+echo "   1. SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co"
+echo "   2. SUPABASE_ANON_KEY=eyJ... (from Supabase dashboard)"
+echo "   3. SUPABASE_SERVICE_KEY=eyJ... (from Supabase dashboard)"
+echo "   4. GROQ_API_KEY_1=gsk_... (your Groq API key)"
+echo ""
+
+read -p "Would you like to open .env for editing now? (y/n): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # Try to open with common editors
+    if command -v code &> /dev/null; then
+        echo "📝 Opening .env in VS Code..."
+        code .env
+    elif command -v nano &> /dev/null; then
+        echo "📝 Opening .env in nano..."
+        nano .env
+    elif command -v vim &> /dev/null; then
+        echo "📝 Opening .env in vim..."
+        vim .env
+    else
+        echo "📝 Please edit .env manually with your preferred editor"
+    fi
+fi
+
+echo ""
+echo "🧪 After editing .env, test production mode:"
 echo "   npm start"
 echo ""
-echo "4. Deploy backend to Railway:"
-echo "   cd backend"
-echo "   railway login"
-echo "   railway init"
-echo "   railway up"
+echo "✅ The app should now use real Google OAuth instead of development mode"
 echo ""
-echo "5. Build signed app for distribution:"
-echo "   export APPLE_ID='your@email.com'"
-echo "   export APPLE_APP_SPECIFIC_PASSWORD='xxxx-xxxx-xxxx-xxxx'"
-echo "   export APPLE_TEAM_ID='XXXXXXXXXX'"
-echo "   npm run build:signed"
+echo "🔍 Look for these signs of production mode:"
+echo "   - No 'Development mode detected' in console"
+echo "   - Google sign-in redirects to real Google OAuth"
+echo "   - No 'Continue in Development Mode' button needed"
 echo ""
-echo "📚 See DEPLOYMENT.md for detailed instructions"
-echo ""
-print_success "Setup script complete!"
+echo "📚 For troubleshooting, see PRODUCTION_SETUP.md"

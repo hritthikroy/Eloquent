@@ -22,6 +22,8 @@ npm-debug.log*
 *.tmp
 *.temp
 
-# API usage data
+# User data
 api-usage.json
 history.json
+config.json
+admin-config.json

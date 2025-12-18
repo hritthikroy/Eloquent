@@ -572,7 +572,32 @@
     const { ipcRenderer } = require('electron');
 
     // Load admin data on startup
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Verify admin access on page load
+      try {
+        const hasAccess = await ipcRenderer.invoke('admin-verify-access');
+        if (!hasAccess) {
+          document.body.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; text-align: center;">
+              <h1 style="color: #ef4444; margin-bottom: 20px;">🚫 Access Denied</h1>
+              <p style="color: #ffffff; margin-bottom: 30px;">You do not have permission to access the admin panel.</p>
+              <button onclick="window.close()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">Close Window</button>
+            </div>
+          `;
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to verify admin access:', error);
+        document.body.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; text-align: center;">
+            <h1 style="color: #ef4444; margin-bottom: 20px;">❌ Error</h1>
+            <p style="color: #ffffff; margin-bottom: 30px;">Failed to verify admin access.</p>
+            <button onclick="window.close()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">Close Window</button>
+          </div>
+        `;
+        return;
+      }
+
       loadAdminConfig();
       loadAdminData();
       loadUsers();
