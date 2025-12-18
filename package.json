@@ -14,9 +14,20 @@
     "build:signed": "electron-builder --mac --universal --publish never",
     "build:unsigned": "electron-builder --mac --universal --publish never",
     "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'",
+    
     "backend:dev": "cd backend-go && go run main.go",
     "backend:build": "cd backend-go && go build -o eloquent-backend .",
-    "start:full": "npm run backend:dev & npm start"
+    "backend:test": "cd backend-go && go test ./...",
+    "backend:clean": "cd backend-go && go clean && rm -f eloquent-backend",
+    
+    "start:full": "npm run backend:dev & npm start",
+    "test": "echo 'No tests specified yet'",
+    "lint": "echo 'No linting configured yet'",
+    
+    "check-deps": "node check-dependencies.js",
+    "configure-production": "node -e \"console.log('🔧 Production Configuration Guide:\\n\\n1. Get Groq API key: https://console.groq.com\\n2. Get Supabase credentials: https://supabase.com/dashboard\\n3. Update .env file with real credentials\\n4. Run: npm run validate-production')\"",
+    "check-production": "node -e \"const fs=require('fs'); const env=fs.readFileSync('.env','utf8'); console.log('🔍 Production Status:'); console.log('Groq API:', env.includes('gsk_') ? '✅ Configured' : '❌ Missing'); console.log('Supabase:', env.includes('supabase.co') && !env.includes('your-project') ? '✅ Configured' : '❌ Missing');\"",
+    "validate-production": "node -e \"const fs=require('fs'); const env=fs.readFileSync('.env','utf8'); const hasGroq=env.includes('gsk_'); const hasSupabase=env.includes('supabase.co')&&!env.includes('your-project'); console.log(hasGroq&&hasSupabase?'✅ Production ready!':'❌ Missing credentials. Run: npm run configure-production');\""
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.0",

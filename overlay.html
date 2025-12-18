@@ -123,7 +123,14 @@
       padding: 2px 8px;
       border-radius: 10px;
       flex-shrink: 0;
+      text-align: center;
+      min-width: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
+
 
     /* Entrance animation */
     .overlay {
@@ -133,6 +140,58 @@
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Quick popup mode - faster, more dramatic animations */
+    .overlay.quick-popup {
+      animation: quickPopIn 0.1s ease-out;
+    }
+
+    @keyframes quickPopIn {
+      0% { 
+        opacity: 0; 
+        transform: translateY(-8px) scale(0.8); 
+      }
+      50% { 
+        opacity: 1; 
+        transform: translateY(2px) scale(1.05); 
+      }
+      100% { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+      }
+    }
+
+    /* Quick popup flash effect */
+    .overlay.quick-popup .rec-indicator {
+      animation: quickFlash 0.15s ease-in-out infinite;
+    }
+
+    @keyframes quickFlash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Quick popup compact styling */
+    .overlay.quick-popup {
+      height: 35px;
+      padding: 0 12px;
+      gap: 8px;
+    }
+
+    .overlay.quick-popup .rec-label {
+      font-size: 12px;
+    }
+
+    .overlay.quick-popup .timer {
+      font-size: 11px;
+      padding: 1px 6px;
+      min-width: 35px;
+    }
+
+    .overlay.quick-popup .waveform {
+      width: 40px;
+      height: 16px;
     }
   </style>
 </head>
@@ -161,6 +220,7 @@
     const overlay = document.getElementById('overlay');
 
     let mode = 'standard';
+    let quickPopupMode = false;
     let audioContext;
     let analyser;
     let dataArray;
@@ -252,6 +312,33 @@
       loop();
     }
 
+    // Quick popup animation - fast and energetic
+    function animateQuickPopup() {
+      let t = 0;
+      let frameCount = 0;
+      function loop() {
+        animationId = requestAnimationFrame(loop);
+        
+        // Fast, energetic animation for quick popup
+        for (let i = 0; i < 6; i++) {
+          const centerFactor = 1 - (i / 6) * 0.3;
+          // Faster oscillation and higher amplitude for quick popup
+          const target = (Math.sin(t * 0.15 + i * 0.8) * 8 + 12) * centerFactor;
+          barHeights[i] = barHeights[i] * 0.6 + target * 0.4; // Faster response
+        }
+        drawBars();
+        t++;
+        
+        // Update timer less frequently but show quick status
+        frameCount++;
+        if (frameCount % 15 === 0) {
+          const messages = ['Quick!', 'Flash!', 'Pop!', 'Zap!'];
+          timer.textContent = messages[Math.floor(Math.random() * messages.length)];
+        }
+      }
+      loop();
+    }
+
     // ULTRA-FAST Draw mirrored bars with optimizations
     function drawBars() {
       // PERFORMANCE BOOST: Use faster clearRect
@@ -301,10 +388,29 @@
       overlay.classList.toggle('rewrite', m === 'rewrite');
     });
 
-    // Status updates
-    ipcRenderer.on('status', (_, status) => {
-      timer.textContent = status;
+    // Quick popup mode
+    ipcRenderer.on('quick-popup-mode', (_, enabled) => {
+      quickPopupMode = enabled;
+      overlay.classList.toggle('quick-popup', enabled);
+      
+      if (enabled) {
+        // Update canvas size for quick popup
+        canvasW = 40;
+        canvasH = 16;
+        setupCanvas();
+        
+        // Show quick status
+        timer.textContent = 'Quick!';
+        
+        // Start quick animation immediately
+        animateQuickPopup();
+      }
     });
+
+    // Status updates (removed processing text functionality)
+    // ipcRenderer.on('status', (_, status) => {
+    //   timer.textContent = status;
+    // });
 
     // Error handling
     ipcRenderer.on('error', (_, errorMsg) => {

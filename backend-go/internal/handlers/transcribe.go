@@ -78,11 +78,11 @@ func (h *TranscribeHandler) TranscribeAudio(c *gin.Context) {
 
 	// PERFORMANCE BOOST: Use worker pool for transcription
 	var result *services.TranscriptionResult
-	var err error
 	
 	transcriptionErr := services.SubmitTranscriptionJob(c.Request.Context(), func() error {
-		result, err = h.transcribeService.TranscribeAudio(audioData, header.Filename, language, mode)
-		return err
+		var transcribeErr error
+		result, transcribeErr = h.transcribeService.TranscribeAudio(audioData, header.Filename, language, mode)
+		return transcribeErr
 	})
 	
 	if transcriptionErr != nil {

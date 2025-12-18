@@ -612,6 +612,34 @@ function createTray() {
           createOverlay('standard');
         }
       }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quick Popup Test (Cmd+Shift+Q)',
+      click: () => {
+        playSound('notification');
+        createQuickPopupRecording('standard', 1500);
+      }
+    },
+    {
+      label: 'Quick Flash (Cmd+Shift+F)',
+      click: () => {
+        playSound('notification');
+        createQuickPopupRecording('rewrite', 800);
+      }
+    },
+    {
+      label: 'Flash Notification (Cmd+Shift+N)',
+      click: () => {
+        playSound('start');
+        createFlashNotification('Hello!', 600);
+      }
+    },
+    {
+      label: 'Pulse Notification (Cmd+Shift+U)',
+      click: () => {
+        createPulseNotification(3, 300);
+      }
     }
   );
 
@@ -730,7 +758,6 @@ function handleShortcut(action, mode = 'standard') {
     }
   } else if (action === 'stop') {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('status', 'Stopping...');
       stopRecording();
     }
   }
@@ -790,15 +817,54 @@ function registerShortcuts() {
     createManualOAuthWindow();
   });
 
+  // Cmd+Shift+Q - Quick Popup Test (1.5 seconds)
+  const quickPopupRegistered = globalShortcut.register('Cmd+Shift+Q', () => {
+    console.log('⚡ Cmd+Shift+Q pressed - quick popup test');
+    playSound('notification');
+    createQuickPopupRecording('standard', 1500);
+  });
+
+  // Cmd+Shift+F - Quick Flash (0.8 seconds)
+  const quickFlashRegistered = globalShortcut.register('Cmd+Shift+F', () => {
+    console.log('⚡ Cmd+Shift+F pressed - quick flash');
+    playSound('notification');
+    createQuickPopupRecording('rewrite', 800);
+  });
+
+  // Cmd+Shift+P - Ultra Quick Popup (0.3 seconds)
+  const ultraQuickRegistered = globalShortcut.register('Cmd+Shift+P', () => {
+    console.log('⚡ Cmd+Shift+P pressed - ultra quick popup');
+    playSound('start');
+    createQuickPopupRecording('standard', 300);
+  });
+
+  // Cmd+Shift+N - Flash Notification
+  const flashNotificationRegistered = globalShortcut.register('Cmd+Shift+N', () => {
+    console.log('💫 Cmd+Shift+N pressed - flash notification');
+    playSound('start');
+    createFlashNotification('Flash!', 600);
+  });
+
+  // Cmd+Shift+U - Pulse Notification
+  const pulseNotificationRegistered = globalShortcut.register('Cmd+Shift+U', () => {
+    console.log('🔄 Cmd+Shift+U pressed - pulse notification');
+    createPulseNotification(3, 300);
+  });
+
 
 
   console.log('✅ Shortcuts registered:');
   console.log(`   Alt+Shift+Space (AI Rewrite): ${rewriteRegistered ? 'OK' : 'FAILED'}`);
   console.log(`   Alt+Space (Standard): ${standardRegistered ? 'OK' : 'FAILED'}`);
   console.log(`   Escape (Stop): ${escapeRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Cmd+Shift+Q (Quick Popup): ${quickPopupRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Cmd+Shift+F (Quick Flash): ${quickFlashRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Cmd+Shift+P (Ultra Quick): ${ultraQuickRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Cmd+Shift+N (Flash Notification): ${flashNotificationRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   Cmd+Shift+U (Pulse Notification): ${pulseNotificationRegistered ? 'OK' : 'FAILED'}`);
   
   if (!rewriteRegistered || !standardRegistered || !escapeRegistered) {
-    console.error('❌ Some shortcuts failed to register');
+    console.error('❌ Some core shortcuts failed to register');
   }
 }
 
@@ -906,6 +972,249 @@ function createOverlayUltraFast(mode = 'standard') {
     overlayWindow = null;
     isCreatingOverlay = false;
   });
+}
+
+// QUICK POPUP: Ultra-fast popup recording window that appears and disappears rapidly
+function createQuickPopupRecording(mode = 'standard', duration = 2000) {
+  currentMode = mode;
+
+  if (!isAuthenticated) {
+    showNotification('Sign In Required', 'Please sign in with Google to use Eloquent');
+    createLoginWindow();
+    return;
+  }
+
+  if (isCreatingOverlay) {
+    return;
+  }
+  
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    // If window exists, just flash it quickly
+    overlayWindow.show();
+    setTimeout(() => {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.hide();
+      }
+    }, duration);
+    return;
+  }
+  
+  if (recordingProcess) {
+    recordingProcess.kill();
+    recordingProcess = null;
+  }
+
+  isCreatingOverlay = true;
+  
+  // ULTRA-FAST: Get cursor position for instant popup
+  const cursorPosition = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursorPosition);
+  const screenBounds = display.workArea;
+  
+  // Smaller window for quick popup
+  const windowWidth = 200;
+  const windowHeight = 40;
+  const x = cursorPosition.x - (windowWidth / 2);
+  const y = cursorPosition.y - windowHeight - 15;
+  
+  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
+  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
+  
+  overlayWindow = new BrowserWindow({
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round(finalX),
+    y: Math.round(finalY),
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    hasShadow: false,
+    focusable: false,
+    acceptFirstMouse: false,
+    show: false,
+    paintWhenInitiallyHidden: false,
+    // ULTRA-FAST: Minimal webPreferences for instant popup
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      backgroundThrottling: false,
+      hardwareAcceleration: true,
+      webSecurity: false, // Faster loading for quick popup
+      enableWebSQL: false
+    }
+  });
+  
+  // INSTANT: Set properties immediately
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlayWindow.setAlwaysOnTop(true, 'floating', 1);
+
+  // INSTANT: Load and show immediately
+  overlayWindow.loadFile('overlay.html');
+
+  overlayWindow.webContents.once('did-finish-load', () => {
+    overlayWindow.webContents.send('set-mode', mode);
+    overlayWindow.webContents.send('quick-popup-mode', true);
+    overlayWindow.show();
+    
+    // Auto-hide after specified duration
+    setTimeout(() => {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.hide();
+        
+        // Optional: Close completely after hiding
+        setTimeout(() => {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.close();
+            overlayWindow = null;
+          }
+        }, 500);
+      }
+    }, duration);
+    
+    isCreatingOverlay = false;
+  });
+
+  overlayWindow.on('closed', () => {
+    overlayWindow = null;
+    isCreatingOverlay = false;
+  });
+
+  // Return promise that resolves when popup is done
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, duration + 500);
+  });
+}
+
+// FLASH NOTIFICATION: Ultra-quick visual feedback (no recording)
+function createFlashNotification(message = 'Flash!', duration = 500) {
+  if (isCreatingOverlay) {
+    return;
+  }
+
+  isCreatingOverlay = true;
+  
+  const cursorPosition = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursorPosition);
+  const screenBounds = display.workArea;
+  
+  // Tiny window for flash notification
+  const windowWidth = 150;
+  const windowHeight = 30;
+  const x = cursorPosition.x - (windowWidth / 2);
+  const y = cursorPosition.y - windowHeight - 10;
+  
+  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
+  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
+  
+  const flashWindow = new BrowserWindow({
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round(finalX),
+    y: Math.round(finalY),
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    hasShadow: false,
+    focusable: false,
+    acceptFirstMouse: false,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      backgroundThrottling: false,
+      hardwareAcceleration: true
+    }
+  });
+  
+  flashWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  flashWindow.setAlwaysOnTop(true, 'floating', 1);
+
+  // Create simple HTML for flash notification
+  const flashHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+          background: transparent;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+        }
+        .flash {
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          color: white;
+          padding: 6px 12px;
+          border-radius: 15px;
+          font-size: 12px;
+          font-weight: 600;
+          text-align: center;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          animation: flashPop 0.3s ease-out;
+          transform: translateZ(0);
+        }
+        @keyframes flashPop {
+          0% { opacity: 0; transform: scale(0.5) translateY(-5px); }
+          50% { opacity: 1; transform: scale(1.1) translateY(0); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="flash">${message}</div>
+    </body>
+    </html>
+  `;
+
+  flashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(flashHTML));
+
+  flashWindow.webContents.once('did-finish-load', () => {
+    flashWindow.show();
+    
+    // Auto-close after duration
+    setTimeout(() => {
+      if (!flashWindow.isDestroyed()) {
+        flashWindow.close();
+      }
+    }, duration);
+    
+    isCreatingOverlay = false;
+  });
+
+  flashWindow.on('closed', () => {
+    isCreatingOverlay = false;
+  });
+
+  return flashWindow;
+}
+
+// PULSE NOTIFICATION: Rhythmic popup at cursor
+function createPulseNotification(count = 3, interval = 200) {
+  let pulseCount = 0;
+  
+  function pulse() {
+    if (pulseCount >= count) return;
+    
+    createFlashNotification(`Pulse ${pulseCount + 1}`, interval - 50);
+    playSound('notification');
+    pulseCount++;
+    
+    if (pulseCount < count) {
+      setTimeout(pulse, interval);
+    }
+  }
+  
+  pulse();
 }
 
 // Alias for backward compatibility
@@ -1135,9 +1444,7 @@ async function stopRecording() {
     recordingProcess = null;
   }
 
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.webContents.send('status', 'Processing...');
-  }
+  // Processing status removed - overlay will close immediately
 
   // Wait for file to be written - reduced from 500ms to 200ms
   await new Promise(r => setTimeout(r, 200));
