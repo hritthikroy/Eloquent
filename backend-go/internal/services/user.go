@@ -28,12 +28,25 @@ func (s *UserService) GetUserByID(userID string) (*models.User, error) {
 		return nil, err
 	}
 
+	// Mock user - in real implementation this would come from database
+	email := "user@example.com"
+	role := "user"
+	plan := "free"
+	subscriptionStatus := "none"
+	
+	// Check if this is an admin user (in real implementation, this would be stored in DB)
+	if models.IsAdminEmail(email) {
+		role = "admin"
+		plan = "enterprise"
+		subscriptionStatus = "active"
+	}
+
 	user := &models.User{
 		ID:                  id,
-		Email:               "user@example.com",
-		Role:                "user",
-		Plan:                "free",
-		SubscriptionStatus:  "none",
+		Email:               email,
+		Role:                role,
+		Plan:                plan,
+		SubscriptionStatus:  subscriptionStatus,
 		UsageCurrentMonth:   0,
 		UsageLastReset:      time.Now(),
 		Settings:            map[string]interface{}{"language": "en", "aiMode": "auto", "autoGrammarFix": true},
@@ -50,18 +63,23 @@ func (s *UserService) CreateOrUpdateGoogleUser(userData map[string]interface{}, 
 	
 	email := userData["email"].(string)
 	
-	// Determine user role based on email
+	// Determine user role and plan based on email
 	role := "user"
+	plan := "free"
+	subscriptionStatus := "none"
+	
 	if models.IsAdminEmail(email) {
 		role = "admin"
+		plan = "enterprise"
+		subscriptionStatus = "active"
 	}
 	
 	user := &models.User{
 		ID:                  id,
 		Email:               email,
 		Role:                role,
-		Plan:                "free",
-		SubscriptionStatus:  "none",
+		Plan:                plan,
+		SubscriptionStatus:  subscriptionStatus,
 		UsageCurrentMonth:   0,
 		UsageLastReset:      time.Now(),
 		Settings:            map[string]interface{}{"language": "en", "aiMode": "auto", "autoGrammarFix": true},

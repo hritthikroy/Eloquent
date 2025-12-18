@@ -18,9 +18,17 @@
       user-select: none;
       overflow: hidden;
       background: transparent;
+      /* PERFORMANCE BOOST: Hardware acceleration */
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      will-change: transform;
+      /* PERFORMANCE BOOST: Disable text rendering optimizations for speed */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeSpeed;
     }
 
-    /* Pill-shaped overlay like the reference image */
+    /* ULTRA-FAST Pill-shaped overlay with hardware acceleration */
     .overlay {
       height: 40px;
       background: #1e293b;
@@ -33,6 +41,15 @@
       gap: 10px;
       position: relative;
       overflow: hidden;
+      /* PERFORMANCE BOOST: Hardware acceleration and compositing */
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      will-change: transform, opacity;
+      /* PERFORMANCE BOOST: Force GPU layer */
+      -webkit-transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
+      /* PERFORMANCE BOOST: Optimize rendering */
+      contain: layout style paint;
     }
 
     /* Recording indicator - pulsing ring */
@@ -185,7 +202,8 @@
       }
     }
 
-    // Real audio animation
+    // ULTRA-FAST Real audio animation with optimizations
+    let frameCount = 0;
     function animate() {
       animationId = requestAnimationFrame(animate);
       analyser.getByteFrequencyData(dataArray);
@@ -198,29 +216,45 @@
       }
 
       drawBars();
-      updateTimer();
+      
+      // PERFORMANCE BOOST: Update timer less frequently (every 10 frames = ~6 times per second)
+      frameCount++;
+      if (frameCount % 10 === 0) {
+        updateTimer();
+      }
     }
 
-    // Fake animation fallback
+    // ULTRA-FAST Fake animation fallback with optimizations
     function animateFake() {
       let t = 0;
+      let frameCount = 0;
       function loop() {
         animationId = requestAnimationFrame(loop);
-        for (let i = 0; i < 6; i++) {
-          // Center bars (i=0) are tallest, outer bars shorter
-          const centerFactor = 1 - (i / 6) * 0.4;
-          const target = (Math.sin(t * 0.06 + i * 0.5) * 6 + 10) * centerFactor;
-          barHeights[i] = barHeights[i] * 0.8 + target * 0.2;
+        
+        // PERFORMANCE BOOST: Update bars less frequently for fake animation
+        if (frameCount % 2 === 0) {
+          for (let i = 0; i < 6; i++) {
+            // Center bars (i=0) are tallest, outer bars shorter
+            const centerFactor = 1 - (i / 6) * 0.4;
+            const target = (Math.sin(t * 0.06 + i * 0.5) * 6 + 10) * centerFactor;
+            barHeights[i] = barHeights[i] * 0.8 + target * 0.2;
+          }
+          drawBars();
+          t++;
         }
-        drawBars();
-        updateTimer();
-        t++;
+        
+        // PERFORMANCE BOOST: Update timer less frequently
+        frameCount++;
+        if (frameCount % 10 === 0) {
+          updateTimer();
+        }
       }
       loop();
     }
 
-    // Draw mirrored bars expanding from center outward
+    // ULTRA-FAST Draw mirrored bars with optimizations
     function drawBars() {
+      // PERFORMANCE BOOST: Use faster clearRect
       ctx.clearRect(0, 0, canvasW, canvasH);
 
       const halfBars = 6; // 6 bars on each side
@@ -230,24 +264,27 @@
       const centerY = canvasH / 2;
 
       const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
+      
+      // PERFORMANCE BOOST: Set fillStyle once outside loop
+      ctx.fillStyle = color;
 
+      // PERFORMANCE BOOST: Batch drawing operations
+      ctx.beginPath();
+      
       // Draw bars from center outward (mirrored left and right)
       for (let i = 0; i < halfBars; i++) {
         const h = Math.max(barHeights[i] * 0.6, 2);
         const offset = (i * (barWidth + gap)) + gap / 2;
 
-        ctx.fillStyle = color;
-
         // Right side bar
-        ctx.beginPath();
         ctx.roundRect(centerX + offset, centerY - h / 2, barWidth, h, 1);
-        ctx.fill();
 
         // Left side bar (mirrored)
-        ctx.beginPath();
         ctx.roundRect(centerX - offset - barWidth, centerY - h / 2, barWidth, h, 1);
-        ctx.fill();
       }
+      
+      // PERFORMANCE BOOST: Fill all bars at once
+      ctx.fill();
     }
 
     // Update timer

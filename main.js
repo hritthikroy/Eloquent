@@ -20,6 +20,10 @@ const AI_PROMPTS = require('./ai-prompts');
 const performanceMonitor = require('./performance-monitor');
 const authService = require('./auth-service');
 const { isAdminUser } = require('./admin-check');
+const FastStartup = require('./fast-startup');
+
+// Initialize fast startup optimizer
+const fastStartup = new FastStartup();
 
 // Exit early if electron is not available (during build)
 if (!app) {
@@ -300,70 +304,103 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 app.whenReady().then(async () => {
-  console.log('🚀 App is ready, starting initialization...');
+  fastStartup.milestone('App ready');
+  console.log('🚀 App is ready, starting ULTRA-FAST initialization...');
 
-  // Register custom protocol for OAuth callbacks
-  if (!app.isDefaultProtocolClient('eloquent')) {
-    app.setAsDefaultProtocolClient('eloquent');
-  }
+  // PERFORMANCE BOOST: Parallel initialization
+  const initTasks = [
+    // Register protocol (fast)
+    () => {
+      if (!app.isDefaultProtocolClient('eloquent')) {
+        app.setAsDefaultProtocolClient('eloquent');
+      }
+    },
+    
+    // Initialize auth service (async)
+    async () => {
+      console.log('🔐 Initializing authentication...');
+      authService.init();
+      
+      try {
+        // Add timeout to prevent hanging
+        const authResult = await Promise.race([
+          authService.validateSession(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Auth validation timeout')), 3000)
+          )
+        ]);
+        
+        if (authResult.valid) {
+          console.log('✅ User authenticated:', authResult.user?.email || 'cached');
+          isAuthenticated = true;
 
-  // Load saved configuration first
-  console.log('📁 Loading saved configuration...');
-  // Functions will be called after they are defined
-
-  // Initialize auth service
-  console.log('🔐 Initializing authentication...');
-  authService.init();
-  
-  // Check for existing authentication
-  const authResult = await authService.validateSession();
-  if (authResult.valid) {
-    console.log('✅ User authenticated:', authResult.user?.email || 'cached');
-    isAuthenticated = true;
-
-    // Update CONFIG with user settings if available
-    if (authResult.user?.settings) {
-      CONFIG.language = authResult.user.settings.language || CONFIG.language;
-      CONFIG.aiMode = authResult.user.settings.aiMode || CONFIG.aiMode;
-      CONFIG.autoGrammarFix = authResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+          // Update CONFIG with user settings if available
+          if (authResult.user?.settings) {
+            CONFIG.language = authResult.user.settings.language || CONFIG.language;
+            CONFIG.aiMode = authResult.user.settings.aiMode || CONFIG.aiMode;
+            CONFIG.autoGrammarFix = authResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+          }
+        } else {
+          console.log('📝 No valid authentication found:', authResult.reason || 'unknown');
+          isAuthenticated = false;
+        }
+      } catch (error) {
+        console.log('⚠️ Auth validation failed:', error.message);
+        console.log('📝 Continuing without authentication');
+        isAuthenticated = false;
+      }
+    },
+    
+    // Check permissions (async, non-blocking)
+    async () => {
+      console.log('🔐 Checking permissions...');
+      // Run permission checks in parallel
+      const [micResult] = await Promise.allSettled([
+        requestMicrophonePermission(),
+        Promise.resolve(checkAccessibilityPermission()) // Make it a promise for consistency
+      ]);
+      
+      if (micResult.status === 'rejected') {
+        console.warn('⚠️ Microphone permission check failed:', micResult.reason);
+      }
     }
-  } else {
-    console.log('📝 No valid authentication found');
-    isAuthenticated = false;
-  }
+  ];
 
-  // Request permissions
-  console.log('🔐 Checking microphone permission...');
-  await requestMicrophonePermission();
+  // PERFORMANCE BOOST: Execute initialization tasks in parallel
+  await Promise.allSettled(initTasks.map(task => 
+    typeof task === 'function' ? Promise.resolve(task()) : task
+  ));
 
-  console.log('🔐 Checking accessibility permission...');
-  checkAccessibilityPermission();
-
-  // Then create UI
+  // PERFORMANCE BOOST: Create UI components immediately after auth
   console.log('🎛️ Creating tray...');
   createTray();
 
   console.log('⌨️ Registering shortcuts...');
   registerShortcuts();
 
+  fastStartup.milestone('UI components created');
+  
   console.log('✅ Eloquent is ready! Look for the microphone icon in your menu bar.');
   console.log('🎤 Press Alt+Space to start recording, Esc to stop');
+  
+  // Log startup performance
+  fastStartup.logReport();
 
-  // Show authentication status and require login
-  if (isAuthenticated) {
+  // PERFORMANCE BOOST: Defer login window creation to avoid blocking startup
+  if (!isAuthenticated) {
+    console.log('🔒 Sign-in required - will show login window');
+    // Use setImmediate for better performance than setTimeout
+    setImmediate(() => {
+      createLoginWindow();
+    });
+  } else {
     const subscription = authService.getSubscription();
     const usage = authService.getUsage();
-    console.log(`👤 Logged in as: ${authResult.user?.email}`);
+    console.log(`👤 Logged in as: ${authService.getUser()?.email}`);
     console.log(`📊 Plan: ${subscription?.plan || 'free'}`);
     if (usage) {
       console.log(`⏱️ Usage: ${usage.currentMonth}/${usage.limit === -1 ? '∞' : usage.limit} minutes`);
     }
-  } else {
-    // REQUIRE SIGN-IN - show login window on startup
-    console.log('🔒 Sign-in required - opening login window');
-    setTimeout(() => {
-      createLoginWindow();
-    }, 500);
   }
 
 });
@@ -483,9 +520,30 @@ function createTray() {
 
   // Build dynamic menu based on auth state
   const user = authService.getUser();
-  const subscription = authService.getSubscription();
-  const usage = authService.getUsage();
-  const plan = subscription?.plan || 'free';
+  let subscription = authService.getSubscription();
+  let usage = authService.getUsage();
+  let plan = subscription?.plan || 'free';
+
+  // ADMIN OVERRIDE: If user is admin but doesn't have enterprise plan, override it
+  if (user && isAdminUser(user)) {
+    console.log('🔧 Admin user detected:', user.email);
+    
+    // Force admin users to have enterprise plan and unlimited usage
+    if (plan !== 'enterprise') {
+      console.log('⚡ Overriding plan for admin user: free → enterprise');
+      subscription = { plan: 'enterprise', status: 'active' };
+      plan = 'enterprise';
+    }
+    
+    if (!usage || usage.limit !== -1) {
+      console.log('⚡ Overriding usage for admin user: limited → unlimited');
+      usage = { currentMonth: 0, totalMinutes: 0, limit: -1 };
+    }
+    
+    console.log('📊 Final Subscription:', subscription);
+    console.log('⏱️ Final Usage:', usage);
+    console.log('📋 Final Plan:', plan);
+  }
 
   const menuTemplate = [
     { label: '🎤 Eloquent Voice Dictation', enabled: false },
@@ -495,44 +553,47 @@ function createTray() {
   // Auth section
   if (isAuthenticated && user) {
     menuTemplate.push(
-      { label: `👤 ${user.email}`, enabled: false },
-      { label: `📊 Plan: ${plan.charAt(0).toUpperCase() + plan.slice(1)}`, enabled: false }
+      { label: `👤 ${user.email}`, enabled: false }
     );
-    if (usage && usage.limit !== -1) {
-      const remaining = usage.limit - usage.currentMonth;
-      menuTemplate.push({ label: `⏱️ ${remaining} min remaining`, enabled: false });
+    
+    // Plan and usage info
+    const planLabel = plan === 'enterprise' ? 'Enterprise' : plan.charAt(0).toUpperCase() + plan.slice(1);
+    menuTemplate.push({ label: `📊 Plan: ${planLabel}`, enabled: false });
+    
+    if (usage) {
+      if (usage.limit === -1) {
+        menuTemplate.push({ label: `⏱️ Unlimited minutes`, enabled: false });
+      } else {
+        const currentMonth = usage.currentMonth || 0;
+        const remaining = usage.limit - currentMonth;
+        if (!isNaN(remaining) && remaining >= 0) {
+          menuTemplate.push({ label: `⏱️ ${remaining} min remaining`, enabled: false });
+        }
+      }
     }
-    menuTemplate.push(
-      { type: 'separator' },
-      { label: 'Open Dashboard', click: () => createDashboard() }
-    );
+    
+    menuTemplate.push({ type: 'separator' });
+
+    // Main actions
+    menuTemplate.push({ label: 'Open Dashboard', click: () => createDashboard() });
+
+    // Only show admin panel for admin users
+    const shouldShowAdmin = isAdminUser(user);
+    if (shouldShowAdmin) {
+      menuTemplate.push({ label: '🔧 Admin Panel', click: () => createAdminPanel() });
+    }
 
     // Only show subscription management for non-admin users
-    if (!isAdminUser(user)) {
-      menuTemplate.push(
-        { label: plan === 'free' ? '⭐ Upgrade to Pro' : 'Manage Subscription', click: () => createSubscriptionWindow() }
-      );
+    if (!shouldShowAdmin && plan === 'free') {
+      menuTemplate.push({ label: '⭐ Upgrade to Pro', click: () => createSubscriptionWindow() });
     }
   } else {
-    menuTemplate.push(
-      { label: '🔑 Sign In / Sign Up', click: () => createLoginWindow() },
-      { label: 'Open Dashboard', click: () => createDashboard() }
-    );
+    menuTemplate.push({ label: '🔑 Sign In / Sign Up', click: () => createLoginWindow() });
   }
 
-  // Only show admin panel for admin users
-  const currentUser = authService.getUser();
-  const shouldShowAdmin = isAuthenticated && isAdminUser(currentUser);
-  
-  if (shouldShowAdmin) {
-    menuTemplate.push(
-      { label: '🔧 Admin Panel', click: () => createAdminPanel() },
-      { type: 'separator' }
-    );
-  } else {
-    menuTemplate.push({ type: 'separator' });
-  }
+  menuTemplate.push({ type: 'separator' });
 
+  // Recording actions
   menuTemplate.push(
     {
       label: 'Start AI Rewrite (Alt+Shift+Space)',
@@ -551,34 +612,43 @@ function createTray() {
           createOverlay('standard');
         }
       }
-    },
-    { type: 'separator' },
-    {
-      label: CONFIG.autoPasteMode === 'direct' ? '🎯 Auto-Paste Mode: ON (Direct)' : '📋 Auto-Paste Mode: OFF (Clipboard Only)',
-      enabled: false
-    },
-    {
-      label: systemPreferences.isTrustedAccessibilityClient(false) ? '✅ Auto-paste enabled' : '🔧 Enable auto-paste',
-      click: () => {
-        if (!systemPreferences.isTrustedAccessibilityClient(false)) {
-          promptAccessibilityPermission();
-        }
-      }
-    },
-    { type: 'separator' },
-    { label: '💡 Tip: Press Esc to stop recording', enabled: false },
-    { type: 'separator' },
-    { label: 'Settings', click: () => createDashboard() }
+    }
   );
 
-  // Logout option if authenticated
+  // Auto-paste status (only show if not enabled)
+  if (!systemPreferences.isTrustedAccessibilityClient(false)) {
+    menuTemplate.push(
+      { type: 'separator' },
+      {
+        label: '🔧 Enable Auto-Paste',
+        click: () => promptAccessibilityPermission()
+      }
+    );
+  }
+
+  menuTemplate.push({ type: 'separator' });
+
+  // Settings and logout
   if (isAuthenticated) {
+    menuTemplate.push({ label: 'Settings', click: () => createDashboard() });
     menuTemplate.push({
       label: '🚪 Sign Out',
       click: () => {
         authService.logout();
         isAuthenticated = false;
-        createTray(); // Refresh menu
+        
+        // Refresh tray menu
+        createTray();
+        
+        // INSTANT FRONTEND UPDATE: Notify dashboard immediately
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('auth-updated', {
+            isAuthenticated: false,
+            user: null,
+            subscription: null,
+            usage: null
+          });
+        }
       }
     });
   }
@@ -714,6 +784,12 @@ function registerShortcuts() {
     createDashboard();
   });
 
+  // Cmd+Shift+O - Open Manual OAuth Fix (for stuck OAuth)
+  const manualOAuthRegistered = globalShortcut.register('Cmd+Shift+O', () => {
+    console.log('🔧 Cmd+Shift+O pressed - opening manual OAuth fix');
+    createManualOAuthWindow();
+  });
+
 
 
   console.log('✅ Shortcuts registered:');
@@ -728,7 +804,7 @@ function registerShortcuts() {
 
 
 
-// Overlay creation
+// ULTRA-FAST Overlay creation with aggressive optimizations
 function createOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
 
@@ -756,9 +832,24 @@ function createOverlayUltraFast(mode = 'standard') {
   isCreatingOverlay = true;
   lastOverlayCreationTime = Date.now();
   
+  // PERFORMANCE BOOST: Pre-calculate position before window creation
+  const cursorPosition = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursorPosition);
+  const screenBounds = display.workArea;
+  
+  const windowWidth = 280;
+  const windowHeight = 50;
+  const x = cursorPosition.x - (windowWidth / 2);
+  const y = cursorPosition.y - windowHeight - 20;
+  
+  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
+  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
+  
   overlayWindow = new BrowserWindow({
-    width: 280,
-    height: 50,
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round(finalX),
+    y: Math.round(finalY),
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -769,6 +860,7 @@ function createOverlayUltraFast(mode = 'standard') {
     acceptFirstMouse: false,
     show: false,
     paintWhenInitiallyHidden: false,
+    // PERFORMANCE BOOST: Optimized webPreferences for speed
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -776,35 +868,38 @@ function createOverlayUltraFast(mode = 'standard') {
       offscreen: false,
       preload: false,
       enableRemoteModule: false,
-      experimentalFeatures: false
+      experimentalFeatures: false,
+      // Security settings
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      disableBlinkFeatures: 'Auxclick',
+      // NEW: Hardware acceleration
+      hardwareAcceleration: true,
+      // NEW: Faster rendering
+      enableWebSQL: false,
+      enablePreferredSizeMode: false
     }
   });
   
   overlayWindow.recordingStartTime = Date.now();
-
-  overlayWindow.loadFile('overlay.html');
   
-  const cursorPosition = screen.getCursorScreenPoint();
-  const windowBounds = overlayWindow.getBounds();
-  
-  const x = cursorPosition.x - (windowBounds.width / 2);
-  const y = cursorPosition.y - windowBounds.height - 20;
-  
-  const display = screen.getDisplayNearestPoint(cursorPosition);
-  const screenBounds = display.workArea;
-  
-  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowBounds.width));
-  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowBounds.height));
-  
-  overlayWindow.setPosition(Math.round(finalX), Math.round(finalY));
+  // PERFORMANCE BOOST: Set properties before loading
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setAlwaysOnTop(true, 'floating', 1);
 
-  overlayWindow.webContents.on('did-finish-load', () => {
+  // PERFORMANCE BOOST: Load file with immediate show
+  overlayWindow.loadFile('overlay.html');
+
+  overlayWindow.webContents.once('did-finish-load', () => {
+    // PERFORMANCE BOOST: Send mode and show immediately
     overlayWindow.webContents.send('set-mode', mode);
     overlayWindow.show();
-    startRecording();
-    isCreatingOverlay = false;
+    
+    // PERFORMANCE BOOST: Start recording in next tick for better responsiveness
+    setImmediate(() => {
+      startRecording();
+      isCreatingOverlay = false;
+    });
   });
 
   overlayWindow.on('closed', () => {
@@ -828,13 +923,69 @@ function createDashboard() {
     minWidth: 700,
     minHeight: 500,
     titleBarStyle: 'hiddenInset',
+    // PERFORMANCE BOOST: Optimized webPreferences for dashboard
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      // Performance optimizations
+      backgroundThrottling: false,
+      hardwareAcceleration: true,
+      // Security settings
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      // Faster rendering
+      enableWebSQL: false,
+      enablePreferredSizeMode: false,
+      // Disable unnecessary features
+      disableBlinkFeatures: 'Auxclick'
     }
   });
 
+  // PERFORMANCE BOOST: Preload optimizations
+  dashboardWindow.webContents.once('dom-ready', () => {
+    // Inject performance optimizations
+    dashboardWindow.webContents.executeJavaScript(`
+      // Disable smooth scrolling for faster rendering
+      document.documentElement.style.scrollBehavior = 'auto';
+      
+      // Enable hardware acceleration hints
+      document.body.style.transform = 'translateZ(0)';
+      document.body.style.backfaceVisibility = 'hidden';
+      
+      // Optimize animations
+      document.body.style.willChange = 'transform';
+      
+      console.log('🚀 Dashboard performance optimizations applied');
+    `);
+  });
+
   dashboardWindow.loadFile('dashboard.html');
+
+  // Send authentication status immediately when dashboard loads
+  dashboardWindow.webContents.once('did-finish-load', () => {
+    console.log('📊 Dashboard loaded, sending immediate auth status...');
+    
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      const user = authService.getUser();
+      const authenticated = authService.isAuthenticated();
+      const subscription = authService.getSubscription();
+      const usage = authService.getUsage();
+      
+      console.log('📤 Sending auth data:', {
+        authenticated,
+        userEmail: user?.email,
+        plan: subscription?.plan
+      });
+      
+      dashboardWindow.webContents.send('auth-status', {
+        isAuthenticated: authenticated,
+        user: user,
+        subscription: subscription,
+        usage: usage
+      });
+    }, 100);
+  });
 
   dashboardWindow.on('closed', () => {
     dashboardWindow = null;
@@ -1943,6 +2094,12 @@ ipcMain.on('auth-complete', (event, result) => {
   createDashboard();
 });
 
+// Add IPC handler to refresh tray menu (for debugging)
+ipcMain.on('refresh-tray', () => {
+  console.log('🔄 Manual tray refresh requested');
+  createTray();
+});
+
 
 
 
@@ -2006,6 +2163,16 @@ ipcMain.on('close-subscription-window', () => {
   }
 });
 
+// Open manual OAuth window
+ipcMain.on('open-manual-oauth', () => {
+  createManualOAuthWindow();
+});
+
+// Open dashboard from manual OAuth window
+ipcMain.on('open-dashboard', () => {
+  createDashboard();
+});
+
 // Open billing portal
 ipcMain.handle('open-billing-portal', async () => {
   await authService.openBillingPortal();
@@ -2016,13 +2183,116 @@ ipcMain.on('forgot-password', (event, email) => {
   shell.openExternal(`${authService.baseURL.replace('/api', '')}/forgot-password?email=${encodeURIComponent(email || '')}`);
 });
 
+// Manual OAuth token processing (for when protocol handler fails)
+ipcMain.handle('manual-oauth-process', async (event, tokens) => {
+  console.log('🔧 Manual OAuth processing requested');
+  
+  try {
+    if (!tokens || !tokens.access_token) {
+      throw new Error('No access token provided');
+    }
+    
+    console.log('🔑 Processing OAuth tokens manually...');
+    
+    // Handle the OAuth callback
+    const result = await authService.handleOAuthCallback({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token
+    });
+    
+    if (result.success) {
+      console.log('✅ Manual OAuth authentication successful');
+      isAuthenticated = true;
+      
+      if (result.user?.settings) {
+        CONFIG.language = result.user.settings.language || CONFIG.language;
+        CONFIG.aiMode = result.user.settings.aiMode || CONFIG.aiMode;
+        CONFIG.autoGrammarFix = result.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+      }
+      
+      // Close login window if open
+      if (loginWindow && !loginWindow.isDestroyed()) {
+        loginWindow.close();
+        loginWindow = null;
+      }
+      
+      // Refresh tray menu
+      createTray();
+      
+      // INSTANT FRONTEND UPDATE: Notify dashboard immediately
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.webContents.send('auth-updated', {
+          isAuthenticated: true,
+          user: result.user,
+          subscription: result.subscription,
+          usage: result.usage
+        });
+      }
+      
+      // Show success notification
+      showNotification('✅ Sign In Successful', `Welcome back, ${result.user?.email || 'User'}!`);
+      
+      return { success: true, user: result.user, subscription: result.subscription, usage: result.usage };
+    } else {
+      console.error('❌ Manual OAuth authentication failed:', result.error);
+      return { success: false, error: result.error };
+    }
+  } catch (error) {
+    console.error('❌ Error in manual OAuth processing:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // New Google Sign-in handlers for dashboard
 ipcMain.on('check-auth-status', (event) => {
   console.log('🔍 Checking authentication status');
-  const user = authService.getUser();
+  let user = authService.getUser();
+  let authenticated = authService.isAuthenticated();
+  let subscription = authService.getSubscription();
+  let usage = authService.getUsage();
+  
+  // ADMIN FALLBACK: If no user but we're checking for admin, create admin user
+  if (!user && !authenticated) {
+    // Check if we should create an admin user (for development/admin access)
+    const adminEmails = ['hritthikin@gmail.com'];
+    // For now, we'll only create admin user in development mode or if explicitly requested
+    if (authService.isDevelopmentMode) {
+      console.log('🔧 Creating admin user for development mode');
+      user = {
+        id: 'admin-dev',
+        email: 'hritthikin@gmail.com',
+        name: 'Admin User',
+        role: 'admin'
+      };
+      authenticated = true;
+      subscription = { plan: 'enterprise', status: 'active' };
+      usage = { currentMonth: 0, totalMinutes: 0, limit: -1 };
+    }
+  }
+  
+  // Apply admin overrides if user is admin
+  if (user && isAdminUser(user)) {
+    console.log('🔧 Admin user detected in dashboard check:', user.email);
+    if (!subscription || subscription.plan !== 'enterprise') {
+      subscription = { plan: 'enterprise', status: 'active' };
+    }
+    if (!usage || usage.limit !== -1) {
+      usage = { currentMonth: 0, totalMinutes: 0, limit: -1 };
+    }
+  }
+  
+  console.log('📊 Auth Status:', {
+    authenticated,
+    userEmail: user?.email,
+    plan: subscription?.plan,
+    isDevelopmentMode: authService.isDevelopmentMode
+  });
+  
   event.reply('auth-status', {
-    isAuthenticated: authService.isAuthenticated(),
-    user: user
+    isAuthenticated: authenticated,
+    user: user,
+    subscription: subscription,
+    usage: usage
   });
 });
 
@@ -2044,6 +2314,20 @@ ipcMain.on('sign-out', async (event) => {
   try {
     await authService.logout();
     isAuthenticated = false;
+    
+    // Refresh tray menu
+    createTray();
+    
+    // INSTANT FRONTEND UPDATE: Notify dashboard immediately
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('auth-updated', {
+        isAuthenticated: false,
+        user: null,
+        subscription: null,
+        usage: null
+      });
+    }
+    
     event.reply('auth-status', {
       isAuthenticated: false,
       user: null
@@ -2158,6 +2442,26 @@ function createSubscriptionWindow() {
   subscriptionWindow.on('closed', () => {
     subscriptionWindow = null;
   });
+}
+
+function createManualOAuthWindow() {
+  const manualOAuthWindow = new BrowserWindow({
+    width: 700,
+    height: 800,
+    titleBarStyle: 'hiddenInset',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  manualOAuthWindow.loadFile('manual-oauth.html');
+
+  manualOAuthWindow.on('closed', () => {
+    // Window closed, no cleanup needed
+  });
+  
+  return manualOAuthWindow;
 }
 
 ipcMain.on('save-config', (event, newConfig) => {
@@ -2492,11 +2796,23 @@ async function handleProtocolUrl(url) {
           // Refresh tray menu
           createTray();
           
+          // INSTANT FRONTEND UPDATE: Notify dashboard immediately
+          if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+            dashboardWindow.webContents.send('auth-updated', {
+              isAuthenticated: true,
+              user: result.user,
+              subscription: result.subscription,
+              usage: result.usage
+            });
+          }
+          
           // Show success notification
           showNotification('✅ Sign In Successful', `Welcome back, ${result.user?.email || 'User'}!`);
           
-          // Open dashboard
-          createDashboard();
+          // Open dashboard if not already open
+          if (!dashboardWindow || dashboardWindow.isDestroyed()) {
+            createDashboard();
+          }
           
           // Resolve OAuth promise if waiting
           if (globalOAuthResolver) {

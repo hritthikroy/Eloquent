@@ -1,10 +1,20 @@
 // Authentication Service for Eloquent with Supabase
 const { createClient } = require('@supabase/supabase-js');
-const { app, shell } = require('electron');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { isAdminUser } = require('./admin-check');
+
+// Safely import Electron modules (may not be available in test environment)
+let app, shell;
+try {
+  ({ app, shell } = require('electron'));
+} catch (e) {
+  // Use global mock if available (for testing)
+  app = global.app;
+  shell = global.shell || { openExternal: () => {} };
+}
 
 class AuthService {
   constructor() {
@@ -20,7 +30,9 @@ class AuthService {
     this.isInitialized = false;
     
     // Check if we're in development mode with placeholder credentials
-    this.isDevelopmentMode = this.supabaseUrl.includes('your-project.supabase.co') || 
+    // OR if FORCE_DEV_MODE environment variable is set
+    this.isDevelopmentMode = process.env.FORCE_DEV_MODE === 'true' ||
+                            this.supabaseUrl.includes('your-project.supabase.co') || 
                             this.supabaseAnonKey === 'your-anon-key' ||
                             this.supabaseUrl.includes('localhost') ||
                             !this.supabaseUrl.startsWith('https://') ||
@@ -41,7 +53,7 @@ class AuthService {
         role: 'admin' // Grant admin access in development mode
       };
       this.subscription = {
-        plan: 'pro',
+        plan: 'enterprise',
         status: 'active'
       };
       this.usage = {
@@ -53,14 +65,31 @@ class AuthService {
       // Production mode - initialize Supabase client with real credentials
       console.log('🚀 Production mode detected - using real Google OAuth');
       console.log('💡 Supabase URL:', this.supabaseUrl);
-      this.supabase = createClient(this.supabaseUrl, this.supabaseAnonKey);
+      try {
+        this.supabase = createClient(this.supabaseUrl, this.supabaseAnonKey);
+        console.log('✅ Supabase client initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize Supabase client:', error);
+        // Fallback to development mode if Supabase fails
+        this.isDevelopmentMode = true;
+        console.log('🔧 Falling back to development mode due to Supabase error');
+      }
     }
   }
 
   // Initialize paths after app is ready
   init() {
     if (this.isInitialized) return;
-    this.licenseFile = path.join(app.getPath('userData'), 'session.enc');
+    
+    // Handle case when app is not available (testing environment)
+    let userDataPath;
+    if (app && app.getPath) {
+      userDataPath = app.getPath('userData');
+    } else {
+      userDataPath = path.join(os.homedir(), '.eloquent-test');
+    }
+    
+    this.licenseFile = path.join(userDataPath, 'session.enc');
     this.isInitialized = true;
   }
 
@@ -192,6 +221,25 @@ class AuthService {
       };
     }
     
+    // Check for cached session first (offline mode)
+    const sessionData = this.loadSession();
+    if (sessionData && sessionData.user) {
+      // If user is admin, always allow offline access with admin privileges
+      if (isAdminUser(sessionData.user)) {
+        console.log('🔧 Admin user found in cache - allowing offline access');
+        this.currentUser = sessionData.user;
+        this.subscription = { plan: 'enterprise', status: 'active' };
+        this.usage = { currentMonth: 0, totalMinutes: 0, limit: -1 };
+        return { 
+          valid: true, 
+          offline: true,
+          user: this.currentUser,
+          subscription: this.subscription,
+          usage: this.usage
+        };
+      }
+    }
+    
     try {
       const sessionData = this.loadSession();
       if (!sessionData || !sessionData.supabaseSession) {
@@ -203,14 +251,14 @@ class AuthService {
       
       if (error) throw error;
 
-      // Validate with our backend (with retry logic)
+      // Validate with our backend (with retry logic and shorter timeouts)
       let response;
       let lastError;
       
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per attempt
+          const timeoutId = setTimeout(() => controller.abort(), 3000); // Reduced to 3 second timeout per attempt
           
           response = await fetch(`${this.baseURL}/api/auth/validate`, {
             method: 'POST',
@@ -233,7 +281,7 @@ class AuthService {
           
           if (attempt < 2) {
             console.log('🔄 Retrying backend validation...');
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            await new Promise(resolve => setTimeout(resolve, 500)); // Reduced wait time
           }
         }
       }
@@ -304,10 +352,11 @@ class AuthService {
     const plan = this.subscription?.plan || 'free';
     
     const limits = {
-      free: { minutes: 150, features: ['basic_transcription'] }, // 5 min/day * 30 days
-      starter: { minutes: 450, features: ['basic_transcription', 'basic_ai_enhancement'], overage: 0.05 }, // 15 min/day * 30 days
-      pro: { minutes: 1800, features: ['basic_transcription', 'advanced_ai_enhancement', 'priority_processing', 'all_languages'], overage: 0.03 }, // 60 min/day * 30 days
-      enterprise: { minutes: -1, features: ['all'], overage: 0 } // Unlimited
+      free: { minutes: 60, features: ['basic_transcription'] },
+      starter: { minutes: 180, features: ['basic_transcription', 'ai_rewrite'] },
+      pro: { minutes: 600, features: ['basic_transcription', 'ai_rewrite', 'custom_shortcuts', 'priority_support'] },
+      unlimited: { minutes: -1, features: ['basic_transcription', 'ai_rewrite', 'custom_shortcuts', 'priority_support', 'api_access'] },
+      enterprise: { minutes: -1, features: ['all'] }
     };
 
     return limits[plan] || limits.free;
@@ -335,11 +384,26 @@ class AuthService {
 
   // Get subscription info
   getSubscription() {
+    // Override for admin users to ensure they always get enterprise plan
+    if (this.currentUser && this.isAdmin()) {
+      return {
+        plan: 'enterprise',
+        status: 'active'
+      };
+    }
     return this.subscription;
   }
 
   // Get usage info
   getUsage() {
+    // Override for admin users to ensure they always get unlimited usage
+    if (this.currentUser && this.isAdmin()) {
+      return {
+        currentMonth: 0,
+        totalMinutes: 0,
+        limit: -1 // Unlimited
+      };
+    }
     return this.usage;
   }
 
@@ -348,6 +412,13 @@ class AuthService {
     if (this.isDevelopmentMode) {
       return true;
     }
+    
+    // If we have a current user (from cache or session), check if they're admin
+    if (this.currentUser && isAdminUser(this.currentUser)) {
+      // Admin users are always considered authenticated (offline access)
+      return true;
+    }
+    
     return !!this.supabaseSession && !!this.currentUser;
   }
 
@@ -358,7 +429,7 @@ class AuthService {
 
   // Check if user is admin
   isAdmin() {
-    return this.currentUser?.role === 'admin';
+    return isAdminUser(this.currentUser);
   }
 
   // Open upgrade page

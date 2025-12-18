@@ -76,8 +76,35 @@ func (h *TranscribeHandler) TranscribeAudio(c *gin.Context) {
 		return
 	}
 
-	// Transcribe audio
-	result, err := h.transcribeService.TranscribeAudio(audioData, header.Filename, language, mode)
+	// PERFORMANCE BOOST: Use worker pool for transcription
+	var result *services.TranscriptionResult
+	var err error
+	
+	transcriptionErr := services.SubmitTranscriptionJob(c.Request.Context(), func() error {
+		result, err = h.transcribeService.TranscribeAudio(audioData, header.Filename, language, mode)
+		return err
+	})
+	
+	if transcriptionErr != nil {
+		// Log failed attempt
+		h.userService.TrackUsage(
+			user.ID.String(),
+			0,
+			"transcription",
+			"standard",
+			language,
+			0,
+			false,
+			transcriptionErr.Error(),
+		)
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Transcription failed",
+			"details": transcriptionErr.Error(),
+		})
+		return
+	}
+	
 	if err != nil {
 		// Log failed attempt
 		h.userService.TrackUsage(

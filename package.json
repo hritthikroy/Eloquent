@@ -41,9 +41,13 @@
       "admin.html",
       "login.html",
       "subscription.html",
+      "manual-oauth.html",
       "ai-prompts.js",
       "utils.js",
       "performance-monitor.js",
+      "performance-optimizer.js",
+      "fast-startup.js",
+      "admin-check.js",
       "assets/**/*",
       "package.json"
     ],

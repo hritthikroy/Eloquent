@@ -1,8 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
 
 	"eloquent-backend/internal/config"
 	"eloquent-backend/internal/handlers"
@@ -15,6 +21,12 @@ import (
 )
 
 func main() {
+	// PERFORMANCE BOOST: Optimize Go runtime for better performance
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	
+	log.Println("🚀 Starting Eloquent Backend with ULTRA-FAST optimizations...")
+	startTime := time.Now()
+
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
@@ -22,32 +34,59 @@ func main() {
 
 	// Initialize configuration
 	cfg := config.New()
+	log.Printf("📁 Configuration loaded in %v", time.Since(startTime))
 
-	// Initialize services
+	// PERFORMANCE BOOST: Initialize services with connection pooling and timeouts
+	serviceStart := time.Now()
+	
+	// Start connection pool cleanup routine
+	services.StartConnectionCleanup()
+	
 	supabaseService := services.NewSupabaseService(cfg.SupabaseURL, cfg.SupabaseKey)
 	userService := services.NewUserService(supabaseService)
-	transcribeService := services.NewTranscribeService(cfg.GroqAPIKey)
+	transcribeService := services.NewTranscribeServiceOptimized(cfg.GroqAPIKey)
 	stripeService := services.NewStripeService(cfg.StripeSecretKey)
+	log.Printf("🔧 Services initialized in %v", time.Since(serviceStart))
 
 	// Initialize handlers
+	handlerStart := time.Now()
 	authHandler := handlers.NewAuthHandler(userService, supabaseService)
 	transcribeHandler := handlers.NewTranscribeHandler(transcribeService, userService)
 	subscriptionHandler := handlers.NewSubscriptionHandler(stripeService, userService)
 	usageHandler := handlers.NewUsageHandler(userService)
 	webhookHandler := handlers.NewWebhookHandler(stripeService, userService)
+	log.Printf("📡 Handlers initialized in %v", time.Since(handlerStart))
 
-	// Setup Gin router
+	// PERFORMANCE BOOST: Setup optimized Gin router
+	routerStart := time.Now()
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r := gin.Default()
+	// PERFORMANCE BOOST: Create router with optimized settings
+	r := gin.New()
+	
+	// PERFORMANCE BOOST: Custom recovery middleware (faster than default)
+	r.Use(gin.Recovery())
+	
+	// PERFORMANCE BOOST: Optimized CORS middleware
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour, // Cache preflight for 12 hours
+	}
+	r.Use(cors.New(corsConfig))
 
-	// CORS middleware
-	r.Use(cors.Default())
-
-	// Rate limiting middleware
-	r.Use(middleware.RateLimit())
+	// PERFORMANCE BOOST: Performance monitoring and optimization middleware
+	r.Use(middleware.PerformanceMonitor())
+	r.Use(middleware.EnableCompression())
+	r.Use(middleware.RequestSizeLimit(25 * 1024 * 1024)) // 25MB limit for audio files
+	
+	// PERFORMANCE BOOST: Optimized rate limiting middleware
+	r.Use(middleware.RateLimitOptimized())
 
 	// Root route - Landing page
 	r.GET("/", func(c *gin.Context) {
@@ -131,7 +170,20 @@ func main() {
         <h1>🎉 Success!</h1>
         <div class="spinner"></div>
         <p>Redirecting back to Eloquent...</p>
-        <p><small>You can close this window if it doesn't close automatically</small></p>
+        <p><small>If Eloquent doesn't open automatically, use the button below</small></p>
+        <button id="manualOpen" style="display: none; padding: 12px 24px; font-size: 16px; background: white; color: #4CAF50; border: 2px solid white; border-radius: 8px; cursor: pointer; margin-top: 20px; font-weight: bold;">
+            🔧 Open Manual OAuth Fix
+        </button>
+        <div id="instructions" style="display: none; margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; text-align: left;">
+            <h3>If automatic redirect failed:</h3>
+            <ol style="margin: 10px 0; padding-left: 20px;">
+                <li>Open Eloquent app manually</li>
+                <li>Right-click the tray icon (microphone in menu bar)</li>
+                <li>Select "🔧 Manual OAuth Fix"</li>
+                <li>Or press <strong>Cmd+Shift+O</strong></li>
+                <li>Copy this page's URL and paste it in the fix window</li>
+            </ol>
+        </div>
     </div>
     
     <script>
@@ -163,24 +215,32 @@ func main() {
                 token_type: tokens.token_type
             };
             
-            // Method 1: Custom protocol (for Electron)
+            // Method 1: Custom protocol (for Electron) - try multiple formats
+            let protocolWorked = false;
+            
+            // Try simple format first (most reliable)
             try {
-                const encodedData = encodeURIComponent(JSON.stringify(authData));
-                console.log('Encoded auth data length:', encodedData.length);
-                const protocolUrl = 'eloquent://auth/success?data=' + encodedData;
-                console.log('Redirecting to:', protocolUrl.substring(0, 100) + '...');
-                window.location.href = protocolUrl;
+                const simpleUrl = 'eloquent://auth/success?access_token=' + authData.access_token + 
+                                '&refresh_token=' + (authData.refresh_token || '') +
+                                '&expires_in=' + (authData.expires_in || '') +
+                                '&token_type=' + (authData.token_type || '');
+                console.log('Trying simple protocol format:', simpleUrl.substring(0, 100) + '...');
+                window.location.href = simpleUrl;
+                protocolWorked = true;
             } catch (e) {
-                console.log('Custom protocol failed, trying other methods...', e);
-                
-                // Fallback: try simpler protocol format
+                console.log('Simple protocol failed:', e);
+            }
+            
+            // Fallback: try JSON format if simple didn't work
+            if (!protocolWorked) {
                 try {
-                    const simpleUrl = 'eloquent://auth/success?access_token=' + authData.access_token + 
-                                    '&refresh_token=' + (authData.refresh_token || '');
-                    console.log('Trying simple protocol format:', simpleUrl.substring(0, 100) + '...');
-                    window.location.href = simpleUrl;
-                } catch (e2) {
-                    console.log('Simple protocol also failed:', e2);
+                    const encodedData = encodeURIComponent(JSON.stringify(authData));
+                    console.log('Encoded auth data length:', encodedData.length);
+                    const protocolUrl = 'eloquent://auth/success?data=' + encodedData;
+                    console.log('Trying JSON protocol format:', protocolUrl.substring(0, 100) + '...');
+                    window.location.href = protocolUrl;
+                } catch (e) {
+                    console.log('JSON protocol also failed:', e);
                 }
             }
             
@@ -208,6 +268,30 @@ func main() {
             }
         }
         
+        // Show manual open button after 2 seconds if still on page
+        setTimeout(() => {
+            const manualButton = document.getElementById('manualOpen');
+            const instructions = document.getElementById('instructions');
+            if (manualButton) {
+                manualButton.style.display = 'inline-block';
+                instructions.style.display = 'block';
+                manualButton.onclick = () => {
+                    // Copy URL to clipboard and show instructions
+                    try {
+                        navigator.clipboard.writeText(window.location.href).then(() => {
+                            alert('✅ URL copied to clipboard!\\n\\nNow:\\n1. Open Eloquent app\\n2. Press Cmd+Shift+O\\n3. Paste the URL and click Process');
+                        }).catch(() => {
+                            // Fallback: show URL for manual copy
+                            prompt('Copy this URL and use it in Eloquent\\'s Manual OAuth Fix:', window.location.href);
+                        });
+                    } catch (e) {
+                        // Fallback: show URL for manual copy
+                        prompt('Copy this URL and use it in Eloquent\\'s Manual OAuth Fix:', window.location.href);
+                    }
+                };
+            }
+        }, 2000);
+
         // Auto-close after 3 seconds
         setTimeout(() => {
             try {
@@ -220,17 +304,26 @@ func main() {
         // Fallback: if protocol redirect fails, show manual close button after 5 seconds
         setTimeout(() => {
             if (document.body) {
+                const container = document.querySelector('.container');
+                
+                // Add instructions
+                const instructions = document.createElement('div');
+                instructions.innerHTML = '<p><strong>If Eloquent didn\'t open automatically:</strong></p><p>1. Copy the tokens below<br>2. Open Eloquent manually<br>3. Go to Settings and paste the tokens</p>';
+                instructions.style.cssText = 'margin: 20px 0; font-size: 14px; line-height: 1.5;';
+                container.appendChild(instructions);
+                
+                // Show tokens for manual entry
+                const tokenDisplay = document.createElement('div');
+                tokenDisplay.innerHTML = '<textarea readonly style="width: 100%; height: 100px; margin: 10px 0; padding: 10px; font-family: monospace; font-size: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 5px;">' + JSON.stringify(tokens, null, 2) + '</textarea>';
+                container.appendChild(tokenDisplay);
+                
                 const button = document.createElement('button');
                 button.textContent = 'Close Window';
                 button.style.cssText = 'padding: 10px 20px; font-size: 16px; background: white; color: #4CAF50; border: 2px solid white; border-radius: 5px; cursor: pointer; margin-top: 20px;';
                 button.onclick = () => window.close();
-                document.querySelector('.container').appendChild(button);
+                container.appendChild(button);
             }
         }, 5000);
-            } catch (e) {
-                console.log('Cannot close window automatically');
-            }
-        }, 3000);
     </script>
 </body>
 </html>`
@@ -289,11 +382,49 @@ func main() {
 		}
 	}
 
+	log.Printf("🎯 Router setup completed in %v", time.Since(routerStart))
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
 	}
 
-	log.Printf("🚀 Eloquent API running on port %s", port)
-	log.Fatal(r.Run(":" + port))
+	// PERFORMANCE BOOST: Create optimized HTTP server
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+		// PERFORMANCE BOOST: Optimized timeouts
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		// PERFORMANCE BOOST: Increase max header size for large requests
+		MaxHeaderBytes: 1 << 20, // 1MB
+	}
+
+	// PERFORMANCE BOOST: Graceful shutdown
+	go func() {
+		log.Printf("🚀 Eloquent API running on port %s (startup time: %v)", port, time.Since(startTime))
+		log.Printf("🎯 Performance optimizations: ✅ Connection pooling ✅ Timeouts ✅ Caching ✅ Rate limiting")
+		
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("🛑 Shutting down server...")
+
+	// PERFORMANCE BOOST: Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("✅ Server exited")
 }

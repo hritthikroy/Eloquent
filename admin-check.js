@@ -1,4 +1,12 @@
 // Admin check utility
+// Admin users automatically get:
+// - role: 'admin'
+// - plan: 'enterprise' (unlimited minutes, all features)
+// - subscription_status: 'active'
+// Regular users get:
+// - role: 'user'
+// - plan: 'free' (60 minutes per month)
+// - subscription_status: 'none'
 function isAdminUser(user) {
   if (!user || !user.email) return false;
   
