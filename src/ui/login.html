@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
   <title>Eloquent - Sign In</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -228,7 +229,7 @@
       <div id="error-message" class="error-message"></div>
       <div id="success-message" class="success-message"></div>
 
-      <button class="btn btn-google" id="google-btn" onclick="signInWithGoogle()">
+      <button class="btn btn-google" id="google-btn">
         <svg viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -239,9 +240,7 @@
         <span class="loading"><span class="spinner"></span></span>
       </button>
 
-      <button class="btn btn-secondary" onclick="continueWithoutAccount()">
-        Continue in Development Mode
-      </button>
+
 
       <div class="features">
         <div class="feature">
@@ -321,14 +320,14 @@
         } else {
           let errorMsg = result.error || 'Sign in failed';
           if (errorMsg.includes('your-project.supabase.co') || errorMsg.includes('your-anon-key')) {
-            errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials or use Development Mode.';
+            errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials in .env file.';
           }
           showError(errorMsg);
         }
       } catch (error) {
         let errorMsg = error.message || 'Sign in failed';
         if (errorMsg.includes('your-project.supabase.co') || errorMsg.includes('your-anon-key')) {
-          errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials or use Development Mode.';
+          errorMsg = 'Google Sign-in not configured. Please set up Supabase credentials in .env file.';
         }
         showError(errorMsg);
       } finally {
@@ -336,9 +335,10 @@
       }
     }
 
-    function continueWithoutAccount() {
-      ipcRenderer.send('auth-skip');
-    }
+
+
+    // Add event listener for the Google button
+    document.getElementById('google-btn').addEventListener('click', signInWithGoogle);
 
     // Listen for Google auth callback
     ipcRenderer.on('google-auth-result', (_, result) => {

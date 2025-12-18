@@ -139,7 +139,7 @@ class AuthService {
       return { success: true, url: data.url, isProduction: !redirectUrl.includes('localhost') };
     } catch (error) {
       console.error('Google sign-in error:', error);
-      console.log('💡 Tip: Use "Continue in Development Mode" to bypass OAuth');
+      console.log('💡 Tip: Configure Supabase credentials in .env to enable OAuth');
       
       // Provide more helpful error messages
       let userFriendlyError = error.message;
@@ -150,7 +150,7 @@ class AuthService {
       } else if (error.message.includes('fetch')) {
         userFriendlyError = 'Network error. Please check your internet connection.';
       } else if (error.message.includes('your-project.supabase.co')) {
-        userFriendlyError = 'Google Sign-in not configured. Please set up Supabase credentials or use Development Mode.';
+        userFriendlyError = 'Google Sign-in not configured. Please set up Supabase credentials in .env file.';
       }
       
       return { success: false, error: userFriendlyError };
@@ -430,6 +430,14 @@ class AuthService {
   // Check if user is admin
   isAdmin() {
     return isAdminUser(this.currentUser);
+  }
+
+  // Get access token for API requests
+  getAccessToken() {
+    if (this.isDevelopmentMode) {
+      return 'dev-token'; // Mock token for development
+    }
+    return this.supabaseSession?.access_token;
   }
 
   // Open upgrade page

@@ -38,6 +38,21 @@ func NewSupabaseService(url, serviceKey string) *SupabaseService {
 }
 
 func (s *SupabaseService) GetUser(token string) (*SupabaseUser, error) {
+	// Development mode: Handle dev token
+	// Check for dev-token OR placeholder service key OR placeholder URL
+	if token == "dev-token" || 
+	   s.URL == "https://your-project.supabase.co" ||
+	   s.ServiceKey == "placeholder_service_key" ||
+	   s.ServiceKey == "" {
+		return &SupabaseUser{
+			ID:    "00000000-0000-0000-0000-000000000001", // Valid UUID for dev user
+			Email: "hritthikin@gmail.com", // Admin email for development
+			UserMetadata: map[string]interface{}{
+				"name": "Development User",
+			},
+		}, nil
+	}
+
 	url := fmt.Sprintf("%s/auth/v1/user", s.URL)
 	
 	req, err := http.NewRequest("GET", url, nil)

@@ -55,6 +55,7 @@ func main() {
 	subscriptionHandler := handlers.NewSubscriptionHandler(stripeService, userService)
 	usageHandler := handlers.NewUsageHandler(userService)
 	webhookHandler := handlers.NewWebhookHandler(stripeService, userService)
+	adminHandler := handlers.NewAdminHandler(userService)
 	log.Printf("📡 Handlers initialized in %v", time.Since(handlerStart))
 
 	// PERFORMANCE BOOST: Setup optimized Gin router
@@ -379,6 +380,22 @@ func main() {
 		webhooks := api.Group("/webhooks")
 		{
 			webhooks.POST("/stripe", webhookHandler.StripeWebhook)
+		}
+
+		// Admin routes (requires admin authentication)
+		admin := api.Group("/admin")
+		admin.Use(middleware.AuthMiddleware(supabaseService))
+		{
+			admin.GET("/users", adminHandler.GetAllUsers)
+			admin.GET("/users/:id", adminHandler.GetUserDetails)
+			admin.PUT("/users/:id/plan", adminHandler.UpdateUserPlan)
+			admin.PUT("/users/:id/role", adminHandler.UpdateUserRole)
+			admin.POST("/users/:id/reset-usage", adminHandler.ResetUserUsage)
+			admin.DELETE("/users/:id", adminHandler.DeleteUser)
+			admin.GET("/stats", adminHandler.GetAdminStats)
+			admin.GET("/search", adminHandler.SearchUsers)
+			admin.GET("/users/plan/:plan", adminHandler.GetUsersByPlan)
+			admin.PUT("/users/bulk", adminHandler.BulkUpdateUsers)
 		}
 	}
 

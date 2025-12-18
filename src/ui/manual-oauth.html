@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
     <title>Manual OAuth Fix - Eloquent</title>
     <style>
         body {
@@ -126,9 +129,9 @@
 
         <div class="step">
             <h3>Step 2: Process Authentication</h3>
-            <button id="processBtn" onclick="processOAuth()">🔄 Process OAuth URL</button>
-            <button id="clearBtn" onclick="clearForm()">🗑️ Clear</button>
-            <button id="closeBtn" onclick="closeWindow()">❌ Close</button>
+            <button id="processBtn">🔄 Process OAuth URL</button>
+            <button id="clearBtn">🗑️ Clear</button>
+            <button id="closeBtn">❌ Close</button>
         </div>
 
         <div id="status"></div>
@@ -137,7 +140,7 @@
             <h3>💡 Alternative Methods:</h3>
             <p><strong>Method 1:</strong> Try signing in again from the main app</p>
             <p><strong>Method 2:</strong> Restart Eloquent and try OAuth again</p>
-            <p><strong>Method 3:</strong> Use Development Mode (no OAuth required)</p>
+            <p><strong>Method 3:</strong> Configure Supabase credentials in .env file</p>
         </div>
     </div>
 
@@ -249,6 +252,11 @@
                 processOAuth();
             }
         });
+
+        // Add event listeners for buttons
+        document.getElementById('processBtn').addEventListener('click', processOAuth);
+        document.getElementById('clearBtn').addEventListener('click', clearForm);
+        document.getElementById('closeBtn').addEventListener('click', closeWindow);
     </script>
 </body>
 </html>

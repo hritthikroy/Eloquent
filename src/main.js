@@ -27,7 +27,7 @@ const fastStartup = new FastStartup();
 
 // Exit early if electron is not available (during build)
 if (!app) {
-  return;
+  process.exit(0);
 }
 
 // Ensure single instance
@@ -55,6 +55,7 @@ if (!gotTheLock) {
 let overlayWindow = null;
 let dashboardWindow = null;
 let adminWindow = null;
+let userManagementWindow = null;
 let loginWindow = null;
 let subscriptionWindow = null;
 
@@ -581,6 +582,7 @@ function createTray() {
     const shouldShowAdmin = isAdminUser(user);
     if (shouldShowAdmin) {
       menuTemplate.push({ label: '🔧 Admin Panel', click: () => createAdminPanel() });
+      menuTemplate.push({ label: '👥 User Management', click: () => createUserManagement() });
     }
 
     // Only show subscription management for non-admin users
@@ -683,6 +685,12 @@ function createTray() {
 
 // Enhanced sound system with better audio feedback
 function playSound(type) {
+  // Skip sound on non-macOS platforms
+  if (process.platform !== 'darwin') {
+    console.log(`🔊 Sound: ${type} (skipped on ${process.platform})`);
+    return;
+  }
+
   const sounds = {
     start: '/System/Library/Sounds/Tink.aiff',
     success: '/System/Library/Sounds/Glass.aiff',
@@ -764,6 +772,12 @@ function registerShortcuts() {
   const adminRegistered = globalShortcut.register('Cmd+Shift+A', () => {
     console.log('🔧 Cmd+Shift+A pressed - opening admin panel');
     createAdminPanel();
+  });
+
+  // Cmd+Shift+U - Open User Management (fallback if tray not visible)
+  const userMgmtRegistered = globalShortcut.register('Cmd+Shift+U', () => {
+    console.log('👥 Cmd+Shift+U pressed - opening user management');
+    createUserManagement();
   });
   
   // Cmd+Shift+R - Refresh tray menu (for debugging)
@@ -1053,6 +1067,58 @@ function createAdminPanel() {
   });
 }
 
+function createUserManagement() {
+  // Check if user is authenticated and has admin role
+  if (!isAuthenticated) {
+    console.log('🚫 User management access denied: User not authenticated');
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'Access Denied',
+      message: 'You must be logged in to access user management.',
+      buttons: ['OK']
+    });
+    return;
+  }
+
+  // Check admin access
+  const currentUser = authService.getUser();
+  
+  if (!isAdminUser(currentUser)) {
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'Access Denied',
+      message: 'You do not have permission to access user management.',
+      buttons: ['OK']
+    });
+    return;
+  }
+
+  if (userManagementWindow) {
+    userManagementWindow.focus();
+    return;
+  }
+
+  console.log('✅ User management access granted for:', authService.getUser()?.email);
+
+  userManagementWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      enableRemoteModule: true
+    },
+    title: 'User Management - Eloquent Admin',
+    icon: path.join(__dirname, '../assets/logo.png')
+  });
+
+  userManagementWindow.loadFile('src/ui/user-management.html');
+
+  userManagementWindow.on('closed', () => {
+    userManagementWindow = null;
+  });
+}
+
 
 
 function startRecording() {
@@ -1302,9 +1368,18 @@ async function transcribe(filePath) {
       },
       timeout: 30000,
       maxContentLength: Infinity,
-      maxBodyLength: Infinity
+      maxBodyLength: Infinity,
+      validateStatus: function (status) {
+        return status < 500; // Resolve only if the status code is less than 500
+      }
     }
   );
+
+  // Check for API errors
+  if (response.status !== 200) {
+    const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
+    throw new Error(errorMsg);
+  }
 
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
     dashboardWindow.webContents.send('api-request', 'whisper');
@@ -1350,9 +1425,18 @@ async function rewrite(text) {
     },
     {
       headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-      timeout: 30000
+      timeout: 30000,
+      validateStatus: function (status) {
+        return status < 500; // Resolve only if the status code is less than 500
+      }
     }
   );
+
+  // Check for API errors
+  if (response.status !== 200) {
+    const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
+    throw new Error(errorMsg);
+  }
 
   // Track API usage
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
@@ -1506,9 +1590,18 @@ Now fix this text:`;
     },
     {
       headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-      timeout: 30000
+      timeout: 30000,
+      validateStatus: function (status) {
+        return status < 500; // Resolve only if the status code is less than 500
+      }
     }
   );
+
+  // Check for API errors
+  if (response.status !== 200) {
+    const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
+    throw new Error(errorMsg);
+  }
 
   // Track API usage
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
@@ -1538,8 +1631,14 @@ function pasteTextRobust(text) {
     return;
   }
 
-  // Check if we have Accessibility permission FIRST
-  const hasAccessibility = systemPreferences.isTrustedAccessibilityClient(false);
+  // Check if we have Accessibility permission FIRST (with error handling)
+  let hasAccessibility = false;
+  try {
+    hasAccessibility = systemPreferences.isTrustedAccessibilityClient(false);
+  } catch (error) {
+    console.log('⚠️ Could not check accessibility permission:', error.message);
+    hasAccessibility = false;
+  }
   
   if (!hasAccessibility) {
     console.log('⚠️ No Accessibility permission - cannot auto-paste');
@@ -2664,6 +2763,42 @@ ipcMain.handle('admin-clear-logs', async () => {
   saveAdminConfigToFile();
   
   return { success: true };
+});
+
+// Get auth token for user management window
+ipcMain.handle('get-auth-token', async () => {
+  console.log('🔐 get-auth-token called');
+  console.log('   isAuthenticated:', isAuthenticated);
+  
+  // Try to validate session if not authenticated
+  if (!isAuthenticated) {
+    console.log('   Not authenticated, trying to validate session...');
+    try {
+      const authResult = await authService.validateSession();
+      if (authResult.valid) {
+        console.log('   ✅ Session validation successful');
+        isAuthenticated = true;
+      } else {
+        console.log('   ❌ Session validation failed:', authResult.reason);
+        throw new Error('Not authenticated');
+      }
+    } catch (error) {
+      console.log('   ❌ Session validation error:', error.message);
+      throw new Error('Not authenticated');
+    }
+  }
+  
+  const user = authService.getUser();
+  console.log('   User:', user?.email, 'Role:', user?.role);
+  
+  if (!isAdminUser(user)) {
+    console.log('   ❌ Admin access required for user:', user?.email);
+    throw new Error('Admin access required');
+  }
+  
+  const token = authService.getAccessToken();
+  console.log('   ✅ Returning token:', token ? 'Token available' : 'No token');
+  return token;
 });
 
 // Function to log API requests
