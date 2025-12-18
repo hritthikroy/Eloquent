@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Dictionary - Eloquent</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .header {
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .description {
+      background: #f8f9fa;
+      border-left: 4px solid #3b82f6;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .description strong {
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      resize: vertical;
+      transition: border-color 0.3s;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    textarea::placeholder {
+      color: #aaa;
+    }
+
+    .examples {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .examples h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .example-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .tag:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .tag:active {
+      transform: translateY(0);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 20px;
+      padding: 16px;
+      background: #f8f9fa;
+      border-radius: 12px;
+    }
+
+    .stat {
+      flex: 1;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #3b82f6;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .success-message {
+      background: #10b981;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #3b82f6;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      transition: gap 0.3s;
+    }
+
+    .back-link:hover {
+      gap: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      }
+
+      .container {
+        background: rgba(30, 30, 30, 0.95);
+      }
+
+      h1 {
+        color: #fff;
+      }
+
+      .subtitle {
+        color: #aaa;
+      }
+
+      .description {
+        background: rgba(255, 255, 255, 0.05);
+        border-left-color: #3b82f6;
+        color: #ccc;
+      }
+
+      .description strong {
+        color: #fff;
+      }
+
+      label {
+        color: #ddd;
+      }
+
+      textarea {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+
+      textarea:focus {
+        border-color: #3b82f6;
+      }
+
+      .examples {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .examples h3 {
+        color: #fff;
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .stats {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .stat-label {
+        color: #aaa;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <a href="dashboard.html" class="back-link">
+      ← Back to Dashboard
+    </a>
+
+    <div class="success-message" id="successMessage">
+      ✓ Dictionary updated successfully!
+    </div>
+
+    <div class="header">
+      <h1>📚 Custom Dictionary</h1>
+      <p class="subtitle">Improve transcription accuracy for specialized terms</p>
+    </div>
+
+    <div class="description">
+      <strong>How it works:</strong> Add custom words, names, or technical terms that you frequently use. These words
+      will be sent to the Whisper API as context, significantly improving recognition accuracy for specialized
+      vocabulary.
+    </div>
+
+    <div class="form-group">
+      <label for="dictionary">Your Custom Words (comma-separated)</label>
+      <textarea id="dictionary"
+        placeholder="Eloquent, ChatGPT, SwiftUI, macOS, Kubernetes, PostgreSQL, Anthropic, Claude..."></textarea>
+    </div>
+
+    <div class="examples">
+      <h3>💡 Quick Add Examples</h3>
+      <div class="example-tags">
+        <span class="tag" onclick="addWord('Eloquent')">Eloquent</span>
+        <span class="tag" onclick="addWord('ChatGPT')">ChatGPT</span>
+        <span class="tag" onclick="addWord('SwiftUI')">SwiftUI</span>
+        <span class="tag" onclick="addWord('macOS')">macOS</span>
+        <span class="tag" onclick="addWord('Kubernetes')">Kubernetes</span>
+        <span class="tag" onclick="addWord('PostgreSQL')">PostgreSQL</span>
+        <span class="tag" onclick="addWord('Anthropic')">Anthropic</span>
+        <span class="tag" onclick="addWord('Groq')">Groq</span>
+        <span class="tag" onclick="addWord('Whisper')">Whisper</span>
+        <span class="tag" onclick="addWord('API')">API</span>
+        <span class="tag" onclick="addWord('GitHub')">GitHub</span>
+        <span class="tag" onclick="addWord('TypeScript')">TypeScript</span>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="wordCount">0</div>
+        <div class="stat-label">Words</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="charCount">0</div>
+        <div class="stat-label">Characters</div>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-secondary" onclick="clearDictionary()">Clear All</button>
+      <button class="btn-primary" onclick="saveDictionary()">Update Dictionary</button>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const textarea = document.getElementById('dictionary');
+    const wordCountEl = document.getElementById('wordCount');
+    const charCountEl = document.getElementById('charCount');
+    const successMessage = document.getElementById('successMessage');
+
+    // Load saved dictionary
+    function loadDictionary() {
+      const saved = localStorage.getItem('customDictionary') || '';
+      textarea.value = saved;
+      updateStats();
+    }
+
+    // Update word and character count
+    function updateStats() {
+      const text = textarea.value.trim();
+      const words = text ? text.split(',').map(w => w.trim()).filter(w => w).length : 0;
+      const chars = text.length;
+
+      wordCountEl.textContent = words;
+      charCountEl.textContent = chars;
+    }
+
+    // Add word to dictionary
+    function addWord(word) {
+      const current = textarea.value.trim();
+      const words = current ? current.split(',').map(w => w.trim()) : [];
+
+      // Check if word already exists
+      if (!words.includes(word)) {
+        words.push(word);
+        textarea.value = words.join(', ');
+        updateStats();
+
+        // Flash the added word
+        const tags = document.querySelectorAll('.tag');
+        tags.forEach(tag => {
+          if (tag.textContent === word) {
+            tag.style.background = '#10b981';
+            setTimeout(() => {
+              tag.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+            }, 500);
+          }
+        });
+      }
+    }
+
+    // Save dictionary
+    function saveDictionary() {
+      const text = textarea.value.trim();
+      localStorage.setItem('customDictionary', text);
+
+      // Send to main process
+      ipcRenderer.send('update-dictionary', text);
+
+      // Show success message
+      successMessage.style.display = 'block';
+      setTimeout(() => {
+        successMessage.style.display = 'none';
+      }, 3000);
+    }
+
+    // Clear dictionary
+    function clearDictionary() {
+      if (confirm('Are you sure you want to clear all custom words?')) {
+        textarea.value = '';
+        updateStats();
+        localStorage.removeItem('customDictionary');
+        ipcRenderer.send('update-dictionary', '');
+      }
+    }
+
+    // Update stats on input
+    textarea.addEventListener('input', updateStats);
+
+    // Load on page load
+    loadDictionary();
+
+    // Auto-save on blur
+    textarea.addEventListener('blur', () => {
+      if (textarea.value !== localStorage.getItem('customDictionary')) {
+        saveDictionary();
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey && e.key === 's') {
+        e.preventDefault();
+        saveDictionary();
+      }
+    });
+  </script>
+</body>
+
+</html>
