@@ -36,7 +36,7 @@ class AuthService {
       // Set up mock user for development
       this.currentUser = {
         id: 'dev-user',
-        email: 'developer@localhost',
+        email: 'hritthikin@gmail.com', // Use admin email for development
         name: 'Development User',
         role: 'admin' // Grant admin access in development mode
       };

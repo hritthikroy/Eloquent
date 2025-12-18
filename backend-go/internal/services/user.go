@@ -31,6 +31,7 @@ func (s *UserService) GetUserByID(userID string) (*models.User, error) {
 	user := &models.User{
 		ID:                  id,
 		Email:               "user@example.com",
+		Role:                "user",
 		Plan:                "free",
 		SubscriptionStatus:  "none",
 		UsageCurrentMonth:   0,
@@ -47,9 +48,18 @@ func (s *UserService) CreateOrUpdateGoogleUser(userData map[string]interface{}, 
 	// In a real implementation, you'd insert/update in the database
 	id := uuid.New()
 	
+	email := userData["email"].(string)
+	
+	// Determine user role based on email
+	role := "user"
+	if models.IsAdminEmail(email) {
+		role = "admin"
+	}
+	
 	user := &models.User{
 		ID:                  id,
-		Email:               userData["email"].(string),
+		Email:               email,
+		Role:                role,
 		Plan:                "free",
 		SubscriptionStatus:  "none",
 		UsageCurrentMonth:   0,

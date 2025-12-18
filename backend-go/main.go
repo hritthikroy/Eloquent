@@ -165,9 +165,23 @@ func main() {
             
             // Method 1: Custom protocol (for Electron)
             try {
-                window.location.href = 'eloquent://auth/success?data=' + encodeURIComponent(JSON.stringify(authData));
+                const encodedData = encodeURIComponent(JSON.stringify(authData));
+                console.log('Encoded auth data length:', encodedData.length);
+                const protocolUrl = 'eloquent://auth/success?data=' + encodedData;
+                console.log('Redirecting to:', protocolUrl.substring(0, 100) + '...');
+                window.location.href = protocolUrl;
             } catch (e) {
-                console.log('Custom protocol failed, trying other methods...');
+                console.log('Custom protocol failed, trying other methods...', e);
+                
+                // Fallback: try simpler protocol format
+                try {
+                    const simpleUrl = 'eloquent://auth/success?access_token=' + authData.access_token + 
+                                    '&refresh_token=' + (authData.refresh_token || '');
+                    console.log('Trying simple protocol format:', simpleUrl.substring(0, 100) + '...');
+                    window.location.href = simpleUrl;
+                } catch (e2) {
+                    console.log('Simple protocol also failed:', e2);
+                }
             }
             
             // Method 2: PostMessage (if opened in popup)
@@ -198,6 +212,21 @@ func main() {
         setTimeout(() => {
             try {
                 window.close();
+            } catch (e) {
+                console.log('Could not close window automatically');
+            }
+        }, 3000);
+        
+        // Fallback: if protocol redirect fails, show manual close button after 5 seconds
+        setTimeout(() => {
+            if (document.body) {
+                const button = document.createElement('button');
+                button.textContent = 'Close Window';
+                button.style.cssText = 'padding: 10px 20px; font-size: 16px; background: white; color: #4CAF50; border: 2px solid white; border-radius: 5px; cursor: pointer; margin-top: 20px;';
+                button.onclick = () => window.close();
+                document.querySelector('.container').appendChild(button);
+            }
+        }, 5000);
             } catch (e) {
                 console.log('Cannot close window automatically');
             }

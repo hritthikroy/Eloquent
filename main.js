@@ -3,7 +3,15 @@
 // Load environment variables
 require('dotenv').config();
 
-const { app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell } = require('electron');
+let app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell;
+
+try {
+  ({ app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell } = require('electron'));
+} catch (e) {
+  // During build process, electron might not be available
+  console.log('Electron not available during build process');
+  module.exports = {};
+}
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
@@ -11,6 +19,12 @@ const { exec, spawn } = require('child_process');
 const AI_PROMPTS = require('./ai-prompts');
 const performanceMonitor = require('./performance-monitor');
 const authService = require('./auth-service');
+const { isAdminUser } = require('./admin-check');
+
+// Exit early if electron is not available (during build)
+if (!app) {
+  return;
+}
 
 // Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock();
@@ -494,7 +508,7 @@ function createTray() {
     );
 
     // Only show subscription management for non-admin users
-    if (!authService.isAdmin()) {
+    if (!isAdminUser(user)) {
       menuTemplate.push(
         { label: plan === 'free' ? '⭐ Upgrade to Pro' : 'Manage Subscription', click: () => createSubscriptionWindow() }
       );
@@ -507,9 +521,12 @@ function createTray() {
   }
 
   // Only show admin panel for admin users
-  if (isAuthenticated && authService.isAdmin()) {
+  const currentUser = authService.getUser();
+  const shouldShowAdmin = isAuthenticated && isAdminUser(currentUser);
+  
+  if (shouldShowAdmin) {
     menuTemplate.push(
-      { label: 'Admin Panel', click: () => createAdminPanel() },
+      { label: '🔧 Admin Panel', click: () => createAdminPanel() },
       { type: 'separator' }
     );
   } else {
@@ -679,6 +696,17 @@ function registerShortcuts() {
     console.log('🔧 Cmd+Shift+A pressed - opening admin panel');
     createAdminPanel();
   });
+  
+  // Cmd+Shift+R - Refresh tray menu (for debugging)
+  const refreshRegistered = globalShortcut.register('Cmd+Shift+R', () => {
+    console.log('🔄 Cmd+Shift+R pressed - refreshing tray menu');
+    console.log('Current auth state:', { 
+      isAuthenticated, 
+      user: authService.getUser()?.email,
+      isAdmin: authService.isAdmin()
+    });
+    createTray();
+  });
 
   // Cmd+Shift+D - Open Dashboard (fallback if tray not visible)
   const dashboardRegistered = globalShortcut.register('Cmd+Shift+D', () => {
@@ -828,8 +856,10 @@ function createAdminPanel() {
     return;
   }
 
-  if (!authService.isAdmin()) {
-    console.log('🚫 Admin panel access denied: User is not an admin');
+  // Check admin access
+  const currentUser = authService.getUser();
+  
+  if (!isAdminUser(currentUser)) {
     dialog.showMessageBoxSync({
       type: 'warning',
       title: 'Access Denied',
@@ -1902,8 +1932,13 @@ ipcMain.on('auth-complete', (event, result) => {
     loginWindow.close();
     loginWindow = null;
   }
-  // Refresh tray menu to show logged-in state
-  createTray();
+  
+  // Wait a moment for auth service to fully process the data
+  setTimeout(() => {
+    console.log('🔄 Refreshing tray menu after auth complete');
+    createTray();
+  }, 500);
+  
   // Open dashboard
   createDashboard();
 });
@@ -2190,11 +2225,16 @@ ipcMain.on('delete-history-item', (event, id) => {
 
 // Admin IPC handlers
 ipcMain.handle('admin-verify-access', async () => {
-  return isAuthenticated && authService.isAdmin();
+  const currentUser = authService.getUser();
+  const hasAccess = isAuthenticated && isAdminUser(currentUser);
+  
+
+  
+  return hasAccess;
 });
 
 ipcMain.handle('admin-get-config', async () => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   return {
@@ -2205,7 +2245,7 @@ ipcMain.handle('admin-get-config', async () => {
 });
 
 ipcMain.handle('admin-save-config', async (event, newAdminConfig) => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2227,7 +2267,7 @@ ipcMain.handle('admin-save-config', async (event, newAdminConfig) => {
 });
 
 ipcMain.handle('admin-get-stats', async () => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2255,7 +2295,7 @@ ipcMain.handle('admin-get-stats', async () => {
 });
 
 ipcMain.handle('admin-get-users', async () => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2266,7 +2306,7 @@ ipcMain.handle('admin-get-users', async () => {
 });
 
 ipcMain.handle('admin-add-user', async (event, userData) => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2284,7 +2324,7 @@ ipcMain.handle('admin-add-user', async (event, userData) => {
 });
 
 ipcMain.handle('admin-remove-user', async (event, userId) => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2297,7 +2337,7 @@ ipcMain.handle('admin-remove-user', async (event, userId) => {
 });
 
 ipcMain.handle('admin-get-requests', async () => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2307,7 +2347,7 @@ ipcMain.handle('admin-get-requests', async () => {
 });
 
 ipcMain.handle('admin-clear-logs', async () => {
-  if (!isAuthenticated || !authService.isAdmin()) {
+  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2367,6 +2407,15 @@ async function handleProtocolUrl(url) {
     return;
   }
   
+  // Add timeout to prevent hanging
+  const timeoutId = setTimeout(() => {
+    if (processingOAuth) {
+      console.log('⚠️ Protocol URL processing timeout');
+      processingOAuth = false;
+      showNotification('❌ Sign In Timeout', 'Authentication took too long. Please try again.');
+    }
+  }, 15000); // 15 second timeout
+  
   if (url.startsWith('eloquent://auth/callback') || url.startsWith('eloquent://auth/success')) {
     processingOAuth = true;
     lastProcessedOAuthUrl = url;
@@ -2375,19 +2424,44 @@ async function handleProtocolUrl(url) {
       
       // Handle new format: eloquent://auth/success?data={...}
       if (url.includes('eloquent://auth/success?data=')) {
-        const dataParam = url.split('?data=')[1];
-        const authData = JSON.parse(decodeURIComponent(dataParam));
-        accessToken = authData.access_token;
-        refreshToken = authData.refresh_token;
-        console.log('🔑 Parsed tokens from JSON data');
+        try {
+          const dataParam = url.split('?data=')[1];
+          const authData = JSON.parse(decodeURIComponent(dataParam));
+          accessToken = authData.access_token;
+          refreshToken = authData.refresh_token;
+          console.log('🔑 Parsed tokens from JSON data');
+        } catch (parseError) {
+          console.error('❌ Error parsing auth data from URL:', parseError);
+          console.log('Raw URL:', url);
+          // Try to extract tokens from URL parameters as fallback
+          const urlObj = new URL(url.replace('eloquent://', 'https://'));
+          const params = new URLSearchParams(urlObj.search);
+          accessToken = params.get('access_token');
+          refreshToken = params.get('refresh_token');
+          console.log('🔑 Fallback: parsed tokens from URL parameters');
+        }
       } else {
-        // Handle old format: eloquent://auth/callback#access_token=...
-        const urlObj = new URL(url);
-        const fragment = urlObj.hash ? urlObj.hash.substring(1) : urlObj.search.substring(1);
-        const params = new URLSearchParams(fragment);
-        accessToken = params.get('access_token');
-        refreshToken = params.get('refresh_token');
-        console.log('🔑 Parsed tokens from URL parameters');
+        // Handle old format: eloquent://auth/callback#access_token=... or query parameters
+        try {
+          const urlObj = new URL(url.replace('eloquent://', 'https://'));
+          
+          // Try query parameters first
+          accessToken = urlObj.searchParams.get('access_token');
+          refreshToken = urlObj.searchParams.get('refresh_token');
+          
+          // If not found, try fragment
+          if (!accessToken && urlObj.hash) {
+            const fragment = urlObj.hash.substring(1);
+            const params = new URLSearchParams(fragment);
+            accessToken = params.get('access_token');
+            refreshToken = params.get('refresh_token');
+          }
+          
+          console.log('🔑 Parsed tokens from URL parameters');
+        } catch (urlError) {
+          console.error('❌ Error parsing URL:', urlError);
+          console.log('Raw URL:', url);
+        }
       }
       
       if (accessToken) {
@@ -2445,6 +2519,8 @@ async function handleProtocolUrl(url) {
       console.error('❌ Error handling OAuth callback:', error);
       showNotification('❌ Sign In Failed', 'Error processing authentication');
     } finally {
+      // Clear timeout
+      clearTimeout(timeoutId);
       // Reset OAuth processing flag
       processingOAuth = false;
       // Clear the last processed URL after a delay to allow for legitimate retries

@@ -8,6 +8,7 @@ CREATE TABLE users (
   name VARCHAR(255),
   google_id VARCHAR(255),
   profile_picture TEXT,
+  role VARCHAR(50) DEFAULT 'user',
   plan VARCHAR(50) DEFAULT 'free',
   stripe_customer_id VARCHAR(255),
   stripe_subscription_id VARCHAR(255),

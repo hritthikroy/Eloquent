@@ -7,24 +7,16 @@
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "prod": "NODE_ENV=production electron .",
-    "configure-production": "./configure-production.sh",
-    "validate-production": "node validate-production.js",
-    "check-production": "node check-production.js",
-    "deploy-heroku": "./deploy-heroku.sh",
-    "heroku-config": "./heroku-config.sh",
-    "test-backend": "./test-backend.sh",
+
     "build": "electron-builder --mac --universal",
     "build:arm64": "electron-builder --mac --arm64",
     "build:x64": "electron-builder --mac --x64",
     "build:signed": "electron-builder --mac --universal --publish never",
-    "build:unsigned": "electron-builder --mac --universal --publish never --config.afterSign=",
+    "build:unsigned": "electron-builder --mac --universal --publish never",
     "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'",
     "backend:dev": "cd backend-go && go run main.go",
     "backend:build": "cd backend-go && go build -o eloquent-backend .",
-    "start:full": "npm run backend:dev & npm start",
-    "test:integration": "node test-integration.js",
-    "test:frontend-backend": "node test-frontend-backend.js",
-    "test:full": "npm run test:integration && npm run test:frontend-backend"
+    "start:full": "npm run backend:dev & npm start"
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.0",

@@ -58,6 +58,7 @@ func (h *AuthHandler) GoogleAuth(c *gin.Context) {
 			"id":             user.ID,
 			"email":          user.Email,
 			"name":           user.Name,
+			"role":           user.GetRole(),
 			"plan":           user.Plan,
 			"profilePicture": user.ProfilePicture,
 			"settings":       user.Settings,
@@ -113,6 +114,7 @@ func (h *AuthHandler) ValidateToken(c *gin.Context) {
 			"id":             user.ID,
 			"email":          user.Email,
 			"name":           user.Name,
+			"role":           user.GetRole(),
 			"plan":           user.Plan,
 			"profilePicture": user.ProfilePicture,
 			"settings":       user.Settings,
@@ -253,11 +255,36 @@ func (h *AuthHandler) OAuthCallback(c *gin.Context) {
             window.opener.postMessage(authData, '*');
         } else {
             // Fallback: try to trigger a custom event
-            window.location.href = 'eloquent://auth/success?data=' + encodeURIComponent(JSON.stringify(authData));
+            try {
+                const encodedData = encodeURIComponent(JSON.stringify(authData));
+                window.location.href = 'eloquent://auth/success?data=' + encodedData;
+            } catch (e) {
+                console.log('Protocol redirect failed:', e);
+                // Try simple format
+                window.location.href = 'eloquent://auth/success?access_token=' + authData.access_token + 
+                                     '&refresh_token=' + (authData.refresh_token || '');
+            }
         }
         
-        // Auto-close after 2 seconds
-        setTimeout(() => window.close(), 2000);
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            try {
+                window.close();
+            } catch (e) {
+                console.log('Could not close window automatically');
+            }
+        }, 3000);
+        
+        // Show manual close button after 5 seconds if window is still open
+        setTimeout(() => {
+            if (document.body) {
+                const button = document.createElement('button');
+                button.textContent = 'Close Window';
+                button.style.cssText = 'padding: 10px 20px; font-size: 16px; background: white; color: #2e7d32; border: 2px solid white; border-radius: 5px; cursor: pointer; margin-top: 20px; display: block; margin-left: auto; margin-right: auto;';
+                button.onclick = () => window.close();
+                document.body.appendChild(button);
+            }
+        }, 5000);
     </script>
 </body>
 </html>`

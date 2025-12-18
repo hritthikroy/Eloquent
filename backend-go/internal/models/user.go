@@ -12,6 +12,7 @@ type User struct {
 	Name                   *string                `json:"name" db:"name"`
 	GoogleID               *string                `json:"google_id" db:"google_id"`
 	ProfilePicture         *string                `json:"profile_picture" db:"profile_picture"`
+	Role                   string                 `json:"role" db:"role"`
 	Plan                   string                 `json:"plan" db:"plan"`
 	StripeCustomerID       *string                `json:"stripe_customer_id" db:"stripe_customer_id"`
 	StripeSubscriptionID   *string                `json:"stripe_subscription_id" db:"stripe_subscription_id"`
@@ -113,4 +114,31 @@ func (u *User) HasRemainingMinutes(minutesNeeded int) bool {
 func (u *User) ShouldResetUsage() bool {
 	now := time.Now()
 	return now.Month() != u.UsageLastReset.Month() || now.Year() != u.UsageLastReset.Year()
+}
+
+// IsAdmin checks if user has admin role
+func (u *User) IsAdmin() bool {
+	return u.Role == "admin"
+}
+
+// GetRole returns the user's role, defaulting to "user" if not set
+func (u *User) GetRole() string {
+	if u.Role == "" {
+		return "user"
+	}
+	return u.Role
+}
+
+// IsAdminEmail checks if an email should have admin privileges
+func IsAdminEmail(email string) bool {
+	adminEmails := []string{
+		"hritthikin@gmail.com",
+	}
+	
+	for _, adminEmail := range adminEmails {
+		if email == adminEmail {
+			return true
+		}
+	}
+	return false
 }
