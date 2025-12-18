@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+*.log
+dist/
+.build/
+.env
+.env.local
+
+# User data (contains API keys and history)
+api-usage.json
+history.json
