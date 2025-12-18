@@ -29,3 +29,6 @@ api-usage.json
 history.json
 config.json
 admin-config.json
+
+# Electron cache
+electron-cache/

@@ -21,106 +21,101 @@ Professional voice dictation application with AI enhancement, built with Electro
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone and install dependencies**
 ```bash
 git clone <repository-url>
 cd EloquentElectron
-```
-
-2. **Install dependencies**
-```bash
-# Install Electron dependencies
 npm install
-
-# Install Go dependencies
-cd backend-go
-go mod tidy
-cd ..
+cd backend-go && go mod tidy && cd ..
 ```
 
-3. **Configure environment**
+2. **Configure environment**
 ```bash
-# Create environment file
-touch backend-go/.env
+# Copy environment template
+cp .env.example .env
+cp backend-go/.env.example backend-go/.env
 
-# Edit with your credentials:
+# Edit .env files with your credentials:
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_KEY
 # - GROQ_API_KEY
 # - STRIPE_SECRET_KEY
 ```
 
-4. **Configure Production Mode** (Optional)
+3. **Start the application**
 ```bash
-# Quick interactive setup
-npm run configure-production
+# Start backend
+cd backend-go && go run main.go &
 
-# Or check current status
-npm run check-production
-```
-
-5. **Start the application**
-```bash
-# Option 1: Start everything at once
-npm run start:full
-
-# Option 2: Start manually
-# Terminal 1: Go backend
-cd backend-go && go run main.go
-
-# Terminal 2: Electron app
+# Start Electron app
 npm start
 ```
 
-## 🚀 Production Mode Setup
+## 📁 Project Structure
 
-Eloquent supports two modes:
-
-### 🔧 Development Mode (Default)
-- Mock authentication (no real Google sign-in)
-- Works offline
-- Good for testing
-
-### 🚀 Production Mode
-- Real Google OAuth authentication
-- User accounts and subscriptions
-- Cloud data storage
-
-### Quick Configuration
-```bash
-# Interactive setup wizard
-npm run configure-production
-
-# Check current status
-npm run check-production
-
-# Validate configuration
-npm run validate-production
+```
+EloquentElectron/
+├── src/                    # Source code
+│   ├── main.js            # Main Electron process
+│   ├── services/          # Core services
+│   │   ├── auth-service.js
+│   │   ├── performance-monitor.js
+│   │   └── performance-optimizer.js
+│   ├── utils/             # Utility modules
+│   │   ├── ai-prompts.js
+│   │   ├── admin-check.js
+│   │   ├── fast-startup.js
+│   │   └── utils.js
+│   └── ui/                # User interface files
+│       ├── dashboard.html
+│       ├── overlay.html
+│       ├── admin.html
+│       ├── login.html
+│       ├── subscription.html
+│       └── manual-oauth.html
+├── backend-go/            # Go backend server
+├── assets/                # Static assets
+├── docs/                  # Documentation
+│   ├── QUICKSTART.md
+│   └── PERFORMANCE_OPTIMIZATIONS.md
+├── .env                   # Environment configuration
+└── package.json          # Node.js dependencies
 ```
 
-**Required credentials:**
-- **Groq API Key** (free at [console.groq.com](https://console.groq.com))
-- **Supabase Anon Key** (from [your dashboard](https://supabase.com/dashboard/project/apphxfvhpqogsquqlaol))
+## 🎯 Usage
 
-See `PRODUCTION_MODE_GUIDE.md` for detailed instructions.
+### Keyboard Shortcuts
+- **Alt + Shift + Space** - Start AI Rewrite (recommended)
+- **Alt + Space** - Start Standard transcription
+- **Escape** - Stop recording
+- **Cmd + Shift + D** - Open dashboard
+- **Cmd + Shift + A** - Open admin panel (admin users only)
 
-## 🏗️ Architecture
+### First Recording
+1. Press **Alt + Shift + Space**
+2. Speak your text
+3. Press **Escape** to stop
+4. Text automatically pastes at cursor!
 
-### **Go Backend** (`backend-go/`)
-- **Framework**: Gin (HTTP router)
-- **Database**: Supabase PostgreSQL
-- **Authentication**: Supabase Auth + JWT
-- **Transcription**: Groq API integration
-- **Payments**: Stripe integration
-- **Performance**: 30-50MB memory, <100ms startup
+## 🔧 Development
 
-### **Electron Frontend**
-- **Framework**: Electron with native macOS integration
-- **UI**: HTML/CSS/JavaScript
-- **Features**: System tray, global shortcuts, auto-paste
-- **Permissions**: Microphone and accessibility access
+### Scripts
+```bash
+# Development
+npm run dev              # Start Electron in dev mode
+npm run start:full       # Start backend + frontend
 
-## 📊 Performance
+# Production
+npm run build           # Build distributable app
+npm run build:signed    # Build signed app
+
+# Backend
+npm run backend:dev     # Start Go server
+npm run backend:build   # Build Go binary
+npm run backend:test    # Run Go tests
+```
+
+## 🚀 Performance
 
 | Metric | Go Backend | Previous (Node.js) |
 |--------|------------|-------------------|
@@ -129,151 +124,15 @@ See `PRODUCTION_MODE_GUIDE.md` for detailed instructions.
 | **Requests/sec** | 15,000+ | 5,000 |
 | **Binary Size** | 15MB | 50MB+ |
 
-## 🔧 Development
+## 📚 Documentation
 
-### **Backend Development**
-```bash
-cd backend-go
-
-# Run with hot reload
-go run main.go
-
-# Build for production
-go build -o eloquent-backend .
-
-# Run tests
-go test ./...
-```
-
-### **Frontend Development**
-```bash
-# Development mode
-npm run dev
-
-# Build for production
-npm run build
-
-# Build signed app (requires Apple Developer account)
-npm run build:signed
-```
-
-## 🚀 Deployment
-
-### **Backend Deployment**
-
-#### Railway (Recommended)
-```bash
-cd backend-go
-railway login
-railway init
-railway up
-```
-
-#### Docker
-```bash
-cd backend-go
-docker build -t eloquent-backend .
-docker run -p 3000:3000 --env-file .env eloquent-backend
-```
-
-#### Heroku
-```bash
-cd backend-go
-heroku create your-app-name
-git push heroku main
-```
-
-### **App Distribution**
-```bash
-# Build signed macOS app
-npm run build:signed
-
-# The app will be in dist/ folder
-```
-
-## 📝 API Documentation
-
-### **Authentication**
-- `POST /api/auth/google` - Google OAuth login
-- `POST /api/auth/validate` - Validate JWT token
-- `PUT /api/auth/settings` - Update user settings
-
-### **Transcription**
-- `POST /api/transcribe/audio` - Transcribe audio file
-- `GET /api/transcribe/api-key` - Get API key (Business plan)
-
-### **Subscriptions**
-- `POST /api/subscriptions/create-checkout` - Create Stripe checkout
-- `GET /api/subscriptions/status` - Get subscription status
-
-### **Usage**
-- `GET /api/usage/stats` - Get usage statistics
-- `GET /api/usage/history` - Get usage history
-
-## 🔐 Environment Variables
-
-### **Backend** (`backend-go/.env`)
-```env
-PORT=3000
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your_service_key
-GROQ_API_KEY=gsk_your_groq_key
-STRIPE_SECRET_KEY=sk_your_stripe_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-```
-
-### **Electron App**
-```env
-ELOQUENT_API_URL=http://localhost:3000  # Development
-ELOQUENT_API_URL=https://your-api.com   # Production
-```
-
-## 🎯 Usage
-
-### **Keyboard Shortcuts**
-- `Alt + Space` - Start standard transcription
-- `Alt + Shift + Space` - Start AI rewrite mode
-- `Escape` - Stop recording
-- `Cmd + Shift + D` - Open dashboard
-
-- `Cmd + Shift + A` - Open admin panel (admin users only)
-
-### **Features**
-- **Auto-paste**: Text appears at cursor automatically
-- **AI Enhancement**: Grammar correction and text rewriting
-- **Usage Limits**: Track monthly usage by plan
-- **Multiple Languages**: Support for various languages
-- **Subscription Management**: Stripe-powered billing
-- **Analytics Dashboard**: Real-time usage insights and performance metrics
-
-## 🔐 Admin Panel
-
-The admin panel provides system administrators with tools to manage API configuration, monitor usage, and manage users.
-
-### **Access Control**
-- **Authentication Required**: Users must be logged in to access admin features
-- **Admin Role Required**: Only users with admin privileges can access the panel
-- **Development Mode**: In development, the mock user automatically has admin access
-
-### **Admin Features**
-- **API Configuration**: Manage Groq API keys and rate limits
-- **User Management**: Add/remove users and view activity
-- **Usage Monitoring**: Real-time API request statistics
-- **Request Logs**: View detailed API request history
-
-### **Accessing Admin Panel**
-1. **Tray Menu**: Right-click tray icon → "Admin Panel" (if admin)
-2. **Keyboard Shortcut**: `Cmd + Shift + A` (if admin)
-3. **Access Denied**: Non-admin users will see an access denied message
-
-### **Development Setup**
-In development mode, the mock user automatically has admin privileges. In production, admin roles should be managed through your backend database by setting the user's `role` field to `'admin'`.
-
-
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Get up and running in 5 minutes
+- **[Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)** - Optimization details
+- **[Backend Documentation](backend-go/README.md)** - Go backend setup
 
 ## 🛠️ Troubleshooting
 
-### **Common Issues**
+### Common Issues
 
 #### "Connection refused" error
 ```bash
@@ -289,29 +148,13 @@ npm run reset-permissions
 ```
 
 #### Auto-paste not working
-```bash
-# Enable accessibility permission
-# System Settings > Privacy & Security > Accessibility
-# Add "Electron" or "Eloquent" and enable
-```
+1. Go to **System Settings** > **Privacy & Security** > **Accessibility**
+2. Find **Electron** or **Eloquent** and enable it
+3. Restart the app
 
 ## 📄 License
 
 MIT License - see LICENSE file for details.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
-
-## 📞 Support
-
-- **Email**: support@eloquentapp.com
-- **Issues**: GitHub Issues
-- **Documentation**: See `/docs` folder
 
 ---
 

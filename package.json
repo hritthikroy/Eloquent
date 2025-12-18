@@ -2,17 +2,18 @@
   "name": "eloquent",
   "version": "2.1.0",
   "description": "Professional voice-to-text macOS application with enhanced AI recognition, subscription management, and ultra-reliable pasting",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "prod": "NODE_ENV=production electron .",
 
-    "build": "electron-builder --mac --universal",
+    "build": "electron-builder --mac --arm64",
     "build:arm64": "electron-builder --mac --arm64",
     "build:x64": "electron-builder --mac --x64",
-    "build:signed": "electron-builder --mac --universal --publish never",
-    "build:unsigned": "electron-builder --mac --universal --publish never",
+    "build:universal": "electron-builder --mac --universal",
+    "build:signed": "electron-builder --mac --arm64 --publish never",
+    "build:unsigned": "electron-builder --mac --arm64 --publish never",
     "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'",
     
     "backend:dev": "cd backend-go && go run main.go",
@@ -23,16 +24,19 @@
     "start:full": "npm run backend:dev & npm start",
     "test": "echo 'No tests specified yet'",
     "lint": "echo 'No linting configured yet'",
+    "webpack": "webpack --mode=production",
+    "build:optimized": "node scripts/optimize-build.js",
+    "analyze-bundle": "npx webpack-bundle-analyzer dist-webpack/main.js",
+    "size-check": "du -sh dist/ && ls -lh dist/*.dmg dist/*.zip 2>/dev/null || echo 'No build files found'",
     
-    "check-deps": "node check-dependencies.js",
-    "configure-production": "node -e \"console.log('🔧 Production Configuration Guide:\\n\\n1. Get Groq API key: https://console.groq.com\\n2. Get Supabase credentials: https://supabase.com/dashboard\\n3. Update .env file with real credentials\\n4. Run: npm run validate-production')\"",
-    "check-production": "node -e \"const fs=require('fs'); const env=fs.readFileSync('.env','utf8'); console.log('🔍 Production Status:'); console.log('Groq API:', env.includes('gsk_') ? '✅ Configured' : '❌ Missing'); console.log('Supabase:', env.includes('supabase.co') && !env.includes('your-project') ? '✅ Configured' : '❌ Missing');\"",
-    "validate-production": "node -e \"const fs=require('fs'); const env=fs.readFileSync('.env','utf8'); const hasGroq=env.includes('gsk_'); const hasSupabase=env.includes('supabase.co')&&!env.includes('your-project'); console.log(hasGroq&&hasSupabase?'✅ Production ready!':'❌ Missing credentials. Run: npm run configure-production');\""
+    "check-env": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')){console.log('❌ .env file missing. Copy from .env.example');process.exit(1);} const env=fs.readFileSync('.env','utf8'); console.log('🔍 Environment Status:'); console.log('Groq API:', env.includes('gsk_') ? '✅ Configured' : '❌ Missing'); console.log('Supabase:', env.includes('supabase.co') && !env.includes('your-project') ? '✅ Configured' : '❌ Missing');\""
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.0",
     "electron": "^28.0.0",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^24.0.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.88.0",
@@ -45,22 +49,27 @@
     "productName": "Eloquent",
     "copyright": "Copyright © 2024 Eloquent",
     "files": [
-      "main.js",
-      "auth-service.js",
-      "dashboard.html",
-      "overlay.html",
-      "admin.html",
-      "login.html",
-      "subscription.html",
-      "manual-oauth.html",
-      "ai-prompts.js",
-      "utils.js",
-      "performance-monitor.js",
-      "performance-optimizer.js",
-      "fast-startup.js",
-      "admin-check.js",
+      "src/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "!src/**/*.map",
+      "!**/*.log",
+      "!**/*.md",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/__tests__/**",
+      "!backend-go/**",
+      "!docs/**",
+      "!scripts/**",
+      "!webpack.config.js",
+      "!.electronbuilderignore",
+      "!node_modules/**/test/**",
+      "!node_modules/**/tests/**",
+      "!node_modules/**/*.md",
+      "!node_modules/**/*.map",
+      "!node_modules/**/LICENSE*",
+      "!node_modules/**/CHANGELOG*",
+      "!node_modules/**/*.d.ts"
     ],
     "directories": {
       "output": "dist",
@@ -73,13 +82,13 @@
         {
           "target": "dmg",
           "arch": [
-            "universal"
+            "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "universal"
+            "arm64"
           ]
         }
       ],
@@ -110,6 +119,15 @@
       }
     },
     "compression": "maximum",
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.{node,dll}"
+    ],
+    "electronDownload": {
+      "cache": "./electron-cache"
+    },
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false
   }
 }
