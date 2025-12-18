@@ -183,6 +183,89 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	})
 }
 
+// OAuth callback handler for production
+func (h *AuthHandler) OAuthCallback(c *gin.Context) {
+	// Get the session data from query parameters or fragments
+	accessToken := c.Query("access_token")
+	refreshToken := c.Query("refresh_token")
+	
+	if accessToken == "" {
+		// Handle error case
+		errorMsg := c.Query("error_description")
+		if errorMsg == "" {
+			errorMsg = "Authentication failed"
+		}
+		
+		// Return HTML page that communicates with Electron app
+		html := `<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Failed</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px; }
+        .error { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <h2 class="error">Authentication Failed</h2>
+    <p>` + errorMsg + `</p>
+    <p>You can close this window and try again.</p>
+    <script>
+        // Try to communicate with Electron app
+        if (window.electronAPI) {
+            window.electronAPI.authResult({ success: false, error: "` + errorMsg + `" });
+        }
+        // Auto-close after 3 seconds
+        setTimeout(() => window.close(), 3000);
+    </script>
+</body>
+</html>`
+		c.Header("Content-Type", "text/html")
+		c.String(http.StatusOK, html)
+		return
+	}
+
+	// Success case - return HTML that communicates with Electron
+	html := `<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Successful</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 50px; }
+        .success { color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h2 class="success">Authentication Successful!</h2>
+    <p>Redirecting back to Eloquent...</p>
+    <script>
+        // Send tokens to Electron app
+        const authData = {
+            success: true,
+            access_token: "` + accessToken + `",
+            refresh_token: "` + refreshToken + `"
+        };
+        
+        // Try multiple methods to communicate with Electron
+        if (window.electronAPI) {
+            window.electronAPI.authResult(authData);
+        } else if (window.opener) {
+            window.opener.postMessage(authData, '*');
+        } else {
+            // Fallback: try to trigger a custom event
+            window.location.href = 'eloquent://auth/success?data=' + encodeURIComponent(JSON.stringify(authData));
+        }
+        
+        // Auto-close after 2 seconds
+        setTimeout(() => window.close(), 2000);
+    </script>
+</body>
+</html>`
+
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, html)
+}
+
 func (h *AuthHandler) DeleteAccount(c *gin.Context) {
 	supabaseUser, _ := c.Get("user")
 	user, err := h.userService.GetUserByID(supabaseUser.(*services.SupabaseUser).ID)

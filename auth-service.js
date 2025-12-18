@@ -89,17 +89,25 @@ class AuthService {
         setTimeout(() => reject(new Error('Supabase connection timeout - check your internet connection')), 10000)
       );
       
+      // Use web-based redirect for production
+      const redirectUrl = process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/callback';
+      console.log('🔗 OAuth redirect URL:', redirectUrl);
+      
       const authPromise = this.supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/callback'
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       });
 
       const { data, error } = await Promise.race([authPromise, timeoutPromise]);
 
       if (error) throw error;
-      return { success: true, url: data.url };
+      return { success: true, url: data.url, isProduction: !redirectUrl.includes('localhost') };
     } catch (error) {
       console.error('Google sign-in error:', error);
       console.log('💡 Tip: Use "Continue in Development Mode" to bypass OAuth');
@@ -196,6 +204,9 @@ class AuthService {
       if (error) throw error;
 
       // Validate with our backend
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`${this.baseURL}/api/auth/validate`, {
         method: 'POST',
         headers: {
@@ -204,10 +215,26 @@ class AuthService {
         },
         body: JSON.stringify({
           deviceId: this.getDeviceId()
-        })
+        }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
-      const result = await response.json();
+      // Check if response has content before parsing JSON
+      const responseText = await response.text();
+      let result;
+      
+      if (responseText.trim()) {
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Failed to parse response JSON:', parseError);
+          throw new Error('Invalid JSON response from server');
+        }
+      } else {
+        throw new Error('Empty response from server');
+      }
       
       if (!response.ok) {
         throw new Error(result.error || 'Session validation failed');
@@ -255,10 +282,10 @@ class AuthService {
     const plan = this.subscription?.plan || 'free';
     
     const limits = {
-      free: { minutes: 30, features: ['basic_transcription'] },
-      pro: { minutes: 300, features: ['basic_transcription', 'ai_rewrite', 'custom_shortcuts', 'priority_support'] },
-      business: { minutes: 1000, features: ['basic_transcription', 'ai_rewrite', 'custom_shortcuts', 'priority_support', 'team_sharing', 'api_access'] },
-      enterprise: { minutes: -1, features: ['all'] }
+      free: { minutes: 150, features: ['basic_transcription'] }, // 5 min/day * 30 days
+      starter: { minutes: 450, features: ['basic_transcription', 'basic_ai_enhancement'], overage: 0.05 }, // 15 min/day * 30 days
+      pro: { minutes: 1800, features: ['basic_transcription', 'advanced_ai_enhancement', 'priority_processing', 'all_languages'], overage: 0.03 }, // 60 min/day * 30 days
+      enterprise: { minutes: -1, features: ['all'], overage: 0 } // Unlimited
     };
 
     return limits[plan] || limits.free;

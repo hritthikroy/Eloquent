@@ -64,11 +64,11 @@
       margin-left: 8px;
     }
 
-    .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-    @media (max-width: 900px) { .plans { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 600px) { .plans { grid-template-columns: 1fr; } }
+    .pricing { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    @media (max-width: 1200px) { .pricing { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .pricing { grid-template-columns: 1fr; } }
 
-    .plan {
+    .pricing-card {
       background: rgba(255, 255, 255, 0.08);
       backdrop-filter: blur(20px);
       border-radius: 20px;
@@ -78,9 +78,9 @@
       position: relative;
     }
 
-    .plan:hover { transform: translateY(-4px); border-color: rgba(255, 255, 255, 0.25); }
-    .plan.popular { border-color: #3b82f6; box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); }
-    .plan.popular::before {
+    .pricing-card:hover { transform: translateY(-4px); border-color: rgba(255, 255, 255, 0.25); }
+    .pricing-card.popular { border-color: #3b82f6; box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); }
+    .pricing-card.popular::before {
       content: 'BEST VALUE';
       position: absolute;
       top: -12px;
@@ -94,16 +94,16 @@
       border-radius: 20px;
     }
 
-    .plan-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-    .plan-desc { color: rgba(255, 255, 255, 0.5); font-size: 13px; margin-bottom: 16px; }
+    .pricing-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .pricing-desc { color: rgba(255, 255, 255, 0.5); font-size: 13px; margin-bottom: 16px; }
 
-    .plan-price { margin-bottom: 20px; }
+    .pricing-price { margin-bottom: 20px; }
     .price-amount { font-size: 36px; font-weight: 700; }
     .price-period { color: rgba(255, 255, 255, 0.6); font-size: 14px; }
     .price-yearly { color: #22c55e; font-size: 12px; margin-top: 4px; }
 
-    .plan-features { list-style: none; margin-bottom: 24px; }
-    .plan-features li {
+    .pricing-features { list-style: none; margin-bottom: 24px; }
+    .pricing-features li {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -111,9 +111,10 @@
       font-size: 13px;
       color: rgba(255, 255, 255, 0.85);
     }
-    .plan-features li::before { content: '✓'; color: #22c55e; font-weight: bold; }
+    .pricing-features li::before { content: '✓'; color: #22c55e; font-weight: bold; }
+    .pricing-features li[style*="color: rgba(255, 255, 255, 0.4)"]::before { content: '✗'; color: rgba(255, 255, 255, 0.4); }
 
-    .plan-btn {
+    .pricing-btn {
       width: 100%;
       padding: 14px;
       border: none;
@@ -124,11 +125,11 @@
       transition: all 0.3s;
     }
 
-    .plan-btn.primary { background: #3b82f6; color: white; }
-    .plan-btn.primary:hover { background: #2563eb; }
-    .plan-btn.secondary { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
-    .plan-btn.secondary:hover { background: rgba(255, 255, 255, 0.15); }
-    .plan-btn.current { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); cursor: default; }
+    .pricing-btn.primary { background: #3b82f6; color: white; }
+    .pricing-btn.primary:hover { background: #2563eb; }
+    .pricing-btn.secondary { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .pricing-btn.secondary:hover { background: rgba(255, 255, 255, 0.15); }
+    .pricing-btn.current { background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4); cursor: default; }
 
     .guarantee {
       text-align: center;
@@ -174,6 +175,139 @@
       font-size: 14px;
     }
     .back-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+    /* Pricing Calculator Styles */
+    .calculator {
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 16px;
+      padding: 32px;
+      margin: 32px 0;
+    }
+    .calculator h3 {
+      font-size: 22px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .calculator p {
+      color: rgba(255, 255, 255, 0.7);
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    .calculator-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .slider-value {
+      color: #3b82f6;
+      font-size: 18px;
+    }
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .slider::-webkit-slider-thumb:hover {
+      background: #2563eb;
+      transform: scale(1.1);
+    }
+    .slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      border: none;
+    }
+    .calculator-results {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 24px;
+    }
+    @media (max-width: 900px) {
+      .calculator-results { grid-template-columns: repeat(2, 1fr); }
+    }
+    .result-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    .result-card.best {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.1);
+    }
+    .result-card h4 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .result-card .price {
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 4px;
+    }
+    .result-card .breakdown {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .result-card .badge {
+      display: inline-block;
+      background: #22c55e;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 10px;
+      margin-top: 8px;
+    }
+
+    /* Overage Badge */
+    .overage-badge {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #f59e0b;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -186,8 +320,8 @@
 
   <div class="container">
     <div class="header">
-      <h1>Simple, Affordable Pricing</h1>
-      <p>Start free, upgrade only when you need more</p>
+      <h1>Flexible Pricing</h1>
+      <p>Pay for what you use with our hybrid pricing model</p>
     </div>
 
     <div id="usage-banner" class="usage-banner" style="display: none;">
@@ -202,101 +336,142 @@
       <div class="billing-option" onclick="setBilling('year')">Yearly <span class="save">Save 33%</span></div>
     </div>
 
-    <div class="plans">
+    <div class="pricing">
       <!-- Free Plan -->
-      <div class="plan">
-        <div class="plan-name">Free</div>
-        <div class="plan-desc">Try it out</div>
-        <div class="plan-price">
+      <div class="pricing-card">
+        <div class="pricing-name">Free</div>
+        <div class="pricing-desc">Try it out</div>
+        <div class="pricing-price">
           <span class="price-amount">$0</span>
-          <span class="price-period">/month</span>
+          <span class="price-period">per month</span>
         </div>
-        <ul class="plan-features">
-          <li><strong>1 hour</strong> per month</li>
+        <ul class="pricing-features">
+          <li><strong>5 minutes/day</strong></li>
           <li>Basic transcription</li>
-          <li>Standard shortcuts</li>
-          <li>2 devices</li>
+          <li>Standard mode only</li>
+          <li style="color: rgba(255, 255, 255, 0.4);">✗ AI enhancement</li>
+          <li style="color: rgba(255, 255, 255, 0.4);">✗ Overage available</li>
         </ul>
-        <button class="plan-btn current" id="free-btn">Current Plan</button>
+        <button class="pricing-btn current" id="free-btn">Current Plan</button>
       </div>
 
       <!-- Starter Plan -->
-      <div class="plan">
-        <div class="plan-name">Starter</div>
-        <div class="plan-desc">For casual users</div>
-        <div class="plan-price">
+      <div class="pricing-card">
+        <div class="pricing-name">Starter</div>
+        <div class="pricing-desc">Perfect for light users</div>
+        <div class="pricing-price">
           <span class="price-amount" id="starter-price">$2.99</span>
-          <span class="price-period">/month</span>
-          <div class="price-yearly" id="starter-yearly">or $24/year (save $12)</div>
+          <span class="price-period">per month</span>
+          <div class="price-yearly" id="starter-yearly">or $29/year (save $7)</div>
         </div>
-        <ul class="plan-features">
-          <li><strong>3 hours</strong> per month</li>
-          <li>AI rewriting</li>
-          <li>Grammar correction</li>
-          <li>3 devices</li>
+        <ul class="pricing-features">
+          <li><strong>15 minutes/day included</strong></li>
+          <li style="color: #f59e0b;"><strong>$0.05/min</strong> over limit</li>
+          <li>Basic AI enhancement</li>
+          <li>Standard processing</li>
+          <li>3 languages</li>
         </ul>
-        <button class="plan-btn secondary" onclick="subscribe('starter')">Get Starter</button>
+        <button class="pricing-btn secondary" onclick="subscribe('starter')">Upgrade to Starter</button>
       </div>
 
       <!-- Pro Plan -->
-      <div class="plan popular">
-        <div class="plan-name">Pro</div>
-        <div class="plan-desc">Most popular</div>
-        <div class="plan-price">
-          <span class="price-amount" id="pro-price">$5.99</span>
-          <span class="price-period">/month</span>
-          <div class="price-yearly" id="pro-yearly">or $48/year (save $24)</div>
+      <div class="pricing-card popular">
+        <div class="pricing-name">Pro</div>
+        <div class="pricing-desc">Most popular</div>
+        <div class="pricing-price">
+          <span class="price-amount" id="pro-price">$9.99</span>
+          <span class="price-period">per month</span>
+          <div class="price-yearly" id="pro-yearly">or $99/year (save $21)</div>
         </div>
-        <ul class="plan-features">
-          <li><strong>10 hours</strong> per month</li>
-          <li>Everything in Starter</li>
-          <li>Custom shortcuts</li>
-          <li>Priority support</li>
-          <li>5 devices</li>
+        <ul class="pricing-features">
+          <li><strong>60 minutes/day included</strong></li>
+          <li style="color: #f59e0b;"><strong>$0.03/min</strong> over limit</li>
+          <li>Advanced AI enhancement</li>
+          <li>Priority processing</li>
+          <li>All languages</li>
         </ul>
-        <button class="plan-btn primary" onclick="subscribe('pro')">Get Pro</button>
+        <button class="pricing-btn primary" onclick="subscribe('pro')">Upgrade to Pro</button>
       </div>
 
-      <!-- Unlimited Plan -->
-      <div class="plan">
-        <div class="plan-name">Unlimited</div>
-        <div class="plan-desc">Power users</div>
-        <div class="plan-price">
-          <span class="price-amount" id="unlimited-price">$9.99</span>
-          <span class="price-period">/month</span>
-          <div class="price-yearly" id="unlimited-yearly">or $79/year (save $41)</div>
+      <!-- Enterprise Plan -->
+      <div class="pricing-card">
+        <div class="pricing-name">Enterprise</div>
+        <div class="pricing-desc">Unlimited usage</div>
+        <div class="pricing-price">
+          <span class="price-amount" id="enterprise-price">$19.99</span>
+          <span class="price-period">per month</span>
+          <div class="price-yearly" id="enterprise-yearly">or $199/year (save $41)</div>
         </div>
-        <ul class="plan-features">
-          <li><strong>Unlimited</strong> usage</li>
-          <li>Everything in Pro</li>
-          <li>API access</li>
-          <li>Early access features</li>
-          <li>10 devices</li>
+        <ul class="pricing-features">
+          <li><strong>Unlimited minutes</strong></li>
+          <li style="color: #22c55e;"><strong>No overage charges</strong></li>
+          <li>Premium AI models</li>
+          <li>Custom shortcuts</li>
+          <li>Priority support</li>
         </ul>
-        <button class="plan-btn secondary" onclick="subscribe('unlimited')">Get Unlimited</button>
+        <button class="pricing-btn secondary" onclick="subscribe('enterprise')">Upgrade to Enterprise</button>
+      </div>
+    </div>
+
+    <!-- Interactive Pricing Calculator -->
+    <div class="calculator">
+      <h3>🧮 Pricing Calculator</h3>
+      <p>See exactly what you'll pay based on your daily usage</p>
+      
+      <div class="calculator-controls">
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>Daily Usage</span>
+            <span class="slider-value" id="usage-value">30 minutes/day</span>
+          </div>
+          <input type="range" min="5" max="180" value="30" class="slider" id="usage-slider">
+        </div>
+      </div>
+
+      <div class="calculator-results" id="calculator-results">
+        <!-- Results will be populated by JavaScript -->
       </div>
     </div>
 
     <div class="guarantee">
+      <h3>💡 How Hybrid Pricing Works</h3>
+      <p><strong>Base Plan:</strong> Includes daily minutes at a fixed monthly rate<br>
+      <strong>Overage:</strong> Only pay for extra minutes when you exceed your daily limit<br>
+      <strong>Fair & Flexible:</strong> Light users save money, heavy users pay proportionally</p>
+    </div>
+
+    <div class="guarantee" style="margin-top: 20px;">
       <h3>💰 7-Day Money-Back Guarantee</h3>
       <p>Not satisfied? Get a full refund within 7 days, no questions asked.</p>
     </div>
 
     <div class="comparison">
-      <h3>Why upgrade?</h3>
-      <p>See how much time you can save</p>
+      <h3>Plan Comparison</h3>
+      <p>Compare features and pricing across all plans</p>
       <div class="comparison-table">
         <div class="comparison-row">
-          <span>Average email (30 seconds speaking)</span>
-          <span>Free: 120 emails/mo | Pro: 1,200 emails/mo</span>
+          <span>Daily included minutes</span>
+          <span>Free: 5 min | Starter: 15 min | Pro: 60 min | Enterprise: Unlimited</span>
         </div>
         <div class="comparison-row">
-          <span>Meeting notes (5 min speaking)</span>
-          <span>Free: 12 meetings/mo | Pro: 120 meetings/mo</span>
+          <span>Overage pricing</span>
+          <span>Free: N/A | Starter: $0.05/min | Pro: $0.03/min | Enterprise: No charges</span>
         </div>
         <div class="comparison-row">
-          <span>Blog post draft (10 min speaking)</span>
-          <span>Free: 6 posts/mo | Pro: 60 posts/mo</span>
+          <span>AI enhancement</span>
+          <span>Free: ✗ | Starter: Basic AI | Pro: Advanced AI | Enterprise: Premium AI</span>
+        </div>
+        <div class="comparison-row">
+          <span>Languages supported</span>
+          <span>Free: English | Starter: 3 languages | Pro: All languages | Enterprise: All languages</span>
+        </div>
+        <div class="comparison-row">
+          <span>Processing priority</span>
+          <span>Free: Standard | Starter: Standard | Pro: Priority | Enterprise: Highest</span>
+        </div>
+        <div class="comparison-row">
+          <span>Support level</span>
+          <span>Free: Community | Starter: Email | Pro: Priority email | Enterprise: Dedicated</span>
         </div>
       </div>
     </div>
@@ -306,25 +481,25 @@
     const { ipcRenderer } = require('electron');
 
     let billingInterval = 'month';
-    let currentPlan = 'free';
+    let currentPricing = 'free';
 
     const prices = {
-      starter: { month: '$2.99', year: '$2.00' },
-      pro: { month: '$5.99', year: '$4.00' },
-      unlimited: { month: '$9.99', year: '$6.58' }
+      starter: { month: '$2.99', year: '$2.42' },
+      pro: { month: '$9.99', year: '$8.25' },
+      enterprise: { month: '$19.99', year: '$16.58' }
     };
 
     const yearlyTotals = {
-      starter: '$24',
-      pro: '$48',
-      unlimited: '$79'
+      starter: '$29',
+      pro: '$99',
+      enterprise: '$199'
     };
 
     // Load current subscription info
     ipcRenderer.invoke('get-subscription').then(data => {
       if (data) {
-        currentPlan = data.plan || 'free';
-        updatePlanButtons();
+        currentPricing = data.plan || 'free';
+        updatePricingButtons();
         
         if (data.usage) {
           const banner = document.getElementById('usage-banner');
@@ -349,26 +524,26 @@
       if (interval === 'year') {
         document.getElementById('starter-price').textContent = prices.starter.year;
         document.getElementById('pro-price').textContent = prices.pro.year;
-        document.getElementById('unlimited-price').textContent = prices.unlimited.year;
+        document.getElementById('enterprise-price').textContent = prices.enterprise.year;
         document.getElementById('starter-yearly').textContent = `billed ${yearlyTotals.starter}/year`;
         document.getElementById('pro-yearly').textContent = `billed ${yearlyTotals.pro}/year`;
-        document.getElementById('unlimited-yearly').textContent = `billed ${yearlyTotals.unlimited}/year`;
+        document.getElementById('enterprise-yearly').textContent = `billed ${yearlyTotals.enterprise}/year`;
       } else {
         document.getElementById('starter-price').textContent = prices.starter.month;
         document.getElementById('pro-price').textContent = prices.pro.month;
-        document.getElementById('unlimited-price').textContent = prices.unlimited.month;
-        document.getElementById('starter-yearly').textContent = `or $24/year (save $12)`;
-        document.getElementById('pro-yearly').textContent = `or $48/year (save $24)`;
-        document.getElementById('unlimited-yearly').textContent = `or $79/year (save $41)`;
+        document.getElementById('enterprise-price').textContent = prices.enterprise.month;
+        document.getElementById('starter-yearly').textContent = `or $29/year (save $7)`;
+        document.getElementById('pro-yearly').textContent = `or $99/year (save $21)`;
+        document.getElementById('enterprise-yearly').textContent = `or $199/year (save $41)`;
       }
     }
 
-    function updatePlanButtons() {
+    function updatePricingButtons() {
       const buttons = {
         free: document.getElementById('free-btn')
       };
       
-      document.querySelectorAll('.plan-btn').forEach(btn => {
+      document.querySelectorAll('.pricing-btn').forEach(btn => {
         btn.classList.remove('current');
         if (btn.id !== 'free-btn') {
           btn.classList.add('secondary');
@@ -376,16 +551,16 @@
         }
       });
       
-      if (currentPlan === 'free') {
+      if (currentPricing === 'free') {
         buttons.free.textContent = 'Current Plan';
         buttons.free.classList.add('current');
       }
     }
 
-    async function subscribe(plan) {
+    async function subscribe(pricing) {
       try {
         const result = await ipcRenderer.invoke('create-checkout', { 
-          plan, 
+          plan: pricing, 
           interval: billingInterval 
         });
         
@@ -402,6 +577,96 @@
     function goBack() {
       ipcRenderer.send('close-subscription-window');
     }
+
+    // Pricing Calculator Functionality
+    const planLimits = {
+      free: { included: 5, overage: 0, basePrice: 0 },
+      starter: { included: 15, overage: 0.05, basePrice: 2.99 },
+      pro: { included: 60, overage: 0.03, basePrice: 9.99 },
+      enterprise: { included: -1, overage: 0, basePrice: 19.99 }
+    };
+
+    function calculateMonthlyCost(dailyMinutes, plan) {
+      const planData = planLimits[plan];
+      
+      if (plan === 'free') {
+        return dailyMinutes <= planData.included ? 0 : null; // Can't exceed free limit
+      }
+      
+      if (plan === 'enterprise') {
+        return planData.basePrice; // Unlimited
+      }
+      
+      const monthlyIncluded = planData.included * 30;
+      const monthlyUsage = dailyMinutes * 30;
+      const overage = Math.max(0, monthlyUsage - monthlyIncluded);
+      
+      return planData.basePrice + (overage * planData.overage);
+    }
+
+    function updateCalculator() {
+      const slider = document.getElementById('usage-slider');
+      const valueDisplay = document.getElementById('usage-value');
+      const resultsContainer = document.getElementById('calculator-results');
+      
+      const dailyMinutes = parseInt(slider.value);
+      valueDisplay.textContent = `${dailyMinutes} minutes/day`;
+      
+      const plans = ['free', 'starter', 'pro', 'enterprise'];
+      const results = plans.map(plan => {
+        const cost = calculateMonthlyCost(dailyMinutes, plan);
+        return { plan, cost };
+      }).filter(result => result.cost !== null);
+      
+      // Find the best value (lowest cost for paid plans)
+      const paidResults = results.filter(r => r.cost > 0);
+      const bestPaid = paidResults.length > 0 ? paidResults.reduce((min, current) => 
+        current.cost < min.cost ? current : min
+      ) : null;
+      
+      resultsContainer.innerHTML = results.map(({ plan, cost }) => {
+        const planData = planLimits[plan];
+        const isBest = bestPaid && plan === bestPaid.plan && paidResults.length > 1;
+        
+        let breakdown = '';
+        if (plan === 'free') {
+          breakdown = dailyMinutes <= planData.included ? 'Within limit' : 'Exceeds limit';
+        } else if (plan === 'enterprise') {
+          breakdown = 'Unlimited usage';
+        } else {
+          const monthlyUsage = dailyMinutes * 30;
+          const monthlyIncluded = planData.included * 30;
+          const overage = Math.max(0, monthlyUsage - monthlyIncluded);
+          
+          if (overage > 0) {
+            breakdown = `$${planData.basePrice} base + $${(overage * planData.overage).toFixed(2)} overage`;
+          } else {
+            breakdown = 'Within included minutes';
+          }
+        }
+        
+        const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
+        const costDisplay = cost === 0 ? 'Free' : `$${cost.toFixed(2)}`;
+        
+        return `
+          <div class="result-card ${isBest ? 'best' : ''}">
+            <h4>${planName}</h4>
+            <div class="price">${costDisplay}</div>
+            <div class="breakdown">${breakdown}</div>
+            ${isBest ? '<div class="badge">BEST VALUE</div>' : ''}
+            ${plan !== 'free' && plan !== 'enterprise' && dailyMinutes > planLimits[plan].included ? 
+              '<div class="overage-badge">+ Overage</div>' : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Initialize calculator
+    document.addEventListener('DOMContentLoaded', () => {
+      const slider = document.getElementById('usage-slider');
+      slider.addEventListener('input', updateCalculator);
+      updateCalculator(); // Initial calculation
+    });
   </script>
 </body>
 </html>

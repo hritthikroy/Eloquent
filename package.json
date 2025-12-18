@@ -7,7 +7,6 @@
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "prod": "NODE_ENV=production electron .",
-    "setup-production": "./setup-production.sh",
     "configure-production": "./configure-production.sh",
     "validate-production": "node validate-production.js",
     "check-production": "node check-production.js",
@@ -18,6 +17,7 @@
     "build:arm64": "electron-builder --mac --arm64",
     "build:x64": "electron-builder --mac --x64",
     "build:signed": "electron-builder --mac --universal --publish never",
+    "build:unsigned": "electron-builder --mac --universal --publish never --config.afterSign=",
     "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'",
     "backend:dev": "cd backend-go && go run main.go",
     "backend:build": "cd backend-go && go build -o eloquent-backend .",
@@ -41,7 +41,6 @@
     "appId": "com.eloquent.app",
     "productName": "Eloquent",
     "copyright": "Copyright © 2024 Eloquent",
-    "afterSign": "scripts/notarize.js",
     "files": [
       "main.js",
       "auth-service.js",

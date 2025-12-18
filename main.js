@@ -12,6 +12,27 @@ const AI_PROMPTS = require('./ai-prompts');
 const performanceMonitor = require('./performance-monitor');
 const authService = require('./auth-service');
 
+// Ensure single instance
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  // Handle second instance (for protocol URLs on Windows/Linux)
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, focus our window instead
+    if (dashboardWindow) {
+      if (dashboardWindow.isMinimized()) dashboardWindow.restore();
+      dashboardWindow.focus();
+    }
+    
+    // Check if there's a protocol URL in the command line
+    const protocolUrl = commandLine.find(arg => arg.startsWith('eloquent://'));
+    if (protocolUrl) {
+      handleProtocolUrl(protocolUrl);
+    }
+  });
+}
 
 let overlayWindow = null;
 let dashboardWindow = null;
@@ -25,6 +46,8 @@ let audioFile = null;
 let recordingProcess = null;
 let currentMode = 'standard';
 let isAuthenticated = false;
+let processingOAuth = false; // Flag to prevent duplicate OAuth processing
+let lastProcessedOAuthUrl = null; // Track last processed URL
 
 // Application configuration
 const CONFIG = {
@@ -176,7 +199,7 @@ async function requestMicrophonePermission() {
 
     // Permission denied or restricted - show instructions
     console.warn('⚠️ Microphone permission not granted');
-    
+
     // Show helpful dialog only once
     const result = await dialog.showMessageBox({
       type: 'warning',
@@ -192,7 +215,7 @@ async function requestMicrophonePermission() {
       // Open System Settings to Microphone
       exec('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"');
     }
-    
+
     // Quit app if permission not granted
     app.quit();
     return false;
@@ -241,7 +264,7 @@ function promptAccessibilityPermission() {
   if (result === 0) {
     // Open System Settings to Accessibility
     exec('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"');
-    
+
     // Show follow-up notification
     setTimeout(() => {
       showNotification('🔧 Setup Instructions', 'Find "Electron" or "Eloquent" in the list and toggle it ON. Then restart Eloquent.');
@@ -249,7 +272,7 @@ function promptAccessibilityPermission() {
   } else if (result === 1) {
     showNotification('📋 Clipboard Mode', 'Text will be copied to clipboard. Press Cmd+V to paste. You can enable auto-paste anytime from the menu.');
   }
-  
+
   return result;
 }
 
@@ -264,13 +287,16 @@ process.on('unhandledRejection', (reason, promise) => {
 
 app.whenReady().then(async () => {
   console.log('🚀 App is ready, starting initialization...');
-  
 
-  
+  // Register custom protocol for OAuth callbacks
+  if (!app.isDefaultProtocolClient('eloquent')) {
+    app.setAsDefaultProtocolClient('eloquent');
+  }
+
   // Load saved configuration first
   console.log('📁 Loading saved configuration...');
   // Functions will be called after they are defined
-  
+
   // Initialize auth service
   console.log('🔐 Initializing authentication...');
   authService.init();
@@ -280,7 +306,7 @@ app.whenReady().then(async () => {
   if (authResult.valid) {
     console.log('✅ User authenticated:', authResult.user?.email || 'cached');
     isAuthenticated = true;
-    
+
     // Update CONFIG with user settings if available
     if (authResult.user?.settings) {
       CONFIG.language = authResult.user.settings.language || CONFIG.language;
@@ -291,24 +317,24 @@ app.whenReady().then(async () => {
     console.log('📝 No valid authentication found');
     isAuthenticated = false;
   }
-  
+
   // Request permissions
   console.log('🔐 Checking microphone permission...');
   await requestMicrophonePermission();
-  
+
   console.log('🔐 Checking accessibility permission...');
   checkAccessibilityPermission();
 
   // Then create UI
   console.log('🎛️ Creating tray...');
   createTray();
-  
+
   console.log('⌨️ Registering shortcuts...');
   registerShortcuts();
-  
+
   console.log('✅ Eloquent is ready! Look for the microphone icon in your menu bar.');
   console.log('🎤 Press Alt+Space to start recording, Esc to stop');
-  
+
   // Show authentication status and require login
   if (isAuthenticated) {
     const subscription = authService.getSubscription();
@@ -325,18 +351,23 @@ app.whenReady().then(async () => {
       createLoginWindow();
     }, 500);
   }
-  
 
 });
 
 function createTray() {
-  console.log('🎛️ Creating system tray icon...');
+  // Destroy existing tray if it exists
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
   
+  console.log('🎛️ Creating system tray icon...');
+
   // Create a 32x32 microphone icon using raw RGBA pixel data
   // This creates a smooth, anti-aliased microphone shape
   const size = 32;
   const canvas = Buffer.alloc(size * size * 4);
-  
+
   // Helper function to draw anti-aliased pixels
   const setPixel = (x, y, alpha) => {
     if (x >= 0 && x < size && y >= 0 && y < size) {
@@ -347,7 +378,7 @@ function createTray() {
       canvas[idx + 3] = Math.min(255, Math.max(0, Math.round(alpha))); // A
     }
   };
-  
+
   // Draw filled circle (for microphone head)
   const fillCircle = (cx, cy, r) => {
     for (let y = cy - r - 1; y <= cy + r + 1; y++) {
@@ -361,7 +392,7 @@ function createTray() {
       }
     }
   };
-  
+
   // Draw filled rounded rectangle
   const fillRoundedRect = (x1, y1, x2, y2, r) => {
     for (let y = y1; y <= y2; y++) {
@@ -385,7 +416,7 @@ function createTray() {
       }
     }
   };
-  
+
   // Draw line with thickness
   const drawLine = (x1, y1, x2, y2, thickness) => {
     const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
@@ -397,7 +428,7 @@ function createTray() {
       fillCircle(cx, cy, thickness / 2);
     }
   };
-  
+
   // Draw arc
   const drawArc = (cx, cy, r, startAngle, endAngle, thickness) => {
     const steps = 50;
@@ -408,22 +439,22 @@ function createTray() {
       fillCircle(x, y, thickness / 2);
     }
   };
-  
+
   // Draw microphone
   const centerX = 16;
-  
+
   // Microphone head (rounded rectangle / capsule)
   fillRoundedRect(10, 4, 22, 16, 6);
-  
+
   // Microphone arc (U-shape holder)
   drawArc(centerX, 14, 9, 0, Math.PI, 2);
-  
+
   // Microphone stand (vertical line)
   drawLine(centerX, 23, centerX, 27, 2.5);
-  
+
   // Microphone base (horizontal line)
   drawLine(10, 27, 22, 27, 2.5);
-  
+
   let icon = nativeImage.createFromBuffer(canvas, { width: size, height: size });
   icon = icon.resize({ width: 18, height: 18, quality: 'best' });
   icon.setTemplateImage(true);
@@ -441,12 +472,12 @@ function createTray() {
   const subscription = authService.getSubscription();
   const usage = authService.getUsage();
   const plan = subscription?.plan || 'free';
-  
+
   const menuTemplate = [
     { label: '🎤 Eloquent Voice Dictation', enabled: false },
     { type: 'separator' },
   ];
-  
+
   // Auth section
   if (isAuthenticated && user) {
     menuTemplate.push(
@@ -461,7 +492,7 @@ function createTray() {
       { type: 'separator' },
       { label: 'Open Dashboard', click: () => createDashboard() }
     );
-    
+
     // Only show subscription management for non-admin users
     if (!authService.isAdmin()) {
       menuTemplate.push(
@@ -471,11 +502,10 @@ function createTray() {
   } else {
     menuTemplate.push(
       { label: '🔑 Sign In / Sign Up', click: () => createLoginWindow() },
-      { label: 'Open Dashboard', click: () => createDashboard() },
-
+      { label: 'Open Dashboard', click: () => createDashboard() }
     );
   }
-  
+
   // Only show admin panel for admin users
   if (isAuthenticated && authService.isAdmin()) {
     menuTemplate.push(
@@ -485,10 +515,10 @@ function createTray() {
   } else {
     menuTemplate.push({ type: 'separator' });
   }
-  
+
   menuTemplate.push(
-    { 
-      label: 'Start AI Rewrite (Alt+Shift+Space)', 
+    {
+      label: 'Start AI Rewrite (Alt+Shift+Space)',
       click: () => {
         if (!overlayWindow && !isCreatingOverlay) {
           playSound('start');
@@ -496,8 +526,8 @@ function createTray() {
         }
       }
     },
-    { 
-      label: 'Start Standard (Alt+Space)', 
+    {
+      label: 'Start Standard (Alt+Space)',
       click: () => {
         if (!overlayWindow && !isCreatingOverlay) {
           playSound('start');
@@ -506,11 +536,11 @@ function createTray() {
       }
     },
     { type: 'separator' },
-    { 
+    {
       label: CONFIG.autoPasteMode === 'direct' ? '🎯 Auto-Paste Mode: ON (Direct)' : '📋 Auto-Paste Mode: OFF (Clipboard Only)',
       enabled: false
     },
-    { 
+    {
       label: systemPreferences.isTrustedAccessibilityClient(false) ? '✅ Auto-paste enabled' : '🔧 Enable auto-paste',
       click: () => {
         if (!systemPreferences.isTrustedAccessibilityClient(false)) {
@@ -523,11 +553,11 @@ function createTray() {
     { type: 'separator' },
     { label: 'Settings', click: () => createDashboard() }
   );
-  
+
   // Logout option if authenticated
   if (isAuthenticated) {
-    menuTemplate.push({ 
-      label: '🚪 Sign Out', 
+    menuTemplate.push({
+      label: '🚪 Sign Out',
       click: () => {
         authService.logout();
         isAuthenticated = false;
@@ -535,12 +565,12 @@ function createTray() {
       }
     });
   }
-  
+
   menuTemplate.push(
     { type: 'separator' },
     { label: 'Quit Eloquent', click: () => app.quit() }
   );
-  
+
   const contextMenu = Menu.buildFromTemplate(menuTemplate);
 
   if (tray) {
@@ -548,13 +578,13 @@ function createTray() {
     tray.setContextMenu(contextMenu);
     console.log('✅ Tray menu configured');
     console.log('🔍 Look for the microphone icon in your menu bar (top-right corner)');
-    
+
     // Add click handler for tray icon
     tray.on('click', () => {
       console.log('🖱️ Tray icon clicked');
       createDashboard();
     });
-    
+
     tray.on('right-click', () => {
       console.log('🖱️ Tray icon right-clicked');
       tray.popUpContextMenu();
@@ -575,7 +605,7 @@ function playSound(type) {
   };
 
   const soundFile = sounds[type] || sounds.notification;
-  
+
   // Play sound with volume control (70% volume for better UX)
   exec(`afplay "${soundFile}" -v 0.7`, (error) => {
     if (error) {
@@ -591,14 +621,14 @@ let shortcutLock = false;
 
 function handleShortcut(action, mode = 'standard') {
   const now = Date.now();
-  
+
   if (shortcutLock || (now - lastShortcutTime < SHORTCUT_DEBOUNCE)) {
     return;
   }
-  
+
   lastShortcutTime = now;
   shortcutLock = true;
-  
+
   setTimeout(() => {
     shortcutLock = false;
   }, SHORTCUT_DEBOUNCE);
@@ -1640,6 +1670,9 @@ ipcMain.on('get-config', (event) => {
 // AUTHENTICATION IPC HANDLERS
 // ============================================
 
+// Global OAuth resolver for protocol URL handling
+let globalOAuthResolver = null;
+
 // Supabase Google OAuth handler
 ipcMain.handle('auth-google', async () => {
   try {
@@ -1653,6 +1686,15 @@ ipcMain.handle('auth-google', async () => {
     return new Promise((resolve) => {
       let resolved = false;
       let authWindow = null;
+      
+      // Store resolver globally so protocol handler can use it
+      globalOAuthResolver = (result) => {
+        if (!resolved) {
+          resolved = true;
+          globalOAuthResolver = null;
+          resolve(result);
+        }
+      };
 
       authWindow = new BrowserWindow({
         width: 500,
@@ -1671,18 +1713,29 @@ ipcMain.handle('auth-google', async () => {
         if (resolved) return;
         
         // Check if this is the callback with session data
-        if (url.includes('/auth/callback') && url.includes('access_token')) {
+        if ((url.includes('/auth/callback') || url.includes('/auth/success')) && (url.includes('access_token') || url.includes('code'))) {
           resolved = true;
           event.preventDefault();
           
           try {
-            // Parse the URL fragment for session data
-            const urlObj = new URL(url);
-            const fragment = urlObj.hash.substring(1);
-            const params = new URLSearchParams(fragment);
+            let accessToken, refreshToken;
             
-            const accessToken = params.get('access_token');
-            const refreshToken = params.get('refresh_token');
+            // Parse URL for tokens - handle both fragment and query parameters
+            const urlObj = new URL(url);
+            
+            // Try fragment first (Supabase implicit flow)
+            if (urlObj.hash) {
+              const fragment = urlObj.hash.substring(1);
+              const fragmentParams = new URLSearchParams(fragment);
+              accessToken = fragmentParams.get('access_token');
+              refreshToken = fragmentParams.get('refresh_token');
+            }
+            
+            // Try query parameters (production callback)
+            if (!accessToken && urlObj.searchParams) {
+              accessToken = urlObj.searchParams.get('access_token');
+              refreshToken = urlObj.searchParams.get('refresh_token');
+            }
             
             if (accessToken) {
               // Show loading state
@@ -1739,11 +1792,101 @@ ipcMain.handle('auth-google', async () => {
         }
       });
 
+      // Listen for messages from the callback page (production)
+      authWindow.webContents.on('did-finish-load', () => {
+        if (resolved) return;
+        
+        // Inject script to listen for auth results from the callback page
+        authWindow.webContents.executeJavaScript(`
+          // Listen for auth data from the callback page
+          if (window.location.href.includes('/auth/callback')) {
+            // Try to extract auth data from the page
+            const scripts = document.querySelectorAll('script');
+            for (const script of scripts) {
+              if (script.textContent.includes('authData')) {
+                try {
+                  // Extract the auth data from the script
+                  const match = script.textContent.match(/authData\\s*=\\s*({[^}]+})/);
+                  if (match) {
+                    const authData = JSON.parse(match[1]);
+                    if (authData.success && authData.access_token) {
+                      window.electronAPI = { authResult: (data) => console.log('Auth result:', data) };
+                      return authData;
+                    }
+                  }
+                } catch (e) {
+                  console.error('Error parsing auth data:', e);
+                }
+              }
+            }
+          }
+          return null;
+        `).then(authData => {
+          if (authData && authData.success && !resolved) {
+            resolved = true;
+            
+            // Show loading state
+            authWindow.loadURL('data:text/html,' + encodeURIComponent(`
+              <html>
+                <head>
+                  <style>
+                    body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #1e293b, #0f172a); color: white; }
+                    .container { text-align: center; }
+                    h1 { font-size: 24px; margin-bottom: 10px; }
+                    p { color: rgba(255,255,255,0.7); }
+                    .spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="spinner"></div>
+                    <h1>Signing you in...</h1>
+                    <p>Please wait</p>
+                  </div>
+                </body>
+              </html>
+            `));
+
+            // Handle the OAuth callback
+            authService.handleOAuthCallback({
+              access_token: authData.access_token,
+              refresh_token: authData.refresh_token
+            }).then(result => {
+              if (result.success) {
+                isAuthenticated = true;
+                if (result.user?.settings) {
+                  CONFIG.language = result.user.settings.language || CONFIG.language;
+                  CONFIG.aiMode = result.user.settings.aiMode || CONFIG.aiMode;
+                  CONFIG.autoGrammarFix = result.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+                }
+              }
+
+              setTimeout(() => {
+                if (!authWindow.isDestroyed()) authWindow.close();
+              }, 500);
+              
+              resolve(result);
+            }).catch(err => {
+              if (!authWindow.isDestroyed()) authWindow.close();
+              resolve({ success: false, error: err.message });
+            });
+          }
+        }).catch(err => {
+          console.log('No auth data found in page');
+        });
+      });
+
       // Handle window close
       authWindow.on('closed', () => {
         if (!resolved) {
-          resolved = true;
-          resolve({ success: false, error: 'Sign-in window was closed' });
+          // Give a small delay to allow protocol URL processing
+          setTimeout(() => {
+            if (!resolved) {
+              resolved = true;
+              resolve({ success: false, error: 'Sign-in window was closed' });
+            }
+          }, 1000); // 1 second delay
         }
       });
     });
@@ -1984,7 +2127,7 @@ function createSubscriptionWindow() {
 
 ipcMain.on('save-config', (event, newConfig) => {
   console.log('💾 Saving configuration:', newConfig);
-  
+
   // Handle API keys array
   if (newConfig.apiKeys) {
     CONFIG.apiKeys = newConfig.apiKeys;
@@ -1996,7 +2139,6 @@ ipcMain.on('save-config', (event, newConfig) => {
   if (newConfig.preserveClipboard !== undefined) CONFIG.preserveClipboard = newConfig.preserveClipboard;
   if (newConfig.autoGrammarFix !== undefined) CONFIG.autoGrammarFix = newConfig.autoGrammarFix;
 
-  
   // Save configuration to file
   saveConfigToFile();
   console.log('✅ Configuration saved successfully');
@@ -2208,3 +2350,100 @@ app.on('will-quit', () => {
 app.on('window-all-closed', (e) => {
   e.preventDefault(); // Keep app running in menu bar
 });
+
+// Handle custom protocol for OAuth callbacks
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
+});
+
+// Handle protocol URL
+async function handleProtocolUrl(url) {
+  console.log('📱 Received protocol URL:', url);
+  
+  // Prevent duplicate processing of the same OAuth URL
+  if (processingOAuth || lastProcessedOAuthUrl === url) {
+    console.log('⚠️ OAuth already being processed or duplicate URL, ignoring');
+    return;
+  }
+  
+  if (url.startsWith('eloquent://auth/callback') || url.startsWith('eloquent://auth/success')) {
+    processingOAuth = true;
+    lastProcessedOAuthUrl = url;
+    try {
+      let accessToken, refreshToken;
+      
+      // Handle new format: eloquent://auth/success?data={...}
+      if (url.includes('eloquent://auth/success?data=')) {
+        const dataParam = url.split('?data=')[1];
+        const authData = JSON.parse(decodeURIComponent(dataParam));
+        accessToken = authData.access_token;
+        refreshToken = authData.refresh_token;
+        console.log('🔑 Parsed tokens from JSON data');
+      } else {
+        // Handle old format: eloquent://auth/callback#access_token=...
+        const urlObj = new URL(url);
+        const fragment = urlObj.hash ? urlObj.hash.substring(1) : urlObj.search.substring(1);
+        const params = new URLSearchParams(fragment);
+        accessToken = params.get('access_token');
+        refreshToken = params.get('refresh_token');
+        console.log('🔑 Parsed tokens from URL parameters');
+      }
+      
+      if (accessToken) {
+        console.log('🔑 Processing OAuth tokens...');
+        
+        // Handle the OAuth callback
+        const result = await authService.handleOAuthCallback({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+        
+        if (result.success) {
+          console.log('✅ OAuth authentication successful');
+          isAuthenticated = true;
+          
+          if (result.user?.settings) {
+            CONFIG.language = result.user.settings.language || CONFIG.language;
+            CONFIG.aiMode = result.user.settings.aiMode || CONFIG.aiMode;
+            CONFIG.autoGrammarFix = result.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+          }
+          
+          // Close login window if open
+          if (loginWindow && !loginWindow.isDestroyed()) {
+            loginWindow.close();
+            loginWindow = null;
+          }
+          
+          // Refresh tray menu
+          createTray();
+          
+          // Show success notification
+          showNotification('✅ Sign In Successful', `Welcome back, ${result.user?.email || 'User'}!`);
+          
+          // Open dashboard
+          createDashboard();
+          
+          // Resolve OAuth promise if waiting
+          if (globalOAuthResolver) {
+            globalOAuthResolver(result);
+          }
+        } else {
+          console.error('❌ OAuth authentication failed:', result.error);
+          showNotification('❌ Sign In Failed', result.error || 'Authentication failed');
+          
+          // Resolve OAuth promise with error
+          if (globalOAuthResolver) {
+            globalOAuthResolver(result);
+          }
+        }
+      } else {
+        console.error('❌ No access token in OAuth callback');
+        showNotification('❌ Sign In Failed', 'No access token received');
+      }
+    } catch (error) {
+      console.error('❌ Error handling OAuth callback:', error);
+      showNotification('❌ Sign In Failed', 'Error processing authentication');
+    }
+  }
+}

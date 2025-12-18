@@ -78,9 +78,10 @@ current_supabase=$(grep "^SUPABASE_ANON_KEY=" .env | cut -d'=' -f2)
 if [[ "$current_supabase" == "your-anon-key" ]] || [[ -z "$current_supabase" ]]; then
     echo "🔐 SUPABASE ANON KEY SETUP"
     echo "-------------------------"
-    echo "1. Visit: https://supabase.com/dashboard/project/apphxfvhpqogsquqlaol"
-    echo "2. Click Settings → API"
-    echo "3. Copy the 'anon public' key (starts with 'eyJ')"
+    echo "1. Visit: https://supabase.com/dashboard"
+    echo "2. Select your project"
+    echo "3. Click Settings → API"
+    echo "4. Copy the 'anon public' key (starts with 'eyJ')"
     echo ""
     read -p "Enter your Supabase anon key: " supabase_key
     

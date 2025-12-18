@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test OAuth Flow</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            max-width: 800px; margin: 50px auto; padding: 20px;
+            background: #f5f5f5;
+        }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: #2e7d32; }
+        .error { color: #d32f2f; }
+        .info { color: #1976d2; }
+        button { 
+            background: #4285f4; color: white; border: none; padding: 12px 24px; 
+            border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px;
+        }
+        button:hover { background: #3367d6; }
+        .url-test { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f1f3f4; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Eloquent OAuth Flow Test</h1>
+        
+        <div class="test-section">
+            <h3>📋 Configuration Status</h3>
+            <div id="config-status">Loading...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔗 URL Tests</h3>
+            <div class="url-test">
+                <strong>Backend Root:</strong> 
+                <a href="https://agile-basin-06335-9109082620ce.herokuapp.com/" target="_blank">
+                    https://agile-basin-06335-9109082620ce.herokuapp.com/
+                </a>
+                <span id="root-status">Testing...</span>
+            </div>
+            
+            <div class="url-test">
+                <strong>OAuth Callback (no params):</strong> 
+                <a href="https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback" target="_blank">
+                    https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback
+                </a>
+                <span id="callback-status">Testing...</span>
+            </div>
+            
+            <div class="url-test">
+                <strong>OAuth Callback (with test params):</strong> 
+                <a href="https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback?access_token=test123&refresh_token=refresh123" target="_blank">
+                    Test with parameters
+                </a>
+                <span id="callback-params-status">Testing...</span>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔐 OAuth URL Generation</h3>
+            <button onclick="generateOAuthURL()">Generate Google OAuth URL</button>
+            <div id="oauth-url-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 Supabase Configuration Checklist</h3>
+            <p>Make sure these are configured in your Supabase dashboard:</p>
+            <ul>
+                <li><strong>Site URL:</strong> <code>https://agile-basin-06335-9109082620ce.herokuapp.com</code></li>
+                <li><strong>Redirect URLs:</strong> <code>https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback</code></li>
+                <li><strong>Google OAuth:</strong> Enabled with valid Client ID and Secret</li>
+            </ul>
+            
+            <p class="info">
+                💡 <strong>Note:</strong> The callback URL will show "Authentication Failed" when accessed directly 
+                because it expects OAuth parameters from Google. This is normal behavior.
+            </p>
+        </div>
+        
+        <div class="test-section">
+            <h3>🚀 Test Full OAuth Flow</h3>
+            <button onclick="testFullOAuth()">Start OAuth Test</button>
+            <div id="oauth-test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test URL accessibility
+        async function testURL(url, elementId) {
+            try {
+                const response = await fetch(url, { mode: 'no-cors' });
+                document.getElementById(elementId).innerHTML = '<span class="success">✅ Accessible</span>';
+            } catch (error) {
+                document.getElementById(elementId).innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+            }
+        }
+
+        // Generate OAuth URL
+        async function generateOAuthURL() {
+            const resultDiv = document.getElementById('oauth-url-result');
+            resultDiv.innerHTML = 'Generating...';
+            
+            try {
+                // This would normally use Supabase client, but for testing we'll show the expected URL format
+                const supabaseUrl = 'https://apphxfvhpqogsquqlaol.supabase.co';
+                const redirectUrl = 'https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback';
+                
+                const oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&access_type=offline&prompt=consent`;
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ OAuth URL Generated:</div>
+                    <pre>${oauthUrl}</pre>
+                    <button onclick="window.open('${oauthUrl}', '_blank')">Test OAuth Flow</button>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Test full OAuth flow
+        function testFullOAuth() {
+            const resultDiv = document.getElementById('oauth-test-result');
+            resultDiv.innerHTML = `
+                <div class="info">
+                    🔄 Opening OAuth flow in new window...<br>
+                    Complete the Google sign-in process and check if you're redirected back to the callback URL.
+                </div>
+            `;
+            generateOAuthURL();
+        }
+
+        // Load configuration status
+        function loadConfigStatus() {
+            document.getElementById('config-status').innerHTML = `
+                <div class="info">
+                    <strong>Supabase URL:</strong> https://apphxfvhpqogsquqlaol.supabase.co<br>
+                    <strong>Backend URL:</strong> https://agile-basin-06335-9109082620ce.herokuapp.com<br>
+                    <strong>Callback URL:</strong> https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback
+                </div>
+            `;
+        }
+
+        // Run tests on page load
+        window.onload = function() {
+            loadConfigStatus();
+            testURL('https://agile-basin-06335-9109082620ce.herokuapp.com/', 'root-status');
+            testURL('https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback', 'callback-status');
+            testURL('https://agile-basin-06335-9109082620ce.herokuapp.com/api/auth/callback?access_token=test', 'callback-params-status');
+        };
+    </script>
+</body>
+</html>
