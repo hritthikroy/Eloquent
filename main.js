@@ -2444,6 +2444,13 @@ async function handleProtocolUrl(url) {
     } catch (error) {
       console.error('❌ Error handling OAuth callback:', error);
       showNotification('❌ Sign In Failed', 'Error processing authentication');
+    } finally {
+      // Reset OAuth processing flag
+      processingOAuth = false;
+      // Clear the last processed URL after a delay to allow for legitimate retries
+      setTimeout(() => {
+        lastProcessedOAuthUrl = null;
+      }, 5000);
     }
   }
 }

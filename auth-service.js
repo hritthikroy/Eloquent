@@ -203,23 +203,45 @@ class AuthService {
       
       if (error) throw error;
 
-      // Validate with our backend
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      // Validate with our backend (with retry logic)
+      let response;
+      let lastError;
       
-      const response = await fetch(`${this.baseURL}/api/auth/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${data.session.access_token}`
-        },
-        body: JSON.stringify({
-          deviceId: this.getDeviceId()
-        }),
-        signal: controller.signal
-      });
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per attempt
+          
+          response = await fetch(`${this.baseURL}/api/auth/validate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.session.access_token}`
+            },
+            body: JSON.stringify({
+              deviceId: this.getDeviceId()
+            }),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          break; // Success, exit retry loop
+          
+        } catch (error) {
+          lastError = error;
+          console.log(`⚠️ Backend validation attempt ${attempt} failed:`, error.message);
+          
+          if (attempt < 2) {
+            console.log('🔄 Retrying backend validation...');
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+          }
+        }
+      }
       
-      clearTimeout(timeoutId);
+      // If all attempts failed, throw the last error
+      if (!response) {
+        throw lastError || new Error('Failed to connect to backend after retries');
+      }
 
       // Check if response has content before parsing JSON
       const responseText = await response.text();
