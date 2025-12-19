@@ -407,7 +407,17 @@ func main() {
 	// Add catch-all handler for unknown routes
 	r.NoRoute(func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-			log.Printf("⚠️  Unknown API endpoint requested: %s %s", c.Request.Method, c.Request.URL.Path)
+			// Filter out known external/unwanted requests to reduce log noise
+			path := c.Request.URL.Path
+			isExternalRequest := strings.Contains(path, "/exchange") || 
+								strings.Contains(path, "/rate") ||
+								strings.Contains(path, "/currency") ||
+								strings.Contains(path, "/forex")
+			
+			if !isExternalRequest {
+				log.Printf("⚠️  Unknown API endpoint requested: %s %s", c.Request.Method, path)
+			}
+			
 			c.JSON(404, gin.H{
 				"error": "API endpoint not found",
 				"path":  c.Request.URL.Path,

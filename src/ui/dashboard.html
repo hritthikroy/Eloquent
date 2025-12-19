@@ -621,7 +621,7 @@
       
       <div class="sidebar-section">
         <div class="sidebar-title">Main</div>
-        <div class="sidebar-item active" onclick="showSection('home')">
+        <div class="sidebar-item active" data-section="home" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
           </svg>
@@ -631,7 +631,7 @@
       
       <div class="sidebar-section">
         <div class="sidebar-title">Tools</div>
-        <div class="sidebar-item" onclick="showSection('history')">
+        <div class="sidebar-item" data-section="history" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
           </svg>
@@ -641,7 +641,7 @@
       
       <div class="sidebar-section">
         <div class="sidebar-title">Support</div>
-        <div class="sidebar-item" onclick="showSection('settings')">
+        <div class="sidebar-item" data-section="settings" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
           </svg>
@@ -651,7 +651,7 @@
       
       <div class="sidebar-section">
         <div class="sidebar-title">Account</div>
-        <div class="sidebar-item" onclick="handleGoogleSignIn()">
+        <div class="sidebar-item" data-action="google-signin" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -660,7 +660,7 @@
           </svg>
           Google Sign In
         </div>
-        <div class="sidebar-item" onclick="showSection('plans')">
+        <div class="sidebar-item" data-section="plans" style="cursor: pointer;">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
@@ -711,7 +711,7 @@
         <h3 style="display: flex; justify-content: space-between; align-items: center;">
           <span>📝 Most Recent Transcription</span>
           <div style="display: flex; align-items: center; gap: 10px;">
-            <button id="copyLastTranscription" style="padding: 4px 8px; background: rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.5); border-radius: 4px; color: white; font-size: 11px; cursor: pointer; display: none;" onclick="copyLastTranscriptionText()">📋 Copy</button>
+            <button id="copyLastTranscription" style="padding: 4px 8px; background: rgba(59, 130, 246, 0.3); border: 1px solid rgba(59, 130, 246, 0.5); border-radius: 4px; color: white; font-size: 11px; cursor: pointer; display: none;">📋 Copy</button>
             <span id="lastTranscriptionTime" style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">No transcription yet</span>
           </div>
         </h3>
@@ -724,10 +724,8 @@
     <div id="history-section" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h1 style="margin: 0;">History</h1>
-        <button class="btn" onclick="clearAllHistory()"
-          style="background: rgba(255, 59, 48, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 59, 48, 0.3); padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 10px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;"
-          onmouseover="this.style.background='rgba(255, 59, 48, 0.25)'; this.style.borderColor='rgba(255, 59, 48, 0.5)'; this.style.transform='scale(1.05)';"
-          onmouseout="this.style.background='rgba(255, 59, 48, 0.15)'; this.style.borderColor='rgba(255, 59, 48, 0.3)'; this.style.transform='scale(1)';">
+        <button class="btn" id="clearAllHistoryBtn"
+          style="background: rgba(255, 59, 48, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 59, 48, 0.3); padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 10px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
             stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -832,7 +830,7 @@
           </p>
         </div>
 
-        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
       </div>
 
 
@@ -863,7 +861,7 @@
             <p style="font-size: 24px; font-weight: 700; color: #60a5fa; margin-bottom: 4px;" id="currentPlanName">Free Plan</p>
             <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px;" id="currentPlanDetails">Limited features</p>
           </div>
-          <button class="btn btn-primary" onclick="managePlan()" style="padding: 12px 24px;">
+          <button class="btn btn-primary" id="managePlanBtn" style="padding: 12px 24px;">
             Manage Plan
           </button>
         </div>
@@ -928,7 +926,7 @@
                 <span style="color: #10b981;">✓</span> 3 languages
               </li>
             </ul>
-            <button class="btn btn-primary" style="width: 100%;" onclick="subscribeToPlan('starter')">
+            <button class="btn btn-primary" style="width: 100%;" data-plan="starter">
               Upgrade to Starter
             </button>
           </div>
@@ -962,7 +960,7 @@
                 <span style="color: #10b981;">✓</span> All languages
               </li>
             </ul>
-            <button class="btn btn-primary" style="width: 100%;" onclick="subscribeToPlan('pro')">
+            <button class="btn btn-primary" style="width: 100%;" data-plan="pro">
               Upgrade to Pro
             </button>
           </div>
@@ -993,7 +991,7 @@
                 <span style="color: #10b981;">✓</span> Priority support
               </li>
             </ul>
-            <button class="btn" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #a855f7); color: white;" onclick="subscribeToPlan('enterprise')">
+            <button class="btn" style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #a855f7); color: white;" data-plan="enterprise">
               Upgrade to Enterprise
             </button>
           </div>
@@ -1005,740 +1003,7 @@
 
   <script src="../utils/utils.js"></script>
   <script src="../utils/performance-optimizer.js"></script>
-  <script>
-    const { ipcRenderer } = require('electron');
-
-    function showSection(name) {
-      document.querySelectorAll('[id$="-section"]').forEach(el => el.style.display = 'none');
-      document.getElementById(name + '-section').style.display = 'block';
-      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-      event.target.closest('.sidebar-item').classList.add('active');
-      
-      // Refresh history when switching to history section
-      if (name === 'history') {
-        loadHistory();
-      }
-    }
-
-    function saveSettings() {
-      const language = document.getElementById('language').value;
-      const aiMode = document.getElementById('aiMode').value;
-
-      ipcRenderer.send('save-config', {
-        language,
-        aiMode
-      });
-
-      alert(`Settings saved! ✅\n\n✨ AI Mode: ${document.getElementById('aiMode').selectedOptions[0].text}\n🌐 Language: ${language}`);
-    }
-
-    // Load config on start
-    ipcRenderer.send('get-config');
-    ipcRenderer.on('config', (_, config) => {
-      // Load user settings (no API keys)
-      if (config.language) document.getElementById('language').value = config.language;
-      if (config.aiMode) {
-        document.getElementById('aiMode').value = config.aiMode;
-        updateAIModeDescription(config.aiMode);
-      }
-    });
-
-    // Function to update daily limit display based on API key count
-    function updateDailyLimitDisplay(apiKeys) {
-      // Count valid API keys (non-empty)
-      const validKeyCount = apiKeys.filter(key => key && key.trim() !== '').length;
-      const totalMinutes = validKeyCount * 40;
-
-      // Update description (check if element exists)
-      const descEl = document.getElementById('sessionDescription');
-      if (descEl) {
-        if (validKeyCount === 1) {
-          descEl.innerHTML = 'Track your daily recording sessions. You have <strong style="color: #60a5fa;">40 minutes/day</strong> with 1 API key.';
-        } else if (validKeyCount > 1) {
-          descEl.innerHTML = `Track your daily recording sessions. With ${validKeyCount} API keys, you get <strong style="color: #60a5fa;">${totalMinutes} minutes/day</strong> total recording time.`;
-        } else {
-          descEl.innerHTML = 'Track your daily recording sessions. <strong style="color: #ff6b6b;">Add API keys in Settings</strong> to enable recording.';
-        }
-      }
-
-      // Update progress display (check if elements exist)
-      const timeProgressEl = document.getElementById('timeProgress');
-      if (timeProgressEl) {
-        timeProgressEl.textContent = `0 / ${totalMinutes} min`;
-      }
-      
-      const timeRemainingEl = document.getElementById('timeRemaining');
-      if (timeRemainingEl) {
-        timeRemainingEl.textContent = `${totalMinutes} minutes remaining`;
-      }
-
-      // Update API key count display (check if element exists)
-      const keyCountEl = document.getElementById('apiKeyCount');
-      if (keyCountEl) {
-        keyCountEl.textContent = validKeyCount === 1 ? '1 API Key' : `${validKeyCount} API Keys`;
-      }
-    }
-
-    // AI Mode descriptions - Smart Modes
-    const aiModeDescriptions = {
-      auto: '<strong style="color: #a855f7;">Auto - Smart Detection:</strong> Automatically detects your content type and applies the perfect level of enhancement. Light fixes for good text, full rewriting for rough speech. The intelligent choice for all situations.',
-      grammar: '<strong style="color: #a855f7;">Grammar Only:</strong> Light touch - just fixes spelling, grammar, and punctuation. Preserves your natural voice and style. Use when you want minimal changes.'
-    };
-
-    function updateAIModeDescription(mode) {
-      document.getElementById('aiModeDescription').innerHTML = aiModeDescriptions[mode] || aiModeDescriptions.smart;
-    }
-
-    // Update description when AI mode changes
-    document.getElementById('aiMode').addEventListener('change', (e) => {
-      updateAIModeDescription(e.target.value);
-    });
-
-
-    // API Usage tracking functions
-    const MAX_DAILY_REQUESTS = 14400; // 14,400 requests per day per API
-    const WHISPER_COST_PER_REQUEST = 0.0005; // $0.0005 per request
-    const LLAMA_COST_PER_REQUEST = 0.0005;   // $0.0005 per request
-
-    function getAPIUsage() {
-      const today = new Date().toISOString().split('T')[0];
-      const stored = JSON.parse(localStorage.getItem('apiUsage') || '{}');
-
-      // Reset if new day
-      if (stored.date !== today) {
-        return {
-          date: today,
-          whisper: 0,
-          llama: 0
-        };
-      }
-
-      return stored;
-    }
-
-    function saveAPIUsage(usage) {
-      localStorage.setItem('apiUsage', JSON.stringify(usage));
-    }
-
-    function updateAPIUsageDisplay() {
-      const usage = getAPIUsage();
-
-      // Calculate costs
-      const whisperCost = usage.whisper * WHISPER_COST_PER_REQUEST;
-      const llamaCost = usage.llama * LLAMA_COST_PER_REQUEST;
-      const totalCost = whisperCost + llamaCost;
-
-      // Update Whisper API display
-      const whisperCountEl = document.getElementById('whisperCount');
-      if (whisperCountEl) whisperCountEl.textContent = `${usage.whisper} / ${MAX_DAILY_REQUESTS}`;
-      const whisperPercentage = Math.min((usage.whisper / MAX_DAILY_REQUESTS) * 100, 100);
-      const whisperProgressBarEl = document.getElementById('whisperProgressBar');
-      if (whisperProgressBarEl) whisperProgressBarEl.style.width = whisperPercentage + '%';
-      const whisperRemainingEl = document.getElementById('whisperRemaining');
-      if (whisperRemainingEl) whisperRemainingEl.textContent = `${MAX_DAILY_REQUESTS - usage.whisper} requests remaining`;
-      const whisperCostEl = document.getElementById('whisperCost');
-      if (whisperCostEl) whisperCostEl.textContent = `$${whisperCost.toFixed(3)} used`;
-
-      // Update Llama API display
-      const llamaCountEl = document.getElementById('llamaCount');
-      if (llamaCountEl) llamaCountEl.textContent = `${usage.llama} / ${MAX_DAILY_REQUESTS}`;
-      const llamaPercentage = Math.min((usage.llama / MAX_DAILY_REQUESTS) * 100, 100);
-      const llamaProgressBarEl = document.getElementById('llamaProgressBar');
-      if (llamaProgressBarEl) llamaProgressBarEl.style.width = llamaPercentage + '%';
-      const llamaRemainingEl = document.getElementById('llamaRemaining');
-      if (llamaRemainingEl) llamaRemainingEl.textContent = `${MAX_DAILY_REQUESTS - usage.llama} requests remaining`;
-      const llamaCostEl = document.getElementById('llamaCost');
-      if (llamaCostEl) llamaCostEl.textContent = `$${llamaCost.toFixed(3)} used`;
-
-      // Update total cost
-      const totalCostEl = document.getElementById('totalCost');
-      if (totalCostEl) totalCostEl.textContent = `$${totalCost.toFixed(3)}`;
-
-      // Color-code progress bars based on usage
-      updateProgressBarColors('whisperProgressBar', 'whisperCost', 'whisperCount', whisperPercentage);
-      updateProgressBarColors('llamaProgressBar', 'llamaCost', 'llamaCount', llamaPercentage);
-    }
-
-    function updateProgressBarColors(progressBarId, costId, countId, percentage) {
-      const progressBar = document.getElementById(progressBarId);
-      const costElement = document.getElementById(costId);
-      const countElement = document.getElementById(countId);
-
-      // Check if elements exist before updating
-      if (!progressBar || !costElement || !countElement) {
-        return;
-      }
-
-      if (percentage > 90) {
-        // Critical - red
-        progressBar.style.background = '#ff3b30';
-        costElement.style.color = '#ff3b30';
-        countElement.style.color = '#ff3b30';
-      } else if (percentage > 70) {
-        // Warning - orange
-        progressBar.style.background = '#ffaa00';
-        costElement.style.color = '#ffaa00';
-        countElement.style.color = '#ffaa00';
-      } else {
-        // Normal - blue/purple
-        if (progressBarId === 'whisperProgressBar') {
-          progressBar.style.background = '#3b82f6';
-        } else {
-          progressBar.style.background = '#8b5cf6';
-        }
-        costElement.style.color = null; // Use default color
-        countElement.style.color = null; // Use default color
-      }
-    }
-
-    // Update display on load (wrapped in try-catch to prevent errors)
-    try {
-      updateAPIUsageDisplay();
-    } catch (error) {
-      console.log('API usage display not available');
-    }
-
-    // Listen for API request events from main process
-    ipcRenderer.on('api-request', (_, apiType) => {
-      const usage = getAPIUsage();
-
-      if (apiType === 'whisper') {
-        usage.whisper++;
-      } else if (apiType === 'llama') {
-        usage.llama++;
-      }
-
-      saveAPIUsage(usage);
-      try {
-        updateAPIUsageDisplay();
-      } catch (error) {
-        // Silently ignore if elements don't exist
-      }
-    });
-
-    // Also update API usage when recording completes (for tracking both APIs in rewrite mode)
-    ipcRenderer.on('recording-complete', (_, data) => {
-      console.log('Recording complete:', data);
-      // Refresh history - the main process will send updated history-data
-      // No need to call loadHistory() as it's sent automatically
-    });
-
-    // Auto-refresh every minute to check for day change
-    setInterval(() => {
-      try {
-        updateAPIUsageDisplay();
-      } catch (error) {
-        // Silently ignore if elements don't exist
-      }
-    }, 60000);
-
-    // History Management
-    let historyData = [];
-
-    function loadHistory() {
-      ipcRenderer.send('get-history');
-    }
-
-    // PERFORMANCE BOOST: Optimized history rendering with virtual scrolling concepts
-    function displayHistory(history = historyData, searchTerm = '') {
-      const historyList = document.getElementById('historyList');
-      const emptyHistory = document.getElementById('emptyHistory');
-
-      console.log('Displaying history:', history.length, 'items, search:', searchTerm);
-
-      // PERFORMANCE BOOST: Use DocumentFragment for batch DOM updates
-      const fragment = document.createDocumentFragment();
-
-      // Filter by search term
-      let filtered = history;
-      if (searchTerm) {
-        // PERFORMANCE BOOST: Use more efficient filtering
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        filtered = history.filter(item =>
-          item.text.toLowerCase().includes(lowerSearchTerm) ||
-          (item.originalText && item.originalText.toLowerCase().includes(lowerSearchTerm))
-        );
-      }
-
-      console.log('Filtered history:', filtered.length, 'items');
-
-      if (filtered.length === 0) {
-        historyList.innerHTML = '';
-        emptyHistory.style.display = 'block';
-        return;
-      }
-
-      emptyHistory.style.display = 'none';
-      
-      // PERFORMANCE BOOST: Limit rendering to first 50 items for speed
-      const itemsToRender = filtered.slice(0, 50);
-      
-      historyList.innerHTML = itemsToRender.map(item => {
-        const date = new Date(item.timestamp);
-        const timeAgo = getTimeAgo(date);
-        const fullDate = date.toLocaleString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        });
-
-        const isAI = item.mode === 'rewrite';
-        const modeBadge = isAI
-          ? '<span style="background: #8b5cf6; color: white; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); text-transform: uppercase;">✨ AI Enhanced</span>'
-          : '<span style="background: #3b82f6; color: white; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); text-transform: uppercase;">🎤 Standard</span>';
-
-        return `
-          <div class="card" style="
-            border: 1px solid rgba(255, 255, 255, 0.15); 
-            position: relative; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: default;
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(20px);
-          " 
-          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(0, 0, 0, 0.2)'; this.style.borderColor='rgba(255, 255, 255, 0.25)';" 
-          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(0, 0, 0, 0.1)'; this.style.borderColor='rgba(255, 255, 255, 0.15)';">
-            
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                ${modeBadge}
-                <span style="color: rgba(255, 255, 255, 0.6); font-size: 12px; font-weight: 500;" title="${fullDate}">${timeAgo}</span>
-                ${item.duration ? `<span style="color: rgba(255, 255, 255, 0.3); font-size: 12px;">•</span><span style="color: rgba(255, 255, 255, 0.6); font-size: 12px; font-weight: 500;">${item.duration}s</span>` : ''}
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <button onclick="copyToClipboard('${item.id}')" 
-                  style="
-                    padding: 8px 16px; 
-                    background: rgba(59, 130, 246, 0.15); 
-                    border: 1px solid rgba(59, 130, 246, 0.3);
-                    border-radius: 8px; 
-                    cursor: pointer; 
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: #60a5fa;
-                    transition: all 0.2s;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                  "
-                  onmouseover="this.style.background='rgba(59, 130, 246, 0.25)'; this.style.borderColor='rgba(59, 130, 246, 0.5)'; this.style.transform='scale(1.05)';" 
-                  onmouseout="this.style.background='rgba(59, 130, 246, 0.15)'; this.style.borderColor='rgba(59, 130, 246, 0.3)'; this.style.transform='scale(1)';">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                  Copy
-                </button>
-                <button onclick="deleteHistoryItem(${item.id})" 
-                  style="
-                    padding: 8px 14px; 
-                    background: rgba(255, 59, 48, 0.15); 
-                    border: 1px solid rgba(255, 59, 48, 0.3);
-                    border-radius: 8px; 
-                    cursor: pointer; 
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: #ff6b6b; 
-                    transition: all 0.2s;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                  "
-                  onmouseover="this.style.background='rgba(255, 59, 48, 0.25)'; this.style.borderColor='rgba(255, 59, 48, 0.5)'; this.style.transform='scale(1.05)';" 
-                  onmouseout="this.style.background='rgba(255, 59, 48, 0.15)'; this.style.borderColor='rgba(255, 59, 48, 0.3)'; this.style.transform='scale(1)';">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                    <line x1="14" y1="11" x2="14" y2="17"></line>
-                  </svg>
-                  Delete
-                </button>
-              </div>
-            </div>
-            
-            <!-- Text Content -->
-            <div style="
-              background: rgba(255, 255, 255, 0.05); 
-              padding: 16px 18px; 
-              border-radius: 10px; 
-              font-size: 14px; 
-              line-height: 1.7; 
-              color: rgba(255, 255, 255, 0.9); 
-              max-height: 200px; 
-              overflow-y: auto;
-              border: 1px solid rgba(255, 255, 255, 0.1);
-              font-weight: 400;
-            ">
-              ${escapeHtml(item.text)}
-            </div>
-            
-            <!-- Original Text (for AI rewrites) -->
-            ${isAI && item.originalText && item.originalText !== item.text ? `
-              <details style="margin-top: 12px;">
-                <summary style="
-                  cursor: pointer; 
-                  font-size: 12px; 
-                  color: #666; 
-                  padding: 6px 0;
-                  font-weight: 500;
-                  user-select: none;
-                  transition: color 0.15s;
-                "
-                onmouseover="this.style.color='#333';"
-                onmouseout="this.style.color='#666';">
-                  📝 Show original transcription
-                </summary>
-                <div style="
-                  margin-top: 10px; 
-                  padding: 12px 14px; 
-                  background: rgba(168, 85, 247, 0.04); 
-                  border-radius: 6px; 
-                  font-size: 13px; 
-                  color: #666;
-                  line-height: 1.6;
-                  border-left: 3px solid #a855f7;
-                ">
-                  ${escapeHtml(item.originalText)}
-                </div>
-              </details>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-    }
-
-    function getTimeAgo(date) {
-      const seconds = Math.floor((new Date() - date) / 1000);
-
-      if (seconds < 60) return 'Just now';
-      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-      if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-
-      return date.toLocaleDateString();
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    function copyToClipboard(id) {
-      const item = historyData.find(h => h.id == id);
-      if (item) {
-        navigator.clipboard.writeText(item.text).then(() => {
-          // Find the specific button by looking for the copy button within the history item containing this id
-          const historyItems = document.querySelectorAll('#historyList .card');
-          for (let card of historyItems) {
-            const copyBtn = card.querySelector(`button[onclick*="copyToClipboard('${id}')"]`);
-            if (copyBtn) {
-              const originalText = copyBtn.innerHTML;
-              copyBtn.innerHTML = '✅ Copied!';
-              setTimeout(() => {
-                copyBtn.innerHTML = originalText;
-              }, 1500);
-              break;
-            }
-          }
-        }).catch(err => {
-          console.error('Failed to copy text: ', err);
-          alert('Failed to copy text to clipboard');
-        });
-      }
-    }
-
-    function deleteHistoryItem(id) {
-      if (confirm('Delete this transcription?')) {
-        ipcRenderer.send('delete-history-item', id);
-      }
-    }
-
-    function clearAllHistory() {
-      if (confirm('Clear all history? This cannot be undone.')) {
-        ipcRenderer.send('clear-history');
-      }
-    }
-
-    // Search functionality
-    const searchInput = document.getElementById('historySearch');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        displayHistory(historyData, e.target.value);
-      });
-    }
-
-    // Listen for history updates
-    ipcRenderer.on('history-data', (_, history) => {
-      console.log('Received history data:', history ? history.length : 0, 'items');
-      historyData = history || []; // Ensure history is always an array
-      displayHistory(historyData);
-
-      // Update the most recent transcription display
-      updateLastTranscriptionDisplay(historyData);
-    });
-
-    // Also listen for history-updated event for real-time updates
-    ipcRenderer.on('history-updated', (_, history) => {
-      console.log('Received history-updated event:', history ? history.length : 0, 'items');
-      historyData = history || []; // Ensure history is always an array
-      displayHistory(historyData);
-
-      // Update the most recent transcription display
-      updateLastTranscriptionDisplay(historyData);
-    });
-
-    // Update the most recent transcription display
-    function updateLastTranscriptionDisplay(history) {
-      if (history && history.length > 0) {
-        const latest = history[0]; // Most recent is at index 0
-        const textElement = document.getElementById('lastTranscriptionText');
-        const timeElement = document.getElementById('lastTranscriptionTime');
-        const copyButton = document.getElementById('copyLastTranscription');
-
-        if (textElement && latest.text) {
-          textElement.innerHTML = escapeHtml(latest.text);
-          // Store the raw text for copying
-          textElement.setAttribute('data-raw-text', latest.text);
-        }
-
-        if (timeElement && latest.timestamp) {
-          const date = new Date(latest.timestamp);
-          timeElement.textContent = date.toLocaleTimeString();
-        }
-
-        if (copyButton) {
-          copyButton.style.display = 'block';
-        }
-      }
-    }
-
-    // Copy last transcription to clipboard
-    function copyLastTranscriptionText() {
-      const textElement = document.getElementById('lastTranscriptionText');
-      if (textElement) {
-        const text = textElement.getAttribute('data-raw-text') || textElement.textContent;
-        navigator.clipboard.writeText(text).then(() => {
-          const copyButton = document.getElementById('copyLastTranscription');
-          const originalText = copyButton.textContent;
-          copyButton.textContent = '✅ Copied!';
-          setTimeout(() => {
-            copyButton.textContent = originalText;
-          }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy text: ', err);
-          alert('Failed to copy text to clipboard');
-        });
-      }
-    }
-
-    // Load history on page load
-    loadHistory();
-
-    // Google Sign-in handler
-    function handleGoogleSignIn() {
-      // Explicitly initiate Google sign-in
-      console.log('🔄 User clicked Google Sign In button');
-      ipcRenderer.send('initiate-google-signin');
-    }
-
-    // Plan management functions
-    function subscribeToPlan(planType) {
-      // Send plan subscription request to main process
-      ipcRenderer.send('subscribe-to-plan', planType);
-    }
-
-    function managePlan() {
-      // Open plan management interface
-      ipcRenderer.send('manage-subscription');
-    }
-
-    // Listen for authentication status updates
-    ipcRenderer.on('auth-status', (_, authData) => {
-      if (authData.isAuthenticated && authData.user) {
-        // User is signed in, update UI
-        updateAuthUI(authData.user);
-      } else {
-        // User is not signed in, initiate Google OAuth
-        ipcRenderer.send('initiate-google-signin');
-      }
-    });
-
-    // INSTANT FRONTEND UPDATE: Listen for real-time auth updates
-    ipcRenderer.on('auth-updated', (_, authData) => {
-      console.log('🔄 Instant auth update received:', authData);
-      if (authData.isAuthenticated && authData.user) {
-        // Update UI immediately with new auth data
-        updateAuthUI(authData.user);
-        if (authData.subscription) {
-          updatePlanUI(authData.subscription);
-        }
-        // Show success message
-        showNotification('✅ Signed In Successfully', `Welcome, ${authData.user.email}!`);
-      } else if (!authData.isAuthenticated) {
-        // Handle sign out - reset UI immediately
-        const googleSignInItem = document.querySelector('.sidebar-item[onclick="showUserMenu()"]');
-        if (googleSignInItem) {
-          googleSignInItem.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Google Sign In
-          `;
-          googleSignInItem.setAttribute('onclick', 'handleGoogleSignIn()');
-        }
-        showNotification('👋 Signed Out', 'You have been signed out successfully');
-      }
-    });
-
-    // Listen for subscription status updates
-    ipcRenderer.on('subscription-status', (_, subscriptionData) => {
-      updatePlanUI(subscriptionData);
-    });
-
-    // Update authentication UI
-    function updateAuthUI(user) {
-      // Wait for DOM to be ready if needed
-      const updateUI = () => {
-        // Try multiple selectors to find the Google Sign In button
-        let googleSignInItem = document.querySelector('.sidebar-item[onclick="handleGoogleSignIn()"]');
-        
-        // If not found, try finding by text content
-        if (!googleSignInItem) {
-          const sidebarItems = document.querySelectorAll('.sidebar-item');
-          for (let item of sidebarItems) {
-            if (item.textContent.includes('Google Sign In')) {
-              googleSignInItem = item;
-              break;
-            }
-          }
-        }
-        
-        if (googleSignInItem && user) {
-          googleSignInItem.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
-            ${user.name || user.email}
-          `;
-          googleSignInItem.setAttribute('onclick', 'showUserMenu()');
-        } else if (!googleSignInItem) {
-          // Try again in a moment if DOM might not be ready
-          setTimeout(updateUI, 100);
-        }
-      };
-      
-      // Try immediately and also after a short delay
-      updateUI();
-    }
-
-    // Update plan UI
-    function updatePlanUI(subscription) {
-      const currentPlanName = document.getElementById('currentPlanName');
-      const currentPlanDetails = document.getElementById('currentPlanDetails');
-      
-      if (currentPlanName && subscription) {
-        currentPlanName.textContent = subscription.planName || 'Free Plan';
-        if (currentPlanDetails) {
-          currentPlanDetails.textContent = subscription.status === 'active' 
-            ? `Active until ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-            : 'Limited features';
-        }
-      }
-    }
-
-    // Show user menu for signed-in users
-    function showUserMenu() {
-      const menu = confirm('Account Options:\n\nOK - Sign Out\nCancel - Stay Signed In');
-      if (menu) {
-        ipcRenderer.send('sign-out');
-        // Reset the Google Sign In button
-        const googleSignInItem = document.querySelector('.sidebar-item[onclick="showUserMenu()"]');
-        if (googleSignInItem) {
-          googleSignInItem.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Google Sign In
-          `;
-          googleSignInItem.setAttribute('onclick', 'handleGoogleSignIn()');
-        }
-      }
-    }
-
-    // Show notification function for instant feedback
-    function showNotification(title, message) {
-      // Create a temporary notification element
-      const notification = document.createElement('div');
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
-        color: white;
-        padding: 16px 20px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        z-index: 10000;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        font-size: 14px;
-        font-weight: 600;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        transform: translateX(400px);
-        transition: transform 0.3s ease-out;
-        max-width: 300px;
-      `;
-      
-      notification.innerHTML = `
-        <div style="font-weight: 700; margin-bottom: 4px;">${title}</div>
-        <div style="font-weight: 400; opacity: 0.9;">${message}</div>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      // Animate in
-      setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-      }, 100);
-      
-      // Auto remove after 3 seconds
-      setTimeout(() => {
-        notification.style.transform = 'translateX(400px)';
-        setTimeout(() => {
-          if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-          }
-        }, 300);
-      }, 3000);
-    }
-
-    // Check authentication status on page load - multiple strategies for reliability
-    // Strategy 1: Immediate check
-    ipcRenderer.send('check-auth-status');
-    ipcRenderer.send('check-subscription-status');
-    
-    // Strategy 2: DOM ready check
-    document.addEventListener('DOMContentLoaded', () => {
-      ipcRenderer.send('check-auth-status');
-    });
-    
-    // Strategy 3: Backup check after DOM is fully ready
-    setTimeout(() => {
-      ipcRenderer.send('check-auth-status');
-      ipcRenderer.send('check-subscription-status');
-    }, 500);
-  </script>
+  <script src="dashboard.js"></script>
 </body>
 
 </html>

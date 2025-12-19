@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,10 +28,22 @@ func PerformanceMonitor() gin.HandlerFunc {
 				method, path, latency, statusCode)
 		}
 		
-		// Log errors
+		// Log errors (but filter out external/unwanted requests and expected auth failures)
 		if statusCode >= 400 {
-			log.Printf("❌ ERROR REQUEST: %s %s - %v - Status: %d", 
-				method, path, latency, statusCode)
+			// Filter out known external requests to reduce log noise
+			isExternalRequest := strings.Contains(path, "/exchange") || 
+								strings.Contains(path, "/rate") ||
+								strings.Contains(path, "/currency") ||
+								strings.Contains(path, "/forex")
+			
+			// Filter out expected authentication failures (401 on logout is normal)
+			isExpectedAuthFailure := statusCode == 401 && strings.Contains(path, "/logout")
+			
+			// Only log if it's not an external request or expected auth failure
+			if !isExternalRequest && !isExpectedAuthFailure {
+				log.Printf("❌ ERROR REQUEST: %s %s - %v - Status: %d", 
+					method, path, latency, statusCode)
+			}
 		}
 		
 		// Add performance headers

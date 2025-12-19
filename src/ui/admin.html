@@ -314,6 +314,38 @@
       transform: translateY(0);
     }
 
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-warning:hover {
+      background: #d97706;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+    }
+
+    .btn-warning:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary:active {
+      transform: translateY(0);
+    }
+
     .api-requests-table {
       width: 100%;
       border-collapse: collapse;
@@ -423,6 +455,21 @@
       border: 1px solid rgba(239, 68, 68, 0.3);
       color: #ef4444;
       backdrop-filter: blur(10px);
+    }
+
+    .alert-info {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #3b82f6;
+      backdrop-filter: blur(10px);
+    }
+
+    .alert-info code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
     }
 
     .hidden {
@@ -741,7 +788,7 @@
       <h2>👥 User Management</h2>
       
       <!-- Search and Filter Controls -->
-      <div style="display: grid; grid-template-columns: 1fr auto auto; gap: 12px; margin-bottom: 20px;">
+      <div style="display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px; margin-bottom: 20px;">
         <div class="form-group" style="margin: 0;">
           <input type="text" id="userSearch" placeholder="Search users by email or name..." style="width: 100%;">
         </div>
@@ -755,7 +802,9 @@
             <option value="enterprise">Enterprise</option>
           </select>
         </div>
-        <button type="button" class="btn btn-primary" onclick="refreshUsers()">Refresh</button>
+        <button type="button" class="btn btn-secondary" id="testModalBtn">Test Modal</button>
+        <button type="button" class="btn btn-primary" id="refreshUsersBtn">Refresh</button>
+        <button type="button" class="btn btn-warning" id="toggleAutoRefreshBtn">Disable Auto-refresh</button>
       </div>
 
       <!-- Bulk Actions -->
@@ -763,7 +812,7 @@
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
           <span style="color: #60a5fa; font-weight: 600;">Bulk Actions</span>
           <span id="selectedCount" style="color: rgba(255, 255, 255, 0.7);">0 users selected</span>
-          <button type="button" class="btn btn-danger" onclick="clearSelection()" style="margin-left: auto; padding: 6px 12px; font-size: 12px;">Clear</button>
+          <button type="button" class="btn btn-danger" id="clearSelectionBtn" style="margin-left: auto; padding: 6px 12px; font-size: 12px;">Clear</button>
         </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
           <select id="bulkPlan" style="min-width: 120px;">
@@ -780,7 +829,7 @@
             <option value="admin">Admin</option>
             <option value="moderator">Moderator</option>
           </select>
-          <button type="button" class="btn btn-primary" onclick="applyBulkChanges()">Apply Changes</button>
+          <button type="button" class="btn btn-primary" id="applyBulkChangesBtn">Apply Changes</button>
         </div>
       </div>
 
@@ -790,7 +839,7 @@
           <thead>
             <tr>
               <th style="width: 40px;">
-                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                <input type="checkbox" id="selectAll">
               </th>
               <th>User</th>
               <th>Plan</th>
@@ -813,7 +862,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3 id="modalUserName">User Details</h3>
-          <button class="modal-close" onclick="closeUserModal()">&times;</button>
+          <button class="modal-close" id="modalCloseBtn">&times;</button>
         </div>
         <div class="modal-body">
           <div id="userDetailsContent">
@@ -827,8 +876,8 @@
     <div class="section">
       <h2>📊 API Request Monitoring</h2>
       <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-        <button class="btn btn-primary" onclick="refreshRequests()">Refresh</button>
-        <button class="btn btn-danger" onclick="clearLogs()">Clear Logs</button>
+        <button class="btn btn-primary" id="refreshRequestsBtn">Refresh</button>
+        <button class="btn btn-danger" id="clearLogsBtn">Clear Logs</button>
       </div>
       <table class="api-requests-table">
         <thead>
@@ -848,648 +897,6 @@
     </div>
   </div>
 
-  <script>
-    const { ipcRenderer } = require('electron');
-
-    // Load admin data on startup
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Verify admin access on page load
-      try {
-        const hasAccess = await ipcRenderer.invoke('admin-verify-access');
-        if (!hasAccess) {
-          document.body.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; text-align: center;">
-              <h1 style="color: #ef4444; margin-bottom: 20px;">🚫 Access Denied</h1>
-              <p style="color: #ffffff; margin-bottom: 30px;">You do not have permission to access the admin panel.</p>
-              <button onclick="window.close()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">Close Window</button>
-            </div>
-          `;
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to verify admin access:', error);
-        document.body.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; text-align: center;">
-            <h1 style="color: #ef4444; margin-bottom: 20px;">❌ Error</h1>
-            <p style="color: #ffffff; margin-bottom: 30px;">Failed to verify admin access.</p>
-            <button onclick="window.close()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">Close Window</button>
-          </div>
-        `;
-        return;
-      }
-
-      loadAdminConfig();
-      loadAdminData();
-      loadUsers();
-      loadApiRequests();
-      
-      // Refresh data every 30 seconds
-      setInterval(() => {
-        loadAdminData();
-        loadApiRequests();
-      }, 30000);
-    });
-
-    // API Configuration Form
-    document.getElementById('apiConfigForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const saveBtn = document.getElementById('saveConfigText');
-      const loading = document.getElementById('saveConfigLoading');
-      
-      saveBtn.classList.add('hidden');
-      loading.classList.remove('hidden');
-      
-      const config = {
-        masterApiKey: document.getElementById('masterApiKey').value,
-        dailyLimit: parseInt(document.getElementById('dailyLimit').value),
-        rateLimitPerUser: parseInt(document.getElementById('rateLimitPerUser').value)
-      };
-      
-      try {
-        await ipcRenderer.invoke('admin-save-config', config);
-        showAlert('Configuration saved successfully!', 'success');
-        
-        // Reload admin data to reflect changes
-        loadAdminData();
-      } catch (error) {
-        showAlert('Failed to save configuration: ' + error.message, 'error');
-      } finally {
-        saveBtn.classList.remove('hidden');
-        loading.classList.add('hidden');
-      }
-    });
-
-    // Load admin configuration into form
-    async function loadAdminConfig() {
-      try {
-        const config = await ipcRenderer.invoke('admin-get-config');
-        
-        document.getElementById('masterApiKey').value = config.masterApiKey || '';
-        document.getElementById('dailyLimit').value = config.dailyLimit || 1000;
-        document.getElementById('rateLimitPerUser').value = config.rateLimitPerUser || 100;
-        
-        console.log('✅ Admin configuration loaded into form');
-      } catch (error) {
-        console.error('Failed to load admin configuration:', error);
-        showAlert('Failed to load configuration: ' + error.message, 'error');
-      }
-    }
-
-    // Get access token from Electron main process
-    async function getAccessToken() {
-      try {
-        return await ipcRenderer.invoke('get-auth-token');
-      } catch (error) {
-        console.error('Failed to get access token:', error);
-        throw new Error('Authentication required');
-      }
-    }
-
-    // Load admin dashboard data
-    async function loadAdminData() {
-      try {
-        const token = await getAccessToken();
-        const response = await fetch('http://localhost:3000/api/admin/stats', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch admin stats');
-        
-        const stats = await response.json();
-        
-        document.getElementById('totalRequests').textContent = stats.total_requests || 0;
-        document.getElementById('activeUsers').textContent = stats.active_users_24h || 0;
-        document.getElementById('apiUsage').textContent = Math.round(stats.api_usage_percent || 0) + '%';
-        document.getElementById('successRate').textContent = Math.round(stats.success_rate || 0) + '%';
-      } catch (error) {
-        console.error('Failed to load admin data:', error);
-        showAlert('Failed to load admin statistics: ' + error.message, 'error');
-      }
-    }
-
-    // State management
-    let allUsers = [];
-    let selectedUsers = new Set();
-
-    // Load users
-    async function loadUsers() {
-      try {
-        const token = await getAccessToken();
-        const response = await fetch('http://localhost:3000/api/admin/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch users');
-        
-        const data = await response.json();
-        allUsers = data.users || [];
-        renderUsers(allUsers);
-      } catch (error) {
-        console.error('Failed to load users:', error);
-        showAlert('Failed to load users: ' + error.message, 'error');
-      }
-    }
-
-    // Render users table
-    function renderUsers(users) {
-      const tbody = document.getElementById('usersTableBody');
-      
-      if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.5);">No users found</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = users.map(user => {
-        const usagePercent = user.plan === 'unlimited' || user.plan === 'enterprise' ? 0 : 
-          Math.min(100, (user.usage_current_month / getUsageLimit(user.plan)) * 100);
-        const usageClass = usagePercent > 90 ? 'danger' : usagePercent > 75 ? 'warning' : '';
-        
-        return `
-          <tr>
-            <td class="checkbox-cell">
-              <input type="checkbox" class="user-checkbox" data-user-id="${user.id}" 
-                ${selectedUsers.has(user.id) ? 'checked' : ''} 
-                onchange="toggleUserSelection('${user.id}')">
-            </td>
-            <td>
-              <div class="user-info-cell">
-                <div class="user-avatar">${getInitials(user.email)}</div>
-                <div class="user-info-text">
-                  <div class="user-name">${user.name || 'Unknown'}</div>
-                  <div class="user-email">${user.email}</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="plan-badge plan-${user.plan}">${user.plan}</span>
-            </td>
-            <td>
-              <span class="role-badge role-${user.role}">${user.role}</span>
-            </td>
-            <td>
-              <div>
-                <span style="color: white; font-size: 14px;">${user.usage_current_month || 0} / ${getUsageLimit(user.plan)} min</span>
-                <div class="usage-bar">
-                  <div class="usage-fill ${usageClass}" style="width: ${usagePercent}%"></div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="status-badge status-${user.subscription_status === 'active' ? 'success' : user.subscription_status === 'none' ? 'pending' : 'error'}">
-                ${user.subscription_status}
-              </span>
-            </td>
-            <td style="color: rgba(255, 255, 255, 0.7); font-size: 13px;">
-              ${user.last_login ? formatDate(user.last_login) : 'Never'}
-            </td>
-            <td>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn btn-primary btn-small" onclick="viewUserDetails('${user.id}')">View</button>
-                <button class="btn btn-success btn-small" onclick="editUserPlan('${user.id}')">Edit</button>
-                <button class="btn btn-danger btn-small" onclick="deleteUser('${user.id}')">Delete</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Helper functions
-    function getInitials(email) {
-      return email.substring(0, 2).toUpperCase();
-    }
-
-    function getUsageLimit(plan) {
-      const limits = {
-        'free': 60,
-        'starter': 180,
-        'pro': 600,
-        'unlimited': '∞',
-        'enterprise': '∞'
-      };
-      return limits[plan] || 60;
-    }
-
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      if (diffDays < 7) return `${diffDays}d ago`;
-      return date.toLocaleDateString();
-    }
-
-    // Selection management
-    function toggleUserSelection(userId) {
-      if (selectedUsers.has(userId)) {
-        selectedUsers.delete(userId);
-      } else {
-        selectedUsers.add(userId);
-      }
-      updateBulkActions();
-    }
-
-    function toggleSelectAll() {
-      const selectAll = document.getElementById('selectAll');
-      const checkboxes = document.querySelectorAll('.user-checkbox');
-      
-      if (selectAll.checked) {
-        checkboxes.forEach(cb => {
-          cb.checked = true;
-          selectedUsers.add(cb.dataset.userId);
-        });
-      } else {
-        checkboxes.forEach(cb => {
-          cb.checked = false;
-          selectedUsers.delete(cb.dataset.userId);
-        });
-      }
-      
-      updateBulkActions();
-    }
-
-    function clearSelection() {
-      selectedUsers.clear();
-      document.getElementById('selectAll').checked = false;
-      document.querySelectorAll('.user-checkbox').forEach(cb => cb.checked = false);
-      updateBulkActions();
-    }
-
-    function updateBulkActions() {
-      const bulkActions = document.getElementById('bulkActions');
-      const selectedCount = document.getElementById('selectedCount');
-      
-      if (selectedUsers.size > 0) {
-        bulkActions.classList.remove('hidden');
-        selectedCount.textContent = `${selectedUsers.size} user${selectedUsers.size > 1 ? 's' : ''} selected`;
-      } else {
-        bulkActions.classList.add('hidden');
-      }
-    }
-
-    // Load API requests (placeholder for future implementation)
-    async function loadApiRequests() {
-      // This would load recent API requests from the backend
-      // For now, we'll focus on user management
-      console.log('API request monitoring - to be implemented');
-    }
-
-    // Search and filter
-    document.getElementById('userSearch').addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase();
-      const filtered = allUsers.filter(user => 
-        user.email.toLowerCase().includes(query) || 
-        (user.name && user.name.toLowerCase().includes(query))
-      );
-      renderUsers(filtered);
-    });
-
-    document.getElementById('planFilter').addEventListener('change', (e) => {
-      const plan = e.target.value;
-      const filtered = plan ? allUsers.filter(user => user.plan === plan) : allUsers;
-      renderUsers(filtered);
-    });
-
-    // User actions
-    async function viewUserDetails(userId) {
-      try {
-        const token = await getAccessToken();
-        const response = await fetch(`http://localhost:3000/api/admin/users/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) throw new Error('Failed to fetch user details');
-        
-        const data = await response.json();
-        showUserModal(data);
-      } catch (error) {
-        showAlert('Failed to load user details: ' + error.message, 'error');
-      }
-    }
-
-    function showUserModal(userData) {
-      const modal = document.getElementById('userModal');
-      const modalUserName = document.getElementById('modalUserName');
-      const userDetailsContent = document.getElementById('userDetailsContent');
-      
-      modalUserName.textContent = userData.user.name || userData.user.email;
-      
-      userDetailsContent.innerHTML = `
-        <div class="user-detail-grid">
-          <div class="user-detail-card">
-            <h4>Account Information</h4>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Email</span>
-              <span class="user-detail-value">${userData.user.email}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Name</span>
-              <span class="user-detail-value">${userData.user.name || 'Not set'}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Role</span>
-              <span class="user-detail-value">
-                <span class="role-badge role-${userData.user.role}">${userData.user.role}</span>
-              </span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Created</span>
-              <span class="user-detail-value">${new Date(userData.user.created_at).toLocaleDateString()}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Last Login</span>
-              <span class="user-detail-value">${userData.user.last_login ? formatDate(userData.user.last_login) : 'Never'}</span>
-            </div>
-          </div>
-          
-          <div class="user-detail-card">
-            <h4>Subscription</h4>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Plan</span>
-              <span class="user-detail-value">
-                <span class="plan-badge plan-${userData.user.plan}">${userData.user.plan}</span>
-              </span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Status</span>
-              <span class="user-detail-value">
-                <span class="status-badge status-${userData.user.subscription_status === 'active' ? 'success' : 'pending'}">
-                  ${userData.user.subscription_status}
-                </span>
-              </span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">End Date</span>
-              <span class="user-detail-value">${userData.user.subscription_end_date ? new Date(userData.user.subscription_end_date).toLocaleDateString() : 'N/A'}</span>
-            </div>
-          </div>
-          
-          <div class="user-detail-card">
-            <h4>Usage Statistics</h4>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Current Month</span>
-              <span class="user-detail-value">${userData.usage_stats.current_month} minutes</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Limit</span>
-              <span class="user-detail-value">${userData.usage_stats.limit === -1 ? 'Unlimited' : userData.usage_stats.limit + ' minutes'}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Remaining</span>
-              <span class="user-detail-value">${userData.usage_stats.remaining === -1 ? 'Unlimited' : userData.usage_stats.remaining + ' minutes'}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="user-detail-card">
-          <h4>Recent Usage Logs</h4>
-          <table class="api-requests-table" style="margin-top: 12px;">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Minutes</th>
-                <th>Mode</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${userData.usage_logs.map(log => `
-                <tr>
-                  <td>${formatDate(log.created_at)}</td>
-                  <td>${log.type}</td>
-                  <td>${log.minutes}</td>
-                  <td>${log.mode || 'N/A'}</td>
-                  <td>
-                    <span class="status-badge status-${log.success ? 'success' : 'error'}">
-                      ${log.success ? 'Success' : 'Failed'}
-                    </span>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-        
-        <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
-          <button class="btn btn-success" onclick="editUserPlan('${userData.user.id}')">Edit Plan</button>
-          <button class="btn btn-primary" onclick="resetUserUsage('${userData.user.id}')">Reset Usage</button>
-          <button class="btn btn-danger" onclick="deleteUser('${userData.user.id}')">Delete User</button>
-        </div>
-      `;
-      
-      modal.classList.remove('hidden');
-    }
-
-    function closeUserModal() {
-      document.getElementById('userModal').classList.add('hidden');
-    }
-
-    async function editUserPlan(userId) {
-      const user = allUsers.find(u => u.id === userId);
-      if (!user) return;
-
-      const newPlan = prompt(`Change plan for ${user.email}:\n\nCurrent: ${user.plan}\n\nEnter new plan (free, starter, pro, unlimited, enterprise):`, user.plan);
-      if (!newPlan || newPlan === user.plan) return;
-
-      const validPlans = ['free', 'starter', 'pro', 'unlimited', 'enterprise'];
-      if (!validPlans.includes(newPlan)) {
-        showAlert('Invalid plan. Valid options: ' + validPlans.join(', '), 'error');
-        return;
-      }
-
-      try {
-        const token = await getAccessToken();
-        const response = await fetch(`http://localhost:3000/api/admin/users/${userId}/plan`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            plan: newPlan,
-            subscription_status: newPlan === 'free' ? 'none' : 'active',
-            subscription_end_date: newPlan === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-          })
-        });
-
-        if (!response.ok) throw new Error('Failed to update plan');
-
-        showAlert(`Plan updated to ${newPlan} successfully!`, 'success');
-        loadUsers();
-        closeUserModal();
-      } catch (error) {
-        showAlert('Failed to update plan: ' + error.message, 'error');
-      }
-    }
-
-    async function resetUserUsage(userId) {
-      const user = allUsers.find(u => u.id === userId);
-      if (!user) return;
-
-      if (!confirm(`Reset usage for ${user.email}?`)) return;
-
-      try {
-        const token = await getAccessToken();
-        const response = await fetch(`http://localhost:3000/api/admin/users/${userId}/reset-usage`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) throw new Error('Failed to reset usage');
-
-        showAlert('Usage reset successfully!', 'success');
-        loadUsers();
-        closeUserModal();
-      } catch (error) {
-        showAlert('Failed to reset usage: ' + error.message, 'error');
-      }
-    }
-
-    async function deleteUser(userId) {
-      const user = allUsers.find(u => u.id === userId);
-      if (!user) return;
-
-      if (!confirm(`Are you sure you want to delete ${user.email}?\n\nThis action cannot be undone.`)) return;
-
-      try {
-        const token = await getAccessToken();
-        const response = await fetch(`http://localhost:3000/api/admin/users/${userId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) throw new Error('Failed to delete user');
-
-        showAlert('User deleted successfully!', 'success');
-        loadUsers();
-        closeUserModal();
-      } catch (error) {
-        showAlert('Failed to delete user: ' + error.message, 'error');
-      }
-    }
-
-    // Bulk actions
-    async function applyBulkChanges() {
-      if (selectedUsers.size === 0) {
-        showAlert('No users selected', 'error');
-        return;
-      }
-
-      const bulkPlan = document.getElementById('bulkPlan').value;
-      const bulkRole = document.getElementById('bulkRole').value;
-
-      if (!bulkPlan && !bulkRole) {
-        showAlert('Please select at least one change to apply', 'error');
-        return;
-      }
-
-      const userIds = Array.from(selectedUsers);
-      const updates = {};
-      
-      if (bulkPlan) {
-        updates.plan = bulkPlan;
-        updates.subscription_status = bulkPlan === 'free' ? 'none' : 'active';
-        if (bulkPlan !== 'free') {
-          updates.subscription_end_date = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        }
-      }
-      
-      if (bulkRole) {
-        updates.role = bulkRole;
-      }
-
-      try {
-        const token = await getAccessToken();
-        const response = await fetch('http://localhost:3000/api/admin/users/bulk', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            user_ids: userIds,
-            updates: updates
-          })
-        });
-
-        if (!response.ok) throw new Error('Failed to apply bulk changes');
-
-        const result = await response.json();
-        showAlert(`Bulk update completed: ${result.results.successful} successful, ${result.results.failed} failed`, 'success');
-        
-        clearSelection();
-        loadUsers();
-        
-        // Reset bulk action selects
-        document.getElementById('bulkPlan').value = '';
-        document.getElementById('bulkRole').value = '';
-      } catch (error) {
-        showAlert('Failed to apply bulk changes: ' + error.message, 'error');
-      }
-    }
-
-    function refreshUsers() {
-      loadUsers();
-      showAlert('Users refreshed!', 'success');
-    }
-
-    // Close modal when clicking outside
-    document.getElementById('userModal').addEventListener('click', (e) => {
-      if (e.target.id === 'userModal') {
-        closeUserModal();
-      }
-    });
-
-    // Refresh requests
-    function refreshRequests() {
-      loadApiRequests();
-      showAlert('Requests refreshed!', 'success');
-    }
-
-    // Clear logs
-    async function clearLogs() {
-      if (!confirm('Are you sure you want to clear all logs?')) return;
-      
-      try {
-        await ipcRenderer.invoke('admin-clear-logs');
-        showAlert('Logs cleared successfully!', 'success');
-        loadApiRequests();
-      } catch (error) {
-        showAlert('Failed to clear logs: ' + error.message, 'error');
-      }
-    }
-
-    // Show alert
-    function showAlert(message, type) {
-      const container = document.getElementById('alertContainer');
-      const alert = document.createElement('div');
-      alert.className = `alert alert-${type}`;
-      alert.textContent = message;
-      
-      container.innerHTML = '';
-      container.appendChild(alert);
-      
-      setTimeout(() => {
-        alert.remove();
-      }, 5000);
-    }
-  </script>
+  <script src="admin.js"></script>
 </body>
 </html>

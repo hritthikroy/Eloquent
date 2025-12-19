@@ -35,6 +35,17 @@ func (h *AdminHandler) checkAdminAccess(c *gin.Context) (*models.User, bool) {
 		return nil, false
 	}
 
+	// Check if this is development mode
+	if devMode, exists := c.Get("dev_mode"); exists && devMode.(bool) {
+		// In dev mode, create a mock admin user
+		mockUser := &models.User{
+			Email: supabaseUser.Email,
+			Role:  "admin",
+			Plan:  "enterprise",
+		}
+		return mockUser, true
+	}
+
 	user, err := h.userService.GetUserByID(supabaseUser.ID)
 	if err != nil || !user.IsAdmin() {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})

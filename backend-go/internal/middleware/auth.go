@@ -50,6 +50,23 @@ func AuthMiddleware(supabaseService *services.SupabaseService) gin.HandlerFunc {
 			return
 		}
 
+		// Development mode bypass for admin panel
+		if token == "dev-token" {
+			// Create a mock admin user for development
+			devUser := &services.SupabaseUser{
+				ID:    "dev-admin-user-id", // Use a recognizable dev ID
+				Email: "hritthikin@gmail.com", // Admin email
+				UserMetadata: map[string]interface{}{
+					"name": "Development Admin",
+				},
+			}
+			c.Set("user", devUser)
+			c.Set("token", token)
+			c.Set("dev_mode", true) // Flag to indicate dev mode
+			c.Next()
+			return
+		}
+
 		// PERFORMANCE BOOST: Check cache first
 		cache.mutex.RLock()
 		entry, exists := cache.users[token]

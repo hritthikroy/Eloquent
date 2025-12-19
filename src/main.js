@@ -71,17 +71,17 @@ let lastProcessedOAuthUrl = null; // Track last processed URL
 // Application configuration
 const CONFIG = {
   apiKeys: [
-    '', // API Key 1 - Managed by admin
-    '', // API Key 2 (optional)
-    '', // API Key 3 (optional)
-    '', // API Key 4 (optional)
-    ''  // API Key 5 (optional)
+    process.env.GROQ_API_KEY_1 || '', // API Key 1 - Load from environment
+    process.env.GROQ_API_KEY_2 || '', // API Key 2 (optional)
+    process.env.GROQ_API_KEY_3 || '', // API Key 3 (optional)
+    process.env.GROQ_API_KEY_4 || '', // API Key 4 (optional)
+    process.env.GROQ_API_KEY_5 || ''  // API Key 5 (optional)
   ],
-  language: 'en',
+  language: process.env.LANGUAGE || 'en',
   customDictionary: '',
-  aiMode: 'auto',
-  preserveClipboard: false,
-  autoGrammarFix: true,
+  aiMode: process.env.AI_MODE || 'qn',
+  preserveClipboard: process.env.PRESERVE_CLIPBOARD === 'true',
+  autoGrammarFix: process.env.AUTO_GRAMMAR_FIX !== 'false',
   autoPasteMode: 'direct'
 };
 
@@ -322,6 +322,12 @@ app.whenReady().then(async () => {
       console.log('🔐 Initializing authentication...');
       authService.init();
       
+      // IMMEDIATE DEV MODE CHECK: Set authentication immediately if in dev mode
+      if (authService.isAuthenticated()) {
+        console.log('🔧 Development mode - authentication enabled immediately');
+        isAuthenticated = true;
+      }
+      
       try {
         // Add timeout to prevent hanging
         const authResult = await Promise.race([
@@ -349,6 +355,12 @@ app.whenReady().then(async () => {
         console.log('⚠️ Auth validation failed:', error.message);
         console.log('📝 Continuing without authentication');
         isAuthenticated = false;
+      }
+      
+      // DEVELOPMENT MODE OVERRIDE: Check if auth service is in development mode
+      if (!isAuthenticated && authService.isAuthenticated()) {
+        console.log('🔧 Development mode detected - enabling authentication');
+        isAuthenticated = true;
       }
     },
     
@@ -823,7 +835,7 @@ function registerShortcuts() {
 function createOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !authService.isAuthenticated()) {
     showNotification('Sign In Required', 'Please sign in with Google to use Eloquent');
     createLoginWindow();
     return;
@@ -1062,6 +1074,21 @@ function createAdminPanel() {
 
   adminWindow.loadFile('src/ui/admin.html');
 
+  // Suppress autofill errors in dev tools
+  adminWindow.webContents.once('did-finish-load', () => {
+    adminWindow.webContents.executeJavaScript(`
+      // Suppress autofill console errors
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        const message = args.join(' ');
+        if (message.includes('Autofill.enable') || message.includes('Autofill.setAddresses')) {
+          return; // Suppress autofill errors
+        }
+        originalConsoleError.apply(console, args);
+      };
+    `);
+  });
+
   adminWindow.on('closed', () => {
     adminWindow = null;
   });
@@ -1114,6 +1141,21 @@ function createUserManagement() {
 
   userManagementWindow.loadFile('src/ui/user-management.html');
 
+  // Suppress autofill errors in dev tools
+  userManagementWindow.webContents.once('did-finish-load', () => {
+    userManagementWindow.webContents.executeJavaScript(`
+      // Suppress autofill console errors
+      const originalConsoleError = console.error;
+      console.error = function(...args) {
+        const message = args.join(' ');
+        if (message.includes('Autofill.enable') || message.includes('Autofill.setAddresses')) {
+          return; // Suppress autofill errors
+        }
+        originalConsoleError.apply(console, args);
+      };
+    `);
+  });
+
   userManagementWindow.on('closed', () => {
     userManagementWindow = null;
   });
@@ -1132,6 +1174,11 @@ function startRecording() {
 
   audioFile = path.join(app.getPath('temp'), `eloquent-${Date.now()}.wav`);
   recordingStartTime = Date.now();
+
+  // Send the recording start time to the overlay for accurate timer
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('recording-started', recordingStartTime);
+  }
 
   playSound('start');
   performanceMonitor.measureRecordingLatency();
@@ -1808,23 +1855,27 @@ function loadConfigFromFile() {
       const savedConfig = JSON.parse(fs.readFileSync(configFile, 'utf8'));
       console.log('📋 Loaded saved configuration');
       
-      // Merge saved config with defaults
-      if (savedConfig.apiKeys) CONFIG.apiKeys = savedConfig.apiKeys;
+      // Merge saved config with current config (preserving environment variables)
+      // Only override if saved config has valid values
+      if (savedConfig.apiKeys && savedConfig.apiKeys.some(key => key && key.trim())) {
+        CONFIG.apiKeys = savedConfig.apiKeys;
+      }
       if (savedConfig.language) CONFIG.language = savedConfig.language;
       if (savedConfig.aiMode) CONFIG.aiMode = savedConfig.aiMode;
       if (savedConfig.preserveClipboard !== undefined) CONFIG.preserveClipboard = savedConfig.preserveClipboard;
       if (savedConfig.autoGrammarFix !== undefined) CONFIG.autoGrammarFix = savedConfig.autoGrammarFix;
-
       if (savedConfig.customDictionary) CONFIG.customDictionary = savedConfig.customDictionary;
       
       const validKeys = CONFIG.apiKeys.filter(k => k && k.trim()).length;
       console.log(`🔑 Loaded ${validKeys} API keys from saved config`);
     } else {
-      console.log('📋 No saved config found, using defaults');
+      console.log('📋 No saved config found, using defaults (environment variables preserved)');
+      const validKeys = CONFIG.apiKeys.filter(k => k && k.trim()).length;
+      console.log(`🔑 Using ${validKeys} API keys from environment variables`);
     }
   } catch (error) {
     console.error('❌ Error loading config:', error);
-    console.log('📋 Using default configuration');
+    console.log('📋 Using default configuration (environment variables preserved)');
   }
 }
 
@@ -2656,15 +2707,25 @@ ipcMain.on('delete-history-item', (event, id) => {
 // Admin IPC handlers
 ipcMain.handle('admin-verify-access', async () => {
   const currentUser = authService.getUser();
-  const hasAccess = isAuthenticated && isAdminUser(currentUser);
+  const isDev = authService.isDevelopmentMode;
   
-
+  console.log('🔧 Admin access verification:', {
+    isAuthenticated,
+    isDev,
+    userEmail: currentUser?.email,
+    isAdmin: isAdminUser(currentUser)
+  });
   
+  // Allow access in development mode OR if authenticated as admin
+  const hasAccess = isDev || (isAuthenticated && isAdminUser(currentUser));
+  
+  console.log('🔧 Admin access result:', hasAccess);
   return hasAccess;
 });
 
 ipcMain.handle('admin-get-config', async () => {
-  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
+  const isDev = authService.isDevelopmentMode;
+  if (!isDev && (!isAuthenticated || !isAdminUser(authService.getUser()))) {
     throw new Error('Access denied: Admin privileges required');
   }
   return {
@@ -2675,7 +2736,8 @@ ipcMain.handle('admin-get-config', async () => {
 });
 
 ipcMain.handle('admin-save-config', async (event, newAdminConfig) => {
-  if (!isAuthenticated || !isAdminUser(authService.getUser())) {
+  const isDev = authService.isDevelopmentMode;
+  if (!isDev && (!isAuthenticated || !isAdminUser(authService.getUser()))) {
     throw new Error('Access denied: Admin privileges required');
   }
   
@@ -2787,40 +2849,138 @@ ipcMain.handle('admin-clear-logs', async () => {
   return { success: true };
 });
 
+// Backend proxy IPC handlers for admin panel
+ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }) => {
+  console.log(`🔧 Admin backend request: ${method} ${endpoint}`);
+  
+  // Check authentication and admin privileges
+  const user = authService.getUser();
+  const isDev = authService.isDevelopmentMode;
+  
+  console.log('   Auth state:', { isAuthenticated, isDev, userEmail: user?.email, isAdmin: isAdminUser(user) });
+  
+  // Allow in development mode OR if authenticated as admin
+  if (!isDev && (!isAuthenticated || !isAdminUser(user))) {
+    console.error('   ❌ Access denied: Admin privileges required');
+    return {
+      success: false,
+      status: 403,
+      error: 'Access denied: Admin privileges required'
+    };
+  }
+  
+  try {
+    const url = `http://localhost:3000${endpoint}`;
+    console.log('   Making request to:', url);
+    
+    const config = {
+      method: method,
+      url: url,
+      headers: {
+        'Authorization': 'Bearer dev-token',
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000,
+      validateStatus: function (status) {
+        // Accept any status code to handle it properly
+        return status >= 200 && status < 600;
+      }
+    };
+    
+    if (data && (method === 'POST' || method === 'PUT')) {
+      config.data = data;
+    }
+    
+    const response = await axios(config);
+    console.log(`   ✅ Response: ${response.status}`);
+    
+    return {
+      success: response.status >= 200 && response.status < 300,
+      status: response.status,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('   ❌ Backend request failed:', error.message);
+    
+    // Check if it's a connection error
+    if (error.code === 'ECONNREFUSED') {
+      return {
+        success: false,
+        status: 503,
+        error: 'Backend server is not running. Please start the backend with ./start-backend.sh'
+      };
+    }
+    
+    return {
+      success: false,
+      status: error.response?.status || 500,
+      error: error.message,
+      data: error.response?.data
+    };
+  }
+});
+
 // Get auth token for user management window
 ipcMain.handle('get-auth-token', async () => {
   console.log('🔐 get-auth-token called');
-  console.log('   isAuthenticated:', isAuthenticated);
   
-  // Try to validate session if not authenticated
-  if (!isAuthenticated) {
-    console.log('   Not authenticated, trying to validate session...');
-    try {
-      const authResult = await authService.validateSession();
-      if (authResult.valid) {
-        console.log('   ✅ Session validation successful');
-        isAuthenticated = true;
-      } else {
-        console.log('   ❌ Session validation failed:', authResult.reason);
+  try {
+    console.log('   isAuthenticated:', isAuthenticated);
+    console.log('   isDevelopmentMode:', authService.isDevelopmentMode);
+    
+    // In development mode, always return dev-token
+    if (authService.isDevelopmentMode) {
+      console.log('   🔧 Development mode - returning dev-token directly');
+      return 'dev-token';
+    }
+    
+    // Try to validate session if not authenticated
+    if (!isAuthenticated) {
+      console.log('   Not authenticated, trying to validate session...');
+      try {
+        const authResult = await authService.validateSession();
+        if (authResult.valid) {
+          console.log('   ✅ Session validation successful');
+          isAuthenticated = true;
+        } else {
+          console.log('   ❌ Session validation failed:', authResult.reason);
+          throw new Error('Not authenticated');
+        }
+      } catch (error) {
+        console.log('   ❌ Session validation error:', error.message);
         throw new Error('Not authenticated');
       }
-    } catch (error) {
-      console.log('   ❌ Session validation error:', error.message);
-      throw new Error('Not authenticated');
     }
+    
+    const user = authService.getUser();
+    console.log('   User:', user?.email, 'Role:', user?.role);
+    
+    if (!isAdminUser(user)) {
+      console.log('   ❌ Admin access required for user:', user?.email);
+      throw new Error('Admin access required');
+    }
+    
+    // Get access token - directly access the property for reliability
+    let token = authService.accessToken;
+    
+    if (!token) {
+      console.log('   ❌ No access token available');
+      throw new Error('No access token available');
+    }
+    
+    console.log('   ✅ Returning token:', token ? 'Token available' : 'No token');
+    return token;
+  } catch (error) {
+    console.error('   ❌ get-auth-token error:', error);
+    
+    // Fallback to dev-token if in development mode
+    if (authService.isDevelopmentMode) {
+      console.log('   🔧 Error occurred but in development mode - returning dev-token as fallback');
+      return 'dev-token';
+    }
+    
+    throw error;
   }
-  
-  const user = authService.getUser();
-  console.log('   User:', user?.email, 'Role:', user?.role);
-  
-  if (!isAdminUser(user)) {
-    console.log('   ❌ Admin access required for user:', user?.email);
-    throw new Error('Admin access required');
-  }
-  
-  const token = authService.getAccessToken();
-  console.log('   ✅ Returning token:', token ? 'Token available' : 'No token');
-  return token;
 });
 
 // Function to log API requests

@@ -312,7 +312,7 @@
   </style>
 </head>
 <body>
-  <button class="back-btn" onclick="goBack()">
+  <button class="back-btn" id="backBtn">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M19 12H5M12 19l-7-7 7-7"/>
     </svg>
@@ -333,8 +333,8 @@
     </div>
 
     <div class="billing-toggle">
-      <div class="billing-option active" onclick="setBilling('month')">Monthly</div>
-      <div class="billing-option" onclick="setBilling('year')">Yearly <span class="save">Save 33%</span></div>
+      <div class="billing-option active" data-billing="month">Monthly</div>
+      <div class="billing-option" data-billing="year">Yearly <span class="save">Save 33%</span></div>
     </div>
 
     <div class="pricing">
@@ -372,7 +372,7 @@
           <li>Standard processing</li>
           <li>3 languages</li>
         </ul>
-        <button class="pricing-btn secondary" onclick="subscribe('starter')">Upgrade to Starter</button>
+        <button class="pricing-btn secondary" data-plan="starter">Upgrade to Starter</button>
       </div>
 
       <!-- Pro Plan -->
@@ -391,7 +391,7 @@
           <li>Priority processing</li>
           <li>All languages</li>
         </ul>
-        <button class="pricing-btn primary" onclick="subscribe('pro')">Upgrade to Pro</button>
+        <button class="pricing-btn primary" data-plan="pro">Upgrade to Pro</button>
       </div>
 
       <!-- Enterprise Plan -->
@@ -410,7 +410,7 @@
           <li>Custom shortcuts</li>
           <li>Priority support</li>
         </ul>
-        <button class="pricing-btn secondary" onclick="subscribe('enterprise')">Upgrade to Enterprise</button>
+        <button class="pricing-btn secondary" data-plan="enterprise">Upgrade to Enterprise</button>
       </div>
     </div>
 
@@ -667,6 +667,31 @@
       const slider = document.getElementById('usage-slider');
       slider.addEventListener('input', updateCalculator);
       updateCalculator(); // Initial calculation
+    });
+    
+    // Add event listeners to replace onclick handlers
+    document.addEventListener('DOMContentLoaded', () => {
+      // Back button
+      const backBtn = document.getElementById('backBtn');
+      if (backBtn) {
+        backBtn.addEventListener('click', goBack);
+      }
+      
+      // Billing options
+      document.querySelectorAll('.billing-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const billing = this.getAttribute('data-billing');
+          setBilling(billing);
+        });
+      });
+      
+      // Plan subscription buttons
+      document.querySelectorAll('button[data-plan]').forEach(button => {
+        button.addEventListener('click', function() {
+          const plan = this.getAttribute('data-plan');
+          subscribe(plan);
+        });
+      });
     });
   </script>
 </body>

@@ -16,10 +16,22 @@ class AuthBridge {
     this.sessionCache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     
+    // Store access token for API calls
+    this.accessToken = null;
+    this.refreshToken = null;
+    
     console.log('🚀 AuthBridge initialized with Go backend acceleration');
     if (this.isDevelopmentMode) {
       console.log('🔧 Development mode detected');
     }
+  }
+
+  // Initialize method (called by main.js)
+  init() {
+    console.log('🔐 AuthBridge init() called');
+    // Initialization is already done in constructor
+    // This method exists for compatibility with main.js
+    return this;
   }
 
   // High-performance Google sign-in using Go backend
@@ -73,6 +85,10 @@ class AuthBridge {
     try {
       // In development mode, simulate successful callback
       if (this.isDevelopmentMode) {
+        // Store dev tokens
+        this.accessToken = 'dev-token';
+        this.refreshToken = 'dev-refresh-token';
+        
         const devResult = {
           success: true,
           user: {
@@ -110,6 +126,10 @@ class AuthBridge {
           console.warn('Could not fetch user data from Supabase:', err);
         }
       }
+
+      // Store tokens for API calls
+      this.accessToken = session.access_token;
+      this.refreshToken = session.refresh_token;
 
       // Send to our Go backend
       const response = await this.makeRequest('POST', '/api/auth/google', {
@@ -271,11 +291,25 @@ class AuthBridge {
     }
   }
 
+  // Get access token for API calls
+  getAccessToken() {
+    return this.accessToken;
+  }
+
+  // Get refresh token
+  getRefreshToken() {
+    return this.refreshToken;
+  }
+
   // Logout with cache cleanup
   async logout() {
     try {
       // Clear cache immediately
       this.clearCache();
+      
+      // Clear tokens
+      this.accessToken = null;
+      this.refreshToken = null;
       
       // Notify backend (don't wait for response)
       this.makeRequest('POST', '/api/auth/logout', null, 2000).catch(() => {
