@@ -1,6 +1,6 @@
 // Check if running in Electron
 const isElectron = typeof require !== 'undefined';
-let API_BASE = 'http://localhost:3000/api';
+let API_BASE = process.env.ELOQUENT_API_URL || 'https://agile-basin-06335-9109082620ce.herokuapp.com/api';
 let authToken = '';
 
 console.log('User Management window loaded');

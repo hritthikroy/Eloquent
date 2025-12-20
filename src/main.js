@@ -3181,10 +3181,15 @@ ipcMain.handle('admin-clear-logs', async () => {
 ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }) => {
   console.log(`🔧 Admin backend request: ${method} ${endpoint}`);
   
+  // Get API URL from environment or fallback
+  const getAPIUrl = () => {
+    return process.env.ELOQUENT_API_URL || 'https://agile-basin-06335-9109082620ce.herokuapp.com';
+  };
+  
   // Health check doesn't require authentication
   if (endpoint === '/health') {
     try {
-      const url = `http://localhost:3000${endpoint}`;
+      const url = `${getAPIUrl()}${endpoint}`;
       console.log('   Making health check request to:', url);
       
       const response = await axios({
@@ -3228,7 +3233,7 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
   }
   
   try {
-    const url = `http://localhost:3000${endpoint}`;
+    const url = `${getAPIUrl()}${endpoint}`;
     console.log('   Making request to:', url);
     
     const config = {

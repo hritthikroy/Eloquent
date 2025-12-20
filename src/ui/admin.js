@@ -282,7 +282,7 @@ function showTroubleshooting() {
     3. <strong>Missing .env:</strong> Copy .env.example to .env in backend-go directory<br>
     4. <strong>Permission denied:</strong> Run <code>chmod +x start-backend.sh</code><br><br>
     <strong>Check if backend is running:</strong><br>
-    Open <a href="http://localhost:3000/health" target="_blank" style="color: #60a5fa;">http://localhost:3000/health</a> in browser<br>
+    Open <a href="https://agile-basin-06335-9109082620ce.herokuapp.com/health" target="_blank" style="color: #60a5fa;">https://agile-basin-06335-9109082620ce.herokuapp.com/health</a> in browser<br>
     Should show: <code>{"status":"ok"}</code><br><br>
     <button id="backToInstructions" class="btn btn-primary btn-small" style="margin-top: 15px;">← Back to Instructions</button>
   `;
