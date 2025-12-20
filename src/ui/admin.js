@@ -153,15 +153,9 @@ async function loadAdminData() {
     
     if (!result.success) {
       if (result.status === 404) {
-        // Stats endpoint not found, use mock data
-        console.log('Stats endpoint not found, using mock data');
-        const mockStats = {
-          total_requests: 1250,
-          active_users_24h: 45,
-          api_usage_percent: 67.3,
-          success_rate: 98.5
-        };
-        updateStatsDisplay(mockStats);
+        // Stats endpoint not found
+        console.log('Stats endpoint not found');
+        showAlert('Admin stats endpoint not available. Please check backend configuration.', 'error');
         return;
       }
       
@@ -312,14 +306,10 @@ async function loadUsers() {
     
     if (!result.success) {
       if (result.status === 401) {
-        // Try with development mode authentication
-        console.log('401 error, trying with admin email override...');
-        showAlert('Authentication failed. Make sure you are signed in with an admin account (hritthikin@gmail.com)', 'error');
-        
-        // Show mock users for development
-        allUsers = generateMockUsers();
+        console.log('401 error - authentication required');
+        showAlert('Authentication failed. Make sure you are signed in with an admin account.', 'error');
+        allUsers = [];
         renderUsers(allUsers);
-        showAlert('Showing mock data for development. Sign in with admin account for real data.', 'info');
         return;
       }
       
@@ -346,50 +336,15 @@ async function loadUsers() {
     
     showAlert(errorMessage, 'error');
     
-    // Fallback: show mock users for development
-    allUsers = generateMockUsers();
+    // Show empty state when backend is not available
+    allUsers = [];
     renderUsers(allUsers);
-    showAlert('Showing mock data due to connection error', 'info');
   }
 }
 
-// Generate mock users for development/testing
+// No mock users - admin panel requires real backend connection
 function generateMockUsers() {
-  return [
-    {
-      id: '1',
-      email: 'hritthikin@gmail.com',
-      name: 'Admin User',
-      role: 'admin',
-      plan: 'enterprise',
-      subscription_status: 'active',
-      usage_current_month: 45,
-      last_login: new Date().toISOString(),
-      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: '2',
-      email: 'user@example.com',
-      name: 'Test User',
-      role: 'user',
-      plan: 'pro',
-      subscription_status: 'active',
-      usage_current_month: 120,
-      last_login: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: '3',
-      email: 'free@example.com',
-      name: 'Free User',
-      role: 'user',
-      plan: 'free',
-      subscription_status: 'none',
-      usage_current_month: 25,
-      last_login: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  ];
+  return [];
 }
 
 // Render users table
@@ -402,6 +357,7 @@ function renderUsers(users) {
   }
 
   tbody.innerHTML = users.map(user => {
+    const userId = String(user.id);
     const usagePercent = user.plan === 'unlimited' || user.plan === 'enterprise' ? 0 : 
       Math.min(100, (user.usage_current_month / getUsageLimit(user.plan)) * 100);
     const usageClass = usagePercent > 90 ? 'danger' : usagePercent > 75 ? 'warning' : '';
@@ -409,8 +365,8 @@ function renderUsers(users) {
     return `
       <tr>
         <td class="checkbox-cell">
-          <input type="checkbox" class="user-checkbox" data-user-id="${user.id}" 
-            ${selectedUsers.has(user.id) ? 'checked' : ''}>
+          <input type="checkbox" class="user-checkbox" data-user-id="${userId}" 
+            ${selectedUsers.has(userId) ? 'checked' : ''}>
         </td>
         <td>
           <div class="user-info-cell">
@@ -445,9 +401,9 @@ function renderUsers(users) {
         </td>
         <td>
           <div style="display: flex; gap: 8px;">
-            <button class="btn btn-primary btn-small user-view-btn" data-user-id="${user.id}">View</button>
-            <button class="btn btn-success btn-small user-edit-btn" data-user-id="${user.id}">Edit</button>
-            <button class="btn btn-danger btn-small user-delete-btn" data-user-id="${user.id}">Delete</button>
+            <button class="btn btn-primary btn-small user-view-btn" data-user-id="${userId}">View</button>
+            <button class="btn btn-success btn-small user-edit-btn" data-user-id="${userId}">Edit</button>
+            <button class="btn btn-danger btn-small user-delete-btn" data-user-id="${userId}">Delete</button>
           </div>
         </td>
       </tr>
@@ -490,10 +446,12 @@ function formatDate(dateString) {
 
 // Selection management
 function toggleUserSelection(userId) {
-  if (selectedUsers.has(userId)) {
-    selectedUsers.delete(userId);
+  // Ensure userId is a string for consistent comparison
+  const userIdStr = String(userId);
+  if (selectedUsers.has(userIdStr)) {
+    selectedUsers.delete(userIdStr);
   } else {
-    selectedUsers.add(userId);
+    selectedUsers.add(userIdStr);
   }
   updateBulkActions();
 }
@@ -505,12 +463,12 @@ function toggleSelectAll() {
   if (selectAll.checked) {
     checkboxes.forEach(cb => {
       cb.checked = true;
-      selectedUsers.add(cb.dataset.userId);
+      selectedUsers.add(String(cb.dataset.userId));
     });
   } else {
     checkboxes.forEach(cb => {
       cb.checked = false;
-      selectedUsers.delete(cb.dataset.userId);
+      selectedUsers.delete(String(cb.dataset.userId));
     });
   }
   
@@ -536,11 +494,82 @@ function updateBulkActions() {
   }
 }
 
-// Load API requests (placeholder for future implementation)
+// Load API requests
 async function loadApiRequests() {
-  // This would load recent API requests from the backend
-  // For now, we'll focus on user management
-  console.log('API request monitoring - to be implemented');
+  try {
+    console.log('📊 Loading API requests...');
+    
+    // Get API requests from main process
+    const requests = await ipcRenderer.invoke('admin-get-api-requests');
+    
+    if (!requests || !Array.isArray(requests)) {
+      console.warn('No API requests data received');
+      renderApiRequests([]);
+      return;
+    }
+    
+    console.log(`✅ Loaded ${requests.length} API requests`);
+    renderApiRequests(requests);
+  } catch (error) {
+    console.error('Failed to load API requests:', error);
+    showAlert('Failed to load API requests: ' + error.message, 'error');
+    renderApiRequests([]);
+  }
+}
+
+// Render API requests table
+function renderApiRequests(requests) {
+  const tbody = document.getElementById('requestsTableBody');
+  
+  if (!tbody) {
+    console.warn('requestsTableBody element not found');
+    return;
+  }
+  
+  if (requests.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.5);">No API requests yet</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = requests.map(req => {
+    const statusClass = req.status === 'success' ? 'success' : 'error';
+    const typeDisplay = req.type === 'whisper' ? '🎤 Whisper' : 
+                       req.type === 'llama-rewrite' ? '✨ AI Rewrite' : 
+                       req.type === 'llama-grammar' ? '📝 Grammar' : req.type;
+    
+    return `
+      <tr>
+        <td style="color: rgba(255, 255, 255, 0.9);">${formatTimestamp(req.timestamp)}</td>
+        <td><span style="font-weight: 600; color: white;">${typeDisplay}</span></td>
+        <td><span class="status-badge status-${statusClass}">${req.status}</span></td>
+        <td style="color: rgba(255, 255, 255, 0.7);">${req.duration ? req.duration + 'ms' : 'N/A'}</td>
+        <td style="color: rgba(255, 255, 255, 0.7);">${req.tokens || 'N/A'}</td>
+        <td style="color: rgba(255, 255, 255, 0.6); font-size: 13px;">${req.userEmail || 'Anonymous'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Format timestamp for display
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+
+  if (diffSecs < 60) return `${diffSecs}s ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
 }
 
 // Search and filter
@@ -566,58 +595,65 @@ async function viewUserDetails(userId) {
   console.log('viewUserDetails called with userId:', userId, 'type:', typeof userId);
   
   try {
-    // First, try to find user in local cache (works even if backend is down)
-    // Convert userId to string for comparison since data-user-id is always a string
+    // Ensure userId is a string for consistent comparison
     const userIdStr = String(userId);
+    
+    // First, try to find user in local cache (works even if backend is down)
     const cachedUser = allUsers.find(u => String(u.id) === userIdStr);
     console.log('Cached user found:', cachedUser ? cachedUser.email : 'none', 'allUsers count:', allUsers.length);
+    console.log('All user IDs:', allUsers.map(u => ({ id: u.id, type: typeof u.id })));
     
-    // Check if backend is running first
+    // If we have a cached user, show it immediately (better UX)
+    if (cachedUser) {
+      const limit = getUsageLimit(cachedUser.plan);
+      const numericLimit = limit === '∞' ? -1 : (typeof limit === 'number' ? limit : 60);
+      
+      const userData = {
+        user: cachedUser,
+        usage_stats: {
+          current_month: cachedUser.usage_current_month || 0,
+          limit: numericLimit,
+          remaining: numericLimit === -1 ? -1 : Math.max(0, numericLimit - (cachedUser.usage_current_month || 0))
+        },
+        usage_logs: []
+      };
+      
+      console.log('Showing modal with cached user data:', userData);
+      showUserModal(userData);
+      
+      // Try to fetch fresh data from backend in background
+      try {
+        const isBackendRunning = await checkBackendHealth();
+        if (isBackendRunning) {
+          const result = await ipcRenderer.invoke('admin-backend-request', {
+            method: 'GET',
+            endpoint: `/api/admin/users/${userIdStr}`
+          });
+          
+          if (result.success && result.data) {
+            console.log('Got fresh data from backend, updating modal');
+            showUserModal(result.data);
+          }
+        }
+      } catch (bgError) {
+        console.log('Background fetch failed (using cached data):', bgError.message);
+      }
+      
+      return;
+    }
+    
+    // No cached user - need to fetch from backend
     const isBackendRunning = await checkBackendHealth();
     console.log('Backend running:', isBackendRunning);
     
     if (!isBackendRunning) {
-      // Fallback to mock user data for development
-      if (cachedUser) {
-        const limit = getUsageLimit(cachedUser.plan);
-        const numericLimit = limit === '∞' ? -1 : (typeof limit === 'number' ? limit : 60);
-        
-        const mockUserData = {
-          user: cachedUser,
-          usage_stats: {
-            current_month: cachedUser.usage_current_month || 0,
-            limit: numericLimit,
-            remaining: numericLimit === -1 ? -1 : Math.max(0, numericLimit - (cachedUser.usage_current_month || 0))
-          },
-          usage_logs: [
-            {
-              created_at: new Date().toISOString(),
-              type: 'transcription',
-              minutes: 15,
-              mode: 'real-time',
-              success: true
-            },
-            {
-              created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-              type: 'transcription',
-              minutes: 30,
-              mode: 'file-upload',
-              success: true
-            }
-          ]
-        };
-        console.log('Showing modal with mock data:', mockUserData);
-        showUserModal(mockUserData);
-        showAlert('Showing mock data - backend not running', 'info');
-        return;
-      }
       showAlert('Backend is not running and user not found in cache', 'error');
       return;
     }
 
     const result = await ipcRenderer.invoke('admin-backend-request', {
       method: 'GET',
-      endpoint: `/api/admin/users/${userId}`
+      endpoint: `/api/admin/users/${userIdStr}`
     });
     
     if (!result.success) {
@@ -631,384 +667,430 @@ async function viewUserDetails(userId) {
     showUserModal(result.data);
   } catch (error) {
     console.error('Error loading user details:', error);
-    
-    // Try to show basic user info from cache as fallback
-    const userIdStr = String(userId);
-    const cachedUser = allUsers.find(u => String(u.id) === userIdStr);
-    console.log('Fallback - cached user:', cachedUser ? cachedUser.email : 'none');
-    
-    if (cachedUser) {
-      const limit = getUsageLimit(cachedUser.plan);
-      const numericLimit = limit === '∞' ? -1 : (typeof limit === 'number' ? limit : 60);
-      
-      const fallbackData = {
-        user: cachedUser,
-        usage_stats: {
-          current_month: cachedUser.usage_current_month || 0,
-          limit: numericLimit,
-          remaining: numericLimit === -1 ? -1 : Math.max(0, numericLimit - (cachedUser.usage_current_month || 0))
-        },
-        usage_logs: []
-      };
-      console.log('Showing modal with fallback data:', fallbackData);
-      showUserModal(fallbackData);
-      showAlert('Showing cached data - could not load latest details: ' + error.message, 'error');
-    } else {
-      showAlert('Failed to load user details: ' + error.message, 'error');
-    }
+    showAlert('Failed to load user details: ' + error.message, 'error');
   }
 }
 
 function showUserModal(userData) {
+  console.log('showUserModal called with:', userData);
+  
   const modal = document.getElementById('userModal');
   const modalUserName = document.getElementById('modalUserName');
   const userDetailsContent = document.getElementById('userDetailsContent');
   
-  // Check if modal elements exist
   if (!modal || !modalUserName || !userDetailsContent) {
-    console.error('Modal elements not found:', { modal: !!modal, modalUserName: !!modalUserName, userDetailsContent: !!userDetailsContent });
-    showAlert('Modal elements not found - page may not be fully loaded', 'error');
+    console.error('Modal elements not found');
     return;
   }
   
-  // Show modal immediately so user sees something
-  modal.classList.remove('hidden');
+  // Extract user data - handle various data structures
+  let user = null;
+  let usageStats = { current_month: 0, limit: 60, remaining: 60 };
   
-  // Debug: log the received data
-  console.log('User modal data received:', userData);
+  console.log('Extracting user data from:', JSON.stringify(userData, null, 2));
   
-  // Handle case where userData is null/undefined
-  if (!userData) {
-    console.error('No user data provided to showUserModal');
-    modalUserName.textContent = 'Error';
-    userDetailsContent.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #ef4444;">
-        <h3>No Data Available</h3>
-        <p>User data was not provided. Please try again.</p>
-        <button class="btn btn-primary" onclick="closeUserModal()">Close</button>
-      </div>
-    `;
-    return;
-  }
-  
-  // Validate data structure - handle both direct user object and wrapped user object
-  let user, usageStats, usageLogs;
-  
-  if (userData.user) {
-    // Backend response format
+  if (userData && userData.user) {
     user = userData.user;
-    usageStats = userData.usage_stats || { current_month: 0, limit: 0, remaining: 0 };
-    usageLogs = userData.usage_logs || [];
-  } else if (userData.id || userData.email) {
-    // Direct user object format (fallback)
+    usageStats = userData.usage_stats || usageStats;
+    console.log('Found user in userData.user:', user);
+  } else if (userData && (userData.id || userData.email)) {
     user = userData;
-    const limit = getUsageLimit(user.plan);
-    const numericLimit = limit === '∞' ? -1 : (typeof limit === 'number' ? limit : 60);
-    usageStats = { 
-      current_month: user.usage_current_month || 0, 
-      limit: numericLimit,
-      remaining: numericLimit === -1 ? -1 : Math.max(0, numericLimit - (user.usage_current_month || 0))
-    };
-    usageLogs = [];
-  } else {
-    console.error('Invalid user data structure:', userData);
-    modalUserName.textContent = 'Error';
-    userDetailsContent.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #ef4444;">
-        <h3>Invalid Data</h3>
-        <p>The user data format is not recognized.</p>
-        <pre style="text-align: left; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; font-size: 11px; overflow: auto; max-height: 200px;">${JSON.stringify(userData, null, 2)}</pre>
-        <button class="btn btn-primary" onclick="closeUserModal()" style="margin-top: 16px;">Close</button>
-      </div>
-    `;
-    return;
+    console.log('Using userData directly as user:', user);
   }
   
   if (!user) {
-    console.error('User object is null after parsing');
+    console.error('No user data found in:', userData);
     modalUserName.textContent = 'Error';
-    userDetailsContent.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #ef4444;">
-        <h3>User Not Found</h3>
-        <p>Could not extract user information from the response.</p>
-        <button class="btn btn-primary" onclick="closeUserModal()">Close</button>
-      </div>
-    `;
+    userDetailsContent.innerHTML = '<p style="color: #ef4444; padding: 20px; text-align: center;">No user data available. Please try again.</p>';
+    modal.classList.remove('hidden');
     return;
   }
   
-  modalUserName.textContent = user.name || user.email || 'Unknown User';
+  // Store user ID for action buttons (ensure it's a string for consistency)
+  const userId = String(user.id);
   
-  // Show loading state first
-  userDetailsContent.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: center; padding: 40px;">
-      <div class="loading" style="width: 24px; height: 24px; margin-right: 12px;"></div>
-      <span style="color: rgba(255, 255, 255, 0.7);">Loading user details...</span>
-    </div>
+  console.log('Rendering modal for user:', user.email, 'ID:', userId);
+  
+  // Set title
+  modalUserName.textContent = user.name || user.email || 'User Details';
+  
+  // Build content using DOM methods instead of innerHTML for reliability
+  userDetailsContent.innerHTML = '';
+  
+  // Create grid container
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;';
+  
+  // Account Info Card
+  const accountCard = document.createElement('div');
+  accountCard.style.cssText = 'background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 20px;';
+  accountCard.innerHTML = `
+    <h4 style="color: white; font-size: 14px; font-weight: 600; margin-bottom: 12px;">ACCOUNT INFO</h4>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Email:</strong> ${user.email || 'N/A'}</p>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Name:</strong> ${user.name || 'Not set'}</p>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Role:</strong> ${user.role || 'user'}</p>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Last Login:</strong> ${user.last_login ? formatDate(user.last_login) : 'Never'}</p>
   `;
+  grid.appendChild(accountCard);
   
-  // Then populate with actual content
-  setTimeout(() => {
-    console.log('Populating modal with user data:', { user, usageStats, usageLogs });
-    
-    try {
-      // Create a simpler, more robust modal content
-      const modalContent = `
-        <div class="user-detail-grid">
-          <div class="user-detail-card">
-            <h4>Account Information</h4>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Email</span>
-              <span class="user-detail-value">${user.email || 'N/A'}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Name</span>
-              <span class="user-detail-value">${user.name || 'Not set'}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Role</span>
-              <span class="user-detail-value">
-                <span class="role-badge role-${user.role || 'user'}">${user.role || 'user'}</span>
-              </span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Created</span>
-              <span class="user-detail-value">${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Last Login</span>
-              <span class="user-detail-value">${user.last_login ? formatDate(user.last_login) : 'Never'}</span>
-            </div>
-          </div>
-          
-          <div class="user-detail-card">
-            <h4>Subscription</h4>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Plan</span>
-              <span class="user-detail-value">
-                <span class="plan-badge plan-${user.plan || 'free'}">${user.plan || 'free'}</span>
-              </span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Status</span>
-              <span class="user-detail-value">
-                <span class="status-badge status-${user.subscription_status === 'active' ? 'success' : 'pending'}">
-                  ${user.subscription_status || 'none'}
-                </span>
-              </span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">End Date</span>
-              <span class="user-detail-value">${user.subscription_end_date ? new Date(user.subscription_end_date).toLocaleDateString() : 'N/A'}</span>
-            </div>
-          </div>
-          
-          <div class="user-detail-card">
-            <h4>Usage Statistics</h4>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Current Month</span>
-              <span class="user-detail-value">${usageStats.current_month || 0} minutes</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Limit</span>
-              <span class="user-detail-value">${usageStats.limit === -1 ? 'Unlimited' : (usageStats.limit || 0) + ' minutes'}</span>
-            </div>
-            <div class="user-detail-item">
-              <span class="user-detail-label">Remaining</span>
-              <span class="user-detail-value">${usageStats.remaining === -1 ? 'Unlimited' : (usageStats.remaining || 0) + ' minutes'}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="user-detail-card">
-          <h4>Recent Usage Logs</h4>
-          <table class="api-requests-table" style="margin-top: 12px;">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Minutes</th>
-                <th>Mode</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${usageLogs && usageLogs.length > 0 ? usageLogs.map(log => `
-                <tr>
-                  <td>${formatDate(log.created_at)}</td>
-                  <td>${log.type || 'N/A'}</td>
-                  <td>${log.minutes || 0}</td>
-                  <td>${log.mode || 'N/A'}</td>
-                  <td>
-                    <span class="status-badge status-${log.success ? 'success' : 'error'}">
-                      ${log.success ? 'Success' : 'Failed'}
-                    </span>
-                  </td>
-                </tr>
-              `).join('') : '<tr><td colspan="5" style="text-align: center; color: rgba(255,255,255,0.5);">No usage logs found</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-        
-        <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
-          <button class="btn btn-success modal-edit-plan-btn" data-user-id="${user.id}">Edit Plan</button>
-          <button class="btn btn-primary modal-reset-usage-btn" data-user-id="${user.id}">Reset Usage</button>
-          <button class="btn btn-danger modal-delete-user-btn" data-user-id="${user.id}">Delete User</button>
-        </div>
-      `;
-      
-      userDetailsContent.innerHTML = modalContent;
-      
-      console.log('Modal content populated successfully');
-      
-      // Add event listeners for modal action buttons
-      addModalActionListeners();
-    } catch (error) {
-      console.error('Error populating modal content:', error);
-      userDetailsContent.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: #ef4444;">
-          <h3>Error Loading User Details</h3>
-          <p>Failed to display user information: ${error.message}</p>
-          <p style="font-size: 12px; color: rgba(255, 255, 255, 0.5); margin-top: 10px;">
-            Debug info: ${JSON.stringify({ hasUser: !!user, hasStats: !!usageStats, hasLogs: !!usageLogs })}
-          </p>
-          <button class="btn btn-primary" onclick="closeUserModal()">Close</button>
-        </div>
-      `;
-    }
-  }, 100); // Small delay to show loading state
+  // Subscription Card
+  const subCard = document.createElement('div');
+  subCard.style.cssText = 'background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 20px;';
+  subCard.innerHTML = `
+    <h4 style="color: white; font-size: 14px; font-weight: 600; margin-bottom: 12px;">SUBSCRIPTION</h4>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Plan:</strong> <span class="plan-badge plan-${user.plan || 'free'}">${user.plan || 'free'}</span></p>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Status:</strong> ${user.subscription_status || 'none'}</p>
+    <p style="color: rgba(255,255,255,0.7); margin: 8px 0;"><strong style="color: white;">Usage:</strong> ${usageStats.current_month || 0} / ${usageStats.limit === -1 ? '∞' : usageStats.limit} min</p>
+  `;
+  grid.appendChild(subCard);
+  
+  userDetailsContent.appendChild(grid);
+  
+  // Action buttons
+  const btnContainer = document.createElement('div');
+  btnContainer.style.cssText = 'display: flex; gap: 12px; justify-content: flex-end;';
+  
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn btn-success';
+  editBtn.textContent = 'Edit Plan';
+  editBtn.addEventListener('click', () => {
+    console.log('Edit Plan clicked for user:', userId);
+    editUserPlan(userId);
+  });
+  
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'btn btn-primary';
+  resetBtn.textContent = 'Reset Usage';
+  resetBtn.addEventListener('click', () => {
+    console.log('Reset Usage clicked for user:', userId);
+    resetUserUsage(userId);
+  });
+  
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn btn-danger';
+  deleteBtn.textContent = 'Delete User';
+  deleteBtn.addEventListener('click', () => {
+    console.log('Delete User clicked for user:', userId);
+    deleteUser(userId);
+  });
+  
+  btnContainer.appendChild(editBtn);
+  btnContainer.appendChild(resetBtn);
+  btnContainer.appendChild(deleteBtn);
+  userDetailsContent.appendChild(btnContainer);
+  
+  // Show modal
+  modal.classList.remove('hidden');
+  console.log('Modal displayed successfully');
 }
 
 function closeUserModal() {
   const modal = document.getElementById('userModal');
   if (modal) {
     modal.classList.add('hidden');
+    
+    // Clear modal content to prevent memory leaks
+    const userDetailsContent = document.getElementById('userDetailsContent');
+    if (userDetailsContent) {
+      userDetailsContent.innerHTML = '';
+    }
   }
 }
 
-// Test function to debug modal issues
-function testUserModal() {
-  console.log('Testing user modal with mock data...');
-  
-  // First, let's check if modal elements exist
+async function editUserPlan(userId) {
+  // Ensure userId is a string for consistent comparison
+  const userIdStr = String(userId);
+  const user = allUsers.find(u => String(u.id) === userIdStr);
+  if (!user) {
+    console.error('User not found for ID:', userId);
+    showAlert('User not found', 'error');
+    return;
+  }
+
+  // Show edit modal
+  showEditUserModal(user);
+}
+
+// Show edit user modal with form
+function showEditUserModal(user) {
   const modal = document.getElementById('userModal');
   const modalUserName = document.getElementById('modalUserName');
   const userDetailsContent = document.getElementById('userDetailsContent');
   
-  console.log('Modal elements check:', {
-    modal: !!modal,
-    modalUserName: !!modalUserName,
-    userDetailsContent: !!userDetailsContent
-  });
-  
-  if (!modal) {
-    showAlert('Modal element not found!', 'error');
+  if (!modal || !modalUserName || !userDetailsContent)Content) {
+    console.error('Modal elements not found');
     return;
   }
   
-  // Show modal with simple content first
+  const userId = String(user.id);
+  
+  modalUserName.textContent = `Edit User: ${user.name || user.email}`;
+  
+  userDetailsContent.innerHTML = `
+    <form id="editUserForm" style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;">Email</label>
+          <input type="email" id="editUserEmail" value="${user.email || ''}" 
+            style="padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px;" readonly>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;">Name</label>
+          <input type="text" id="editUserName" value="${user.name || ''}" placeholder="User name"
+            style="padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px;">
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;">Plan</label>
+          <select id="editUserPlan" 
+            style="padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px;">
+            <option value="free" ${user.plan === 'free' ? 'selected' : ''}>Free</option>
+            <option value="starter" ${user.plan === 'starter' ? 'selected' : ''}>Starter</option>
+            <option value="pro" ${user.plan === 'pro' ? 'selected' : ''}>Pro</option>
+            <option value="unlimited" ${user.plan === 'unlimited' ? 'selected' : ''}>Unlimited</option>
+            <option value="enterprise" ${user.plan === 'enterprise' ? 'selected' : ''}>Enterprise</option>
+          </select>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;">Role</label>
+          <select id="editUserRole" 
+            style="padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px;">
+            <option value="user" ${user.role === 'user' ? 'selected' : ''}>User</option>
+            <option value="moderator" ${user.role === 'moderator' ? 'selected' : ''}>Moderator</option>
+            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;">Subscription Status</label>
+          <select id="editUserSubStatus" 
+            style="padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px;">
+            <option value="none" ${user.subscription_status === 'none' ? 'selected' : ''}>None</option>
+            <option value="active" ${user.subscription_status === 'active' ? 'selected' : ''}>Active</option>
+            <option value="cancelled" ${user.subscription_status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+            <option value="expired" ${user.subscription_status === 'expired' ? 'selected' : ''}>Expired</option>
+          </select>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;">Current Usage (minutes)</label>
+          <input type="number" id="editUserUsage" value="${user.usage_current_month || 0}" min="0"
+            style="padding: 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px;">
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 12px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <button type="button" class="btn btn-secondary" id="editCancelBtn" style="padding: 12px 24px;">Cancel</button>
+        <button type="button" class="btn btn-danger" id="editDeleteBtn" style="padding: 12px 24px;">Delete User</button>
+        <button type="submit" class="btn btn-success" id="editSaveBtn" style="padding: 12px 24px;">Save Changes</button>
+      </div>
+    </form>
+  `;
+  
+  // Show modal first
   modal.classList.remove('hidden');
   
-  if (modalUserName) {
-    modalUserName.textContent = 'Test User Modal';
+  // Add form submit handler
+  const form = document.getElementById('editUserForm');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await saveUserChanges(userId);
+    });
   }
   
-  if (userDetailsContent) {
-    userDetailsContent.innerHTML = `
-      <div style="padding: 20px; text-align: center;">
-        <h3 style="color: white; margin-bottom: 20px;">Modal Test Successful!</h3>
-        <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 20px;">
-          This confirms the modal is working correctly.
-        </p>
-        <button class="btn btn-primary" onclick="closeUserModal()">Close Test</button>
-      </div>
-    `;
+  // Add cancel button handler
+  const cancelBtn = document.getElementById('editCancelBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      closeUserModal();
+    });
   }
   
-  console.log('Test modal should now be visible');
-  
-  // Check if modal is actually visible
-  setTimeout(() => {
-    const computedStyle = window.getComputedStyle(modal);
-    console.log('Modal computed display:', computedStyle.display);
-    console.log('Modal classList:', modal.classList.toString());
-  }, 200);
+  // Add delete button handler
+  const deleteBtn = document.getElementById('editDeleteBtn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      deleteUser(userId);
+    });
+  }
 }
 
-async function editUserPlan(userId) {
-  const user = allUsers.find(u => u.id === userId);
-  if (!user) return;
-
-  const newPlan = prompt(`Change plan for ${user.email}:\n\nCurrent: ${user.plan}\n\nEnter new plan (free, starter, pro, unlimited, enterprise):`, user.plan);
-  if (!newPlan || newPlan === user.plan) return;
-
-  const validPlans = ['free', 'starter', 'pro', 'unlimited', 'enterprise'];
-  if (!validPlans.includes(newPlan)) {
-    showAlert('Invalid plan. Valid options: ' + validPlans.join(', '), 'error');
+// Save user changes from edit form
+async function saveUserChanges(userId) {
+  const userIdStr = String(userId);
+  
+  // Get form values
+  const newPlan = document.getElementById('editUserPlan')?.value;
+  const newRole = document.getElementById('editUserRole')?.value;
+  const newSubStatus = document.getElementById('editUserSubStatus')?.value;
+  const newName = document.getElementById('editUserName')?.value;
+  const newUsage = document.getElementById('editUserUsage')?.value;
+  
+  // Validate required fields
+  if (!newPlan || !newRole || !newSubStatus) {
+    showAlert('Please fill in all required fields', 'error');
     return;
   }
-
+  
+  // Show loading state
+  const saveBtn = document.getElementById('editSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+  }
+  
   try {
-    const result = await ipcRenderer.invoke('admin-backend-request', {
+    // Check if backend is running
+    const isBackendRunning = await checkBackendHealth();
+    if (!isBackendRunning) {
+      throw new Error('Backend is not running. Please start the backend server first.');
+    }
+    
+    // Update plan and subscription status
+    const planResult = await ipcRenderer.invoke('admin-backend-request', {
       method: 'PUT',
-      endpoint: `/api/admin/users/${userId}/plan`,
+      endpoint: `/api/admin/users/${userIdStr}/plan`,
       data: {
         plan: newPlan,
-        subscription_status: newPlan === 'free' ? 'none' : 'active',
-        subscription_end_date: newPlan === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        subscription_status: newSubStatus,
+        subscription_end_date: newPlan === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       }
     });
 
-    if (!result.success) throw new Error(result.error || 'Failed to update plan');
+    if (!planResult.success) {
+      throw new Error(planResult.error || 'Failed to update plan');
+    }
 
-    showAlert(`Plan updated to ${newPlan} successfully!`, 'success');
-    loadUsers();
+    // Update role if changed
+    const user = allUsers.find(u => String(u.id) === userIdStr);
+    if (user && newRole !== user.role) {
+      const roleResult = await ipcRenderer.invoke('admin-backend-request', {
+        method: 'PUT',
+        endpoint: `/api/admin/users/${userIdStr}/role`,
+        data: { role: newRole }
+      });
+      
+      if (!roleResult.success) {
+        console.warn('Failed to update role:', roleResult.error);
+        showAlert('Plan updated but role update failed: ' + roleResult.error, 'warning');
+      }
+    }
+    
+    // Update usage if changed
+    if (newUsage !== undefined && user && parseInt(newUsage) !== (user.usage_current_month || 0)) {
+      const usageResult = await ipcRenderer.invoke('admin-backend-request', {
+        method: 'PUT',
+        endpoint: `/api/admin/users/${userIdStr}/usage`,
+        data: { usage_current_month: parseInt(newUsage) || 0 }
+      });
+      
+      if (!usageResult.success) {
+        console.warn('Failed to update usage:', usageResult.error);
+      }
+    }
+
+    showAlert('User updated successfully!', 'success');
+    
+    // Refresh data and close modal
+    await loadUsers();
     closeUserModal();
+    
   } catch (error) {
-    showAlert('Failed to update plan: ' + error.message, 'error');
+    console.error('Error saving user changes:', error);
+    showAlert('Failed to update user: ' + error.message, 'error');
+  } finally {
+    // Reset button state
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
+    }
   }
 }
 
 async function resetUserUsage(userId) {
-  const user = allUsers.find(u => u.id === userId);
-  if (!user) return;
+  // Ensure userId is a string for consistent comparison
+  const userIdStr = String(userId);
+  const user = allUsers.find(u => String(u.id) === userIdStr);
+  if (!user) {
+    console.error('User not found for ID:', userId);
+    showAlert('User not found', 'error');
+    return;
+  }
 
-  if (!confirm(`Reset usage for ${user.email}?`)) return;
+  // Show confirmation dialog
+  const confirmed = confirm(`Reset usage for ${user.email}?\n\nThis will set their current month usage to 0.`);
+  if (!confirmed) return;
 
   try {
+    // Check if backend is running
+    const isBackendRunning = await checkBackendHealth();
+    if (!isBackendRunning) {
+      throw new Error('Backend is not running. Please start the backend server first.');
+    }
+    
     const result = await ipcRenderer.invoke('admin-backend-request', {
       method: 'POST',
-      endpoint: `/api/admin/users/${userId}/reset-usage`
+      endpoint: `/api/admin/users/${userIdStr}/reset-usage`
     });
 
-    if (!result.success) throw new Error(result.error || 'Failed to reset usage');
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to reset usage');
+    }
 
     showAlert('Usage reset successfully!', 'success');
-    loadUsers();
+    
+    // Refresh data and close modal
+    await loadUsers();
     closeUserModal();
+    
   } catch (error) {
+    console.error('Error resetting usage:', error);
     showAlert('Failed to reset usage: ' + error.message, 'error');
   }
 }
 
 async function deleteUser(userId) {
-  const user = allUsers.find(u => u.id === userId);
-  if (!user) return;
+  // Ensure userId is a string for consistent comparison
+  const userIdStr = String(userId);
+  const user = allUsers.find(u => String(u.id) === userIdStr);
+  if (!user) {
+    console.error('User not found for ID:', userId);
+    showAlert('User not found', 'error');
+    return;
+  }
 
-  if (!confirm(`Are you sure you want to delete ${user.email}?\n\nThis action cannot be undone.`)) return;
+  // Show confirmation dialog
+  const confirmed = confirm(`Are you sure you want to delete ${user.email}?\n\nThis action cannot be undone.`);
+  if (!confirmed) return;
 
   try {
+    // Check if backend is running
+    const isBackendRunning = await checkBackendHealth();
+    if (!isBackendRunning) {
+      throw new Error('Backend is not running. Please start the backend server first.');
+    }
+    
     const result = await ipcRenderer.invoke('admin-backend-request', {
       method: 'DELETE',
-      endpoint: `/api/admin/users/${userId}`
+      endpoint: `/api/admin/users/${userIdStr}`
     });
 
-    if (!result.success) throw new Error(result.error || 'Failed to delete user');
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to delete user');
+    }
 
     showAlert('User deleted successfully!', 'success');
-    loadUsers();
+    
+    // Refresh data and close modal
+    await loadUsers();
     closeUserModal();
+    
   } catch (error) {
+    console.error('Error deleting user:', error);
     showAlert('Failed to delete user: ' + error.message, 'error');
   }
 }
@@ -1069,7 +1151,8 @@ async function applyBulkChanges() {
 
 function refreshUsers() {
   loadUsers();
-  showAlert('Users refreshed!', 'success');
+  loadApiRequests(); // Also refresh API requests
+  showAlert('Data refreshed!', 'success');
 }
 
 // Close modal when clicking outside
@@ -1116,6 +1199,7 @@ function startAutoRefresh() {
     refreshInterval = setInterval(() => {
       console.log('🔄 Auto-refreshing admin data...');
       loadAdminData().catch(console.error);
+      loadUsers().catch(console.error);
       loadApiRequests().catch(console.error);
     }, 120000); // 2 minutes instead of 30 seconds
     
@@ -1175,9 +1259,6 @@ function addStaticEventListeners() {
   // Refresh users button
   document.getElementById('refreshUsersBtn').addEventListener('click', refreshUsers);
   
-  // Test modal button
-  document.getElementById('testModalBtn').addEventListener('click', testUserModal);
-  
   // Auto-refresh toggle button
   document.getElementById('toggleAutoRefreshBtn').addEventListener('click', toggleAutoRefresh);
   
@@ -1205,14 +1286,15 @@ function addUserActionListeners() {
   // User checkboxes
   document.querySelectorAll('.user-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', (e) => {
-      toggleUserSelection(e.target.dataset.userId);
+      // Ensure userId is a string for consistent comparison
+      toggleUserSelection(String(e.target.dataset.userId));
     });
   });
 
   // View user buttons
   document.querySelectorAll('.user-view-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const userId = e.target.dataset.userId;
+      const userId = String(e.target.dataset.userId);
       console.log('View user button clicked for user ID:', userId);
       viewUserDetails(userId);
     });
@@ -1221,14 +1303,14 @@ function addUserActionListeners() {
   // Edit user buttons
   document.querySelectorAll('.user-edit-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      editUserPlan(e.target.dataset.userId);
+      editUserPlan(String(e.target.dataset.userId));
     });
   });
 
   // Delete user buttons
   document.querySelectorAll('.user-delete-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      deleteUser(e.target.dataset.userId);
+      deleteUser(String(e.target.dataset.userId));
     });
   });
 }

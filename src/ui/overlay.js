@@ -1,8 +1,28 @@
 const { ipcRenderer } = require('electron');
-const canvas = document.getElementById('waveCanvas');
-const ctx = canvas.getContext('2d');
-const timer = document.getElementById('timer');
-const overlay = document.getElementById('overlay');
+
+// Wait for DOM to be fully loaded before accessing elements
+let canvas, ctx, timer, overlay;
+
+function initializeElements() {
+  canvas = document.getElementById('waveCanvas');
+  timer = document.getElementById('timer');
+  overlay = document.getElementById('overlay');
+  
+  if (!canvas) {
+    console.error('Canvas element not found!');
+    return false;
+  }
+  
+  ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+  
+  if (!ctx) {
+    console.error('Could not get canvas context!');
+    return false;
+  }
+  
+  console.log('✅ Elements initialized:', { canvas: !!canvas, ctx: !!ctx, timer: !!timer, overlay: !!overlay });
+  return true;
+}
 
 let mode = 'standard';
 let quickPopupMode = false;
@@ -14,18 +34,30 @@ let startTime = Date.now();
 let canvasW = 60;
 let canvasH = 20;
 
+// PERFORMANCE BOOST: Pre-calculate constants
+const BAR_WIDTH = 2;
+const BAR_GAP = 3;
+const HALF_BARS = 6;
+
 // Setup canvas after DOM ready
 function setupCanvas() {
+  if (!canvas || !ctx) {
+    console.error('Cannot setup canvas - elements not initialized');
+    return;
+  }
+  
   const dpr = window.devicePixelRatio || 1;
   canvas.width = canvasW * dpr;
   canvas.height = canvasH * dpr;
   canvas.style.width = canvasW + 'px';
   canvas.style.height = canvasH + 'px';
   ctx.scale(dpr, dpr);
+  
+  console.log('✅ Canvas setup complete:', { width: canvas.width, height: canvas.height, dpr });
 }
 
 // Smooth bar heights (6 bars, mirrored to make 12)
-let barHeights = new Array(6).fill(2);
+let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
 
 // Initialize audio
 async function initAudio() {
@@ -51,6 +83,11 @@ async function initAudio() {
 let frameCount = 0;
 function animate() {
   animationId = requestAnimationFrame(animate);
+  
+  // PERFORMANCE BOOST: Only update every other frame for smoother performance
+  frameCount++;
+  if (frameCount % 2 !== 0) return;
+  
   analyser.getByteFrequencyData(dataArray);
 
   // Map frequency data to 6 bars (center has highest energy)
@@ -62,9 +99,8 @@ function animate() {
 
   drawBars();
   
-  // PERFORMANCE BOOST: Update timer less frequently (every 10 frames = ~6 times per second)
-  frameCount++;
-  if (frameCount % 10 === 0) {
+  // PERFORMANCE BOOST: Update timer every 30 frames (~2 times per second is enough)
+  if (frameCount % 30 === 0) {
     updateTimer();
   }
 }
@@ -75,11 +111,11 @@ function animateFake() {
   let frameCount = 0;
   function loop() {
     animationId = requestAnimationFrame(loop);
+    frameCount++;
     
-    // PERFORMANCE BOOST: Update bars less frequently for fake animation
-    if (frameCount % 2 === 0) {
+    // PERFORMANCE BOOST: Update bars every 3rd frame
+    if (frameCount % 3 === 0) {
       for (let i = 0; i < 6; i++) {
-        // Center bars (i=0) are tallest, outer bars shorter
         const centerFactor = 1 - (i / 6) * 0.4;
         const target = (Math.sin(t * 0.06 + i * 0.5) * 6 + 10) * centerFactor;
         barHeights[i] = barHeights[i] * 0.8 + target * 0.2;
@@ -88,9 +124,8 @@ function animateFake() {
       t++;
     }
     
-    // PERFORMANCE BOOST: Update timer less frequently
-    frameCount++;
-    if (frameCount % 10 === 0) {
+    // PERFORMANCE BOOST: Update timer every 60 frames
+    if (frameCount % 60 === 0) {
       updateTimer();
     }
   }
@@ -103,21 +138,21 @@ function animateQuickPopup() {
   let frameCount = 0;
   function loop() {
     animationId = requestAnimationFrame(loop);
-    
-    // Fast, energetic animation for quick popup
-    for (let i = 0; i < 6; i++) {
-      const centerFactor = 1 - (i / 6) * 0.3;
-      // Faster oscillation and higher amplitude for quick popup
-      const target = (Math.sin(t * 0.15 + i * 0.8) * 8 + 12) * centerFactor;
-      barHeights[i] = barHeights[i] * 0.6 + target * 0.4; // Faster response
-    }
-    drawBars();
-    t++;
-    
-    // Update timer less frequently
     frameCount++;
-    if (frameCount % 15 === 0) {
-      updateTimer(); // Use actual timer instead of random messages
+    
+    // PERFORMANCE: Update every other frame
+    if (frameCount % 2 === 0) {
+      for (let i = 0; i < 6; i++) {
+        const centerFactor = 1 - (i / 6) * 0.3;
+        const target = (Math.sin(t * 0.15 + i * 0.8) * 8 + 12) * centerFactor;
+        barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
+      }
+      drawBars();
+      t++;
+    }
+    
+    if (frameCount % 30 === 0) {
+      updateTimer();
     }
   }
   loop();
@@ -125,35 +160,39 @@ function animateQuickPopup() {
 
 // ULTRA-FAST Draw mirrored bars with optimizations
 function drawBars() {
-  // PERFORMANCE BOOST: Use faster clearRect
+  if (!ctx || !canvas) {
+    console.error('Cannot draw bars - canvas not ready');
+    return;
+  }
+  
   ctx.clearRect(0, 0, canvasW, canvasH);
 
-  const halfBars = 6; // 6 bars on each side
-  const barWidth = 2;
-  const gap = 3;
   const centerX = canvasW / 2;
   const centerY = canvasH / 2;
 
   const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
-  
-  // PERFORMANCE BOOST: Set fillStyle once outside loop
   ctx.fillStyle = color;
   
-  // Draw bars from center outward (mirrored left and right)
-  for (let i = 0; i < halfBars; i++) {
+  // PERFORMANCE BOOST: Batch all rectangles
+  for (let i = 0; i < HALF_BARS; i++) {
     const h = Math.max(barHeights[i] * 0.6, 2);
-    const offset = (i * (barWidth + gap)) + gap / 2;
+    const offset = (i * (BAR_WIDTH + BAR_GAP)) + BAR_GAP / 2;
+    const y = centerY - h / 2;
 
     // Right side bar
-    ctx.fillRect(centerX + offset, centerY - h / 2, barWidth, h);
-
+    ctx.fillRect(centerX + offset, y, BAR_WIDTH, h);
     // Left side bar (mirrored)
-    ctx.fillRect(centerX - offset - barWidth, centerY - h / 2, barWidth, h);
+    ctx.fillRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h);
   }
 }
 
 // Update timer
 function updateTimer() {
+  if (!timer) {
+    console.error('Timer element not found');
+    return;
+  }
+  
   if (!startTime) {
     timer.textContent = '0:00';
     return;
@@ -168,17 +207,35 @@ function updateTimer() {
 ipcRenderer.on('set-mode', (_, m) => {
   mode = m;
   overlay.classList.toggle('rewrite', m === 'rewrite');
+  
+  // Update label based on mode
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) {
+    if (m === 'rewrite') {
+      recLabel.textContent = 'AI Rewriter';
+    } else {
+      recLabel.textContent = 'Recording';
+    }
+  }
+  
+  // Ensure timer is visible and initialized
+  updateTimer();
 });
 
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
-  console.log('Recording started at:', recordingStartTime);
+  console.log('🎙️ Recording started event received:', recordingStartTime);
   startTime = recordingStartTime;
   updateTimer(); // Update immediately
   
   // Start timer updates every second
   if (window.timerInterval) clearInterval(window.timerInterval);
-  window.timerInterval = setInterval(updateTimer, 1000);
+  window.timerInterval = setInterval(() => {
+    updateTimer();
+    console.log('⏱️ Timer updated');
+  }, 1000);
+  
+  console.log('✅ Timer interval started');
 });
 
 // Quick popup mode
@@ -202,11 +259,28 @@ ipcRenderer.on('quick-popup-mode', (_, enabled) => {
 
 // Error handling
 ipcRenderer.on('error', (_, errorMsg) => {
-  timer.textContent = 'Error';
-  timer.style.color = '#ef4444';
-  // Stop the timer updates when there's an error
+  console.error('Recording error:', errorMsg);
+  
+  // Stop animations and timer
   if (animationId) cancelAnimationFrame(animationId);
   if (window.timerInterval) clearInterval(window.timerInterval);
+  
+  // Add error class to overlay for styling
+  overlay.classList.add('error');
+  
+  // Update overlay to show error state
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) {
+    recLabel.textContent = 'Error';
+  }
+  
+  // Show error message in timer area (truncate if too long)
+  const displayMsg = errorMsg ? (errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg) : 'Unknown error';
+  timer.textContent = displayMsg;
+  timer.title = errorMsg || 'Error'; // Full message on hover
+  
+  // Clear waveform
+  ctx.clearRect(0, 0, canvasW, canvasH);
 });
 
 // Cancel recording
@@ -225,10 +299,29 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Initialize
-setupCanvas();
-updateTimer(); // Show initial time (will show 0:00 until recording starts)
-initAudio();
+// Initialize when DOM is ready
+function initialize() {
+  console.log('🎬 Initializing overlay...');
+  
+  if (!initializeElements()) {
+    console.error('❌ Failed to initialize elements');
+    return;
+  }
+  
+  setupCanvas();
+  updateTimer(); // Show initial time (will show 0:00 until recording starts)
+  initAudio();
+  
+  console.log('✅ Overlay initialized successfully');
+}
+
+// Run initialization
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initialize);
+} else {
+  // DOM is already loaded
+  initialize();
+}
 
 // Cleanup
 window.addEventListener('beforeunload', () => {

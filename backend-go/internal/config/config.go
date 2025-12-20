@@ -12,6 +12,7 @@ type Config struct {
 	BaseURL          string
 	SupabaseURL      string
 	SupabaseKey      string
+	SupabaseAnonKey  string
 	GroqAPIKey       string
 	StripeSecretKey  string
 	StripeWebhookKey string
@@ -62,6 +63,7 @@ func New() *Config {
 		BaseURL:          getEnv("ELOQUENT_API_URL", "http://localhost:3000"),
 		SupabaseURL:      getEnv("SUPABASE_URL", ""),
 		SupabaseKey:      getEnv("SUPABASE_SERVICE_KEY", ""),
+		SupabaseAnonKey:  getEnv("SUPABASE_ANON_KEY", ""),
 		GroqAPIKey:       getEnv("GROQ_API_KEY", ""),
 		StripeSecretKey:  getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookKey: getEnv("STRIPE_WEBHOOK_SECRET", ""),

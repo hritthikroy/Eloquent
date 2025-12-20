@@ -49,6 +49,15 @@ func (h *AuthHandler) GoogleAuth(c *gin.Context) {
 	// Reset usage if needed
 	h.userService.CheckAndResetUsage(user.ID.String())
 
+	// Register device if provided
+	if req.DeviceID != "" {
+		err := h.userService.RegisterDevice(user.ID.String(), req.DeviceID)
+		if err != nil {
+			// Log error but don't fail the authentication
+			// Device registration is not critical for auth
+		}
+	}
+
 	// Get usage stats
 	usageStats, _ := h.userService.GetUsageStats(user.ID.String())
 

@@ -54,7 +54,7 @@ func AuthMiddleware(supabaseService *services.SupabaseService) gin.HandlerFunc {
 		if token == "dev-token" {
 			// Create a mock admin user for development
 			devUser := &services.SupabaseUser{
-				ID:    "dev-admin-user-id", // Use a recognizable dev ID
+				ID:    "00000000-0000-0000-0000-000000000001", // Valid UUID for dev user
 				Email: "hritthikin@gmail.com", // Admin email
 				UserMetadata: map[string]interface{}{
 					"name": "Development Admin",

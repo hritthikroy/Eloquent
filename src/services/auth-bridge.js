@@ -38,10 +38,17 @@ class AuthBridge {
   async signInWithGoogle() {
     if (this.isDevelopmentMode) {
       console.log('🔧 Development mode - simulating Google sign-in');
+      // In development mode, simulate successful sign-in directly without opening a URL
+      const devResult = await this.handleOAuthCallback({ 
+        access_token: 'dev-token',
+        refresh_token: 'dev-refresh-token'
+      });
       return { 
         success: true, 
-        url: 'about:blank',
-        isDevelopment: true 
+        isDevelopment: true,
+        skipBrowserOpen: true,
+        user: devResult.user,
+        subscription: devResult.subscription
       };
     }
 
@@ -53,12 +60,18 @@ class AuthBridge {
       
       // Check if we have valid Supabase credentials
       if (supabaseUrl.includes('your-project.supabase.co') || supabaseAnonKey === 'your-anon-key') {
-        // Development mode fallback
+        // Development mode fallback - simulate sign-in directly
         console.log('🔧 No Supabase credentials - using development mode');
+        const devResult = await this.handleOAuthCallback({ 
+          access_token: 'dev-token',
+          refresh_token: 'dev-refresh-token'
+        });
         return { 
           success: true, 
-          url: 'about:blank',
-          isDevelopment: true 
+          isDevelopment: true,
+          skipBrowserOpen: true,
+          user: devResult.user,
+          subscription: devResult.subscription
         };
       }
 
@@ -187,6 +200,26 @@ class AuthBridge {
       };
       this.cacheSession('current', devSession);
       return devSession;
+    }
+
+    // Check if we have an access token
+    if (!this.accessToken) {
+      console.log('⚠️ No access token available for validation');
+      
+      // Try to use cached session as fallback
+      const fallbackCache = this.getCachedSession('current');
+      if (fallbackCache) {
+        console.log('🔌 Using cached session as fallback (no token)');
+        return {
+          valid: true,
+          offline: true,
+          user: fallbackCache.user,
+          subscription: fallbackCache.subscription,
+          usage: fallbackCache.usage
+        };
+      }
+      
+      return { valid: false, reason: 'No access token' };
     }
 
     try {
@@ -360,6 +393,11 @@ class AuthBridge {
         },
         signal: controller.signal
       };
+
+      // Add Authorization header if we have an access token
+      if (this.accessToken) {
+        options.headers['Authorization'] = `Bearer ${this.accessToken}`;
+      }
 
       if (data) {
         options.body = JSON.stringify(data);

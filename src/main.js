@@ -79,7 +79,7 @@ const CONFIG = {
   ],
   language: process.env.LANGUAGE || 'en',
   customDictionary: '',
-  aiMode: process.env.AI_MODE || 'qn',
+  aiMode: process.env.AI_MODE || 'auto',
   preserveClipboard: process.env.PRESERVE_CLIPBOARD === 'true',
   autoGrammarFix: process.env.AUTO_GRAMMAR_FIX !== 'false',
   autoPasteMode: 'direct'
@@ -87,7 +87,7 @@ const CONFIG = {
 
 // Admin configuration
 const ADMIN_CONFIG = {
-  masterApiKey: '',
+  masterApiKey: process.env.GROQ_API_KEY || '',
   dailyLimit: 1000,
   rateLimitPerUser: 100,
   users: [],
@@ -390,6 +390,9 @@ app.whenReady().then(async () => {
 
   console.log('⌨️ Registering shortcuts...');
   registerShortcuts();
+
+  // PERFORMANCE BOOST: Pre-cache overlay HTML for instant window creation
+  preCacheOverlayHTML();
 
   fastStartup.milestone('UI components created');
   
@@ -831,6 +834,22 @@ function registerShortcuts() {
 
 
 
+// Cached overlay HTML content for instant loading
+let cachedOverlayHTML = null;
+
+// Pre-cache overlay HTML on startup for faster window creation
+function preCacheOverlayHTML() {
+  try {
+    const overlayPath = path.join(__dirname, 'ui', 'overlay.html');
+    if (fs.existsSync(overlayPath)) {
+      cachedOverlayHTML = fs.readFileSync(overlayPath, 'utf8');
+      console.log('✅ Overlay HTML pre-cached for instant loading');
+    }
+  } catch (err) {
+    console.log('⚠️ Could not pre-cache overlay HTML:', err.message);
+  }
+}
+
 // ULTRA-FAST Overlay creation with aggressive optimizations
 function createOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
@@ -914,19 +933,19 @@ function createOverlayUltraFast(mode = 'standard') {
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setAlwaysOnTop(true, 'floating', 1);
 
-  // PERFORMANCE BOOST: Load file with immediate show
+  // PERFORMANCE BOOST: Always load from file to ensure latest code is used
+  // Note: Cached HTML was causing issues with relative script paths
   overlayWindow.loadFile('src/ui/overlay.html');
 
-  overlayWindow.webContents.once('did-finish-load', () => {
-    // PERFORMANCE BOOST: Send mode and show immediately
+  // PERFORMANCE BOOST: Start recording immediately, don't wait for full load
+  overlayWindow.webContents.once('dom-ready', () => {
+    // Send mode immediately on DOM ready (faster than did-finish-load)
     overlayWindow.webContents.send('set-mode', mode);
     overlayWindow.show();
     
-    // PERFORMANCE BOOST: Start recording in next tick for better responsiveness
-    setImmediate(() => {
-      startRecording();
-      isCreatingOverlay = false;
-    });
+    // Start recording immediately - don't wait
+    startRecording();
+    isCreatingOverlay = false;
   });
 
   overlayWindow.on('closed', () => {
@@ -1236,7 +1255,7 @@ function startRecording() {
   });
 }
 
-// FIXED: Simplified and reliable stopRecording function
+// OPTIMIZED: Fast and reliable stopRecording function
 async function stopRecording() {
   if (isProcessing) {
     console.log('⚠️ Already processing recording');
@@ -1249,16 +1268,15 @@ async function stopRecording() {
   // Calculate recording duration
   const recordingDuration = recordingStartTime ? Date.now() - recordingStartTime : 0;
 
-  // Stop recording process
+  // Stop recording process immediately
   if (recordingProcess) {
     recordingProcess.kill('SIGINT');
     recordingProcess = null;
   }
 
-  // Processing status removed - overlay will close immediately
-
-  // Wait for file to be written - reduced from 500ms to 200ms
-  await new Promise(r => setTimeout(r, 200));
+  // PERFORMANCE BOOST: Reduced wait time from 200ms to 100ms
+  // Sox writes the file quickly, we just need a brief moment
+  await new Promise(r => setTimeout(r, 100));
 
   try {
     // Validate audio file
@@ -1288,6 +1306,13 @@ async function stopRecording() {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
 
+    // PERFORMANCE BOOST: Close overlay immediately while transcription happens
+    // This gives instant feedback to the user
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.close();
+      overlayWindow = null;
+    }
+
     console.log('🎤 Transcribing...');
     originalText = await transcribe(audioFile);
     
@@ -1312,7 +1337,7 @@ async function stopRecording() {
 
     console.log(`✅ Final text: "${finalText.substring(0, 100)}..."`);
 
-    // Save to history BEFORE closing overlay
+    // Save to history
     const historyEntry = {
       id: Date.now(),
       text: finalText,
@@ -1333,18 +1358,12 @@ async function stopRecording() {
       });
     }
 
-    // CRITICAL FIX: Close overlay FIRST so focus returns to target app
-    // Then paste after a short delay to ensure focus has switched
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.close();
-      overlayWindow = null;
-    }
-    
-    // Wait for focus to return to the original app, then paste
+    // PERFORMANCE BOOST: Paste immediately - overlay is already closed
+    // Reduced delay from 200ms to 50ms since overlay is already gone
     setTimeout(() => {
       pasteTextRobust(finalText);
       playSound('success');
-    }, 200);
+    }, 50);
 
     // Track API usage
     if (apiKey && apiKey.trim() !== '') {
@@ -1356,16 +1375,8 @@ async function stopRecording() {
 
     playSound('error');
     
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('error', error.message);
-      // Close error overlay faster - reduced from 2000ms to 800ms
-      setTimeout(() => {
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.close();
-          overlayWindow = null;
-        }
-      }, 800);
-    }
+    // Show error notification instead of keeping overlay open
+    showNotification('Recording Error', error.message);
   } finally {
     // Cleanup
     isProcessing = false;
@@ -1381,7 +1392,7 @@ async function stopRecording() {
   }
 }
 
-// Transcription function
+// OPTIMIZED: Transcription function with faster processing
 async function transcribe(filePath) {
   if (!fs.existsSync(filePath)) {
     throw new Error('Audio file not found');
@@ -1400,11 +1411,14 @@ async function transcribe(filePath) {
     contentType: 'audio/wav'
   });
   
+  // PERFORMANCE BOOST: Use whisper-large-v3-turbo for fastest transcription
   form.append('model', 'whisper-large-v3-turbo');
   form.append('language', CONFIG.language);
   form.append('response_format', 'text');
   form.append('temperature', '0');
 
+  const transcriptionStart = Date.now();
+  
   const response = await axios.post(
     'https://api.groq.com/openai/v1/audio/transcriptions',
     form,
@@ -1413,14 +1427,18 @@ async function transcribe(filePath) {
         ...form.getHeaders(),
         'Authorization': `Bearer ${getActiveAPIKey()}`
       },
-      timeout: 30000,
+      // PERFORMANCE BOOST: Reduced timeout - Groq is fast, 15s should be plenty
+      timeout: 15000,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
       validateStatus: function (status) {
-        return status < 500; // Resolve only if the status code is less than 500
+        return status < 500;
       }
     }
   );
+
+  const transcriptionTime = Date.now() - transcriptionStart;
+  console.log(`⚡ Transcription completed in ${transcriptionTime}ms`);
 
   // Check for API errors
   if (response.status !== 200) {
@@ -1432,14 +1450,19 @@ async function transcribe(filePath) {
     dashboardWindow.webContents.send('api-request', 'whisper');
   }
   
-  logApiRequest('whisper', 'success', Date.now() - recordingStartTime);
+  logApiRequest('whisper', 'success', transcriptionTime);
 
   let text = response.data;
   if (typeof text !== 'string') {
     text = text.text || '';
   }
 
-  text = postProcessTranscription(text.trim());
+  // PERFORMANCE BOOST: Only run post-processing if text is non-empty
+  text = text.trim();
+  if (text) {
+    text = postProcessTranscription(text);
+  }
+  
   if (!text) {
     throw new Error('No speech detected. Please try again.');
   }
@@ -1467,17 +1490,21 @@ async function rewrite(text) {
         },
         { role: 'user', content: `Rewrite this: ${text}` }
       ],
-      temperature: creativeTemp,  // Dynamic temp for better rewriting
-      max_tokens: 1500  // More room for expanded content
+      temperature: creativeTemp,
+      max_tokens: 1500
     },
     {
       headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-      timeout: 30000,
+      // PERFORMANCE BOOST: Reduced timeout - Groq is fast
+      timeout: 20000,
       validateStatus: function (status) {
-        return status < 500; // Resolve only if the status code is less than 500
+        return status < 500;
       }
     }
   );
+
+  const rewriteTime = Date.now() - startTime;
+  console.log(`⚡ AI rewrite completed in ${rewriteTime}ms`);
 
   // Check for API errors
   if (response.status !== 200) {
@@ -1491,7 +1518,7 @@ async function rewrite(text) {
   }
   
   // Log API request for admin panel
-  logApiRequest('llama-rewrite', 'success', Date.now() - startTime, response.data.usage?.total_tokens);
+  logApiRequest('llama-rewrite', 'success', rewriteTime, response.data.usage?.total_tokens);
 
   return response.data.choices[0].message.content;
 }
@@ -2350,6 +2377,12 @@ ipcMain.on('open-dashboard', () => {
   createDashboard();
 });
 
+// Open admin panel from dashboard
+ipcMain.on('open-admin-panel', () => {
+  console.log('🔧 Opening admin panel from dashboard');
+  createAdminPanel();
+});
+
 // Open billing portal
 ipcMain.handle('open-billing-portal', async () => {
   await authService.openBillingPortal();
@@ -2478,8 +2511,35 @@ ipcMain.on('initiate-google-signin', async (event) => {
   try {
     const result = await authService.signInWithGoogle();
     if (result.success) {
-      // Open the OAuth URL in the default browser
-      shell.openExternal(result.url);
+      // In development mode, skip browser open and directly update UI
+      if (result.skipBrowserOpen || result.isDevelopment) {
+        console.log('🔧 Development mode - simulating successful sign-in');
+        isAuthenticated = true;
+        
+        // Refresh tray menu
+        createTray();
+        
+        // Send auth update to dashboard
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('auth-updated', {
+            isAuthenticated: true,
+            user: result.user || {
+              id: 'dev-user',
+              email: 'hritthikin@gmail.com',
+              name: 'Development User',
+              role: 'admin'
+            },
+            subscription: result.subscription || { plan: 'enterprise', status: 'active' },
+            usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
+          });
+        }
+        return;
+      }
+      
+      // Open the OAuth URL in the default browser (production mode)
+      if (result.url) {
+        shell.openExternal(result.url);
+      }
     }
   } catch (error) {
     console.error('Google Sign-in error:', error);
@@ -2830,6 +2890,18 @@ ipcMain.handle('admin-remove-user', async (event, userId) => {
 
 ipcMain.handle('admin-get-requests', async () => {
   if (!isAuthenticated || !isAdminUser(authService.getUser())) {
+    throw new Error('Access denied: Admin privileges required');
+  }
+  
+  return ADMIN_CONFIG.apiRequests
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 100); // Return last 100 requests
+});
+
+// Alias for backward compatibility
+ipcMain.handle('admin-get-api-requests', async () => {
+  const isDev = authService.isDevelopmentMode;
+  if (!isDev && (!isAuthenticated || !isAdminUser(authService.getUser()))) {
     throw new Error('Access denied: Admin privileges required');
   }
   

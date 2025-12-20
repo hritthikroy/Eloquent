@@ -43,7 +43,7 @@ func main() {
 	// Start connection pool cleanup routine
 	services.StartConnectionCleanup()
 	
-	supabaseService := services.NewSupabaseService(cfg.SupabaseURL, cfg.SupabaseKey)
+	supabaseService := services.NewSupabaseService(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseAnonKey)
 	userService := services.NewUserService(supabaseService)
 	transcribeService := services.NewTranscribeServiceOptimized(cfg.GroqAPIKey)
 	stripeService := services.NewStripeService(cfg.StripeSecretKey)

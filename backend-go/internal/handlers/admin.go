@@ -16,6 +16,9 @@ type AdminHandler struct {
 }
 
 func NewAdminHandler(userService *services.UserService) *AdminHandler {
+	if userService == nil {
+		panic("userService cannot be nil when creating AdminHandler")
+	}
 	return &AdminHandler{
 		userService: userService,
 	}
@@ -23,15 +26,26 @@ func NewAdminHandler(userService *services.UserService) *AdminHandler {
 
 // Helper function to check admin access
 func (h *AdminHandler) checkAdminAccess(c *gin.Context) (*models.User, bool) {
+	// Safety check
+	if h.userService == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "User service not initialized"})
+		return nil, false
+	}
+
 	userInterface, exists := c.Get("user")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized - no user in context"})
 		return nil, false
 	}
 
 	supabaseUser, ok := userInterface.(*services.SupabaseUser)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user context"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user context type"})
+		return nil, false
+	}
+
+	if supabaseUser == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User context is nil"})
 		return nil, false
 	}
 
@@ -46,9 +60,33 @@ func (h *AdminHandler) checkAdminAccess(c *gin.Context) (*models.User, bool) {
 		return mockUser, true
 	}
 
+	// Check if the email is an admin email (for users not yet in database)
+	if supabaseUser.Email != "" && models.IsAdminEmail(supabaseUser.Email) {
+		// Create a temporary admin user object
+		mockUser := &models.User{
+			Email: supabaseUser.Email,
+			Role:  "admin",
+			Plan:  "enterprise",
+		}
+		return mockUser, true
+	}
+
+	// Try to get user from database
 	user, err := h.userService.GetUserByID(supabaseUser.ID)
-	if err != nil || !user.IsAdmin() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+	if err != nil {
+		// User not found in database and not an admin email
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Admin access required",
+			"details": "User not found in database or not an admin",
+		})
+		return nil, false
+	}
+
+	if !user.IsAdmin() {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Admin access required",
+			"details": "User does not have admin role",
+		})
 		return nil, false
 	}
 

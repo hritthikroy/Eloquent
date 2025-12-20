@@ -2,15 +2,18 @@ package services
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type SupabaseService struct {
 	URL        string
 	ServiceKey string
+	AnonKey    string
 	client     *http.Client
 }
 
@@ -27,10 +30,11 @@ type SupabaseAuthResponse struct {
 	} `json:"error"`
 }
 
-func NewSupabaseService(url, serviceKey string) *SupabaseService {
+func NewSupabaseService(url, serviceKey, anonKey string) *SupabaseService {
 	return &SupabaseService{
 		URL:        url,
 		ServiceKey: serviceKey,
+		AnonKey:    anonKey,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -39,11 +43,7 @@ func NewSupabaseService(url, serviceKey string) *SupabaseService {
 
 func (s *SupabaseService) GetUser(token string) (*SupabaseUser, error) {
 	// Development mode: Handle dev token
-	// Check for dev-token OR placeholder service key OR placeholder URL
-	if token == "dev-token" || 
-	   s.URL == "https://your-project.supabase.co" ||
-	   s.ServiceKey == "placeholder_service_key" ||
-	   s.ServiceKey == "" {
+	if token == "dev-token" {
 		return &SupabaseUser{
 			ID:    "00000000-0000-0000-0000-000000000001", // Valid UUID for dev user
 			Email: "hritthikin@gmail.com", // Admin email for development
@@ -51,6 +51,19 @@ func (s *SupabaseService) GetUser(token string) (*SupabaseUser, error) {
 				"name": "Development User",
 			},
 		}, nil
+	}
+
+	// Check for placeholder service key OR placeholder URL - use JWT decoding
+	if s.URL == "https://your-project.supabase.co" ||
+	   strings.Contains(s.ServiceKey, "placeholder_service_key") ||
+	   s.ServiceKey == "" {
+		// Decode JWT token to get user info without validating signature
+		// This is for development/testing only
+		user, err := s.decodeJWTToken(token)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode JWT token: %v", err)
+		}
+		return user, nil
 	}
 
 	url := fmt.Sprintf("%s/auth/v1/user", s.URL)
@@ -61,7 +74,12 @@ func (s *SupabaseService) GetUser(token string) (*SupabaseUser, error) {
 	}
 
 	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("apikey", s.ServiceKey)
+	// Use anon key for user token validation, fall back to service key if anon key not set
+	apiKey := s.AnonKey
+	if apiKey == "" {
+		apiKey = s.ServiceKey
+	}
+	req.Header.Set("apikey", apiKey)
 
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -83,6 +101,51 @@ func (s *SupabaseService) GetUser(token string) (*SupabaseUser, error) {
 	}
 
 	return authResp.User, nil
+}
+
+// decodeJWTToken decodes a JWT token without validating the signature
+// This is for development/testing only when Supabase is not configured
+func (s *SupabaseService) decodeJWTToken(token string) (*SupabaseUser, error) {
+	// Split the token into parts
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT token format")
+	}
+
+	// Decode the payload (second part)
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JWT payload: %v", err)
+	}
+
+	// Parse the payload JSON
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("failed to parse JWT payload: %v", err)
+	}
+
+	// Extract user information
+	userID, ok := claims["sub"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid 'sub' claim in JWT")
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid 'email' claim in JWT")
+	}
+
+	// Extract user metadata if available
+	userMetadata := make(map[string]interface{})
+	if metadata, ok := claims["user_metadata"].(map[string]interface{}); ok {
+		userMetadata = metadata
+	}
+
+	return &SupabaseUser{
+		ID:           userID,
+		Email:        email,
+		UserMetadata: userMetadata,
+	}, nil
 }
 
 func (s *SupabaseService) DeleteUser(userID string) error {

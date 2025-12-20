@@ -52,8 +52,11 @@ ipcRenderer.on('config', (_, config) => {
   // Load user settings (no API keys)
   if (config.language) document.getElementById('language').value = config.language;
   if (config.aiMode) {
-    document.getElementById('aiMode').value = config.aiMode;
-    updateAIModeDescription(config.aiMode);
+    // Map legacy 'qn' mode to 'auto' for compatibility
+    const validModes = ['auto', 'grammar'];
+    const aiModeValue = validModes.includes(config.aiMode) ? config.aiMode : 'auto';
+    document.getElementById('aiMode').value = aiModeValue;
+    updateAIModeDescription(aiModeValue);
   }
 });
 
@@ -101,7 +104,7 @@ const aiModeDescriptions = {
 };
 
 function updateAIModeDescription(mode) {
-  document.getElementById('aiModeDescription').innerHTML = aiModeDescriptions[mode] || aiModeDescriptions.smart;
+  document.getElementById('aiModeDescription').innerHTML = aiModeDescriptions[mode] || aiModeDescriptions.auto;
 }
 
 // Update description when AI mode changes
@@ -534,108 +537,210 @@ function copyLastTranscriptionText() {
 loadHistory();
 
 
+// ============================================
+// AUTHENTICATION STATE MANAGEMENT
+// ============================================
+let currentAuthState = {
+  isAuthenticated: false,
+  user: null,
+  subscription: null,
+  usage: null,
+  lastUpdate: 0
+};
+
+// Debounce auth updates to prevent rapid-fire UI changes
+let authUpdateTimeout = null;
+const AUTH_UPDATE_DEBOUNCE = 300; // ms
+
 // Google Sign-in handler
 function handleGoogleSignIn() {
-  // Explicitly initiate Google sign-in
-  console.log('🔄 User clicked Google Sign In button');
+  console.log('🔐 User clicked Google Sign In button');
+  
+  // Prevent double-clicks
+  const signInBtn = document.querySelector('.sidebar-item[data-action="google-signin"]');
+  if (signInBtn) {
+    signInBtn.style.pointerEvents = 'none';
+    signInBtn.style.opacity = '0.6';
+    signInBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="currentColor" class="spin-animation">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10"/>
+      </svg>
+      Signing in...
+    `;
+    
+    // Re-enable after 5 seconds as fallback
+    setTimeout(() => {
+      if (signInBtn && !currentAuthState.isAuthenticated) {
+        signInBtn.style.pointerEvents = 'auto';
+        signInBtn.style.opacity = '1';
+        resetSignInButton(signInBtn);
+      }
+    }, 5000);
+  }
+  
   try {
     ipcRenderer.send('initiate-google-signin');
   } catch (error) {
     console.error('Error initiating Google sign-in:', error);
+    if (signInBtn) {
+      signInBtn.style.pointerEvents = 'auto';
+      signInBtn.style.opacity = '1';
+      resetSignInButton(signInBtn);
+    }
+    showNotification('❌ Sign In Failed', 'Please try again');
   }
+}
+
+function resetSignInButton(btn) {
+  btn.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    Google Sign In
+  `;
+  btn.setAttribute('data-action', 'google-signin');
 }
 
 // Plan management functions
 function subscribeToPlan(planType) {
-  // Send plan subscription request to main process
   ipcRenderer.send('subscribe-to-plan', planType);
 }
 
 function managePlan() {
-  // Open plan management interface
   ipcRenderer.send('manage-subscription');
 }
 
-// Listen for authentication status updates
+// Listen for authentication status updates (initial load)
 ipcRenderer.on('auth-status', (_, authData) => {
+  console.log('📊 Auth status received:', authData?.isAuthenticated ? 'authenticated' : 'not authenticated');
+  
   if (authData.isAuthenticated && authData.user) {
-    // User is signed in, update UI
-    updateAuthUI(authData.user);
-  } else {
-    // User is not signed in, initiate Google OAuth
-    ipcRenderer.send('initiate-google-signin');
+    updateAuthState(authData);
   }
+  // Don't auto-initiate sign-in - let user click the button
 });
 
-// INSTANT FRONTEND UPDATE: Listen for real-time auth updates
+// INSTANT FRONTEND UPDATE: Listen for real-time auth updates with debouncing
 ipcRenderer.on('auth-updated', (_, authData) => {
-  console.log('🔄 Instant auth update received:', authData);
-  if (authData.isAuthenticated && authData.user) {
-    // Update UI immediately with new auth data
-    updateAuthUI(authData.user);
-    if (authData.subscription) {
-      updatePlanUI(authData.subscription);
-    }
-    // Show success message
-    showNotification('✅ Signed In Successfully', `Welcome, ${authData.user.email}!`);
-  } else if (!authData.isAuthenticated) {
-    // Handle sign out - reset UI immediately
-    const googleSignInItem = document.querySelector('.sidebar-item[data-action="user-menu"]');
-    if (googleSignInItem) {
-      googleSignInItem.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        Google Sign In
-      `;
-      googleSignInItem.setAttribute('data-action', 'google-signin');
-    }
-    showNotification('👋 Signed Out', 'You have been signed out successfully');
+  // Debounce rapid updates
+  if (authUpdateTimeout) {
+    clearTimeout(authUpdateTimeout);
   }
+  
+  authUpdateTimeout = setTimeout(() => {
+    const now = Date.now();
+    
+    // Skip if same state received within debounce window
+    if (now - currentAuthState.lastUpdate < AUTH_UPDATE_DEBOUNCE) {
+      return;
+    }
+    
+    console.log('🔄 Auth update processed:', authData?.isAuthenticated ? 'signed in' : 'signed out');
+    
+    if (authData.isAuthenticated && authData.user) {
+      // Only show notification if state actually changed
+      const wasAuthenticated = currentAuthState.isAuthenticated;
+      updateAuthState(authData);
+      
+      if (!wasAuthenticated) {
+        showNotification('✅ Signed In', `Welcome, ${authData.user.name || authData.user.email}!`);
+      }
+    } else if (!authData.isAuthenticated && currentAuthState.isAuthenticated) {
+      // Handle sign out
+      currentAuthState = {
+        isAuthenticated: false,
+        user: null,
+        subscription: null,
+        usage: null,
+        lastUpdate: now
+      };
+      resetToSignedOutUI();
+      showNotification('👋 Signed Out', 'See you next time!');
+    }
+  }, AUTH_UPDATE_DEBOUNCE);
 });
+
+function updateAuthState(authData) {
+  currentAuthState = {
+    isAuthenticated: authData.isAuthenticated,
+    user: authData.user,
+    subscription: authData.subscription,
+    usage: authData.usage,
+    lastUpdate: Date.now()
+  };
+  
+  updateAuthUI(authData.user);
+  if (authData.subscription) {
+    updatePlanUI(authData.subscription);
+  }
+  
+  // Check admin access when auth state changes
+  setTimeout(checkAdminAccess, 100);
+}
 
 // Listen for subscription status updates
 ipcRenderer.on('subscription-status', (_, subscriptionData) => {
   updatePlanUI(subscriptionData);
 });
 
+// Reset UI to signed-out state
+function resetToSignedOutUI() {
+  const userMenuItem = document.querySelector('.sidebar-item[data-action="user-menu"]');
+  if (userMenuItem) {
+    resetSignInButton(userMenuItem);
+    userMenuItem.setAttribute('data-action', 'google-signin');
+  }
+  
+  // Hide user menu if open
+  hideUserMenu();
+}
+
 // Update authentication UI
 function updateAuthUI(user) {
-  // Wait for DOM to be ready if needed
+  if (!user) return;
+  
   const updateUI = () => {
-    // Try multiple selectors to find the Google Sign In button
-    let googleSignInItem = document.querySelector('.sidebar-item[data-action="google-signin"]');
+    // Find the sign-in button by either action type
+    let authButton = document.querySelector('.sidebar-item[data-action="google-signin"]') ||
+                     document.querySelector('.sidebar-item[data-action="user-menu"]');
     
-    // If not found, try finding by text content
-    if (!googleSignInItem) {
+    // Fallback: find by text content
+    if (!authButton) {
       const sidebarItems = document.querySelectorAll('.sidebar-item');
       for (let item of sidebarItems) {
-        if (item.textContent.includes('Google Sign In')) {
-          googleSignInItem = item;
+        if (item.textContent.includes('Google Sign In') || item.textContent.includes(user.name) || item.textContent.includes(user.email)) {
+          authButton = item;
           break;
         }
       }
     }
     
-    if (googleSignInItem && user) {
-      googleSignInItem.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+    if (authButton) {
+      const displayName = user.name || user.email.split('@')[0];
+      const isAdmin = user.role === 'admin' || user.email === 'hritthikin@gmail.com';
+      
+      authButton.innerHTML = `
+        <div class="user-avatar" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: white;">
+          ${displayName.charAt(0).toUpperCase()}
+        </div>
+        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${displayName}</span>
+        ${isAdmin ? '<span style="font-size: 10px; background: rgba(168, 85, 247, 0.3); padding: 2px 6px; border-radius: 4px; color: #c4b5fd;">Admin</span>' : ''}
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px; opacity: 0.6;">
+          <path d="M7 10l5 5 5-5z"/>
         </svg>
-        ${user.name || user.email}
       `;
-      googleSignInItem.setAttribute('data-action', 'user-menu');
-    } else if (!googleSignInItem) {
-      // Try again in a moment if DOM might not be ready
-      setTimeout(updateUI, 100);
+      authButton.setAttribute('data-action', 'user-menu');
+      authButton.style.pointerEvents = 'auto';
+      authButton.style.opacity = '1';
     }
   };
   
-  // Try immediately and also after a short delay
+  // Try immediately and with a small delay for DOM readiness
   updateUI();
+  setTimeout(updateUI, 100);
 }
 
 // Update plan UI
@@ -644,7 +749,7 @@ function updatePlanUI(subscription) {
   const currentPlanDetails = document.getElementById('currentPlanDetails');
   
   if (currentPlanName && subscription) {
-    currentPlanName.textContent = subscription.planName || 'Free Plan';
+    currentPlanName.textContent = subscription.planName || subscription.plan || 'Free Plan';
     if (currentPlanDetails) {
       currentPlanDetails.textContent = subscription.status === 'active' 
         ? `Active until ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
@@ -653,25 +758,179 @@ function updatePlanUI(subscription) {
   }
 }
 
-// Show user menu for signed-in users
+// ============================================
+// USER MENU DROPDOWN
+// ============================================
+let userMenuVisible = false;
+
 function showUserMenu() {
-  const menu = confirm('Account Options:\n\nOK - Sign Out\nCancel - Stay Signed In');
+  // If menu already visible, hide it
+  if (userMenuVisible) {
+    hideUserMenu();
+    return;
+  }
+  
+  const user = currentAuthState.user;
+  if (!user) {
+    console.log('No user found in currentAuthState');
+    return;
+  }
+  
+  // Remove any existing menu
+  hideUserMenu();
+  
+  const isAdmin = user.role === 'admin' || user.email === 'hritthikin@gmail.com';
+  
+  // Create dropdown menu
+  const menu = document.createElement('div');
+  menu.id = 'user-dropdown-menu';
+  menu.style.cssText = `
+    position: fixed;
+    left: 290px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 8px;
+    min-width: 220px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    z-index: 10001;
+  `;
+  
+  // Create header
+  const header = document.createElement('div');
+  header.style.cssText = 'padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 8px;';
+  header.innerHTML = `
+    <div style="font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px;">${user.name || 'User'}</div>
+    <div style="font-size: 13px; color: rgba(255, 255, 255, 0.6); overflow: hidden; text-overflow: ellipsis;">${user.email}</div>
+  `;
+  menu.appendChild(header);
+  
+  // Admin Panel button (if admin)
+  if (isAdmin) {
+    const adminItem = createMenuItem('Admin Panel', 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z', '#c4b5fd');
+    adminItem.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Admin Panel clicked');
+      hideUserMenu();
+      openAdminPanel();
+    });
+    menu.appendChild(adminItem);
+    
+    const divider1 = document.createElement('div');
+    divider1.style.cssText = 'height: 1px; background: rgba(255, 255, 255, 0.1); margin: 8px 0;';
+    menu.appendChild(divider1);
+  }
+  
+  // Settings button
+  const settingsItem = createMenuItem('Settings', 'M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z');
+  settingsItem.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Settings clicked');
+    hideUserMenu();
+    showSection('settings');
+  });
+  menu.appendChild(settingsItem);
+  
+  // Subscription button
+  const subscriptionItem = createMenuItem('Subscription', 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z');
+  subscriptionItem.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Subscription clicked');
+    hideUserMenu();
+    showSection('plans');
+  });
+  menu.appendChild(subscriptionItem);
+  
+  // Divider
+  const divider2 = document.createElement('div');
+  divider2.style.cssText = 'height: 1px; background: rgba(255, 255, 255, 0.1); margin: 8px 0;';
+  menu.appendChild(divider2);
+  
+  // Sign Out button
+  const signoutItem = createMenuItem('Sign Out', 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z', '#fca5a5');
+  signoutItem.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Sign Out clicked');
+    handleSignOut();
+  });
+  menu.appendChild(signoutItem);
+  
+  document.body.appendChild(menu);
+  userMenuVisible = true;
+  
+  // Close menu when clicking outside (with delay to prevent immediate close)
+  setTimeout(() => {
+    document.addEventListener('click', handleOutsideClick);
+  }, 150);
+}
+
+function createMenuItem(text, iconPath, color = 'rgba(255, 255, 255, 0.9)') {
+  const item = document.createElement('div');
+  item.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: ${color};
+    transition: all 0.15s ease;
+  `;
+  
+  item.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px; opacity: 0.7;">
+      <path d="${iconPath}"/>
+    </svg>
+    ${text}
+  `;
+  
+  item.addEventListener('mouseenter', function() {
+    this.style.background = color === '#fca5a5' ? 'rgba(239, 68, 68, 0.15)' : 
+                            color === '#c4b5fd' ? 'rgba(168, 85, 247, 0.15)' : 
+                            'rgba(255, 255, 255, 0.1)';
+  });
+  
+  item.addEventListener('mouseleave', function() {
+    this.style.background = 'transparent';
+  });
+  
+  return item;
+}
+
+function hideUserMenu() {
+  const menu = document.getElementById('user-dropdown-menu');
   if (menu) {
+    menu.remove();
+  }
+  userMenuVisible = false;
+  document.removeEventListener('click', handleOutsideClick);
+}
+
+function handleOutsideClick(e) {
+  const menu = document.getElementById('user-dropdown-menu');
+  const userButton = document.querySelector('.sidebar-item[data-action="user-menu"]');
+  
+  if (menu && !menu.contains(e.target) && userButton && !userButton.contains(e.target)) {
+    hideUserMenu();
+  }
+}
+
+function handleSignOut() {
+  hideUserMenu();
+  
+  // Show confirmation
+  const confirmed = confirm('Are you sure you want to sign out?');
+  if (confirmed) {
     ipcRenderer.send('sign-out');
-    // Reset the Google Sign In button
-    const googleSignInItem = document.querySelector('.sidebar-item[data-action="user-menu"]');
-    if (googleSignInItem) {
-      googleSignInItem.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        Google Sign In
-      `;
-      googleSignInItem.setAttribute('data-action', 'google-signin');
-    }
   }
 }
 
@@ -722,8 +981,7 @@ function showNotification(title, message) {
   }, 3000);
 }
 
-// Check authentication status on page load - multiple strategies for reliability
-// Strategy 1: Immediate check
+// Check authentication status on page load - single strategy for reliability
 ipcRenderer.send('check-auth-status');
 ipcRenderer.send('check-subscription-status');
 
@@ -731,17 +989,12 @@ ipcRenderer.send('check-subscription-status');
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎯 Dashboard DOM loaded');
   
-  // Test navigation buttons
-  console.log('Testing navigation buttons...');
-  const navButtons = document.querySelectorAll('.sidebar-item');
-  console.log('Found', navButtons.length, 'navigation buttons');
-  
   // Add click event listeners for navigation
-  navButtons.forEach((button, index) => {
-    console.log(`Button ${index}:`, button.textContent.trim());
-    
+  const navButtons = document.querySelectorAll('.sidebar-item');
+  
+  navButtons.forEach((button) => {
     button.addEventListener('click', function(e) {
-      console.log('Button clicked:', this.textContent.trim());
+      e.stopPropagation(); // Prevent event bubbling
       
       // Handle section navigation
       const section = this.getAttribute('data-section');
@@ -758,6 +1011,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (action === 'user-menu') {
         showUserMenu();
+        return;
+      }
+      if (action === 'open-admin') {
+        openAdminPanel();
         return;
       }
     });
@@ -804,15 +1061,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  ipcRenderer.send('check-auth-status');
+  // Load history on DOM ready
   loadHistory();
+  
+  // Check admin access after a short delay
+  setTimeout(checkAdminAccess, 500);
 });
-
-// Strategy 3: Backup check after DOM is fully ready
-setTimeout(() => {
-  ipcRenderer.send('check-auth-status');
-  ipcRenderer.send('check-subscription-status');
-}, 500);
 
 // Add event listeners for toggle switches
 document.querySelectorAll('.toggle-switch').forEach(toggle => {
@@ -836,3 +1090,39 @@ if (historySearchInput) {
     this.style.boxShadow = 'none';
   });
 }
+
+
+// Admin Panel Functions
+function openAdminPanel() {
+  console.log('🔧 Opening admin panel...');
+  ipcRenderer.send('open-admin-panel');
+}
+
+// Check if user is admin and show/hide admin panel link
+async function checkAdminAccess() {
+  try {
+    const isAdmin = await ipcRenderer.invoke('admin-verify-access');
+    const adminLink = document.getElementById('adminPanelLink');
+    if (adminLink) {
+      adminLink.style.display = isAdmin ? 'flex' : 'none';
+      console.log('🔧 Admin access:', isAdmin ? 'granted' : 'denied');
+    }
+  } catch (error) {
+    console.log('Admin access check failed:', error.message);
+    const adminLink = document.getElementById('adminPanelLink');
+    if (adminLink) {
+      adminLink.style.display = 'none';
+    }
+  }
+}
+
+// Listen for admin status updates
+ipcRenderer.on('admin-status-updated', (_, isAdmin) => {
+  const adminLink = document.getElementById('adminPanelLink');
+  if (adminLink) {
+    adminLink.style.display = isAdmin ? 'flex' : 'none';
+  }
+});
+
+// Check admin access on page load
+setTimeout(checkAdminAccess, 1000);

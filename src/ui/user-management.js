@@ -167,8 +167,13 @@ function initializeEventListeners() {
 }
 
 async function editUser(userId) {
-  const user = allUsers.find(u => u.id === userId);
-  if (!user) return;
+  // Ensure userId is a string for consistent comparison
+  const userIdStr = String(userId);
+  const user = allUsers.find(u => String(u.id) === userIdStr);
+  if (!user) {
+    showAlert('User not found', 'error');
+    return;
+  }
 
   const newPlan = prompt(
     `Change plan for ${user.email}\n\nCurrent plan: ${user.plan}\n\nEnter new plan:`,
@@ -184,7 +189,7 @@ async function editUser(userId) {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/admin/users/${userId}/plan`, {
+    const response = await fetch(`${API_BASE}/admin/users/${userIdStr}/plan`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -207,13 +212,18 @@ async function editUser(userId) {
 }
 
 async function deleteUser(userId) {
-  const user = allUsers.find(u => u.id === userId);
-  if (!user) return;
+  // Ensure userId is a string for consistent comparison
+  const userIdStr = String(userId);
+  const user = allUsers.find(u => String(u.id) === userIdStr);
+  if (!user) {
+    showAlert('User not found', 'error');
+    return;
+  }
 
   if (!confirm(`Delete user ${user.email}?\n\nThis action cannot be undone.`)) return;
 
   try {
-    const response = await fetch(`${API_BASE}/admin/users/${userId}`, {
+    const response = await fetch(`${API_BASE}/admin/users/${userIdStr}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${authToken}`

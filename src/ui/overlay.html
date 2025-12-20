@@ -193,6 +193,42 @@
       width: 40px;
       height: 16px;
     }
+
+    /* Error state styling */
+    .overlay.error {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: linear-gradient(135deg, #1e293b 0%, #2d1f1f 100%);
+      min-width: 380px;
+    }
+
+    .overlay.error .rec-ring {
+      border-color: #ef4444;
+      animation: none;
+    }
+
+    .overlay.error .rec-dot {
+      background: #ef4444;
+    }
+
+    .overlay.error .rec-label {
+      color: #ef4444;
+      flex-shrink: 0;
+    }
+
+    .overlay.error .timer {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+      min-width: auto;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    .overlay.error .waveform {
+      display: none;
+    }
   </style>
 </head>
 
