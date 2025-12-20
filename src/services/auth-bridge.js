@@ -36,6 +36,8 @@ class AuthBridge {
 
   // High-performance Google sign-in using Go backend
   async signInWithGoogle() {
+    console.log('🔐 AuthBridge.signInWithGoogle called, isDevelopmentMode:', this.isDevelopmentMode);
+    
     if (this.isDevelopmentMode) {
       console.log('🔧 Development mode - simulating Google sign-in');
       // In development mode, simulate successful sign-in directly without opening a URL
@@ -58,10 +60,14 @@ class AuthBridge {
       const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
       const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key';
       
+      console.log('🔐 Checking Supabase credentials...');
+      console.log('   SUPABASE_URL:', supabaseUrl ? 'set' : 'not set');
+      console.log('   SUPABASE_ANON_KEY:', supabaseAnonKey ? 'set (length: ' + supabaseAnonKey.length + ')' : 'not set');
+      
       // Check if we have valid Supabase credentials
-      if (supabaseUrl.includes('your-project.supabase.co') || supabaseAnonKey === 'your-anon-key') {
+      if (supabaseUrl.includes('your-project.supabase.co') || supabaseAnonKey === 'your-anon-key' || !supabaseUrl || !supabaseAnonKey) {
         // Development mode fallback - simulate sign-in directly
-        console.log('🔧 No Supabase credentials - using development mode');
+        console.log('🔧 No valid Supabase credentials - using development mode fallback');
         const devResult = await this.handleOAuthCallback({ 
           access_token: 'dev-token',
           refresh_token: 'dev-refresh-token'
@@ -78,6 +84,8 @@ class AuthBridge {
       // Create Supabase OAuth URL directly
       const redirectUrl = process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/success';
       const oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+      
+      console.log('🌐 Generated OAuth URL:', oauthUrl);
 
       return {
         success: true,

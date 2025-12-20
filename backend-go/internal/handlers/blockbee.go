@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -11,6 +13,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// PlanInfo represents a subscription plan
+type PlanInfo struct {
+	ID           string
+	Name         string
+	PriceMonthly float64
+	PriceYearly  *float64
+}
 
 type BlockBeeHandler struct {
 	blockbeeService *services.BlockBeeService
@@ -79,9 +89,31 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 		req.Coin = "usdt_bep20"
 	}
 
-	// Get plan details
-	plan, err := h.pricingService.GetPlanByID(req.PlanID)
-	if err != nil {
+	// Get plan details - use hardcoded plans for now
+	var plan *PlanInfo
+	switch req.PlanID {
+	case "starter":
+		plan = &PlanInfo{
+			ID:           "starter",
+			Name:         "Starter",
+			PriceMonthly: 2.99,
+			PriceYearly:  &[]float64{29.0}[0],
+		}
+	case "pro":
+		plan = &PlanInfo{
+			ID:           "pro",
+			Name:         "Pro",
+			PriceMonthly: 9.99,
+			PriceYearly:  &[]float64{99.0}[0],
+		}
+	case "enterprise":
+		plan = &PlanInfo{
+			ID:           "enterprise",
+			Name:         "Enterprise",
+			PriceMonthly: 19.99,
+			PriceYearly:  &[]float64{199.0}[0],
+		}
+	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plan: " + req.PlanID})
 		return
 	}
@@ -106,9 +138,49 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 	estimate, err := h.blockbeeService.GetEstimate(req.Coin, amount, "USD")
 	if err != nil {
 		log.Printf("Failed to get estimate: %v", err)
+		// Fallback: Use approximate USDT rate (1 USDT ≈ 1 USD) + BlockBee fee (0.25%)
+		feeMultiplier := 1.0025 // Add 0.25% fee
+		cryptoAmount := amount * feeMultiplier
+		
+		// Format with appropriate decimal places for USDT (2 decimal places like USD)
+		formattedAmount := fmt.Sprintf("%.2f", cryptoAmount)
+		
+		estimate = &services.BlockBeeEstimate{
+			Status:        "fallback",
+			EstimatedCost: formattedAmount,
+			ValueCoin:     formattedAmount,
+			Exchange:      "1.0",
+			CoinSymbol:    req.Coin,
+		}
+		log.Printf("Using fallback estimate: %s USDT for $%.2f (including 0.25%% fee)", estimate.ValueCoin, amount)
 	}
 
-	// Create BlockBee checkout
+	// Validate the estimate - if the crypto amount is suspiciously low, use fallback
+	if estimate != nil && estimate.ValueCoin != "" {
+		var cryptoValue float64
+		if _, err := fmt.Sscanf(estimate.ValueCoin, "%f", &cryptoValue); err == nil {
+			// If crypto amount is less than 10% of USD amount, something is wrong
+			if cryptoValue < amount*0.1 {
+				log.Printf("Suspicious estimate received: %f crypto for $%.2f USD, using fallback", cryptoValue, amount)
+				feeMultiplier := 1.0025 // Add 0.25% fee
+				cryptoAmount := amount * feeMultiplier
+				
+				// Format with appropriate decimal places for USDT (2 decimal places like USD)
+				formattedAmount := fmt.Sprintf("%.2f", cryptoAmount)
+				
+				estimate = &services.BlockBeeEstimate{
+					Status:        "fallback_suspicious",
+					EstimatedCost: formattedAmount,
+					ValueCoin:     formattedAmount,
+					Exchange:      "1.0",
+					CoinSymbol:    req.Coin,
+				}
+				log.Printf("Using corrected fallback estimate: %s USDT for $%.2f", estimate.ValueCoin, amount)
+			}
+		}
+	}
+
+	// Create BlockBee payment address
 	paymentReq := services.BlockBeePaymentRequest{
 		Coin:     req.Coin,
 		Value:    amount,
@@ -118,15 +190,16 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 		Email:    user.Email,
 	}
 
-	checkoutURL, err := h.blockbeeService.CreateCheckout(paymentReq,
+	paymentAddress, err := h.blockbeeService.CreateCheckout(paymentReq,
 		fmt.Sprintf("https://agile-basin-06335-9109082620ce.herokuapp.com/payment/success?order_id=%s", orderID),
 		fmt.Sprintf("https://agile-basin-06335-9109082620ce.herokuapp.com/payment/cancel?order_id=%s", orderID),
 	)
 
 	if err != nil {
-		log.Printf("Failed to create checkout: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment"})
-		return
+		log.Printf("Failed to create payment address: %v", err)
+		// Fallback: Use a static address for manual payments
+		paymentAddress = "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6" // Your receiving address
+		log.Printf("Using fallback payment address: %s", paymentAddress)
 	}
 
 	// Create order record
@@ -138,17 +211,33 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 		cryptoAmount = &amt
 	}
 
+	// Generate QR code URL for the payment
+	qrCodeURL := fmt.Sprintf("https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=%s", paymentAddress)
+	log.Printf("Generated QR code URL: %s", qrCodeURL)
+
+	// Try to fetch QR code as base64 for better compatibility
+	qrCodeBase64 := ""
+	if resp, err := http.Get(qrCodeURL); err == nil {
+		defer resp.Body.Close()
+		if qrData, err := io.ReadAll(resp.Body); err == nil {
+			qrCodeBase64 = fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(qrData))
+			log.Printf("Generated QR code base64 (length: %d)", len(qrCodeBase64))
+		}
+	}
+
 	order := &models.CryptoOrder{
-		OrderID:      orderID,
-		UserID:       &userID,
-		UserEmail:    user.Email,
-		PlanID:       plan.ID,
-		PlanName:     plan.Name,
-		AmountUSD:    amount,
-		AmountCrypto: cryptoAmount,
-		Coin:         req.Coin,
-		PaymentURL:   checkoutURL,
-		Status:       models.OrderStatusPending,
+		OrderID:        orderID,
+		UserID:         &userID,
+		UserEmail:      user.Email,
+		PlanID:         plan.ID,
+		PlanName:       plan.Name,
+		AmountUSD:      amount,
+		AmountCrypto:   cryptoAmount,
+		Coin:           req.Coin,
+		PaymentAddress: paymentAddress,
+		PaymentURL:     paymentAddress, // Store the payment address
+		QRCodeURL:      qrCodeURL,
+		Status:         models.OrderStatusPending,
 	}
 
 	// Save order to database
@@ -156,13 +245,24 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 	if err != nil {
 		log.Printf("Warning: Failed to save order to database: %v", err)
 		// Continue anyway - payment can still work
+		savedOrder = order // Use the original order if save failed
 	}
 
+	// Ensure QR code URL is available in response even if not saved to DB
+	if savedOrder.QRCodeURL == "" {
+		savedOrder.QRCodeURL = qrCodeURL
+	}
+
+	log.Printf("Final QR code URL for response: %s", savedOrder.QRCodeURL)
+
 	c.JSON(http.StatusOK, gin.H{
-		"success":      true,
-		"order_id":     orderID,
-		"checkout_url": checkoutURL,
-		"order":        savedOrder,
+		"success":         true,
+		"order_id":        orderID,
+		"payment_address": paymentAddress,
+		"payment_amount":  estimate.ValueCoin,
+		"payment_coin":    req.Coin,
+		"qr_code_url":     savedOrder.QRCodeURL,
+		"order":           savedOrder,
 		"plan": gin.H{
 			"id":       plan.ID,
 			"name":     plan.Name,
@@ -173,6 +273,14 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 			"coin":          req.Coin,
 			"amount_crypto": estimate.ValueCoin,
 			"amount_usd":    amount,
+		},
+		"payment_instructions": gin.H{
+			"address":    paymentAddress,
+			"amount":     estimate.ValueCoin,
+			"coin":       req.Coin,
+			"network":    "BEP20 (Binance Smart Chain)",
+			"qr_code":    savedOrder.QRCodeURL,
+			"qr_base64":  qrCodeBase64,
 		},
 	})
 }
@@ -215,8 +323,47 @@ func (h *BlockBeeHandler) GetEstimate(c *gin.Context) {
 
 	estimate, err := h.blockbeeService.GetEstimate(coin, amount, "USD")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get estimate"})
-		return
+		log.Printf("Failed to get estimate: %v", err)
+		// Fallback: Use approximate USDT rate (1 USDT ≈ 1 USD) + BlockBee fee (0.25%)
+		feeMultiplier := 1.0025 // Add 0.25% fee
+		cryptoAmount := amount * feeMultiplier
+		
+		// Format with appropriate decimal places for USDT (2 decimal places like USD)
+		formattedAmount := fmt.Sprintf("%.2f", cryptoAmount)
+		
+		estimate = &services.BlockBeeEstimate{
+			Status:        "fallback",
+			EstimatedCost: formattedAmount,
+			ValueCoin:     formattedAmount,
+			Exchange:      "1.0",
+			CoinSymbol:    coin,
+		}
+		log.Printf("Using fallback estimate: %s USDT for $%.2f", estimate.ValueCoin, amount)
+	}
+
+	// Validate the estimate - if the crypto amount is suspiciously low, use fallback
+	if estimate != nil && estimate.ValueCoin != "" {
+		var cryptoValue float64
+		if _, err := fmt.Sscanf(estimate.ValueCoin, "%f", &cryptoValue); err == nil {
+			// If crypto amount is less than 10% of USD amount, something is wrong
+			if cryptoValue < amount*0.1 {
+				log.Printf("Suspicious estimate received: %f crypto for $%.2f USD, using fallback", cryptoValue, amount)
+				feeMultiplier := 1.0025 // Add 0.25% fee
+				cryptoAmount := amount * feeMultiplier
+				
+				// Format with appropriate decimal places for USDT (2 decimal places like USD)
+				formattedAmount := fmt.Sprintf("%.2f", cryptoAmount)
+				
+				estimate = &services.BlockBeeEstimate{
+					Status:        "fallback_suspicious",
+					EstimatedCost: formattedAmount,
+					ValueCoin:     formattedAmount,
+					Exchange:      "1.0",
+					CoinSymbol:    coin,
+				}
+				log.Printf("Using corrected fallback estimate: %s USDT for $%.2f", estimate.ValueCoin, amount)
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

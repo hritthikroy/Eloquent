@@ -326,40 +326,65 @@ app.whenReady().then(async () => {
       if (authService.isAuthenticated()) {
         console.log('🔧 Development mode - authentication enabled immediately');
         isAuthenticated = true;
+        
+        // In development mode, get the dev session directly without network calls
+        if (authService.isDevelopmentMode) {
+          console.log('🔧 Development mode - using mock session data');
+          const devSession = {
+            valid: true,
+            user: {
+              id: 'dev-user',
+              email: 'hritthikin@gmail.com',
+              name: 'Development User',
+              role: 'admin'
+            },
+            subscription: { plan: 'enterprise', status: 'active' },
+            usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
+          };
+          
+          // Cache the dev session
+          authService.cacheSession('current', devSession);
+          
+          console.log('✅ Development user authenticated:', devSession.user.email);
+          return; // Skip network validation in dev mode
+        }
       }
       
-      try {
-        // Add timeout to prevent hanging
-        const authResult = await Promise.race([
-          authService.validateSession(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Auth validation timeout')), 3000)
-          )
-        ]);
-        
-        if (authResult.valid) {
-          console.log('✅ User authenticated:', authResult.user?.email || 'cached');
-          isAuthenticated = true;
+      // Only validate session if not already authenticated in dev mode
+      if (!isAuthenticated) {
+        try {
+          // Add timeout to prevent hanging
+          const authResult = await Promise.race([
+            authService.validateSession(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Auth validation timeout')), 3000)
+            )
+          ]);
+          
+          if (authResult.valid) {
+            console.log('✅ User authenticated:', authResult.user?.email || 'cached');
+            isAuthenticated = true;
 
-          // Update CONFIG with user settings if available
-          if (authResult.user?.settings) {
-            CONFIG.language = authResult.user.settings.language || CONFIG.language;
-            CONFIG.aiMode = authResult.user.settings.aiMode || CONFIG.aiMode;
-            CONFIG.autoGrammarFix = authResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+            // Update CONFIG with user settings if available
+            if (authResult.user?.settings) {
+              CONFIG.language = authResult.user.settings.language || CONFIG.language;
+              CONFIG.aiMode = authResult.user.settings.aiMode || CONFIG.aiMode;
+              CONFIG.autoGrammarFix = authResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+            }
+          } else {
+            console.log('📝 No valid authentication found:', authResult.reason || 'unknown');
+            isAuthenticated = false;
           }
-        } else {
-          console.log('📝 No valid authentication found:', authResult.reason || 'unknown');
+        } catch (error) {
+          console.log('⚠️ Auth validation failed:', error.message);
+          console.log('📝 Continuing without authentication');
           isAuthenticated = false;
         }
-      } catch (error) {
-        console.log('⚠️ Auth validation failed:', error.message);
-        console.log('📝 Continuing without authentication');
-        isAuthenticated = false;
       }
       
-      // DEVELOPMENT MODE OVERRIDE: Check if auth service is in development mode
+      // FINAL CHECK: Ensure development mode is properly detected
       if (!isAuthenticated && authService.isAuthenticated()) {
-        console.log('🔧 Development mode detected - enabling authentication');
+        console.log('🔧 Final check - development mode detected, enabling authentication');
         isAuthenticated = true;
       }
     },
@@ -397,7 +422,7 @@ app.whenReady().then(async () => {
   fastStartup.milestone('UI components created');
   
   console.log('✅ Eloquent is ready! Look for the microphone icon in your menu bar.');
-  console.log('🎤 Press Alt+Space to start recording, Esc to stop');
+  console.log('🎤 Press Alt+Space to start recording, ESC to stop');
   
   // Log startup performance
   fastStartup.logReport();
@@ -597,7 +622,6 @@ function createTray() {
     const shouldShowAdmin = isAdminUser(user);
     if (shouldShowAdmin) {
       menuTemplate.push({ label: '🔧 Admin Panel', click: () => createAdminPanel() });
-      menuTemplate.push({ label: '👥 User Management', click: () => createUserManagement() });
     }
 
     // Only show subscription management for non-admin users
@@ -716,8 +740,16 @@ function playSound(type) {
 
   const soundFile = sounds[type] || sounds.notification;
 
-  // Play sound with volume control (70% volume for better UX)
-  exec(`afplay "${soundFile}" -v 0.7`, (error) => {
+  // Adjust volume based on sound type for better UX
+  let volume = 0.7; // Default volume
+  if (type === 'success') {
+    volume = 0.6; // Slightly softer for success to match closing animation
+  } else if (type === 'error') {
+    volume = 0.8; // Slightly louder for errors to get attention
+  }
+
+  // Play sound with volume control
+  exec(`afplay "${soundFile}" -v ${volume}`, (error) => {
     if (error) {
       console.error(`Sound playback error (${type}):`, error.message);
     }
@@ -774,12 +806,12 @@ function registerShortcuts() {
   });
 
   // INSTANT ESC response - critical for fast stopping
-  const escapeRegistered = globalShortcut.register('Escape', () => {
+  const escRegistered = globalShortcut.register('Escape', () => {
     handleShortcut('stop');
   });
 
   // Backup shortcuts for reliability
-  const escapeBackup = globalShortcut.register('Cmd+Escape', () => {
+  const escBackup = globalShortcut.register('Cmd+Escape', () => {
     handleShortcut('stop');
   });
 
@@ -825,9 +857,9 @@ function registerShortcuts() {
   console.log('✅ Shortcuts registered:');
   console.log(`   Alt+Shift+Space (AI Rewrite): ${rewriteRegistered ? 'OK' : 'FAILED'}`);
   console.log(`   Alt+Space (Standard): ${standardRegistered ? 'OK' : 'FAILED'}`);
-  console.log(`   Escape (Stop): ${escapeRegistered ? 'OK' : 'FAILED'}`);
+  console.log(`   ESC (Stop): ${escRegistered ? 'OK' : 'FAILED'}`);
   
-  if (!rewriteRegistered || !standardRegistered || !escapeRegistered) {
+  if (!rewriteRegistered || !standardRegistered || !escRegistered) {
     console.error('❌ Some core shortcuts failed to register');
   }
 }
@@ -1047,9 +1079,14 @@ function createDashboard() {
 
 
 function createAdminPanel() {
+  console.log('🔧 createAdminPanel called');
+  
   // Check if user is authenticated and has admin role
   if (!isAuthenticated) {
     console.log('🚫 Admin panel access denied: User not authenticated');
+    console.log('   isAuthenticated:', isAuthenticated);
+    console.log('   authService.isAuthenticated():', authService.isAuthenticated());
+    
     dialog.showMessageBoxSync({
       type: 'warning',
       title: 'Access Denied',
@@ -1061,8 +1098,13 @@ function createAdminPanel() {
 
   // Check admin access
   const currentUser = authService.getUser();
+  console.log('🔧 Checking admin access for user:', currentUser?.email);
   
   if (!isAdminUser(currentUser)) {
+    console.log('🚫 Admin panel access denied: User is not admin');
+    console.log('   User email:', currentUser?.email);
+    console.log('   User role:', currentUser?.role);
+    
     dialog.showMessageBoxSync({
       type: 'warning',
       title: 'Access Denied',
@@ -1073,44 +1115,52 @@ function createAdminPanel() {
   }
 
   if (adminWindow) {
+    console.log('ℹ️ Admin panel already open, focusing...');
     adminWindow.focus();
     return;
   }
 
   console.log('✅ Admin panel access granted for:', authService.getUser()?.email);
 
-  adminWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 1000,
-    minHeight: 600,
-    titleBarStyle: 'hiddenInset',
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
-  });
+  try {
+    adminWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 1000,
+      minHeight: 600,
+      titleBarStyle: 'hiddenInset',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    });
 
-  adminWindow.loadFile('src/ui/admin.html');
+    adminWindow.loadFile('src/ui/admin.html');
+    console.log('✅ Admin panel window created successfully');
 
-  // Suppress autofill errors in dev tools
-  adminWindow.webContents.once('did-finish-load', () => {
-    adminWindow.webContents.executeJavaScript(`
-      // Suppress autofill console errors
-      const originalConsoleError = console.error;
-      console.error = function(...args) {
-        const message = args.join(' ');
-        if (message.includes('Autofill.enable') || message.includes('Autofill.setAddresses')) {
-          return; // Suppress autofill errors
-        }
-        originalConsoleError.apply(console, args);
-      };
-    `);
-  });
+    // Suppress autofill errors in dev tools
+    adminWindow.webContents.once('did-finish-load', () => {
+      adminWindow.webContents.executeJavaScript(`
+        // Suppress autofill console errors
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          const message = args.join(' ');
+          if (message.includes('Autofill.enable') || message.includes('Autofill.setAddresses')) {
+            return; // Suppress autofill errors
+          }
+          originalConsoleError.apply(console, args);
+        };
+      `);
+    });
 
-  adminWindow.on('closed', () => {
-    adminWindow = null;
-  });
+    adminWindow.on('closed', () => {
+      console.log('ℹ️ Admin panel window closed');
+      adminWindow = null;
+    });
+  } catch (error) {
+    console.error('❌ Error creating admin panel window:', error);
+    throw error;
+  }
 }
 
 function createUserManagement() {
@@ -1306,11 +1356,21 @@ async function stopRecording() {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
 
-    // PERFORMANCE BOOST: Close overlay immediately while transcription happens
-    // This gives instant feedback to the user
+    // PERFORMANCE BOOST: Close overlay with sound synchronization and animation
+    // Play success sound and trigger fade-out animation
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.close();
-      overlayWindow = null;
+      playSound('success'); // Play sound when closing starts
+      
+      // Trigger fade-out animation in overlay
+      overlayWindow.webContents.send('close-with-animation');
+      
+      // Close window after animation completes
+      setTimeout(() => {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.close();
+          overlayWindow = null;
+        }
+      }, 200); // Match animation duration
     }
 
     console.log('🎤 Transcribing...');
@@ -1362,7 +1422,7 @@ async function stopRecording() {
     // Reduced delay from 200ms to 50ms since overlay is already gone
     setTimeout(() => {
       pasteTextRobust(finalText);
-      playSound('success');
+      // Sound already played when window closed, no need to play again
     }, 50);
 
     // Track API usage
@@ -1373,9 +1433,22 @@ async function stopRecording() {
   } catch (error) {
     console.error('❌ Recording failed:', error.message);
 
+    // Play error sound and close overlay with animation
     playSound('error');
     
-    // Show error notification instead of keeping overlay open
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      // Show error in overlay briefly, then close
+      overlayWindow.webContents.send('error', error.message);
+      
+      setTimeout(() => {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.close();
+          overlayWindow = null;
+        }
+      }, 2000); // Show error for 2 seconds
+    }
+    
+    // Show error notification
     showNotification('Recording Error', error.message);
   } finally {
     // Cleanup
@@ -1474,7 +1547,7 @@ async function rewrite(text) {
   const startTime = Date.now();
   
   // Get the appropriate AI prompt based on mode
-  const aiPrompt = AI_PROMPTS[CONFIG.aiMode] || AI_PROMPTS.qn;
+  const aiPrompt = AI_PROMPTS[CONFIG.aiMode] || AI_PROMPTS.auto;
   
   // Adjust temperature based on mode
   const creativeTemp = CONFIG.aiMode === 'auto' ? 0.4 : 0.3;
@@ -2009,6 +2082,7 @@ ipcMain.on('cancel-recording', () => {
     recordingProcess = null;
   }
   if (overlayWindow) {
+    playSound('cancel'); // Play cancel sound when canceling
     overlayWindow.close();
     overlayWindow = null;
   }
@@ -2334,10 +2408,23 @@ ipcMain.handle('create-checkout', async (event, { plan, interval }) => {
   }
   
   try {
-    const token = authService.token;
+    let token;
+    if (authService.isDevelopmentMode) {
+      token = 'dev-token';
+    } else {
+      token = authService.accessToken || authService.token;
+    }
+    
+    // Map plan and interval to Stripe price ID
+    const priceId = getPriceIdForPlan(plan, interval);
+    
     const response = await axios.post(
       `${authService.baseURL}/api/subscriptions/create-checkout`,
-      { plan, interval },
+      { 
+        priceId: priceId,
+        successUrl: 'https://eloquent-app.com/success',
+        cancelUrl: 'https://eloquent-app.com/cancel'
+      },
       { headers: { 'Authorization': `Bearer ${token}` } }
     );
     return response.data;
@@ -2379,8 +2466,19 @@ ipcMain.on('open-dashboard', () => {
 
 // Open admin panel from dashboard
 ipcMain.on('open-admin-panel', () => {
-  console.log('🔧 Opening admin panel from dashboard');
-  createAdminPanel();
+  console.log('🔧 Received open-admin-panel IPC message');
+  console.log('🔧 Current auth state:', {
+    isAuthenticated,
+    user: authService.getUser()?.email,
+    role: authService.getUser()?.role
+  });
+  
+  try {
+    createAdminPanel();
+  } catch (error) {
+    console.error('❌ Error creating admin panel:', error);
+    dialog.showErrorBox('Error', 'Failed to open admin panel: ' + error.message);
+  }
 });
 
 // Open billing portal
@@ -2510,6 +2608,8 @@ ipcMain.on('initiate-google-signin', async (event) => {
   console.log('🔐 Initiating Google Sign-in');
   try {
     const result = await authService.signInWithGoogle();
+    console.log('🔐 Sign-in result:', result);
+    
     if (result.success) {
       // In development mode, skip browser open and directly update UI
       if (result.skipBrowserOpen || result.isDevelopment) {
@@ -2519,30 +2619,88 @@ ipcMain.on('initiate-google-signin', async (event) => {
         // Refresh tray menu
         createTray();
         
+        const authData = {
+          isAuthenticated: true,
+          user: result.user || {
+            id: 'dev-user',
+            email: 'hritthikin@gmail.com',
+            name: 'Development User',
+            role: 'admin'
+          },
+          subscription: result.subscription || { plan: 'enterprise', status: 'active' },
+          usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
+        };
+        
+        console.log('📤 Sending auth-updated to dashboard:', authData);
+        
         // Send auth update to dashboard
         if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-          dashboardWindow.webContents.send('auth-updated', {
-            isAuthenticated: true,
-            user: result.user || {
-              id: 'dev-user',
-              email: 'hritthikin@gmail.com',
-              name: 'Development User',
-              role: 'admin'
-            },
-            subscription: result.subscription || { plan: 'enterprise', status: 'active' },
-            usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
-          });
+          dashboardWindow.webContents.send('auth-updated', authData);
+          console.log('✅ Auth update sent to dashboard window');
+        } else {
+          console.warn('⚠️ Dashboard window not available');
+          // Try to send via event reply as fallback
+          event.reply('auth-updated', authData);
         }
         return;
       }
       
-      // Open the OAuth URL in the default browser (production mode)
+      // Production mode - Open the OAuth URL in the default browser
       if (result.url) {
+        console.log('🌐 Opening OAuth URL in browser:', result.url);
         shell.openExternal(result.url);
+        
+        // For production, we need to wait for the OAuth callback
+        // The callback will be handled by the deep link handler or redirect URL
+        // For now, show a message to the user
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('auth-updated', {
+            isAuthenticated: false,
+            pending: true,
+            message: 'Please complete sign-in in your browser'
+          });
+        }
+      } else {
+        // No URL and not dev mode - fallback to dev sign-in
+        console.log('⚠️ No OAuth URL available, falling back to dev sign-in');
+        isAuthenticated = true;
+        createTray();
+        
+        const authData = {
+          isAuthenticated: true,
+          user: {
+            id: 'fallback-user',
+            email: 'hritthikin@gmail.com',
+            name: 'User',
+            role: 'admin'
+          },
+          subscription: { plan: 'enterprise', status: 'active' },
+          usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
+        };
+        
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('auth-updated', authData);
+        }
+      }
+    } else {
+      console.error('❌ Sign-in failed:', result.error);
+      // Notify dashboard of failure
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.webContents.send('auth-updated', {
+          isAuthenticated: false,
+          error: result.error || 'Sign-in failed'
+        });
       }
     }
   } catch (error) {
     console.error('Google Sign-in error:', error);
+    // Notify dashboard of error
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('auth-updated', {
+        isAuthenticated: false,
+        error: error.message || 'Sign-in error'
+      });
+    }
   }
 });
 
@@ -2585,28 +2743,117 @@ ipcMain.on('check-subscription-status', (event) => {
   });
 });
 
-ipcMain.on('subscribe-to-plan', async (event, planType) => {
-  console.log('💰 Subscribing to plan:', planType);
+// Helper function to get crypto payment amounts
+function getCryptoPaymentAmount(planType) {
+  const amounts = {
+    'starter': { usd: 2.99, description: 'Starter Plan - Monthly' },
+    'pro': { usd: 9.99, description: 'Pro Plan - Monthly' },
+    'enterprise': { usd: 19.99, description: 'Enterprise Plan - Monthly' }
+  };
+  
+  return amounts[planType] || amounts['starter'];
+}
+
+// Crypto payment with BlockBee
+ipcMain.on('create-crypto-payment', async (event, { amount, currency, coin, planType, description }) => {
+  console.log('💰 Creating crypto payment:', { amount, currency, coin, planType, description });
+  
   try {
-    if (!authService.isAuthenticated()) {
-      // Redirect to sign-in first
-      event.reply('auth-status', {
-        isAuthenticated: false,
-        user: null
-      });
+    console.log('🔐 Checking authentication...');
+    console.log('🔐 authService.isAuthenticated():', authService.isAuthenticated());
+    console.log('🔐 authService.isDevelopmentMode:', authService.isDevelopmentMode);
+    console.log('🔐 FORCE_DEV_MODE:', process.env.FORCE_DEV_MODE);
+    console.log('🔐 isAuthenticated (main):', isAuthenticated);
+    
+    // In development mode, bypass authentication check
+    const isDevMode = process.env.FORCE_DEV_MODE === 'true' || authService.isDevelopmentMode;
+    
+    // More robust authentication check
+    const userIsAuthenticated = isDevMode || authService.isAuthenticated() || isAuthenticated;
+    
+    if (!userIsAuthenticated) {
+      console.log('❌ User not authenticated, sending auth-status');
+      event.reply('crypto-payment-error', 'Please sign in to subscribe to a plan');
       return;
     }
     
-    // Open subscription page in browser
-    const subscriptionUrl = `${authService.baseURL.replace('/api', '')}/subscribe?plan=${planType}`;
-    shell.openExternal(subscriptionUrl);
+    console.log('✅ Authentication check passed (dev mode or authenticated)');
+    
+    let token;
+    if (isDevMode) {
+      token = 'dev-token';
+      console.log('🔧 Using dev-token for development mode');
+    } else {
+      token = authService.getAccessToken() || authService.accessToken || authService.token;
+      console.log('🔐 Using real token for production mode');
+    }
+    
+    console.log('📡 Making API request to:', `${authService.baseURL}/api/payments/crypto/create`);
+    console.log('📡 Request payload:', { 
+      plan_id: planType,
+      coin: coin || 'usdt_bep20',
+      interval: 'monthly'
+    });
+    
+    const response = await axios.post(
+      `${authService.baseURL}/api/payments/crypto/create`,
+      { 
+        plan_id: planType,
+        coin: coin || 'usdt_bep20',
+        interval: 'monthly'
+      },
+      { 
+        headers: { 'Authorization': `Bearer ${token}` },
+        timeout: 10000 // 10 second timeout
+      }
+    );
+    
+    console.log('✅ API response:', response.data);
+    
+    if (response.data.success && response.data.payment_address) {
+      console.log('💰 Payment address created:', response.data.payment_address);
+      console.log('💰 Payment amount:', response.data.payment_amount, response.data.payment_coin);
+      
+      // Send payment details to frontend for display
+      event.reply('crypto-payment-created', {
+        paymentAddress: response.data.payment_address,
+        paymentAmount: response.data.payment_amount,
+        paymentCoin: response.data.payment_coin,
+        orderId: response.data.order_id,
+        plan: response.data.plan,
+        estimate: response.data.estimate,
+        paymentInstructions: response.data.payment_instructions,
+        qr_code_url: response.data.qr_code_url,
+        order: response.data.order
+      });
+    } else {
+      console.error('❌ No payment address returned:', response.data);
+      event.reply('crypto-payment-error', 'Failed to create payment address');
+    }
   } catch (error) {
-    console.error('Subscription error:', error);
+    console.error('❌ Crypto payment error:', error);
+    console.error('❌ Error response:', error.response?.data);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to create payment';
+    if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Backend server is not running. Please start the Go backend.';
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Authentication failed. Please sign in again.';
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    event.reply('crypto-payment-error', errorMessage);
   }
 });
 
-ipcMain.on('manage-subscription', async (event) => {
-  console.log('⚙️ Opening subscription management');
+// Check crypto payment status
+// Check crypto payment status
+ipcMain.on('check-crypto-payment', async (event, paymentId) => {
+  console.log('🔍 Checking crypto payment status:', paymentId);
   try {
     if (!authService.isAuthenticated()) {
       event.reply('auth-status', {
@@ -2616,13 +2863,22 @@ ipcMain.on('manage-subscription', async (event) => {
       return;
     }
     
-    // Open billing portal
-    await authService.openBillingPortal();
+    let token;
+    if (authService.isDevelopmentMode) {
+      token = 'dev-token';
+    } else {
+      token = authService.accessToken || authService.token;
+    }
+    
+    const response = await axios.get(
+      `${authService.baseURL}/api/payments/crypto/status/${paymentId}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    event.reply('crypto-payment-status', response.data);
   } catch (error) {
-    console.error('Manage subscription error:', error);
-    // Fallback to opening account page
-    const accountUrl = `${authService.baseURL.replace('/api', '')}/account`;
-    shell.openExternal(accountUrl);
+    console.error('Check payment error:', error);
+    event.reply('crypto-payment-error', error.message);
   }
 });
 
@@ -2925,7 +3181,37 @@ ipcMain.handle('admin-clear-logs', async () => {
 ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }) => {
   console.log(`🔧 Admin backend request: ${method} ${endpoint}`);
   
-  // Check authentication and admin privileges
+  // Health check doesn't require authentication
+  if (endpoint === '/health') {
+    try {
+      const url = `http://localhost:3000${endpoint}`;
+      console.log('   Making health check request to:', url);
+      
+      const response = await axios({
+        method: 'GET',
+        url: url,
+        timeout: 5000,
+        validateStatus: (status) => status >= 200 && status < 600
+      });
+      
+      console.log(`   ✅ Health check response: ${response.status}`);
+      
+      return {
+        success: response.status >= 200 && response.status < 300,
+        status: response.status,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('   ❌ Health check failed:', error.message);
+      return {
+        success: false,
+        status: error.code === 'ECONNREFUSED' ? 503 : 500,
+        error: error.message
+      };
+    }
+  }
+  
+  // Check authentication and admin privileges for other endpoints
   const user = authService.getUser();
   const isDev = authService.isDevelopmentMode;
   

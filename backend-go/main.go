@@ -46,20 +46,25 @@ func main() {
 	supabaseService := services.NewSupabaseService(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseAnonKey)
 	userService := services.NewUserService(supabaseService)
 	transcribeService := services.NewTranscribeServiceOptimized(cfg.GroqAPIKey)
-	stripeService := services.NewStripeService(cfg.StripeSecretKey)
+	blockbeeService := services.NewBlockBeeService(cfg.BlockBeeAPIKey, cfg.BlockBeeCallbackURL)
+	orderService := services.NewOrderService(supabaseService)
+	pricingService := services.NewPricingService(supabaseService)
 	log.Printf("🔧 Services initialized in %v", time.Since(serviceStart))
 
 	// Initialize enhanced auth service
 	_ = services.NewAuthServiceEnhanced(supabaseService, userService, cfg.BaseURL)
 	
+	// Initialize global usage service
+	globalUsageService := services.NewGlobalUsageService(cfg.SupabaseURL, cfg.SupabaseKey)
+	
 	// Initialize handlers
 	handlerStart := time.Now()
 	authHandler := handlers.NewAuthHandler(userService, supabaseService)
 	transcribeHandler := handlers.NewTranscribeHandler(transcribeService, userService)
-	subscriptionHandler := handlers.NewSubscriptionHandler(stripeService, userService)
+	blockbeeHandler := handlers.NewBlockBeeHandler(blockbeeService, userService, orderService, pricingService)
 	usageHandler := handlers.NewUsageHandler(userService)
-	webhookHandler := handlers.NewWebhookHandler(stripeService, userService)
 	adminHandler := handlers.NewAdminHandler(userService)
+	globalUsageHandler := handlers.NewGlobalUsageHandler(globalUsageService)
 	log.Printf("📡 Handlers initialized in %v", time.Since(handlerStart))
 	log.Printf("🚀 Enhanced auth service with caching and session management enabled")
 
@@ -366,12 +371,15 @@ func main() {
 			transcribe.GET("/api-key", middleware.AuthMiddleware(supabaseService), transcribeHandler.GetAPIKey)
 		}
 
-		// Subscription routes
-		subscriptions := api.Group("/subscriptions")
+		// BlockBee crypto payment routes
+		payments := api.Group("/payments")
 		{
-			subscriptions.POST("/create-checkout", middleware.AuthMiddleware(supabaseService), subscriptionHandler.CreateCheckout)
-			subscriptions.POST("/create-portal", middleware.AuthMiddleware(supabaseService), subscriptionHandler.CreatePortal)
-			subscriptions.GET("/status", middleware.AuthMiddleware(supabaseService), subscriptionHandler.GetStatus)
+			payments.POST("/crypto/create", middleware.AuthMiddleware(supabaseService), blockbeeHandler.CreatePayment)
+			payments.GET("/crypto/status/:order_id", middleware.AuthMiddleware(supabaseService), blockbeeHandler.GetOrderStatus)
+			payments.POST("/crypto/webhook", blockbeeHandler.Webhook) // No auth for webhooks
+			payments.GET("/crypto/estimate", blockbeeHandler.GetEstimate)
+			payments.GET("/crypto/coins", blockbeeHandler.GetSupportedCoins)
+			payments.GET("/crypto/orders", middleware.AuthMiddleware(supabaseService), blockbeeHandler.GetUserOrders)
 		}
 
 		// Usage routes
@@ -381,10 +389,11 @@ func main() {
 			usage.GET("/history", middleware.AuthMiddleware(supabaseService), usageHandler.GetHistory)
 		}
 
-		// Webhook routes (no auth middleware)
-		webhooks := api.Group("/webhooks")
+		// Global usage routes (shared free recording time for all users)
+		globalUsage := api.Group("/global-usage")
 		{
-			webhooks.POST("/stripe", webhookHandler.StripeWebhook)
+			globalUsage.GET("/stats", globalUsageHandler.GetGlobalUsageStats)
+			globalUsage.GET("/check", globalUsageHandler.CheckFreeTimeAvailable)
 		}
 
 		// Admin routes (requires admin authentication)
@@ -401,6 +410,10 @@ func main() {
 			admin.GET("/search", adminHandler.SearchUsers)
 			admin.GET("/users/plan/:plan", adminHandler.GetUsersByPlan)
 			admin.PUT("/users/bulk", adminHandler.BulkUpdateUsers)
+			
+			// Global usage admin routes
+			admin.PUT("/global-usage/limit", globalUsageHandler.UpdateGlobalLimit)
+			admin.POST("/global-usage/reset", globalUsageHandler.ResetGlobalUsage)
 		}
 	}
 

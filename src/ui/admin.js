@@ -212,15 +212,29 @@ async function checkBackendHealth() {
       endpoint: '/health'
     });
     
-    console.log('🔍 Health check result:', result);
+    console.log('🔍 Health check result:', JSON.stringify(result, null, 2));
+    console.log('🔍 Health check details - success:', result.success, 'status:', result.status, 'data:', result.data);
     
-    if (result.success && result.status === 200) {
+    // Accept any successful response (2xx status codes)
+    if (result.success || (result.status >= 200 && result.status < 300)) {
       console.log('✅ Backend is healthy');
       return true;
-    } else {
-      console.log('❌ Backend health check failed:', result);
-      return false;
     }
+    
+    // Also check if we got valid health data even if success flag is wrong
+    if (result.data && result.data.status === 'ok') {
+      console.log('✅ Backend is healthy (data check)');
+      return true;
+    }
+    
+    // 429 means backend IS running, just rate limited - treat as healthy
+    if (result.status === 429) {
+      console.log('✅ Backend is running (rate limited, but responsive)');
+      return true;
+    }
+    
+    console.log('❌ Backend health check failed:', result);
+    return false;
   } catch (error) {
     console.error('❌ Backend health check error:', error);
     return false;
@@ -572,22 +586,31 @@ function formatTimestamp(timestamp) {
   });
 }
 
-// Search and filter
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('userSearch').addEventListener('input', (e) => {
-    const query = e.target.value.toLowerCase();
-    const filtered = allUsers.filter(user => 
-      user.email.toLowerCase().includes(query) || 
-      (user.name && user.name.toLowerCase().includes(query))
+// Search and filter - Combined filtering logic
+function applyFilters() {
+  let filtered = [...allUsers];
+  
+  // Apply search filter
+  const searchQuery = document.getElementById('userSearch')?.value.toLowerCase() || '';
+  if (searchQuery) {
+    filtered = filtered.filter(user => 
+      user.email.toLowerCase().includes(searchQuery) || 
+      (user.name && user.name.toLowerCase().includes(searchQuery))
     );
-    renderUsers(filtered);
-  });
+  }
+  
+  // Apply plan filter
+  const planFilter = document.getElementById('planFilter')?.value || '';
+  if (planFilter) {
+    filtered = filtered.filter(user => user.plan === planFilter);
+  }
+  
+  renderUsers(filtered);
+}
 
-  document.getElementById('planFilter').addEventListener('change', (e) => {
-    const plan = e.target.value;
-    const filtered = plan ? allUsers.filter(user => user.plan === plan) : allUsers;
-    renderUsers(filtered);
-  });
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('userSearch').addEventListener('input', applyFilters);
+  document.getElementById('planFilter').addEventListener('change', applyFilters);
 });
 
 // User actions
@@ -817,7 +840,7 @@ function showEditUserModal(user) {
   const modalUserName = document.getElementById('modalUserName');
   const userDetailsContent = document.getElementById('userDetailsContent');
   
-  if (!modal || !modalUserName || !userDetailsContent)Content) {
+  if (!modal || !modalUserName || !userDetailsContent) {
     console.error('Modal elements not found');
     return;
   }
@@ -1195,15 +1218,15 @@ function startAutoRefresh() {
   }
   
   if (autoRefreshEnabled) {
-    // Refresh data every 2 minutes (less frequent to reduce API calls)
+    // Refresh data every 5 minutes (less frequent to reduce API calls and avoid rate limiting)
     refreshInterval = setInterval(() => {
       console.log('🔄 Auto-refreshing admin data...');
       loadAdminData().catch(console.error);
       loadUsers().catch(console.error);
       loadApiRequests().catch(console.error);
-    }, 120000); // 2 minutes instead of 30 seconds
+    }, 300000); // 5 minutes to avoid rate limiting
     
-    console.log('✅ Auto-refresh started (every 2 minutes)');
+    console.log('✅ Auto-refresh started (every 5 minutes)');
   }
 }
 
@@ -1220,7 +1243,7 @@ function toggleAutoRefresh() {
   
   if (autoRefreshEnabled) {
     startAutoRefresh();
-    showAlert('Auto-refresh enabled (every 2 minutes)', 'success');
+    showAlert('Auto-refresh enabled (every 5 minutes)', 'success');
   } else {
     stopAutoRefresh();
     showAlert('Auto-refresh disabled', 'info');

@@ -283,19 +283,69 @@ ipcRenderer.on('error', (_, errorMsg) => {
   ctx.clearRect(0, 0, canvasW, canvasH);
 });
 
-// Cancel recording
-function cancel() {
-  if (audioContext) audioContext.close();
-  if (animationId) cancelAnimationFrame(animationId);
-  if (window.timerInterval) clearInterval(window.timerInterval);
-  window.close();
+// Listen for close-with-animation from main process
+ipcRenderer.on('close-with-animation', () => {
+  console.log('🎬 Close with animation requested');
+  
+  // Add fade-out animation
+  if (overlay) {
+    overlay.classList.add('fade-out');
+  }
+  
+  // Clean up audio resources
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+  }
+  
+  // Window will be closed by main process after animation
+});
+
+// Stop recording (triggered by ESC key)
+function stopRecording() {
+  console.log('🛑 ESC pressed - stopping recording');
+  
+  // Add fade-out animation before closing
+  if (overlay) {
+    overlay.classList.add('fade-out');
+  }
+  
+  // Clean up audio resources
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+  }
+  
+  // Notify main process to stop recording with a small delay for animation
+  setTimeout(() => {
+    ipcRenderer.send('stop-recording');
+    console.log('✅ Stop recording signal sent to main process');
+  }, 150); // Small delay to allow fade-out animation
 }
 
-// ESC to cancel
+// ESC key to stop recording (works in both modes)
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     e.preventDefault();
-    cancel();
+    e.stopPropagation();
+    console.log('⌨️ ESC key detected in overlay');
+    stopRecording();
   }
 });
 

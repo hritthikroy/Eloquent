@@ -24,6 +24,12 @@ var limiter = &rateLimiter{
 // PERFORMANCE BOOST: Optimized rate limiter with better memory management
 func RateLimitOptimized() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Skip rate limiting for health checks - these should always be allowed
+		if c.Request.URL.Path == "/health" {
+			c.Next()
+			return
+		}
+		
 		ip := c.ClientIP()
 		now := time.Now()
 		
@@ -78,8 +84,9 @@ func RateLimitOptimized() gin.HandlerFunc {
 		}
 
 		// PERFORMANCE BOOST: Check limit before acquiring write lock
-		if validCount >= 100 {
-			c.Header("X-RateLimit-Limit", "100")
+		// Higher limit for admin panel usage (500 requests per 15 minutes)
+		if validCount >= 500 {
+			c.Header("X-RateLimit-Limit", "500")
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("X-RateLimit-Reset", "900") // 15 minutes
 			c.JSON(http.StatusTooManyRequests, gin.H{
@@ -101,11 +108,11 @@ func RateLimitOptimized() gin.HandlerFunc {
 		}
 		validRequests = append(validRequests, now)
 		limiter.requests[ip] = validRequests
-		remaining := 100 - len(validRequests)
+		remaining := 500 - len(validRequests)
 		limiter.mutex.Unlock()
 
 		// PERFORMANCE BOOST: Add rate limit headers
-		c.Header("X-RateLimit-Limit", "100")
+		c.Header("X-RateLimit-Limit", "500")
 		c.Header("X-RateLimit-Remaining", string(rune(remaining)))
 		c.Header("X-RateLimit-Reset", "900")
 

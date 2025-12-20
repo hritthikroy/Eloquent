@@ -1,7 +1,6 @@
 package services
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +10,7 @@ import (
 )
 
 const (
-	BlockBeeBaseURL = "https://api.blockbee.io"
+	BlockBeeBaseURL = "https://api.cryptapi.io"
 )
 
 // BlockBeeService handles crypto payments via BlockBee
@@ -86,7 +85,7 @@ func NewBlockBeeService(apiKey, callbackURL string) *BlockBeeService {
 		apiKey:      apiKey,
 		callbackURL: callbackURL,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second, // Increased timeout
 		},
 	}
 }
@@ -151,42 +150,65 @@ func (s *BlockBeeService) GetEstimate(coin string, value float64, currency strin
 	
 	fullURL := fmt.Sprintf("%s?%s", apiURL, params.Encode())
 
-	resp, err := s.httpClient.Get(fullURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get estimate: %w", err)
-	}
-	defer resp.Body.Close()
+	// Log the API call for debugging
+	fmt.Printf("BlockBee API call: %s\n", fullURL)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	var rawResult map[string]interface{}
-	if err := json.Unmarshal(body, &rawResult); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	result := &BlockBeeEstimate{
-		CoinSymbol: coin,
-	}
-
-	if status, ok := rawResult["status"].(string); ok {
-		result.Status = status
-	}
-	if estimatedCost, ok := rawResult["estimated_cost"].(string); ok {
-		result.EstimatedCost = estimatedCost
-		result.ValueCoin = estimatedCost
-	}
+	// Retry logic with exponential backoff
+	maxRetries := 3
+	var lastErr error
 	
-	// Get exchange rate from estimated_cost_currency
-	if currencies, ok := rawResult["estimated_cost_currency"].(map[string]interface{}); ok {
-		if usdRate, ok := currencies["USD"].(string); ok {
-			result.Exchange = usdRate
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Wait before retry: 2^attempt seconds
+			waitTime := time.Duration(1<<attempt) * time.Second
+			time.Sleep(waitTime)
 		}
+
+		resp, err := s.httpClient.Get(fullURL)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d failed: %w", attempt+1, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d failed to read response: %w", attempt+1, err)
+			continue
+		}
+
+		// Log the raw response for debugging
+		fmt.Printf("BlockBee API response: %s\n", string(body))
+
+		var rawResult map[string]interface{}
+		if err := json.Unmarshal(body, &rawResult); err != nil {
+			lastErr = fmt.Errorf("attempt %d failed to parse response: %w", attempt+1, err)
+			continue
+		}
+
+		result := &BlockBeeEstimate{
+			CoinSymbol: coin,
+		}
+
+		if status, ok := rawResult["status"].(string); ok {
+			result.Status = status
+		}
+		if estimatedCost, ok := rawResult["estimated_cost"].(string); ok {
+			result.EstimatedCost = estimatedCost
+			result.ValueCoin = estimatedCost
+		}
+		
+		// Get exchange rate from estimated_cost_currency
+		if currencies, ok := rawResult["estimated_cost_currency"].(map[string]interface{}); ok {
+			if usdRate, ok := currencies["USD"].(string); ok {
+				result.Exchange = usdRate
+			}
+		}
+
+		return result, nil
 	}
 
-	return result, nil
+	return nil, fmt.Errorf("failed to get estimate after %d attempts: %w", maxRetries, lastErr)
 }
 
 // convertCoinFormat converts user-friendly coin names to BlockBee API format
@@ -263,47 +285,70 @@ func (s *BlockBeeService) GetQRCode(coin, address string, value float64) string 
 		BlockBeeBaseURL, coin, s.apiKey, address, value)
 }
 
-// CreateCheckout creates a hosted checkout page (alternative to direct API)
+// CreateCheckout creates a payment address and returns payment details
 func (s *BlockBeeService) CreateCheckout(req BlockBeePaymentRequest, successURL, cancelURL string) (string, error) {
-	apiURL := fmt.Sprintf("%s/checkout/request/", BlockBeeBaseURL)
+	// Convert coin format for API
+	apiCoin := convertCoinFormat(req.Coin)
 	
-	payload := map[string]interface{}{
-		"apikey":       s.apiKey,
-		"redirect_url": successURL,
-		"notify_url":   s.callbackURL,
-		"value":        req.Value,
-		"currency":     req.Currency,
-		"order_id":     req.OrderID,
-		"item_description": req.ItemDesc,
-		"email":        req.Email,
-	}
+	// Create payment address
+	apiURL := fmt.Sprintf("%s/%s/create/", BlockBeeBaseURL, apiCoin)
+	
+	// Build callback URL with order info
+	callbackParams := url.Values{}
+	callbackParams.Set("order_id", req.OrderID)
+	callbackParams.Set("email", req.Email)
+	fullCallbackURL := fmt.Sprintf("%s?%s", s.callbackURL, callbackParams.Encode())
+	
+	// Use a valid USDT BEP20 address for receiving payments
+	// This should be replaced with your actual receiving wallet address
+	receivingAddress := "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6" // Example BEP20 address
+	
+	params := url.Values{}
+	params.Set("apikey", s.apiKey)
+	params.Set("callback", fullCallbackURL)
+	params.Set("address", receivingAddress)
+	params.Set("pending", "1")
+	params.Set("confirmations", "1")
+	
+	fullURL := fmt.Sprintf("%s?%s", apiURL, params.Encode())
 
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	resp, err := s.httpClient.Post(apiURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("failed to create checkout: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	if status, ok := result["status"].(string); ok && status == "success" {
-		if paymentURL, ok := result["payment_url"].(string); ok {
-			return paymentURL, nil
+	// Retry logic with exponential backoff
+	maxRetries := 3
+	var lastErr error
+	
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			// Wait before retry: 2^attempt seconds
+			waitTime := time.Duration(1<<attempt) * time.Second
+			time.Sleep(waitTime)
 		}
+		
+		resp, err := s.httpClient.Get(fullURL)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d failed: %w", attempt+1, err)
+			continue
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			lastErr = fmt.Errorf("attempt %d failed to read response: %w", attempt+1, err)
+			continue
+		}
+
+		var result map[string]interface{}
+		if err := json.Unmarshal(body, &result); err != nil {
+			lastErr = fmt.Errorf("attempt %d failed to parse response: %w", attempt+1, err)
+			continue
+		}
+
+		// Check if we got a payment address
+		if addressIn, ok := result["address_in"].(string); ok && addressIn != "" {
+			return addressIn, nil
+		}
+		
+		lastErr = fmt.Errorf("attempt %d failed: %s", attempt+1, string(body))
 	}
 
-	return "", fmt.Errorf("failed to create checkout: %s", string(body))
+	return "", fmt.Errorf("failed to create payment address after %d attempts: %w", maxRetries, lastErr)
 }

@@ -556,68 +556,244 @@ const AUTH_UPDATE_DEBOUNCE = 300; // ms
 function handleGoogleSignIn() {
   console.log('🔐 User clicked Google Sign In button');
   
-  // Prevent double-clicks
-  const signInBtn = document.querySelector('.sidebar-item[data-action="google-signin"]');
-  if (signInBtn) {
-    signInBtn.style.pointerEvents = 'none';
-    signInBtn.style.opacity = '0.6';
-    signInBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="currentColor" class="spin-animation">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10"/>
-      </svg>
-      Signing in...
-    `;
-    
-    // Re-enable after 5 seconds as fallback
-    setTimeout(() => {
-      if (signInBtn && !currentAuthState.isAuthenticated) {
-        signInBtn.style.pointerEvents = 'auto';
-        signInBtn.style.opacity = '1';
-        resetSignInButton(signInBtn);
-      }
-    }, 5000);
+  const signInBtn = document.getElementById('google-signin-btn') ||
+                    document.querySelector('.sidebar-item[data-action="google-signin"]') ||
+                    document.querySelector('.google-signin-btn');
+  
+  if (!signInBtn) {
+    console.error('Google Sign In button not found');
+    showNotification('❌ Error', 'Sign in button not found');
+    return;
   }
   
+  // Prevent double-clicks
+  if (signInBtn.classList.contains('signing-in')) {
+    console.log('Already signing in, ignoring click');
+    return;
+  }
+  
+  console.log('🔐 Starting sign-in process...');
+  signInBtn.classList.add('signing-in');
+  signInBtn.innerHTML = `
+    <div class="google-icon">
+      <div class="spinner"></div>
+    </div>
+    <span class="signin-text">Signing in...</span>
+  `;
+  
+  // Re-enable after 8 seconds as fallback
+  const resetTimeout = setTimeout(() => {
+    if (signInBtn && !currentAuthState.isAuthenticated) {
+      console.log('⏰ Sign-in timeout, resetting button');
+      signInBtn.classList.remove('signing-in');
+      resetSignInButton(signInBtn);
+      showNotification('⏰ Timeout', 'Sign in took too long. Please try again.');
+    }
+  }, 8000);
+  
   try {
+    console.log('📤 Sending initiate-google-signin IPC message');
     ipcRenderer.send('initiate-google-signin');
+    
+    // Store timeout ID to clear it on successful sign-in
+    signInBtn.dataset.resetTimeout = resetTimeout;
   } catch (error) {
     console.error('Error initiating Google sign-in:', error);
-    if (signInBtn) {
-      signInBtn.style.pointerEvents = 'auto';
-      signInBtn.style.opacity = '1';
-      resetSignInButton(signInBtn);
-    }
-    showNotification('❌ Sign In Failed', 'Please try again');
+    clearTimeout(resetTimeout);
+    signInBtn.classList.remove('signing-in');
+    resetSignInButton(signInBtn);
+    showNotification('❌ Sign In Failed', error.message || 'Please try again');
   }
 }
 
 function resetSignInButton(btn) {
-  btn.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-    </svg>
-    Google Sign In
+  console.log('🔄 Resetting sign-in button');
+  
+  // Query for the button fresh to ensure we have the current DOM reference
+  let currentButton = document.getElementById('google-signin-btn') ||
+                      document.querySelector('.sidebar-item[data-action="user-menu"]') ||
+                      document.querySelector('.sidebar-item[data-action="google-signin"]') ||
+                      document.querySelector('.google-signin-btn');
+  
+  if (!currentButton) {
+    console.warn('⚠️ Could not find button to reset');
+    return;
+  }
+  
+  // Clear any pending timeout
+  if (currentButton.dataset.resetTimeout) {
+    clearTimeout(parseInt(currentButton.dataset.resetTimeout));
+    delete currentButton.dataset.resetTimeout;
+  }
+  
+  // Update content and attributes FIRST
+  currentButton.classList.remove('signing-in');
+  currentButton.classList.add('google-signin-btn');
+  currentButton.setAttribute('id', 'google-signin-btn');
+  currentButton.setAttribute('data-action', 'google-signin');
+  currentButton.innerHTML = `
+    <div class="google-icon">
+      <svg viewBox="0 0 48 48" width="20" height="20">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+    </div>
+    <span class="signin-text">Google Sign In</span>
   `;
-  btn.setAttribute('data-action', 'google-signin');
+  
+  // Clone and replace to remove ALL event listeners
+  const parent = currentButton.parentNode;
+  if (parent) {
+    const newButton = currentButton.cloneNode(true);
+    parent.replaceChild(newButton, currentButton);
+    currentButton = newButton; // Update reference
+    
+    // Add fresh click listener for sign-in
+    currentButton.addEventListener('click', function(e) {
+      console.log('🖱️ Sign-in button clicked (after reset)');
+      e.preventDefault();
+      e.stopPropagation();
+      handleGoogleSignIn();
+    });
+    
+    console.log('✅ Sign-in button reset with fresh listener');
+  } else {
+    console.warn('⚠️ Button has no parent, adding listener directly to existing button');
+    
+    // Just add the event listener directly without trying to replace
+    // First remove any existing listeners by cloning the attributes only
+    const newButton = document.createElement('div');
+    newButton.className = currentButton.className;
+    newButton.innerHTML = currentButton.innerHTML;
+    Array.from(currentButton.attributes).forEach(attr => {
+      newButton.setAttribute(attr.name, attr.value);
+    });
+    
+    // Find the parent by looking for the sidebar
+    const sidebar = document.querySelector('.sidebar-content');
+    if (sidebar) {
+      // Find the account section
+      const accountSection = Array.from(sidebar.children).find(child => 
+        child.textContent && child.textContent.includes('Account')
+      );
+      if (accountSection) {
+        // Replace the old button with the new one
+        const oldButton = accountSection.querySelector('.sidebar-item[data-action="user-menu"], .sidebar-item[data-action="google-signin"], #google-signin-btn');
+        if (oldButton) {
+          accountSection.replaceChild(newButton, oldButton);
+          currentButton = newButton;
+        }
+      }
+    }
+    
+    // Add fresh click listener
+    currentButton.addEventListener('click', function(e) {
+      console.log('🖱️ Sign-in button clicked (after reset, no parent)');
+      e.preventDefault();
+      e.stopPropagation();
+      handleGoogleSignIn();
+    });
+    
+    console.log('✅ Sign-in button reset with fresh listener (no parent)');
+  }
 }
 
 // Plan management functions
 function subscribeToPlan(planType) {
-  ipcRenderer.send('subscribe-to-plan', planType);
+  console.log('💰 Subscribing to plan:', planType);
+  
+  // Show loading state on the button
+  const button = document.querySelector(`button[data-plan="${planType}"]`);
+  if (button) {
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Creating payment...';
+    button.disabled = true;
+    
+    // Reset button after 10 seconds if no response
+    setTimeout(() => {
+      if (button.disabled) {
+        button.innerHTML = originalText;
+        button.disabled = false;
+      }
+    }, 10000);
+  }
+  
+  // Get crypto payment amount for the plan
+  const paymentAmount = getCryptoPaymentAmount(planType);
+  
+  // Create crypto payment with BlockBee
+  ipcRenderer.send('create-crypto-payment', {
+    amount: paymentAmount.usd,
+    currency: 'USD',
+    coin: 'usdt_bep20', // Default to USDT BEP20
+    planType: planType,
+    description: paymentAmount.description
+  });
+}
+
+// Helper function to get crypto payment amounts
+function getCryptoPaymentAmount(planType) {
+  const amounts = {
+    'starter': { usd: 2.99, description: 'Starter Plan - Monthly' },
+    'pro': { usd: 9.99, description: 'Pro Plan - Monthly' },
+    'enterprise': { usd: 19.99, description: 'Enterprise Plan - Monthly' }
+  };
+  
+  return amounts[planType] || amounts['starter'];
 }
 
 function managePlan() {
   ipcRenderer.send('manage-subscription');
 }
 
-// Listen for authentication status updates (initial load)
+// Listen for crypto payment responses
+ipcRenderer.on('crypto-payment-created', (_, paymentData) => {
+  console.log('💰 Crypto payment created:', paymentData);
+  console.log('🔍 Payment instructions:', paymentData.paymentInstructions);
+  console.log('🔍 QR code URL:', paymentData.qr_code_url);
+  console.log('🔍 QR code from instructions:', paymentData.paymentInstructions?.qr_code);
+  
+  // Reset all plan buttons
+  document.querySelectorAll('button[data-plan]').forEach(btn => {
+    btn.disabled = false;
+    const plan = btn.getAttribute('data-plan');
+    if (plan === 'starter') btn.innerHTML = 'Upgrade to Starter';
+    else if (plan === 'pro') btn.innerHTML = 'Upgrade to Pro';
+    else if (plan === 'enterprise') btn.innerHTML = 'Upgrade to Enterprise';
+  });
+  
+  // Show payment instructions modal
+  showPaymentInstructions(paymentData);
+  
+  // Optionally show payment details
+  if (paymentData.estimate) {
+    showNotification('💰 Payment Details', 
+      `Amount: ${paymentData.estimate.amount_crypto} ${paymentData.estimate.coin.toUpperCase()}\n` +
+      `USD Value: $${paymentData.estimate.amount_usd}`
+    );
+  }
+});
+
+ipcRenderer.on('crypto-payment-error', (_, error) => {
+  console.error('💰 Crypto payment error:', error);
+  
+  // Reset all plan buttons
+  document.querySelectorAll('button[data-plan]').forEach(btn => {
+    btn.disabled = false;
+    const plan = btn.getAttribute('data-plan');
+    if (plan === 'starter') btn.innerHTML = 'Upgrade to Starter';
+    else if (plan === 'pro') btn.innerHTML = 'Upgrade to Pro';
+    else if (plan === 'enterprise') btn.innerHTML = 'Upgrade to Enterprise';
+  });
+  
+  showNotification('❌ Payment Error', error || 'Failed to create crypto payment');
+});
 ipcRenderer.on('auth-status', (_, authData) => {
   console.log('📊 Auth status received:', authData?.isAuthenticated ? 'authenticated' : 'not authenticated');
   
-  if (authData.isAuthenticated && authData.user) {
+  if (authData && authData.isAuthenticated && authData.user) {
     updateAuthState(authData);
   }
   // Don't auto-initiate sign-in - let user click the button
@@ -625,6 +801,15 @@ ipcRenderer.on('auth-status', (_, authData) => {
 
 // INSTANT FRONTEND UPDATE: Listen for real-time auth updates with debouncing
 ipcRenderer.on('auth-updated', (_, authData) => {
+  console.log('📥 Auth update received:', authData);
+  
+  // Clear any pending timeout on the sign-in button
+  const signInBtn = document.getElementById('google-signin-btn');
+  if (signInBtn && signInBtn.dataset.resetTimeout) {
+    clearTimeout(parseInt(signInBtn.dataset.resetTimeout));
+    delete signInBtn.dataset.resetTimeout;
+  }
+  
   // Debounce rapid updates
   if (authUpdateTimeout) {
     clearTimeout(authUpdateTimeout);
@@ -640,7 +825,7 @@ ipcRenderer.on('auth-updated', (_, authData) => {
     
     console.log('🔄 Auth update processed:', authData?.isAuthenticated ? 'signed in' : 'signed out');
     
-    if (authData.isAuthenticated && authData.user) {
+    if (authData && authData.isAuthenticated && authData.user) {
       // Only show notification if state actually changed
       const wasAuthenticated = currentAuthState.isAuthenticated;
       updateAuthState(authData);
@@ -648,7 +833,16 @@ ipcRenderer.on('auth-updated', (_, authData) => {
       if (!wasAuthenticated) {
         showNotification('✅ Signed In', `Welcome, ${authData.user.name || authData.user.email}!`);
       }
-    } else if (!authData.isAuthenticated && currentAuthState.isAuthenticated) {
+    } else if (authData && authData.pending) {
+      // Handle pending sign-in (waiting for browser OAuth)
+      console.log('⏳ Sign-in pending, waiting for browser OAuth');
+      showNotification('🌐 Sign In', authData.message || 'Complete sign-in in your browser');
+    } else if (authData && authData.error) {
+      // Handle sign-in error
+      console.error('❌ Sign-in error:', authData.error);
+      resetToSignedOutUI();
+      showNotification('❌ Sign In Failed', authData.error);
+    } else if (!authData || (!authData.isAuthenticated && currentAuthState.isAuthenticated)) {
       // Handle sign out
       currentAuthState = {
         isAuthenticated: false,
@@ -688,10 +882,22 @@ ipcRenderer.on('subscription-status', (_, subscriptionData) => {
 
 // Reset UI to signed-out state
 function resetToSignedOutUI() {
-  const userMenuItem = document.querySelector('.sidebar-item[data-action="user-menu"]');
+  console.log('🔄 Resetting UI to signed-out state');
+  
+  // Cancel any pending auth UI updates
+  updateAuthUITimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+  updateAuthUITimeouts = [];
+  isUpdatingAuthUI = false; // Reset the flag
+  
+  const userMenuItem = document.getElementById('google-signin-btn') ||
+                       document.querySelector('.sidebar-item[data-action="user-menu"]') ||
+                       document.querySelector('.sidebar-item[data-action="google-signin"]');
+  
   if (userMenuItem) {
     resetSignInButton(userMenuItem);
-    userMenuItem.setAttribute('data-action', 'google-signin');
+    console.log('✅ Sign-in button reset');
+  } else {
+    console.warn('⚠️ Could not find button to reset');
   }
   
   // Hide user menu if open
@@ -699,48 +905,113 @@ function resetToSignedOutUI() {
 }
 
 // Update authentication UI
+let updateAuthUITimeouts = [];
+let isUpdatingAuthUI = false; // Flag to prevent concurrent updates
+
 function updateAuthUI(user) {
-  if (!user) return;
+  // Cancel any pending updates to prevent conflicts
+  updateAuthUITimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+  updateAuthUITimeouts = [];
+  
+  if (!user || isUpdatingAuthUI) return;
+  
+  isUpdatingAuthUI = true;
   
   const updateUI = () => {
-    // Find the sign-in button by either action type
-    let authButton = document.querySelector('.sidebar-item[data-action="google-signin"]') ||
-                     document.querySelector('.sidebar-item[data-action="user-menu"]');
+    // Find the sign-in button by ID first, then by action type
+    let authButton = document.getElementById('google-signin-btn') ||
+                     document.querySelector('.sidebar-item[data-action="google-signin"]') ||
+                     document.querySelector('.sidebar-item[data-action="user-menu"]') ||
+                     document.querySelector('.google-signin-btn');
     
     // Fallback: find by text content
     if (!authButton) {
       const sidebarItems = document.querySelectorAll('.sidebar-item');
       for (let item of sidebarItems) {
-        if (item.textContent.includes('Google Sign In') || item.textContent.includes(user.name) || item.textContent.includes(user.email)) {
+        if (item.textContent.includes('Google Sign In') || item.textContent.includes('Signing in') || 
+            (user.name && item.textContent.includes(user.name)) || 
+            (user.email && item.textContent.includes(user.email))) {
           authButton = item;
           break;
         }
       }
     }
     
+    console.log('🔄 Updating auth UI, button found:', !!authButton);
+    
     if (authButton) {
       const displayName = user.name || user.email.split('@')[0];
       const isAdmin = user.role === 'admin' || user.email === 'hritthikin@gmail.com';
       
+      // Clear any pending timeout
+      if (authButton.dataset.resetTimeout) {
+        clearTimeout(parseInt(authButton.dataset.resetTimeout));
+        delete authButton.dataset.resetTimeout;
+      }
+      
+      // Check if button already shows the correct user (avoid unnecessary updates)
+      const currentText = authButton.textContent || '';
+      if (currentText.includes(displayName) && authButton.getAttribute('data-action') === 'user-menu') {
+        console.log('✅ Auth UI already up to date for user:', displayName);
+        isUpdatingAuthUI = false;
+        return;
+      }
+      
+      // Update content and attributes FIRST
+      authButton.classList.remove('signing-in', 'google-signin-btn');
+      authButton.setAttribute('data-action', 'user-menu');
       authButton.innerHTML = `
-        <div class="user-avatar" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: white;">
+        <div class="user-avatar" style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: white; flex-shrink: 0;">
           ${displayName.charAt(0).toUpperCase()}
         </div>
         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${displayName}</span>
         ${isAdmin ? '<span style="font-size: 10px; background: rgba(168, 85, 247, 0.3); padding: 2px 6px; border-radius: 4px; color: #c4b5fd;">Admin</span>' : ''}
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px; opacity: 0.6;">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px; opacity: 0.6; flex-shrink: 0;">
           <path d="M7 10l5 5 5-5z"/>
         </svg>
       `;
-      authButton.setAttribute('data-action', 'user-menu');
-      authButton.style.pointerEvents = 'auto';
-      authButton.style.opacity = '1';
+      
+      // Clone and replace to remove ALL old event listeners
+      const parent = authButton.parentNode;
+      if (parent) {
+        const newButton = authButton.cloneNode(true);
+        parent.replaceChild(newButton, authButton);
+        
+        // Add fresh click listener for user menu
+        newButton.addEventListener('click', function(e) {
+          console.log('🖱️ User menu button clicked (after auth)');
+          e.preventDefault();
+          e.stopPropagation();
+          showUserMenu();
+        });
+        
+        console.log('✅ Auth UI updated to show user:', displayName);
+        console.log('✅ Click listener re-attached');
+      } else {
+        // Button has no parent - this can happen during rapid updates
+        // Just add listener directly and don't log as warning since it's handled
+        authButton.addEventListener('click', function(e) {
+          console.log('🖱️ User menu button clicked (after auth, direct)');
+          e.preventDefault();
+          e.stopPropagation();
+          showUserMenu();
+        });
+        console.log('✅ Auth UI updated (direct listener)');
+      }
     }
+    
+    isUpdatingAuthUI = false;
   };
   
-  // Try immediately and with a small delay for DOM readiness
+  // Try immediately first
   updateUI();
-  setTimeout(updateUI, 100);
+  
+  // Only add delayed updates if the immediate update didn't work
+  if (isUpdatingAuthUI) {
+    updateAuthUITimeouts.push(setTimeout(() => {
+      if (!isUpdatingAuthUI) updateUI();
+    }, 100));
+  }
 }
 
 // Update plan UI
@@ -764,160 +1035,252 @@ function updatePlanUI(subscription) {
 let userMenuVisible = false;
 
 function showUserMenu() {
+  console.log('🔽 showUserMenu called');
+  console.log('   userMenuVisible:', userMenuVisible);
+  console.log('   currentAuthState:', currentAuthState);
+  
   // If menu already visible, hide it
   if (userMenuVisible) {
+    console.log('   Menu already visible, hiding...');
     hideUserMenu();
+    return;
+  }
+  
+  // Check if user is authenticated
+  if (!currentAuthState.isAuthenticated) {
+    console.log('❌ User not authenticated, redirecting to sign-in');
+    handleGoogleSignIn();
     return;
   }
   
   const user = currentAuthState.user;
   if (!user) {
-    console.log('No user found in currentAuthState');
+    console.error('❌ No user found in currentAuthState');
+    console.log('   currentAuthState:', JSON.stringify(currentAuthState, null, 2));
+    console.log('   Attempting to sign in instead...');
+    handleGoogleSignIn();
     return;
   }
+  
+  console.log('✅ User found:', user.email);
   
   // Remove any existing menu
   hideUserMenu();
   
   const isAdmin = user.role === 'admin' || user.email === 'hritthikin@gmail.com';
+  console.log('   isAdmin:', isAdmin);
   
-  // Create dropdown menu
+  // Create overlay to capture outside clicks
+  const overlay = document.createElement('div');
+  overlay.id = 'user-menu-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    background: transparent;
+  `;
+  overlay.addEventListener('click', hideUserMenu);
+  document.body.appendChild(overlay);
+  
+  // Create dropdown menu - positioned to the right of sidebar
   const menu = document.createElement('div');
   menu.id = 'user-dropdown-menu';
   menu.style.cssText = `
     position: fixed;
-    left: 290px;
+    left: 300px;
     top: 50%;
     transform: translateY(-50%);
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 8px;
-    min-width: 220px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    padding: 0;
+    width: 280px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
     z-index: 10001;
+    overflow: hidden;
+    animation: menuSlideIn 0.2s ease-out;
   `;
   
-  // Create header
+  // Add animation keyframes if not exists
+  if (!document.getElementById('menu-animations')) {
+    const style = document.createElement('style');
+    style.id = 'menu-animations';
+    style.textContent = `
+      @keyframes menuSlideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-50%) translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(-50%) translateX(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  // Create header with user info
   const header = document.createElement('div');
-  header.style.cssText = 'padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 8px;';
+  header.style.cssText = `
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  `;
   header.innerHTML = `
-    <div style="font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px;">${user.name || 'User'}</div>
-    <div style="font-size: 13px; color: rgba(255, 255, 255, 0.6); overflow: hidden; text-overflow: ellipsis;">${user.email}</div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: white; flex-shrink: 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+        ${(user.name || user.email).charAt(0).toUpperCase()}
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 16px; font-weight: 600; color: white; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${user.name || 'User'}</div>
+        <div style="font-size: 13px; color: rgba(255, 255, 255, 0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${user.email}</div>
+        ${isAdmin ? '<div style="margin-top: 6px;"><span style="font-size: 11px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(139, 92, 246, 0.3)); padding: 3px 8px; border-radius: 6px; color: #c4b5fd; font-weight: 500;">Admin</span></div>' : ''}
+      </div>
+    </div>
   `;
   menu.appendChild(header);
   
+  // Menu items container
+  const menuItems = document.createElement('div');
+  menuItems.style.cssText = 'padding: 8px;';
+  
   // Admin Panel button (if admin)
   if (isAdmin) {
-    const adminItem = createMenuItem('Admin Panel', 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z', '#c4b5fd');
+    const adminItem = createMenuItemNew('Admin Panel', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/><path d="M12 11V8M12 15h.01"/></svg>`, '#a78bfa');
     adminItem.addEventListener('click', function(e) {
+      console.log('🔧 Admin Panel button clicked');
       e.preventDefault();
       e.stopPropagation();
-      console.log('Admin Panel clicked');
-      hideUserMenu();
-      openAdminPanel();
+      
+      try {
+        hideUserMenu();
+        console.log('🔧 Menu hidden, opening admin panel...');
+        openAdminPanel();
+      } catch (error) {
+        console.error('❌ Error opening admin panel:', error);
+        showNotification('❌ Error', 'Failed to open admin panel: ' + error.message);
+      }
     });
-    menu.appendChild(adminItem);
-    
-    const divider1 = document.createElement('div');
-    divider1.style.cssText = 'height: 1px; background: rgba(255, 255, 255, 0.1); margin: 8px 0;';
-    menu.appendChild(divider1);
+    menuItems.appendChild(adminItem);
+    console.log('✅ Admin Panel button added to menu');
+  } else {
+    console.log('ℹ️ User is not admin, Admin Panel button not shown');
   }
   
   // Settings button
-  const settingsItem = createMenuItem('Settings', 'M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z');
+  const settingsItem = createMenuItemNew('Settings', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`, 'rgba(255, 255, 255, 0.9)');
   settingsItem.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Settings clicked');
     hideUserMenu();
     showSection('settings');
   });
-  menu.appendChild(settingsItem);
+  menuItems.appendChild(settingsItem);
   
   // Subscription button
-  const subscriptionItem = createMenuItem('Subscription', 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z');
+  const subscriptionItem = createMenuItemNew('Subscription', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`, '#fbbf24');
   subscriptionItem.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Subscription clicked');
     hideUserMenu();
     showSection('plans');
   });
-  menu.appendChild(subscriptionItem);
+  menuItems.appendChild(subscriptionItem);
+  
+  menu.appendChild(menuItems);
   
   // Divider
-  const divider2 = document.createElement('div');
-  divider2.style.cssText = 'height: 1px; background: rgba(255, 255, 255, 0.1); margin: 8px 0;';
-  menu.appendChild(divider2);
+  const divider = document.createElement('div');
+  divider.style.cssText = 'height: 1px; background: rgba(255, 255, 255, 0.1); margin: 0 8px;';
+  menu.appendChild(divider);
   
-  // Sign Out button
-  const signoutItem = createMenuItem('Sign Out', 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z', '#fca5a5');
+  // Sign out section
+  const signoutSection = document.createElement('div');
+  signoutSection.style.cssText = 'padding: 8px;';
+  
+  const signoutItem = createMenuItemNew('Sign Out', `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`, '#f87171');
   signoutItem.addEventListener('click', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Sign Out clicked');
     handleSignOut();
   });
-  menu.appendChild(signoutItem);
+  signoutSection.appendChild(signoutItem);
+  menu.appendChild(signoutSection);
   
   document.body.appendChild(menu);
   userMenuVisible = true;
-  
-  // Close menu when clicking outside (with delay to prevent immediate close)
-  setTimeout(() => {
-    document.addEventListener('click', handleOutsideClick);
-  }, 150);
 }
 
-function createMenuItem(text, iconPath, color = 'rgba(255, 255, 255, 0.9)') {
+function createMenuItemNew(text, iconSvg, color) {
   const item = document.createElement('div');
   item.style.cssText = `
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 12px 14px;
     border-radius: 10px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
     color: ${color};
     transition: all 0.15s ease;
+    margin: 2px 0;
   `;
   
   item.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="currentColor" style="width: 18px; height: 18px; opacity: 0.7;">
-      <path d="${iconPath}"/>
-    </svg>
-    ${text}
+    <span style="display: flex; align-items: center; justify-content: center; opacity: 0.8;">${iconSvg}</span>
+    <span>${text}</span>
   `;
   
   item.addEventListener('mouseenter', function() {
-    this.style.background = color === '#fca5a5' ? 'rgba(239, 68, 68, 0.15)' : 
-                            color === '#c4b5fd' ? 'rgba(168, 85, 247, 0.15)' : 
-                            'rgba(255, 255, 255, 0.1)';
+    this.style.background = 'rgba(255, 255, 255, 0.08)';
+    this.style.transform = 'translateX(4px)';
   });
   
   item.addEventListener('mouseleave', function() {
     this.style.background = 'transparent';
+    this.style.transform = 'translateX(0)';
   });
   
   return item;
 }
 
 function hideUserMenu() {
+  console.log('🔄 Hiding user menu');
+  
+  // Remove menu
   const menu = document.getElementById('user-dropdown-menu');
-  if (menu) {
-    menu.remove();
+  if (menu && menu.parentNode) {
+    menu.parentNode.removeChild(menu);
   }
+  
+  // Remove overlay
+  const overlay = document.getElementById('user-menu-overlay');
+  if (overlay && overlay.parentNode) {
+    overlay.parentNode.removeChild(overlay);
+  }
+  
+  // Also try to remove any stray elements
+  document.querySelectorAll('#user-dropdown-menu, #user-menu-overlay').forEach(el => {
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+  });
+  
   userMenuVisible = false;
   document.removeEventListener('click', handleOutsideClick);
+  
+  console.log('✅ User menu hidden');
 }
 
 function handleOutsideClick(e) {
   const menu = document.getElementById('user-dropdown-menu');
-  const userButton = document.querySelector('.sidebar-item[data-action="user-menu"]');
+  const userButton = document.getElementById('google-signin-btn') ||
+                     document.querySelector('.sidebar-item[data-action="user-menu"]');
   
   if (menu && !menu.contains(e.target) && userButton && !userButton.contains(e.target)) {
     hideUserMenu();
@@ -925,12 +1288,51 @@ function handleOutsideClick(e) {
 }
 
 function handleSignOut() {
-  hideUserMenu();
+  console.log('🚪 handleSignOut called');
   
-  // Show confirmation
-  const confirmed = confirm('Are you sure you want to sign out?');
-  if (confirmed) {
+  try {
+    // First, forcefully remove the menu and overlay
+    const menu = document.getElementById('user-dropdown-menu');
+    const overlay = document.getElementById('user-menu-overlay');
+    
+    if (menu && menu.parentNode) {
+      menu.parentNode.removeChild(menu);
+      console.log('✅ Menu removed');
+    }
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+      console.log('✅ Overlay removed');
+    }
+    userMenuVisible = false;
+    
+    // Reset auth state immediately
+    console.log('🔄 Resetting auth state...');
+    currentAuthState = {
+      isAuthenticated: false,
+      user: null,
+      subscription: null,
+      usage: null,
+      lastUpdate: Date.now()
+    };
+    console.log('✅ Auth state reset');
+    
+    // Reset the button to sign-in state
+    console.log('🔄 Resetting UI to signed-out state...');
+    resetToSignedOutUI();
+    console.log('✅ UI reset complete');
+    
+    // Send sign-out to main process
+    console.log('📤 Sending sign-out to main process...');
     ipcRenderer.send('sign-out');
+    console.log('✅ Sign-out message sent');
+    
+    // Show notification
+    showNotification('👋 Signed Out', 'See you next time!');
+    
+    console.log('✅ Sign out complete');
+  } catch (error) {
+    console.error('❌ Error during sign out:', error);
+    showNotification('❌ Error', 'Sign out failed: ' + error.message);
   }
 }
 
@@ -988,6 +1390,36 @@ ipcRenderer.send('check-subscription-status');
 // Strategy 2: DOM ready check
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🎯 Dashboard DOM loaded');
+  
+  // Add direct click handler for Google Sign In button
+  const googleSignInBtn = document.getElementById('google-signin-btn');
+  if (googleSignInBtn) {
+    console.log('✅ Found Google Sign In button, adding click handler');
+    console.log('   Initial data-action:', googleSignInBtn.getAttribute('data-action'));
+    
+    googleSignInBtn.addEventListener('click', function(e) {
+      console.log('🖱️ Button clicked!');
+      e.preventDefault();
+      e.stopPropagation();
+      const action = this.getAttribute('data-action');
+      console.log('   Action:', action);
+      console.log('   Button element:', this);
+      console.log('   currentAuthState.isAuthenticated:', currentAuthState.isAuthenticated);
+      
+      if (action === 'google-signin') {
+        console.log('   → Calling handleGoogleSignIn()');
+        handleGoogleSignIn();
+      } else if (action === 'user-menu') {
+        console.log('   → Calling showUserMenu()');
+        showUserMenu();
+      } else {
+        console.warn('   ⚠️ Unknown action:', action, '- defaulting to handleGoogleSignIn()');
+        handleGoogleSignIn();
+      }
+    });
+  } else {
+    console.warn('⚠️ Google Sign In button not found on DOM load');
+  }
   
   // Add click event listeners for navigation
   const navButtons = document.querySelectorAll('.sidebar-item');
@@ -1094,8 +1526,19 @@ if (historySearchInput) {
 
 // Admin Panel Functions
 function openAdminPanel() {
-  console.log('🔧 Opening admin panel...');
-  ipcRenderer.send('open-admin-panel');
+  console.log('🔧 openAdminPanel function called');
+  
+  try {
+    console.log('🔧 Sending open-admin-panel IPC message to main process...');
+    ipcRenderer.send('open-admin-panel');
+    console.log('✅ IPC message sent successfully');
+    
+    // Show feedback to user
+    showNotification('🔧 Admin Panel', 'Opening admin panel...');
+  } catch (error) {
+    console.error('❌ Error in openAdminPanel:', error);
+    showNotification('❌ Error', 'Failed to open admin panel: ' + error.message);
+  }
 }
 
 // Check if user is admin and show/hide admin panel link
@@ -1126,3 +1569,741 @@ ipcRenderer.on('admin-status-updated', (_, isAdmin) => {
 
 // Check admin access on page load
 setTimeout(checkAdminAccess, 1000);
+
+
+// ============================================
+// GLOBAL FREE RECORDING TIME (Shared by All Users)
+// ============================================
+
+let globalUsageStats = null;
+let globalUsageRefreshInterval = null;
+
+// Get auth token from main process
+async function getAuthToken() {
+  try {
+    const token = await ipcRenderer.invoke('get-auth-token');
+    return token;
+  } catch (error) {
+    console.log('No auth token available');
+    return null;
+  }
+}
+
+// Helper function to get API URL
+async function getAPIUrl() {
+  // Production backend URL - fallback to localhost for development
+  const PRODUCTION_API_URL = 'https://agile-basin-06335-9109082620ce.herokuapp.com';
+  const LOCAL_API_URL = 'http://localhost:3000';
+  
+  try {
+    // First try to get from config
+    const config = await new Promise(function(resolve, reject) {
+      const timeout = setTimeout(function() { reject(new Error('timeout')); }, 1000);
+      ipcRenderer.once('config', function(_, cfg) { 
+        clearTimeout(timeout);
+        resolve(cfg); 
+      });
+      ipcRenderer.send('get-config');
+    });
+    
+    if (config.apiUrl) {
+      return config.apiUrl;
+    }
+    
+    // Check if we're in development mode (localhost backend running)
+    try {
+      const localCheck = await fetch(LOCAL_API_URL + '/health', { 
+        method: 'GET'
+      });
+      if (localCheck.ok) {
+        console.log('Using local backend');
+        return LOCAL_API_URL;
+      }
+    } catch (e) {
+      // Local not available, use production
+    }
+    
+    return PRODUCTION_API_URL;
+  } catch (error) {
+    // Default to production
+    return PRODUCTION_API_URL;
+  }
+}
+
+// Plan limits in seconds (matching your pricing)
+const PLAN_LIMITS = {
+  'free': 300,        // 5 minutes/day
+  'starter': 900,     // 15 minutes/day
+  'pro': 3600,        // 60 minutes/day
+  'enterprise': -1    // Unlimited
+};
+
+// Fetch user's usage stats from backend
+async function fetchGlobalUsageStats() {
+  try {
+    const apiUrl = await getAPIUrl();
+    const token = await getAuthToken();
+    
+    // If user is NOT logged in, show sign-in prompt
+    if (!token || !currentAuthState.isAuthenticated) {
+      console.log('📊 User not logged in, showing sign-in prompt');
+      updateGlobalUsageDisplay({
+        not_logged_in: true
+      });
+      return null;
+    }
+    
+    // User is logged in, get their personal usage
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    };
+    
+    console.log('📊 Fetching user usage stats...');
+    
+    const response = await fetch(apiUrl + '/api/usage/stats', {
+      method: 'GET',
+      headers: headers
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('📊 User usage response:', data);
+      
+      // Get user's plan from auth state
+      const userPlan = currentAuthState.subscription?.plan || currentAuthState.user?.plan || 'free';
+      const limitSeconds = PLAN_LIMITS[userPlan] || PLAN_LIMITS['free'];
+      const usedSeconds = (data.current_month || 0) * 60; // Convert minutes to seconds
+      
+      globalUsageStats = {
+        free_seconds_used: usedSeconds,
+        free_seconds_limit: limitSeconds,
+        free_seconds_remaining: limitSeconds === -1 ? -1 : Math.max(0, limitSeconds - usedSeconds),
+        percentage_used: limitSeconds === -1 ? 0 : Math.min(100, (usedSeconds / limitSeconds) * 100),
+        reset_period: 'daily',
+        is_limit_reached: limitSeconds !== -1 && usedSeconds >= limitSeconds,
+        plan: userPlan
+      };
+      
+      updateGlobalUsageDisplay(globalUsageStats);
+      return globalUsageStats;
+    } else {
+      // API error, show default for user's plan
+      const userPlan = currentAuthState.subscription?.plan || currentAuthState.user?.plan || 'free';
+      const limitSeconds = PLAN_LIMITS[userPlan] || PLAN_LIMITS['free'];
+      
+      globalUsageStats = {
+        free_seconds_used: 0,
+        free_seconds_limit: limitSeconds,
+        free_seconds_remaining: limitSeconds,
+        percentage_used: 0,
+        reset_period: 'daily',
+        is_limit_reached: false,
+        plan: userPlan
+      };
+      
+      updateGlobalUsageDisplay(globalUsageStats);
+      return globalUsageStats;
+    }
+  } catch (error) {
+    console.error('Error fetching usage stats:', error);
+    
+    // If logged in but error, show defaults for their plan
+    if (currentAuthState.isAuthenticated) {
+      const userPlan = currentAuthState.subscription?.plan || currentAuthState.user?.plan || 'free';
+      const limitSeconds = PLAN_LIMITS[userPlan] || PLAN_LIMITS['free'];
+      
+      const defaultStats = {
+        free_seconds_used: 0,
+        free_seconds_limit: limitSeconds,
+        free_seconds_remaining: limitSeconds,
+        percentage_used: 0,
+        reset_period: 'daily',
+        is_limit_reached: false,
+        plan: userPlan
+      };
+      updateGlobalUsageDisplay(defaultStats);
+      return defaultStats;
+    } else {
+      // Not logged in
+      updateGlobalUsageDisplay({ not_logged_in: true });
+      return null;
+    }
+  }
+}
+
+// Update the global usage display in the UI
+function updateGlobalUsageDisplay(stats) {
+  if (!stats) return;
+  
+  const usageEl = document.getElementById('freeTimeUsage');
+  const progressBarEl = document.getElementById('freeTimeProgressBar');
+  const resetPeriodEl = document.getElementById('freeTimeResetPeriod');
+  const upgradeBtn = document.getElementById('upgradeFromFreeTime');
+  
+  // Handle non-logged-in users
+  if (stats.not_logged_in) {
+    if (usageEl) {
+      usageEl.innerHTML = '<span style="color: rgba(255,255,255,0.6);">Sign in to track usage</span>';
+    }
+    if (progressBarEl) {
+      progressBarEl.style.width = '0%';
+      progressBarEl.style.background = 'rgba(255,255,255,0.2)';
+    }
+    if (resetPeriodEl) {
+      resetPeriodEl.textContent = '';
+    }
+    if (upgradeBtn) {
+      upgradeBtn.style.display = 'flex';
+      upgradeBtn.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)';
+      upgradeBtn.style.borderColor = '#3b82f6';
+      upgradeBtn.innerHTML = '🔐 Sign in to start recording';
+      upgradeBtn.onclick = function() {
+        handleGoogleSignIn();
+      };
+    }
+    return;
+  }
+  
+  if (usageEl) {
+    usageEl.innerHTML = '';
+    
+    // Handle unlimited plans
+    if (stats.free_seconds_limit === -1) {
+      usageEl.textContent = 'Unlimited';
+      usageEl.style.color = '#10b981'; // Green for unlimited
+    } else {
+      usageEl.textContent = stats.free_seconds_used + ' / ' + stats.free_seconds_limit + ' seconds';
+      
+      if (stats.percentage_used >= 90) {
+        usageEl.style.color = '#ef4444';
+      } else if (stats.percentage_used >= 70) {
+        usageEl.style.color = '#f59e0b';
+      } else {
+        usageEl.style.color = 'rgba(255, 255, 255, 0.9)';
+      }
+    }
+  }
+  
+  if (progressBarEl) {
+    if (stats.free_seconds_limit === -1) {
+      progressBarEl.style.width = '100%';
+      progressBarEl.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+    } else {
+      progressBarEl.style.width = Math.min(stats.percentage_used || 0, 100) + '%';
+      
+      if (stats.percentage_used >= 90) {
+        progressBarEl.style.background = 'linear-gradient(90deg, #ef4444, #dc2626)';
+      } else if (stats.percentage_used >= 70) {
+        progressBarEl.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
+      } else {
+        progressBarEl.style.background = 'linear-gradient(90deg, #06b6d4, #3b82f6)';
+      }
+    }
+  }
+  
+  if (resetPeriodEl) {
+    var periodText = stats.reset_period === 'daily' ? 'Resets daily' :
+                     stats.reset_period === 'weekly' ? 'Resets weekly' :
+                     'Resets monthly';
+    resetPeriodEl.textContent = periodText;
+  }
+  
+  if (upgradeBtn) {
+    // Reset onclick to default behavior
+    upgradeBtn.onclick = function() {
+      showSection('plans');
+    };
+    
+    // Hide upgrade button for paid plans
+    if (stats.plan && stats.plan !== 'free') {
+      upgradeBtn.style.display = 'none';
+    } else if (stats.is_limit_reached) {
+      upgradeBtn.style.display = 'flex';
+      upgradeBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+      upgradeBtn.style.borderColor = '#f59e0b';
+      upgradeBtn.innerHTML = '⚠️ Free limit reached - Upgrade now!';
+    } else {
+      upgradeBtn.style.display = 'flex';
+      upgradeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+      upgradeBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+      upgradeBtn.innerHTML = 'Upgrade now - Early bird discount🔥';
+    }
+  }
+}
+
+// Check if free time is available before recording
+async function checkFreeTimeAvailable(secondsNeeded) {
+  secondsNeeded = secondsNeeded || 60;
+  try {
+    const apiUrl = await getAPIUrl();
+    const token = await getAuthToken();
+    
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (token) {
+      headers['Authorization'] = 'Bearer ' + token;
+    }
+    
+    const response = await fetch(apiUrl + '/api/global-usage/check?seconds=' + secondsNeeded, {
+      method: 'GET',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      return { available: true };
+    }
+    
+    const result = await response.json();
+    
+    if (result.stats) {
+      updateGlobalUsageDisplay(result.stats);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error checking free time availability:', error);
+    return { available: true };
+  }
+}
+
+// Initialize global usage tracking
+function initGlobalUsageTracking() {
+  console.log('📊 Initializing global usage tracking...');
+  fetchGlobalUsageStats();
+  
+  if (globalUsageRefreshInterval) {
+    clearInterval(globalUsageRefreshInterval);
+  }
+  globalUsageRefreshInterval = setInterval(fetchGlobalUsageStats, 30000);
+  
+  var upgradeBtn = document.getElementById('upgradeFromFreeTime');
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener('click', function() {
+      showSection('plans');
+    });
+  }
+}
+
+// Listen for recording events to refresh global usage
+ipcRenderer.on('recording-complete', function() {
+  setTimeout(fetchGlobalUsageStats, 1000);
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  initGlobalUsageTracking();
+});
+
+// Also initialize after a short delay (in case DOMContentLoaded already fired)
+setTimeout(initGlobalUsageTracking, 500);
+
+// Payment modal functions
+function showPaymentInstructions(paymentData) {
+  console.log('🔍 showPaymentInstructions called with:', paymentData);
+  console.log('🔍 QR code check:', {
+    'paymentInstructions.qr_code': paymentData.paymentInstructions?.qr_code,
+    'qr_code_url': paymentData.qr_code_url,
+    'condition': !!(paymentData.paymentInstructions?.qr_code || paymentData.qr_code_url)
+  });
+  
+  // Create payment instructions modal
+  const modal = document.createElement('div');
+  modal.className = 'payment-modal';
+  modal.innerHTML = `
+    <div class="payment-modal-content">
+      <div class="payment-header">
+        <h2>💰 Complete Your Payment</h2>
+        <span class="close-modal">&times;</span>
+      </div>
+      
+      <div class="payment-details">
+        <div class="plan-info">
+          <h3>${paymentData.plan?.name || 'Plan'} Subscription</h3>
+          <p class="plan-price">$${paymentData.plan?.price || 'N/A'} USD</p>
+        </div>
+        
+        <div class="payment-instructions">
+          <h4>Send Payment To:</h4>
+          <div class="payment-address">
+            <label>Payment Address:</label>
+            <div class="address-container">
+              <input type="text" value="${paymentData.paymentAddress}" readonly class="payment-address-input">
+              <button class="copy-address-btn" data-address="${paymentData.paymentAddress}">Copy</button>
+            </div>
+          </div>
+          
+          <div class="payment-amount">
+            <label>Exact Amount:</label>
+            <div class="amount-container">
+              <input type="text" value="${paymentData.paymentAmount} ${paymentData.paymentCoin?.toUpperCase()}" readonly class="payment-amount-input">
+              <button class="copy-amount-btn" data-amount="${paymentData.paymentAmount}">Copy Amount</button>
+            </div>
+          </div>
+          
+          <div class="payment-network">
+            <label>Network:</label>
+            <span class="network-info">${paymentData.paymentInstructions?.network || 'BEP20 (Binance Smart Chain)'}</span>
+          </div>
+          
+          ${(paymentData.paymentInstructions?.qr_base64 || paymentData.paymentInstructions?.qr_code || paymentData.qr_code_url) ? `
+          <div class="payment-qr">
+            <label>QR Code:</label>
+            <div class="qr-container">
+              <img src="${paymentData.paymentInstructions?.qr_base64 || paymentData.paymentInstructions?.qr_code || paymentData.qr_code_url}" alt="Payment QR Code" class="qr-code-image" 
+                   onerror="console.error('QR code failed to load:', this.src); this.parentElement.innerHTML='<p style=\\'color: #999; font-size: 14px;\\'>QR code failed to load</p>';">
+            </div>
+          </div>
+          ` : `
+          <div class="payment-qr">
+            <label>QR Code:</label>
+            <div class="qr-container">
+              <p style="color: #999; font-size: 14px;">QR code not available</p>
+              <p style="color: #666; font-size: 12px;">Debug: qr_base64=${paymentData.paymentInstructions?.qr_base64 ? 'present' : 'missing'}, qr_code=${paymentData.paymentInstructions?.qr_code ? 'present' : 'missing'}, qr_code_url=${paymentData.qr_code_url ? 'present' : 'missing'}</p>
+            </div>
+          </div>
+          `}
+        </div>
+        
+        <div class="payment-warnings">
+          <div class="warning-item">
+            ⚠️ Send the EXACT amount shown above
+          </div>
+          <div class="warning-item">
+            ⚠️ Use ${paymentData.paymentInstructions?.network || 'BEP20'} network only
+          </div>
+          <div class="warning-item">
+            ⚠️ Payment will be confirmed automatically
+          </div>
+        </div>
+        
+        <div class="payment-status">
+          <p>Order ID: <code>${paymentData.orderId}</code></p>
+          <p class="status-text">Waiting for payment...</p>
+        </div>
+        
+        <div class="payment-actions">
+          <button class="btn-primary check-status-btn" data-order-id="${paymentData.orderId}">Check Payment Status</button>
+          <button class="btn-secondary close-modal-btn">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add modal styles if not already added
+  if (!document.getElementById('payment-modal-styles')) {
+    const style = document.createElement('style');
+    style.id = 'payment-modal-styles';
+    style.textContent = `
+      .payment-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+      }
+      
+      .payment-modal-content {
+        background: #1a1a1a;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        border: 1px solid #333;
+      }
+      
+      .payment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #333;
+        padding-bottom: 16px;
+      }
+      
+      .payment-header h2 {
+        margin: 0;
+        color: #fff;
+      }
+      
+      .close-modal {
+        font-size: 24px;
+        cursor: pointer;
+        color: #999;
+      }
+      
+      .close-modal:hover {
+        color: #fff;
+      }
+      
+      .plan-info {
+        text-align: center;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: #2a2a2a;
+        border-radius: 8px;
+      }
+      
+      .plan-info h3 {
+        margin: 0 0 8px 0;
+        color: #60a5fa;
+      }
+      
+      .plan-price {
+        font-size: 24px;
+        font-weight: bold;
+        color: #10b981;
+        margin: 0;
+      }
+      
+      .payment-instructions {
+        margin-bottom: 20px;
+      }
+      
+      .payment-instructions h4 {
+        color: #fff;
+        margin-bottom: 16px;
+      }
+      
+      .payment-address, .payment-amount, .payment-network {
+        margin-bottom: 16px;
+      }
+      
+      .payment-address label, .payment-amount label, .payment-network label {
+        display: block;
+        color: #ccc;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+      
+      .address-container, .amount-container {
+        display: flex;
+        gap: 8px;
+      }
+      
+      .payment-address-input, .payment-amount-input {
+        flex: 1;
+        padding: 8px 12px;
+        background: #333;
+        border: 1px solid #555;
+        border-radius: 4px;
+        color: #fff;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      
+      .copy-address-btn, .copy-amount-btn {
+        padding: 8px 12px;
+        background: #60a5fa;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      
+      .copy-address-btn:hover, .copy-amount-btn:hover {
+        background: #3b82f6;
+      }
+      
+      .network-info {
+        color: #10b981;
+        font-weight: bold;
+      }
+      
+      .payment-qr {
+        margin-bottom: 16px;
+        text-align: center;
+      }
+      
+      .qr-container {
+        margin-top: 8px;
+      }
+      
+      .qr-code-image {
+        max-width: 200px;
+        height: auto;
+        border: 2px solid #333;
+        border-radius: 8px;
+        background: white;
+        padding: 8px;
+      }
+      
+      .payment-warnings {
+        background: #fef3cd;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      
+      .warning-item {
+        color: #92400e;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+      
+      .warning-item:last-child {
+        margin-bottom: 0;
+      }
+      
+      .payment-status {
+        background: #2a2a2a;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      
+      .payment-status p {
+        margin: 0 0 8px 0;
+        color: #ccc;
+      }
+      
+      .payment-status code {
+        background: #333;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        color: #60a5fa;
+      }
+      
+      .status-text {
+        color: #fbbf24 !important;
+        font-weight: bold;
+      }
+      
+      .payment-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+      
+      .btn-primary, .btn-secondary {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      
+      .btn-primary {
+        background: #10b981;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        background: #059669;
+      }
+      
+      .btn-secondary {
+        background: #6b7280;
+        color: white;
+      }
+      
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+    `;
+    
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(modal);
+  
+  // Add event listeners for buttons
+  const copyAddressBtn = modal.querySelector('.copy-address-btn');
+  const copyAmountBtn = modal.querySelector('.copy-amount-btn');
+  const checkStatusBtn = modal.querySelector('.check-status-btn');
+  const closeBtn = modal.querySelector('.close-modal-btn');
+  
+  copyAddressBtn.addEventListener('click', () => {
+    const address = copyAddressBtn.getAttribute('data-address');
+    copyPaymentAddress(address);
+  });
+  
+  copyAmountBtn.addEventListener('click', () => {
+    const amount = copyAmountBtn.getAttribute('data-amount');
+    copyPaymentAmount(amount);
+  });
+  
+  checkStatusBtn.addEventListener('click', () => {
+    const orderId = checkStatusBtn.getAttribute('data-order-id');
+    checkPaymentStatus(orderId);
+  });
+  
+  closeBtn.addEventListener('click', closePaymentModal);
+  
+  // Close modal when clicking outside
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closePaymentModal();
+    }
+  });
+  
+  // Close modal when clicking X
+  modal.querySelector('.close-modal').addEventListener('click', closePaymentModal);
+}
+
+function copyPaymentAddress(address) {
+  navigator.clipboard.writeText(address).then(() => {
+    alert('✅ Payment address copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+    alert('❌ Failed to copy to clipboard');
+  });
+}
+
+function copyPaymentAmount(amount) {
+  navigator.clipboard.writeText(amount).then(() => {
+    alert('✅ Payment amount copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+    alert('❌ Failed to copy to clipboard');
+  });
+}
+
+function closePaymentModal() {
+  const modal = document.querySelector('.payment-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+function checkPaymentStatus(orderId) {
+  console.log('🔍 Checking payment status for order:', orderId);
+  ipcRenderer.send('check-crypto-payment', orderId);
+}
+
+// Listen for payment status updates
+ipcRenderer.on('crypto-payment-status', (_, statusData) => {
+  console.log('📊 Payment status update:', statusData);
+  
+  const statusText = document.querySelector('.status-text');
+  if (statusText) {
+    if (statusData.status === 'completed') {
+      statusText.textContent = '✅ Payment confirmed! Subscription activated.';
+      statusText.style.color = '#10b981';
+      
+      // Close modal after 3 seconds
+      setTimeout(() => {
+        closePaymentModal();
+        alert('🎉 Subscription activated successfully!');
+      }, 3000);
+    } else if (statusData.status === 'confirming') {
+      statusText.textContent = '⏳ Payment received, confirming...';
+      statusText.style.color = '#fbbf24';
+    } else {
+      statusText.textContent = 'Waiting for payment...';
+      statusText.style.color = '#fbbf24';
+    }
+  }
+});

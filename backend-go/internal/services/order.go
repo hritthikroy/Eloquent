@@ -28,9 +28,9 @@ func NewOrderService(supabase *SupabaseService) *OrderService {
 // CreateOrder creates a new crypto order
 func (s *OrderService) CreateOrder(order *models.CryptoOrder) (*models.CryptoOrder, error) {
 	order.ID = uuid.New()
-	order.CreatedAt = time.Now()
-	order.UpdatedAt = time.Now()
-	order.ExpiresAt = time.Now().Add(24 * time.Hour)
+	order.CreatedAt = models.CustomTime{Time: time.Now()}
+	order.UpdatedAt = models.CustomTime{Time: time.Now()}
+	order.ExpiresAt = models.CustomTime{Time: time.Now().Add(24 * time.Hour)}
 	
 	if order.Status == "" {
 		order.Status = models.OrderStatusPending
@@ -50,12 +50,13 @@ func (s *OrderService) CreateOrder(order *models.CryptoOrder) (*models.CryptoOrd
 		"payment_url":     order.PaymentURL,
 		"qr_code_url":     order.QRCodeURL,
 		"status":          order.Status,
-		"created_at":      order.CreatedAt.Format(time.RFC3339),
-		"updated_at":      order.UpdatedAt.Format(time.RFC3339),
-		"expires_at":      order.ExpiresAt.Format(time.RFC3339),
+		"created_at":      order.CreatedAt.Time.Format(time.RFC3339),
+		"updated_at":      order.UpdatedAt.Time.Format(time.RFC3339),
+		"expires_at":      order.ExpiresAt.Time.Format(time.RFC3339),
 	}
 
-	if order.UserID != nil {
+	// Only set user_id if it's not the development user
+	if order.UserID != nil && order.UserID.String() != "00000000-0000-0000-0000-000000000001" {
 		orderData["user_id"] = order.UserID.String()
 	}
 
@@ -85,18 +86,21 @@ func (s *OrderService) CreateOrder(order *models.CryptoOrder) (*models.CryptoOrd
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		fmt.Printf("Warning: Database error saving order: %s\n", string(body))
+		fmt.Printf("Warning: Database error saving order (status %d): %s\n", resp.StatusCode, string(body))
 		return order, nil
 	}
 
+	fmt.Printf("Order successfully saved to database: %s\n", order.OrderID)
 	return order, nil
 }
 
 // GetOrderByID retrieves an order by its order_id
 func (s *OrderService) GetOrderByID(orderID string) (*models.CryptoOrder, error) {
 	url := fmt.Sprintf("%s/rest/v1/crypto_orders?order_id=eq.%s", s.supabase.URL, orderID)
+
+	fmt.Printf("Querying order with URL: %s\n", url)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -118,6 +122,8 @@ func (s *OrderService) GetOrderByID(orderID string) (*models.CryptoOrder, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+
+	fmt.Printf("Order query response (status %d): %s\n", resp.StatusCode, string(body))
 
 	var orders []models.CryptoOrder
 	if err := json.Unmarshal(body, &orders); err != nil {
@@ -182,6 +188,8 @@ func (s *OrderService) UpdateOrderStatus(orderID string, status string, txID str
 func (s *OrderService) GetUserOrders(userEmail string) ([]*models.CryptoOrder, error) {
 	url := fmt.Sprintf("%s/rest/v1/crypto_orders?user_email=eq.%s&order=created_at.desc", s.supabase.URL, userEmail)
 
+	fmt.Printf("Querying user orders with URL: %s\n", url)
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -202,6 +210,8 @@ func (s *OrderService) GetUserOrders(userEmail string) ([]*models.CryptoOrder, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
+
+	fmt.Printf("User orders query response (status %d): %s\n", resp.StatusCode, string(body))
 
 	var orders []*models.CryptoOrder
 	if err := json.Unmarshal(body, &orders); err != nil {

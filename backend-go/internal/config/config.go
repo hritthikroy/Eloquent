@@ -14,22 +14,10 @@ type Config struct {
 	SupabaseKey      string
 	SupabaseAnonKey  string
 	GroqAPIKey       string
-	StripeSecretKey  string
-	StripeWebhookKey string
 	
-	// PayPal
-	PayPalClientID     string
-	PayPalClientSecret string
-	PayPalSandbox      bool
-	
-	// Razorpay
-	RazorpayKeyID     string
-	RazorpayKeySecret string
-	
-	// Square
-	SquareAccessToken string
-	SquareEnvironment string
-	SquareLocationID  string
+	// BlockBee (Crypto payments)
+	BlockBeeAPIKey     string
+	BlockBeeCallbackURL string
 	
 	// PERFORMANCE BOOST: Performance-related configuration
 	Performance PerformanceConfig
@@ -65,22 +53,10 @@ func New() *Config {
 		SupabaseKey:      getEnv("SUPABASE_SERVICE_KEY", ""),
 		SupabaseAnonKey:  getEnv("SUPABASE_ANON_KEY", ""),
 		GroqAPIKey:       getEnv("GROQ_API_KEY", ""),
-		StripeSecretKey:  getEnv("STRIPE_SECRET_KEY", ""),
-		StripeWebhookKey: getEnv("STRIPE_WEBHOOK_SECRET", ""),
 		
-		// PayPal
-		PayPalClientID:     getEnv("PAYPAL_CLIENT_ID", ""),
-		PayPalClientSecret: getEnv("PAYPAL_CLIENT_SECRET", ""),
-		PayPalSandbox:      getEnv("PAYPAL_SANDBOX", "true") == "true",
-		
-		// Razorpay
-		RazorpayKeyID:     getEnv("RAZORPAY_KEY_ID", ""),
-		RazorpayKeySecret: getEnv("RAZORPAY_KEY_SECRET", ""),
-		
-		// Square
-		SquareAccessToken: getEnv("SQUARE_ACCESS_TOKEN", ""),
-		SquareEnvironment: getEnv("SQUARE_ENVIRONMENT", "sandbox"),
-		SquareLocationID:  getEnv("SQUARE_LOCATION_ID", ""),
+		// BlockBee
+		BlockBeeAPIKey:     getEnv("BLOCKBEE_API_KEY", ""),
+		BlockBeeCallbackURL: getEnv("BLOCKBEE_CALLBACK_URL", ""),
 		
 		// PERFORMANCE BOOST: Optimized performance settings
 		Performance: PerformanceConfig{

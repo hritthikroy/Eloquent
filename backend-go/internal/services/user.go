@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"eloquent-backend/internal/models"
@@ -42,8 +43,11 @@ func parseSupabaseTime(timeStr string) (time.Time, error) {
 }
 
 type UserService struct {
-	supabase  *SupabaseService
-	mockUsers map[string]*models.User // Cache for mock users
+	supabase     *SupabaseService
+	mockUsers    map[string]*models.User // Cache for mock users
+	usersCache   []*models.User          // Cache for all users
+	cacheExpiry  time.Time               // Cache expiration time
+	cacheMutex   sync.RWMutex            // Mutex for thread-safe cache access
 }
 
 func NewUserService(supabase *SupabaseService) *UserService {
@@ -567,6 +571,27 @@ func (s *UserService) GetUsageHistory(userID string, limit int) ([]*models.Usage
 // Admin-specific methods
 
 func (s *UserService) GetAllUsers() ([]*models.User, error) {
+	// Check cache first
+	s.cacheMutex.RLock()
+	if s.usersCache != nil && time.Now().Before(s.cacheExpiry) {
+		cached := make([]*models.User, len(s.usersCache))
+		copy(cached, s.usersCache)
+		s.cacheMutex.RUnlock()
+		return cached, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	// Cache miss or expired, fetch from database
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+
+	// Double-check after acquiring write lock
+	if s.usersCache != nil && time.Now().Before(s.cacheExpiry) {
+		cached := make([]*models.User, len(s.usersCache))
+		copy(cached, s.usersCache)
+		return cached, nil
+	}
+
 	// Query all users from Supabase database
 	url := fmt.Sprintf("%s/rest/v1/users?select=*", s.supabase.URL)
 	
@@ -579,7 +604,7 @@ func (s *UserService) GetAllUsers() ([]*models.User, error) {
 	req.Header.Set("apikey", s.supabase.ServiceKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{Timeout: 10 * time.Second} // Reduced timeout
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -673,7 +698,20 @@ func (s *UserService) GetAllUsers() ([]*models.User, error) {
 		}
 	}
 	
+	// Store in cache for 30 seconds
+	s.usersCache = make([]*models.User, len(users))
+	copy(s.usersCache, users)
+	s.cacheExpiry = time.Now().Add(30 * time.Second)
+	
 	return users, nil
+}
+
+// InvalidateUsersCache clears the users cache
+func (s *UserService) InvalidateUsersCache() {
+	s.cacheMutex.Lock()
+	defer s.cacheMutex.Unlock()
+	s.usersCache = nil
+	s.cacheExpiry = time.Time{}
 }
 
 // convertRawUserToModel converts a raw JSON user object to models.User

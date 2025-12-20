@@ -142,6 +142,17 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* Exit animation */
+    .overlay.fade-out {
+      animation: fadeOut 0.2s ease-out forwards;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      50% { opacity: 0.7; transform: translateY(-4px) scale(0.98); }
+      to { opacity: 0; transform: translateY(-8px) scale(0.95); }
+    }
+
     /* Quick popup mode - faster, more dramatic animations */
     .overlay.quick-popup {
       animation: quickPopIn 0.1s ease-out;

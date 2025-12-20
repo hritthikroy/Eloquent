@@ -87,14 +87,14 @@ EloquentElectron/
 ### Keyboard Shortcuts
 - **Alt + Shift + Space** - Start AI Rewrite (recommended)
 - **Alt + Space** - Start Standard transcription
-- **Escape** - Stop recording
+- **Enter** - Stop recording
 - **Cmd + Shift + D** - Open dashboard
 - **Cmd + Shift + A** - Open admin panel (admin users only)
 
 ### First Recording
 1. Press **Alt + Shift + Space**
 2. Speak your text
-3. Press **Escape** to stop
+3. Press **Enter** to stop
 4. Text automatically pastes at cursor!
 
 ## 🔧 Development
