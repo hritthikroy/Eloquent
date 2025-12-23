@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Protocol Registration</title>
+</head>
+<body>
+    <h1>Test Eloquent Protocol</h1>
+    <p>Click the button below to test if the eloquent:// protocol is working:</p>
+    
+    <button onclick="testProtocol()">Test eloquent://auth/success</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testProtocol() {
+            const testUrl = 'eloquent://auth/success?access_token=test_token_123&refresh_token=test_refresh_456';
+            console.log('Testing protocol:', testUrl);
+            
+            document.getElementById('result').innerHTML = '<p>Attempting to open: ' + testUrl + '</p>';
+            
+            try {
+                window.location.href = testUrl;
+                document.getElementById('result').innerHTML += '<p>✅ Protocol call attempted - check Electron app console</p>';
+            } catch (error) {
+                document.getElementById('result').innerHTML += '<p>❌ Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

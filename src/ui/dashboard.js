@@ -1,4 +1,26 @@
-const { ipcRenderer } = require('electron');
+// Import ipcRenderer with error handling
+let ipcRenderer;
+try {
+  const electron = require('electron');
+  ipcRenderer = electron.ipcRenderer;
+  console.log('✅ ipcRenderer imported successfully');
+} catch (error) {
+  console.error('❌ Failed to import ipcRenderer:', error);
+  // Try alternative import methods
+  try {
+    ipcRenderer = window.require('electron').ipcRenderer;
+    console.log('✅ ipcRenderer imported via window.require');
+  } catch (error2) {
+    console.error('❌ Failed to import ipcRenderer via window.require:', error2);
+    // Last resort - check if it's available globally
+    if (window.electronAPI && window.electronAPI.ipcRenderer) {
+      ipcRenderer = window.electronAPI.ipcRenderer;
+      console.log('✅ ipcRenderer found via window.electronAPI');
+    } else {
+      console.error('❌ ipcRenderer not available through any method');
+    }
+  }
+}
 
 function showSection(name) {
   try {
@@ -555,10 +577,17 @@ const AUTH_UPDATE_DEBOUNCE = 300; // ms
 // Google Sign-in handler
 function handleGoogleSignIn() {
   console.log('🔐 User clicked Google Sign In button');
+  console.log('🔐 handleGoogleSignIn() called - starting debug trace');
   
   const signInBtn = document.getElementById('google-signin-btn') ||
                     document.querySelector('.sidebar-item[data-action="google-signin"]') ||
                     document.querySelector('.google-signin-btn');
+  
+  console.log('🔐 Sign-in button found:', !!signInBtn);
+  if (signInBtn) {
+    console.log('🔐 Button classes:', signInBtn.className);
+    console.log('🔐 Button data-action:', signInBtn.getAttribute('data-action'));
+  }
   
   if (!signInBtn) {
     console.error('Google Sign In button not found');
@@ -573,6 +602,8 @@ function handleGoogleSignIn() {
   }
   
   console.log('🔐 Starting sign-in process...');
+  console.log('🔐 About to send IPC message...');
+  
   signInBtn.classList.add('signing-in');
   signInBtn.innerHTML = `
     <div class="google-icon">
@@ -593,12 +624,21 @@ function handleGoogleSignIn() {
   
   try {
     console.log('📤 Sending initiate-google-signin IPC message');
+    console.log('📤 ipcRenderer available:', !!ipcRenderer);
+    console.log('📤 ipcRenderer type:', typeof ipcRenderer);
+    
+    if (!ipcRenderer || typeof ipcRenderer.send !== 'function') {
+      throw new Error('ipcRenderer not available or invalid');
+    }
+    
     ipcRenderer.send('initiate-google-signin');
+    console.log('📤 IPC message sent successfully');
     
     // Store timeout ID to clear it on successful sign-in
     signInBtn.dataset.resetTimeout = resetTimeout;
   } catch (error) {
     console.error('Error initiating Google sign-in:', error);
+    console.error('Error stack:', error.stack);
     clearTimeout(resetTimeout);
     signInBtn.classList.remove('signing-in');
     resetSignInButton(signInBtn);
@@ -869,6 +909,15 @@ function updateAuthState(authData) {
   updateAuthUI(authData.user);
   if (authData.subscription) {
     updatePlanUI(authData.subscription);
+  }
+  
+  // Initialize usage tracking only after successful authentication
+  // Add small delay to ensure token is available in main process
+  if (authData.isAuthenticated && authData.user) {
+    console.log('📊 User authenticated, initializing usage tracking...');
+    setTimeout(function() {
+      initGlobalUsageTracking();
+    }, 500);
   }
   
   // Check admin access when auth state changes
@@ -1289,6 +1338,10 @@ function handleOutsideClick(e) {
 
 function handleSignOut() {
   console.log('🚪 handleSignOut called');
+  console.log('🔍 Stack trace:', new Error().stack);
+  
+  // TEMPORARY: Add a confirmation to prevent accidental sign-outs
+  console.log('⚠️ Sign-out requested - checking if this is intentional...');
   
   try {
     // First, forcefully remove the menu and overlay
@@ -1384,8 +1437,11 @@ function showNotification(title, message) {
 }
 
 // Check authentication status on page load - single strategy for reliability
-ipcRenderer.send('check-auth-status');
-ipcRenderer.send('check-subscription-status');
+// Add a small delay to allow sign-in process to complete
+setTimeout(() => {
+  ipcRenderer.send('check-auth-status');
+  ipcRenderer.send('check-subscription-status');
+}, 100);
 
 // Strategy 2: DOM ready check
 document.addEventListener('DOMContentLoaded', () => {
@@ -1399,6 +1455,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     googleSignInBtn.addEventListener('click', function(e) {
       console.log('🖱️ Button clicked!');
+      console.log('   Event:', e);
+      console.log('   Target:', e.target);
+      console.log('   CurrentTarget:', e.currentTarget);
       e.preventDefault();
       e.stopPropagation();
       const action = this.getAttribute('data-action');
@@ -1406,15 +1465,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('   Button element:', this);
       console.log('   currentAuthState.isAuthenticated:', currentAuthState.isAuthenticated);
       
-      if (action === 'google-signin') {
-        console.log('   → Calling handleGoogleSignIn()');
+      // Force call handleGoogleSignIn regardless of action
+      console.log('   → Forcing call to handleGoogleSignIn()');
+      try {
         handleGoogleSignIn();
-      } else if (action === 'user-menu') {
-        console.log('   → Calling showUserMenu()');
-        showUserMenu();
-      } else {
-        console.warn('   ⚠️ Unknown action:', action, '- defaulting to handleGoogleSignIn()');
-        handleGoogleSignIn();
+      } catch (error) {
+        console.error('   ❌ Error calling handleGoogleSignIn:', error);
       }
     });
   } else {
@@ -1589,11 +1645,22 @@ async function getAuthToken() {
   }
 }
 
-// Helper function to get API URL
+// Helper function to get API URL with smart detection to avoid errors
+let cachedAPIUrl = null;
+let apiUrlCheckTime = 0;
+let localhostFailed = false; // Track if localhost has failed before
+const API_URL_CACHE_DURATION = 30000; // Cache for 30 seconds
+
 async function getAPIUrl() {
   // Production backend URL - fallback to localhost for development
   const PRODUCTION_API_URL = 'https://agile-basin-06335-9109082620ce.herokuapp.com';
   const LOCAL_API_URL = 'http://localhost:3000';
+  
+  // Return cached result if still valid
+  const now = Date.now();
+  if (cachedAPIUrl && (now - apiUrlCheckTime) < API_URL_CACHE_DURATION) {
+    return cachedAPIUrl;
+  }
   
   try {
     // First try to get from config
@@ -1607,25 +1674,53 @@ async function getAPIUrl() {
     });
     
     if (config.apiUrl) {
+      cachedAPIUrl = config.apiUrl;
+      apiUrlCheckTime = now;
       return config.apiUrl;
     }
     
+    // Skip localhost check if it failed before or if we're clearly in production
+    if (localhostFailed || window.location.protocol === 'file:') {
+      console.log('✅ Using production backend (localhost previously failed)');
+      cachedAPIUrl = PRODUCTION_API_URL;
+      apiUrlCheckTime = now;
+      return PRODUCTION_API_URL;
+    }
+    
     // Check if we're in development mode (localhost backend running)
+    // Only check localhost once, then remember the result
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500); // Faster timeout
+      
       const localCheck = await fetch(LOCAL_API_URL + '/health', { 
-        method: 'GET'
+        method: 'GET',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
       if (localCheck.ok) {
-        console.log('Using local backend');
+        console.log('✅ Using local backend');
+        cachedAPIUrl = LOCAL_API_URL;
+        apiUrlCheckTime = now;
         return LOCAL_API_URL;
       }
     } catch (e) {
-      // Local not available, use production
+      // Mark localhost as failed to avoid future attempts
+      localhostFailed = true;
+      console.log('📡 Local backend not available, using production');
     }
     
+    console.log('✅ Using production backend');
+    cachedAPIUrl = PRODUCTION_API_URL;
+    apiUrlCheckTime = now;
     return PRODUCTION_API_URL;
   } catch (error) {
     // Default to production
+    console.log('⚠️ Config check failed, defaulting to production backend');
+    cachedAPIUrl = PRODUCTION_API_URL;
+    apiUrlCheckTime = now;
     return PRODUCTION_API_URL;
   }
 }
@@ -1673,7 +1768,16 @@ async function fetchGlobalUsageStats() {
       // Get user's plan from auth state
       const userPlan = currentAuthState.subscription?.plan || currentAuthState.user?.plan || 'free';
       const limitSeconds = PLAN_LIMITS[userPlan] || PLAN_LIMITS['free'];
-      const usedSeconds = (data.current_month || 0) * 60; // Convert minutes to seconds
+      
+      // Use backend data if available, otherwise use local tracking
+      let usedSeconds = (data.current_month || 0) * 60; // Convert minutes to seconds
+      
+      // If backend shows 0, use local tracking instead
+      const localUsage = getLocalUsage();
+      if (usedSeconds === 0 && localUsage.seconds > 0) {
+        console.log('📊 Backend shows 0, using local usage:', localUsage.seconds);
+        usedSeconds = localUsage.seconds;
+      }
       
       globalUsageStats = {
         free_seconds_used: usedSeconds,
@@ -1887,14 +1991,84 @@ function initGlobalUsageTracking() {
   }
 }
 
+// Local usage tracking (persists in localStorage)
+function getLocalUsage() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const stored = localStorage.getItem('eloquent_local_usage');
+    if (stored) {
+      const data = JSON.parse(stored);
+      // Reset if it's a new day
+      if (data.date !== today) {
+        return { date: today, seconds: 0 };
+      }
+      return data;
+    }
+    return { date: today, seconds: 0 };
+  } catch (e) {
+    return { date: new Date().toISOString().split('T')[0], seconds: 0 };
+  }
+}
+
+function saveLocalUsage(data) {
+  try {
+    localStorage.setItem('eloquent_local_usage', JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save local usage:', e);
+  }
+}
+
+function addLocalUsage(seconds) {
+  const usage = getLocalUsage();
+  usage.seconds += seconds;
+  saveLocalUsage(usage);
+  return usage.seconds;
+}
+
 // Listen for recording events to refresh global usage
-ipcRenderer.on('recording-complete', function() {
+ipcRenderer.on('recording-complete', function(event, data) {
+  console.log('📊 Recording complete event received:', data);
+  
+  // Add to local usage tracking
+  const duration = data?.duration || 0;
+  if (duration > 0) {
+    const totalSeconds = addLocalUsage(duration);
+    console.log(`📊 Local usage updated: +${duration}s, total: ${totalSeconds}s`);
+    
+    // Update the UI immediately with local data
+    if (globalUsageStats && currentAuthState.isAuthenticated) {
+      const userPlan = currentAuthState.subscription?.plan || currentAuthState.user?.plan || 'free';
+      const limitSeconds = PLAN_LIMITS[userPlan] || PLAN_LIMITS['free'];
+      
+      globalUsageStats = {
+        free_seconds_used: totalSeconds,
+        free_seconds_limit: limitSeconds,
+        free_seconds_remaining: limitSeconds === -1 ? -1 : Math.max(0, limitSeconds - totalSeconds),
+        percentage_used: limitSeconds === -1 ? 0 : Math.min(100, (totalSeconds / limitSeconds) * 100),
+        reset_period: 'daily',
+        is_limit_reached: limitSeconds !== -1 && totalSeconds >= limitSeconds,
+        plan: userPlan
+      };
+      
+      updateGlobalUsageDisplay(globalUsageStats);
+    }
+  }
+  
+  // Also try to fetch from backend (may have updated data)
   setTimeout(fetchGlobalUsageStats, 1000);
 });
 
-// Initialize on page load
+// Listen for usage reported from main process
+ipcRenderer.on('usage-reported', function(event, data) {
+  console.log('📊 Usage reported from main process:', data);
+  // Refresh usage stats immediately
+  fetchGlobalUsageStats();
+});
+
+// Initialize on page load - but wait for authentication
 document.addEventListener('DOMContentLoaded', function() {
-  initGlobalUsageTracking();
+  // Don't initialize usage tracking immediately - wait for authentication
+  console.log('📊 DOM loaded, waiting for authentication before initializing usage tracking...');
 });
 
 // Also initialize after a short delay (in case DOMContentLoaded already fired)

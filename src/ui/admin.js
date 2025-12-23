@@ -541,7 +541,7 @@ function renderApiRequests(requests) {
   }
   
   if (requests.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.5);">No API requests yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.5);">No API requests yet. Make a recording to see API activity here.</td></tr>';
     return;
   }
 
@@ -551,11 +551,14 @@ function renderApiRequests(requests) {
                        req.type === 'llama-rewrite' ? '✨ AI Rewrite' : 
                        req.type === 'llama-grammar' ? '📝 Grammar' : req.type;
     
+    // Show error message as tooltip if available
+    const errorTooltip = req.errorMessage ? ` title="${req.errorMessage}"` : '';
+    
     return `
-      <tr>
+      <tr${errorTooltip}>
         <td style="color: rgba(255, 255, 255, 0.9);">${formatTimestamp(req.timestamp)}</td>
         <td><span style="font-weight: 600; color: white;">${typeDisplay}</span></td>
-        <td><span class="status-badge status-${statusClass}">${req.status}</span></td>
+        <td><span class="status-badge status-${statusClass}">${req.status}${req.errorMessage ? ' ⚠️' : ''}</span></td>
         <td style="color: rgba(255, 255, 255, 0.7);">${req.duration ? req.duration + 'ms' : 'N/A'}</td>
         <td style="color: rgba(255, 255, 255, 0.7);">${req.tokens || 'N/A'}</td>
         <td style="color: rgba(255, 255, 255, 0.6); font-size: 13px;">${req.userEmail || 'Anonymous'}</td>

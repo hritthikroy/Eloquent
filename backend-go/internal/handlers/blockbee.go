@@ -72,10 +72,37 @@ func (h *BlockBeeHandler) CreatePayment(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUserByID(supabaseUser.(*services.SupabaseUser).ID)
+	supUser := supabaseUser.(*services.SupabaseUser)
+	
+	// Try to get user from database, create if not exists
+	user, err := h.userService.GetUserByID(supUser.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
-		return
+		log.Printf("User not found in database, creating: %s (%s)", supUser.Email, supUser.ID)
+		// User doesn't exist in database yet, create them
+		userData := map[string]interface{}{
+			"email": supUser.Email,
+			"id":    supUser.ID,
+		}
+		if supUser.UserMetadata != nil {
+			if name, ok := supUser.UserMetadata["name"].(string); ok {
+				userData["name"] = name
+			}
+			if fullName, ok := supUser.UserMetadata["full_name"].(string); ok {
+				userData["name"] = fullName
+			}
+			if picture, ok := supUser.UserMetadata["picture"].(string); ok {
+				userData["picture"] = picture
+			}
+			if avatarURL, ok := supUser.UserMetadata["avatar_url"].(string); ok {
+				userData["picture"] = avatarURL
+			}
+		}
+		user, err = h.userService.CreateOrUpdateGoogleUser(userData, "")
+		if err != nil {
+			log.Printf("Failed to create user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user record"})
+			return
+		}
 	}
 
 	var req CreateCryptoPaymentRequest

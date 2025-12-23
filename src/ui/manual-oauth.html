@@ -208,10 +208,7 @@
                 showStatus('🔑 Tokens extracted, authenticating...', 'info');
 
                 // Send to main process for authentication
-                const result = await ipcRenderer.invoke('manual-oauth-process', {
-                    access_token: accessToken,
-                    refresh_token: refreshToken
-                });
+                const result = await ipcRenderer.invoke('manual-oauth-fix', url);
 
                 if (result.success) {
                     showStatus(`✅ Authentication successful! Welcome, ${result.user?.email || 'User'}!`, 'success');

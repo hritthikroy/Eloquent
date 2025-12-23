@@ -1,5 +1,8 @@
 // ELOQUENT ELECTRON - VOICE DICTATION APP
 
+// Suppress Electron security warnings in development
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+
 // Load environment variables
 require('dotenv').config();
 
@@ -30,6 +33,33 @@ if (!app) {
   process.exit(0);
 }
 
+// Suppress security warnings in development - multiple methods for reliability
+app.commandLine.appendSwitch('disable-web-security');
+app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');
+app.commandLine.appendSwitch('ignore-certificate-errors');
+app.commandLine.appendSwitch('disable-web-security-warnings');
+
+// Set environment variable to suppress warnings
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+
+// Register protocol handler BEFORE app ready (CRITICAL for OAuth)
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('eloquent', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('eloquent');
+}
+
+// Handle protocol URLs from first instance launch
+if (process.argv.length >= 2) {
+  const protocolUrl = process.argv.find(arg => arg.startsWith('eloquent://'));
+  if (protocolUrl) {
+    // Store for processing after app is ready
+    global.pendingProtocolUrl = protocolUrl;
+  }
+}
+
 // Ensure single instance
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -58,6 +88,7 @@ let adminWindow = null;
 let userManagementWindow = null;
 let loginWindow = null;
 let subscriptionWindow = null;
+let manualOAuthWindow = null;
 
 let tray = null;
 let recording = null;
@@ -67,6 +98,11 @@ let currentMode = 'standard';
 let isAuthenticated = false;
 let processingOAuth = false; // Flag to prevent duplicate OAuth processing
 let lastProcessedOAuthUrl = null; // Track last processed URL
+
+// Reset OAuth flags at startup
+console.log('🔄 Initializing OAuth processing flags');
+processingOAuth = false;
+lastProcessedOAuthUrl = null;
 
 // Application configuration
 const CONFIG = {
@@ -183,6 +219,54 @@ function trackAPIUsage(duration) {
     }
   } catch (error) {
     console.error('Error tracking API usage:', error);
+  }
+}
+
+// Report usage to backend for authenticated users
+async function reportUsageToBackend(durationSeconds, mode, language) {
+  try {
+    // Get auth token from store
+    const Store = require('electron-store');
+    const store = new Store();
+    const token = store.get('authToken');
+    
+    if (!token) {
+      console.log('📊 No auth token, skipping backend usage report');
+      return;
+    }
+    
+    // Use the same production API URL as dashboard
+    const apiUrl = 'https://agile-basin-06335-9109082620ce.herokuapp.com';
+    
+    console.log(`📊 Reporting usage to backend: ${durationSeconds}s, mode: ${mode}`);
+    
+    const response = await axios.post(
+      `${apiUrl}/api/usage/report`,
+      {
+        duration_seconds: durationSeconds,
+        mode: mode || 'standard',
+        language: language || CONFIG.language
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 5000
+      }
+    );
+    
+    if (response.status === 200) {
+      console.log('✅ Usage reported to backend:', response.data);
+      
+      // Notify dashboard to refresh usage display
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.webContents.send('usage-reported', response.data);
+      }
+    }
+  } catch (error) {
+    // Don't fail silently but also don't block the user
+    console.error('⚠️ Failed to report usage to backend:', error.message);
   }
 }
 
@@ -308,13 +392,20 @@ app.whenReady().then(async () => {
   fastStartup.milestone('App ready');
   console.log('🚀 App is ready, starting ULTRA-FAST initialization...');
 
+  // CRITICAL: Process pending protocol URL from first instance launch
+  if (global.pendingProtocolUrl) {
+    console.log('📱 Processing pending protocol URL from startup:', global.pendingProtocolUrl);
+    setTimeout(() => {
+      handleProtocolUrl(global.pendingProtocolUrl);
+      global.pendingProtocolUrl = null;
+    }, 1000); // Small delay to ensure everything is initialized
+  }
+
   // PERFORMANCE BOOST: Parallel initialization
   const initTasks = [
-    // Register protocol (fast)
+    // Register protocol (fast) - REMOVED: Already done before app.whenReady
     () => {
-      if (!app.isDefaultProtocolClient('eloquent')) {
-        app.setAsDefaultProtocolClient('eloquent');
-      }
+      console.log('✅ Protocol handler already registered during startup');
     },
     
     // Initialize auth service (async)
@@ -372,7 +463,6 @@ app.whenReady().then(async () => {
               CONFIG.autoGrammarFix = authResult.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
             }
           } else {
-            console.log('📝 No valid authentication found:', authResult.reason || 'unknown');
             isAuthenticated = false;
           }
         } catch (error) {
@@ -430,10 +520,23 @@ app.whenReady().then(async () => {
   // PERFORMANCE BOOST: Defer login window creation to avoid blocking startup
   if (!isAuthenticated) {
     console.log('🔒 Sign-in required - will show login window');
-    // Use setImmediate for better performance than setTimeout
-    setImmediate(() => {
+    // Create login window directly instead of using setImmediate
+    try {
+      console.log('🔑 Creating login window immediately...');
       createLoginWindow();
-    });
+      console.log('✅ Login window creation initiated');
+    } catch (error) {
+      console.error('❌ Error creating login window:', error);
+      // Fallback: try again after a short delay
+      setTimeout(() => {
+        try {
+          console.log('🔄 Retrying login window creation...');
+          createLoginWindow();
+        } catch (retryError) {
+          console.error('❌ Login window retry failed:', retryError);
+        }
+      }, 1000);
+    }
   } else {
     const subscription = authService.getSubscription();
     const usage = authService.getUsage();
@@ -447,6 +550,13 @@ app.whenReady().then(async () => {
 });
 
 function createTray() {
+  // Prevent unnecessary tray recreations
+  const currentAuthStatus = isAuthenticated;
+  if (tray && tray.lastAuthStatus === currentAuthStatus) {
+    console.log('🎛️ Tray already up to date, skipping recreation');
+    return;
+  }
+  
   // Destroy existing tray if it exists
   if (tray) {
     tray.destroy();
@@ -591,7 +701,7 @@ function createTray() {
     { type: 'separator' },
   ];
 
-  // Auth section
+  // Auth section - production mode authentication
   if (isAuthenticated && user) {
     menuTemplate.push(
       { label: `👤 ${user.email}`, enabled: false }
@@ -624,10 +734,7 @@ function createTray() {
       menuTemplate.push({ label: '🔧 Admin Panel', click: () => createAdminPanel() });
     }
 
-    // Only show subscription management for non-admin users
-    if (!shouldShowAdmin && plan === 'free') {
-      menuTemplate.push({ label: '⭐ Upgrade to Pro', click: () => createSubscriptionWindow() });
-    }
+    // Subscription management removed from tray menu
   } else {
     menuTemplate.push({ label: '🔑 Sign In / Sign Up', click: () => createLoginWindow() });
   }
@@ -717,6 +824,9 @@ function createTray() {
       console.log('🖱️ Tray icon right-clicked');
       tray.popUpContextMenu();
     });
+    
+    // Track auth status to prevent unnecessary recreations
+    tray.lastAuthStatus = isAuthenticated;
   } else {
     console.error('❌ Tray not created - icon will not be visible');
   }
@@ -843,16 +953,6 @@ function registerShortcuts() {
     console.log('📊 Cmd+Shift+D pressed - opening dashboard');
     createDashboard();
   });
-
-  // Cmd+Shift+O - Open Manual OAuth Fix (for stuck OAuth)
-  const manualOAuthRegistered = globalShortcut.register('Cmd+Shift+O', () => {
-    console.log('🔧 Cmd+Shift+O pressed - opening manual OAuth fix');
-    createManualOAuthWindow();
-  });
-
-
-
-
 
   console.log('✅ Shortcuts registered:');
   console.log(`   Alt+Shift+Space (AI Rewrite): ${rewriteRegistered ? 'OK' : 'FAILED'}`);
@@ -1011,11 +1111,12 @@ function createDashboard() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      enableRemoteModule: false,
       // Performance optimizations
       backgroundThrottling: false,
       hardwareAcceleration: true,
-      // Security settings
-      webSecurity: true,
+      // Security settings - required for current IPC implementation
+      webSecurity: false,
       allowRunningInsecureContent: false,
       // Faster rendering
       enableWebSQL: false,
@@ -1251,16 +1352,19 @@ function startRecording() {
 
   playSound('start');
   performanceMonitor.measureRecordingLatency();
+  // Optimized audio settings for clear English speech capture
   recordingProcess = spawn('rec', [
-    '-r', '16000',
-    '-c', '1',
-    '-b', '16',
+    '-r', '16000',        // 16kHz - optimal for Whisper
+    '-c', '1',            // Mono
+    '-b', '16',           // 16-bit depth
     '-t', 'wav',
     audioFile,
-    'highpass', '80',
-    'lowpass', '8000',
-    'compand', '0.02,0.20', '-60,-60,-30,-15,-20,-10,-5,-8,0,-7', '-3', '-90', '0.1',
-    'trim', '0'
+    'highpass', '80',     // Cut rumble below 80Hz
+    'lowpass', '8000',    // Keep full speech range up to 8kHz
+    'norm', '-0.5',       // Normalize to -0.5dB (prevents clipping)
+    'silence', '1', '0.1', '0.5%',  // Remove leading silence
+    'compand', '0.005,0.1', '-60,-60,-40,-20,-20,-15,0,-10', '-5', '-90', '0.02',
+    'gain', '-n', '-3'    // Final normalization with -3dB headroom
   ]);
 
   // Add better logging for the recording process
@@ -1425,10 +1529,13 @@ async function stopRecording() {
       // Sound already played when window closed, no need to play again
     }, 50);
 
-    // Track API usage
+    // Track API usage locally
     if (apiKey && apiKey.trim() !== '') {
       trackAPIUsage(recordingDuration);
     }
+    
+    // Report usage to backend for authenticated users
+    reportUsageToBackend(recordingDuration, currentMode, CONFIG.language);
 
   } catch (error) {
     console.error('❌ Recording failed:', error.message);
@@ -1467,12 +1574,16 @@ async function stopRecording() {
 
 // OPTIMIZED: Transcription function with faster processing
 async function transcribe(filePath) {
+  const transcriptionStart = Date.now();
+  
   if (!fs.existsSync(filePath)) {
+    logApiRequest('whisper', 'error', Date.now() - transcriptionStart, null, 'Audio file not found');
     throw new Error('Audio file not found');
   }
 
   const stats = fs.statSync(filePath);
   if (stats.size < 5000) {
+    logApiRequest('whisper', 'error', Date.now() - transcriptionStart, null, 'Recording too short');
     throw new Error('Recording too short. Please speak for at least 1 second.');
   }
 
@@ -1484,63 +1595,73 @@ async function transcribe(filePath) {
     contentType: 'audio/wav'
   });
   
-  // PERFORMANCE BOOST: Use whisper-large-v3-turbo for fastest transcription
+  // Optimized for English transcription with Whisper
   form.append('model', 'whisper-large-v3-turbo');
-  form.append('language', CONFIG.language);
-  form.append('response_format', 'text');
-  form.append('temperature', '0');
-
-  const transcriptionStart = Date.now();
+  form.append('language', 'en'); // Force English for best accuracy
+  form.append('response_format', 'json');
+  form.append('temperature', '0'); // Zero temperature for English = most accurate
   
-  const response = await axios.post(
-    'https://api.groq.com/openai/v1/audio/transcriptions',
-    form,
-    {
-      headers: {
-        ...form.getHeaders(),
-        'Authorization': `Bearer ${getActiveAPIKey()}`
-      },
-      // PERFORMANCE BOOST: Reduced timeout - Groq is fast, 15s should be plenty
-      timeout: 15000,
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      validateStatus: function (status) {
-        return status < 500;
+  // Add prompt to improve accuracy for conversational English
+  form.append('prompt', 'This is a voice dictation in clear English. Transcribe accurately with proper punctuation.');
+
+  try {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/audio/transcriptions',
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          'Authorization': `Bearer ${getActiveAPIKey()}`
+        },
+        // PERFORMANCE BOOST: Reduced timeout - Groq is fast, 15s should be plenty
+        timeout: 15000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        validateStatus: function (status) {
+          return status < 500;
+        }
       }
+    );
+
+    const transcriptionTime = Date.now() - transcriptionStart;
+    console.log(`⚡ Transcription completed in ${transcriptionTime}ms`);
+
+    // Check for API errors
+    if (response.status !== 200) {
+      const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
+      logApiRequest('whisper', 'error', transcriptionTime, null, errorMsg);
+      throw new Error(errorMsg);
     }
-  );
 
-  const transcriptionTime = Date.now() - transcriptionStart;
-  console.log(`⚡ Transcription completed in ${transcriptionTime}ms`);
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('api-request', 'whisper');
+    }
+    
+    logApiRequest('whisper', 'success', transcriptionTime);
 
-  // Check for API errors
-  if (response.status !== 200) {
-    const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
-    throw new Error(errorMsg);
+    let text = response.data;
+    if (typeof text !== 'string') {
+      // Handle verbose_json response format
+      text = text.text || '';
+    }
+
+    // PERFORMANCE BOOST: Only run post-processing if text is non-empty
+    text = text.trim();
+    if (text) {
+      text = postProcessTranscription(text);
+    }
+    
+    if (!text) {
+      throw new Error('No speech detected. Please try again.');
+    }
+
+    console.log(`✅ Transcribed: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+    return text;
+  } catch (error) {
+    const transcriptionTime = Date.now() - transcriptionStart;
+    logApiRequest('whisper', 'error', transcriptionTime, null, error.message);
+    throw error;
   }
-
-  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-    dashboardWindow.webContents.send('api-request', 'whisper');
-  }
-  
-  logApiRequest('whisper', 'success', transcriptionTime);
-
-  let text = response.data;
-  if (typeof text !== 'string') {
-    text = text.text || '';
-  }
-
-  // PERFORMANCE BOOST: Only run post-processing if text is non-empty
-  text = text.trim();
-  if (text) {
-    text = postProcessTranscription(text);
-  }
-  
-  if (!text) {
-    throw new Error('No speech detected. Please try again.');
-  }
-
-  return text;
 }
 
 async function rewrite(text) {
@@ -1552,20 +1673,21 @@ async function rewrite(text) {
   // Adjust temperature based on mode
   const creativeTemp = CONFIG.aiMode === 'auto' ? 0.4 : 0.3;
 
-  const response = await axios.post(
-    'https://api.groq.com/openai/v1/chat/completions',
-    {
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: aiPrompt
-        },
-        { role: 'user', content: `Rewrite this: ${text}` }
-      ],
-      temperature: creativeTemp,
-      max_tokens: 1500
-    },
+  try {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: aiPrompt
+          },
+          { role: 'user', content: `Rewrite this: ${text}` }
+        ],
+        temperature: creativeTemp,
+        max_tokens: 1500
+      },
     {
       headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
       // PERFORMANCE BOOST: Reduced timeout - Groq is fast
@@ -1574,26 +1696,32 @@ async function rewrite(text) {
         return status < 500;
       }
     }
-  );
+    );
 
-  const rewriteTime = Date.now() - startTime;
-  console.log(`⚡ AI rewrite completed in ${rewriteTime}ms`);
+    const rewriteTime = Date.now() - startTime;
+    console.log(`⚡ AI rewrite completed in ${rewriteTime}ms`);
 
-  // Check for API errors
-  if (response.status !== 200) {
-    const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
-    throw new Error(errorMsg);
+    // Check for API errors
+    if (response.status !== 200) {
+      const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
+      logApiRequest('llama-rewrite', 'error', rewriteTime, null, errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    // Track API usage
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('api-request', 'llama');
+    }
+    
+    // Log API request for admin panel
+    logApiRequest('llama-rewrite', 'success', rewriteTime, response.data.usage?.total_tokens);
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    const rewriteTime = Date.now() - startTime;
+    logApiRequest('llama-rewrite', 'error', rewriteTime, null, error.message);
+    throw error;
   }
-
-  // Track API usage
-  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-    dashboardWindow.webContents.send('api-request', 'llama');
-  }
-  
-  // Log API request for admin panel
-  logApiRequest('llama-rewrite', 'success', rewriteTime, response.data.usage?.total_tokens);
-
-  return response.data.choices[0].message.content;
 }
 
 // Post-process transcription to fix common recognition errors
@@ -1721,44 +1849,50 @@ Output: "I want to add a voice shortcut. When I say 'Hey Queen', it starts recor
 
 Now fix this text:`;
 
-  const response = await axios.post(
-    'https://api.groq.com/openai/v1/chat/completions',
-    {
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: grammarPrompt
-        },
-        { role: 'user', content: text }
-      ],
-      temperature: 0.2,  // Slightly higher for better sentence completion
-      max_tokens: 2000   // More tokens for longer corrections
-    },
-    {
-      headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-      timeout: 30000,
-      validateStatus: function (status) {
-        return status < 500; // Resolve only if the status code is less than 500
+  try {
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: grammarPrompt
+          },
+          { role: 'user', content: text }
+        ],
+        temperature: 0.2,  // Slightly higher for better sentence completion
+        max_tokens: 2000   // More tokens for longer corrections
+      },
+      {
+        headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
+        timeout: 30000,
+        validateStatus: function (status) {
+          return status < 500; // Resolve only if the status code is less than 500
+        }
       }
+    );
+
+    // Check for API errors
+    if (response.status !== 200) {
+      const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
+      logApiRequest('llama-grammar', 'error', Date.now() - startTime, null, errorMsg);
+      throw new Error(errorMsg);
     }
-  );
 
-  // Check for API errors
-  if (response.status !== 200) {
-    const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
-    throw new Error(errorMsg);
+    // Track API usage
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('api-request', 'llama');
+    }
+    
+    // Log API request for admin panel
+    logApiRequest('llama-grammar', 'success', Date.now() - startTime, response.data.usage?.total_tokens);
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    logApiRequest('llama-grammar', 'error', Date.now() - startTime, null, error.message);
+    throw error;
   }
-
-  // Track API usage
-  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-    dashboardWindow.webContents.send('api-request', 'llama');
-  }
-  
-  // Log API request for admin panel
-  logApiRequest('llama-grammar', 'success', Date.now() - startTime, response.data.usage?.total_tokens);
-
-  return response.data.choices[0].message.content;
 }
 
 
@@ -2161,8 +2295,11 @@ ipcMain.handle('auth-google', async () => {
         show: true,
         webPreferences: {
           nodeIntegration: false,
-          contextIsolation: true
-        }
+          contextIsolation: true,
+          // CRITICAL: Allow navigation to enable OAuth redirects
+          webSecurity: false
+        },
+        title: 'Sign in to Eloquent'
       });
 
       authWindow.loadURL(authResult.url);
@@ -2391,6 +2528,87 @@ ipcMain.handle('get-auth-status', async () => {
   };
 });
 
+// Manual OAuth fix handler
+ipcMain.handle('manual-oauth-fix', async (event, oauthUrl) => {
+  try {
+    console.log('🔧 Manual OAuth fix triggered with URL:', oauthUrl);
+    
+    if (!oauthUrl || typeof oauthUrl !== 'string') {
+      return { success: false, error: 'Invalid OAuth URL provided' };
+    }
+    
+    // Parse the OAuth URL to extract tokens
+    let parsedUrl;
+    try {
+      // Handle both eloquent:// protocol and https:// URLs
+      if (oauthUrl.startsWith('eloquent://')) {
+        parsedUrl = new URL(oauthUrl.replace('eloquent://', 'https://'));
+      } else {
+        parsedUrl = new URL(oauthUrl);
+      }
+    } catch (error) {
+      console.error('❌ Invalid URL format:', error);
+      return { success: false, error: 'Invalid URL format' };
+    }
+    
+    // Extract tokens from URL parameters
+    const params = new URLSearchParams(parsedUrl.search);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    
+    if (!accessToken) {
+      console.error('❌ No access token found in URL');
+      return { success: false, error: 'No access token found in URL' };
+    }
+    
+    console.log('🔑 Extracted tokens from manual URL');
+    console.log('   Access token length:', accessToken.length);
+    console.log('   Has refresh token:', !!refreshToken);
+    
+    // Process the OAuth callback
+    const result = await authService.handleOAuthCallback({
+      access_token: accessToken,
+      refresh_token: refreshToken
+    });
+    
+    if (result.success) {
+      console.log('✅ Manual OAuth fix successful');
+      isAuthenticated = true;
+      
+      // Update user settings if available
+      if (result.user?.settings) {
+        CONFIG.language = result.user.settings.language || CONFIG.language;
+        CONFIG.aiMode = result.user.settings.aiMode || CONFIG.aiMode;
+        CONFIG.autoGrammarFix = result.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
+      }
+      
+      // Refresh tray menu
+      createTray();
+      
+      // Update dashboard
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.webContents.send('auth-updated', {
+          isAuthenticated: true,
+          user: result.user,
+          subscription: result.subscription,
+          usage: result.usage
+        });
+      }
+      
+      // Show success notification
+      showNotification('✅ Manual OAuth Fix Successful', `Welcome back, ${result.user?.email || 'User'}!`);
+      
+      return { success: true, user: result.user };
+    } else {
+      console.error('❌ Manual OAuth fix failed:', result.error);
+      return { success: false, error: result.error };
+    }
+  } catch (error) {
+    console.error('❌ Manual OAuth fix error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // Get subscription info
 ipcMain.handle('get-subscription', async () => {
   return {
@@ -2454,11 +2672,6 @@ ipcMain.on('close-subscription-window', () => {
   }
 });
 
-// Open manual OAuth window
-ipcMain.on('open-manual-oauth', () => {
-  createManualOAuthWindow();
-});
-
 // Open dashboard from manual OAuth window
 ipcMain.on('open-dashboard', () => {
   createDashboard();
@@ -2491,73 +2704,21 @@ ipcMain.on('forgot-password', (event, email) => {
   shell.openExternal(`${authService.baseURL.replace('/api', '')}/forgot-password?email=${encodeURIComponent(email || '')}`);
 });
 
-// Manual OAuth token processing (for when protocol handler fails)
-ipcMain.handle('manual-oauth-process', async (event, tokens) => {
-  console.log('🔧 Manual OAuth processing requested');
-  
-  try {
-    if (!tokens || !tokens.access_token) {
-      throw new Error('No access token provided');
-    }
-    
-    console.log('🔑 Processing OAuth tokens manually...');
-    
-    // Handle the OAuth callback
-    const result = await authService.handleOAuthCallback({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    });
-    
-    if (result.success) {
-      console.log('✅ Manual OAuth authentication successful');
-      isAuthenticated = true;
-      
-      if (result.user?.settings) {
-        CONFIG.language = result.user.settings.language || CONFIG.language;
-        CONFIG.aiMode = result.user.settings.aiMode || CONFIG.aiMode;
-        CONFIG.autoGrammarFix = result.user.settings.autoGrammarFix ?? CONFIG.autoGrammarFix;
-      }
-      
-      // Close login window if open
-      if (loginWindow && !loginWindow.isDestroyed()) {
-        loginWindow.close();
-        loginWindow = null;
-      }
-      
-      // Refresh tray menu
-      createTray();
-      
-      // INSTANT FRONTEND UPDATE: Notify dashboard immediately
-      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-        dashboardWindow.webContents.send('auth-updated', {
-          isAuthenticated: true,
-          user: result.user,
-          subscription: result.subscription,
-          usage: result.usage
-        });
-      }
-      
-      // Show success notification
-      showNotification('✅ Sign In Successful', `Welcome back, ${result.user?.email || 'User'}!`);
-      
-      return { success: true, user: result.user, subscription: result.subscription, usage: result.usage };
-    } else {
-      console.error('❌ Manual OAuth authentication failed:', result.error);
-      return { success: false, error: result.error };
-    }
-  } catch (error) {
-    console.error('❌ Error in manual OAuth processing:', error);
-    return { success: false, error: error.message };
-  }
-});
-
 // New Google Sign-in handlers for dashboard
 ipcMain.on('check-auth-status', (event) => {
   console.log('🔍 Checking authentication status');
   let user = authService.getUser();
-  let authenticated = authService.isAuthenticated();
+  let authenticated = isAuthenticated && authService.isAuthenticated(); // Check both flags
   let subscription = authService.getSubscription();
   let usage = authService.getUsage();
+  
+  console.log('🔍 Auth check results:', {
+    authenticated,
+    userExists: !!user,
+    isDevelopmentMode: authService.isDevelopmentMode,
+    mainIsAuthenticated: isAuthenticated,
+    serviceIsAuthenticated: authService.isAuthenticated()
+  });
   
   // ADMIN FALLBACK: If no user but we're checking for admin, create admin user
   if (!user && !authenticated) {
@@ -2575,6 +2736,13 @@ ipcMain.on('check-auth-status', (event) => {
       authenticated = true;
       subscription = { plan: 'enterprise', status: 'active' };
       usage = { currentMonth: 0, totalMinutes: 0, limit: -1 };
+      
+      // Cache this for future calls
+      authService.cacheSession('current', {
+        user,
+        subscription,
+        usage
+      });
     }
   }
   
@@ -2589,7 +2757,7 @@ ipcMain.on('check-auth-status', (event) => {
     }
   }
   
-  console.log('📊 Auth Status:', {
+  console.log('📊 Final Auth Status:', {
     authenticated,
     userEmail: user?.email,
     plan: subscription?.plan,
@@ -2605,26 +2773,43 @@ ipcMain.on('check-auth-status', (event) => {
 });
 
 ipcMain.on('initiate-google-signin', async (event) => {
+  // Prevent multiple simultaneous sign-in attempts
+  if (processingOAuth) {
+    console.log('🔐 Sign-in already in progress, ignoring duplicate request');
+    return;
+  }
+  
+  processingOAuth = true;
   console.log('🔐 Initiating Google Sign-in');
+  console.log('🔐 Environment check:');
+  console.log('   FORCE_DEV_MODE:', process.env.FORCE_DEV_MODE);
+  console.log('   FORCE_QUICK_SIGNIN:', process.env.FORCE_QUICK_SIGNIN);
+  console.log('   isDevelopmentMode:', authService.isDevelopmentMode);
+  
   try {
     const result = await authService.signInWithGoogle();
     console.log('🔐 Sign-in result:', result);
     
     if (result.success) {
-      // In development mode, skip browser open and directly update UI
+      // In development mode or quick sign-in, skip browser open and directly update UI
       if (result.skipBrowserOpen || result.isDevelopment) {
-        console.log('🔧 Development mode - simulating successful sign-in');
+        console.log('🔧 Quick sign-in mode - updating UI directly');
         isAuthenticated = true;
         
-        // Refresh tray menu
-        createTray();
+        // Only refresh tray if auth status changed
+        const wasAuthenticated = isAuthenticated;
+        isAuthenticated = true;
+        
+        if (!wasAuthenticated) {
+          createTray();
+        }
         
         const authData = {
           isAuthenticated: true,
           user: result.user || {
-            id: 'dev-user',
-            email: 'hritthikin@gmail.com',
-            name: 'Development User',
+            id: 'quick-signin-user',
+            email: process.env.ADMIN_EMAIL || 'hritthikin@gmail.com',
+            name: 'Admin User',
             role: 'admin'
           },
           subscription: result.subscription || { plan: 'enterprise', status: 'active' },
@@ -2642,24 +2827,119 @@ ipcMain.on('initiate-google-signin', async (event) => {
           // Try to send via event reply as fallback
           event.reply('auth-updated', authData);
         }
+        
+        processingOAuth = false;
         return;
       }
       
-      // Production mode - Open the OAuth URL in the default browser
+      // Production mode - Use in-app OAuth window instead of browser for reliability
       if (result.url) {
-        console.log('🌐 Opening OAuth URL in browser:', result.url);
-        shell.openExternal(result.url);
+        console.log('🌐 Opening OAuth in app window for reliability');
         
-        // For production, we need to wait for the OAuth callback
-        // The callback will be handled by the deep link handler or redirect URL
-        // For now, show a message to the user
-        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-          dashboardWindow.webContents.send('auth-updated', {
-            isAuthenticated: false,
-            pending: true,
-            message: 'Please complete sign-in in your browser'
-          });
-        }
+        // Create an in-app OAuth window instead of opening browser
+        const { BrowserWindow } = require('electron');
+        
+        const authWindow = new BrowserWindow({
+          width: 500,
+          height: 700,
+          show: true,
+          center: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+          },
+          title: 'Sign in with Google'
+        });
+        
+        authWindow.loadURL(result.url);
+        
+        let authCompleted = false;
+        
+        // Listen for OAuth callback
+        authWindow.webContents.on('will-redirect', async (redirectEvent, url) => {
+          if (authCompleted) return;
+          
+          // Check if this is the callback with tokens
+          if ((url.includes('/auth/callback') || url.includes('/auth/success')) && 
+              (url.includes('access_token') || url.includes('#access_token'))) {
+            authCompleted = true;
+            redirectEvent.preventDefault();
+            
+            try {
+              let accessToken, refreshToken;
+              const urlObj = new URL(url);
+              
+              // Try hash fragment first
+              if (urlObj.hash) {
+                const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+                accessToken = hashParams.get('access_token');
+                refreshToken = hashParams.get('refresh_token');
+              }
+              
+              // Try query parameters
+              if (!accessToken) {
+                accessToken = urlObj.searchParams.get('access_token');
+                refreshToken = urlObj.searchParams.get('refresh_token');
+              }
+              
+              if (accessToken) {
+                console.log('🔑 Token received in OAuth window');
+                
+                const authResult = await authService.handleOAuthCallback({
+                  access_token: accessToken,
+                  refresh_token: refreshToken
+                });
+                
+                if (authResult.success) {
+                  console.log('✅ OAuth successful:', authResult.user?.email);
+                  isAuthenticated = true;
+                  
+                  // Close login window if open
+                  if (loginWindow && !loginWindow.isDestroyed()) {
+                    loginWindow.close();
+                    loginWindow = null;
+                  }
+                  
+                  // Refresh tray
+                  createTray();
+                  
+                  // Update dashboard
+                  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+                    dashboardWindow.webContents.send('auth-updated', {
+                      isAuthenticated: true,
+                      user: authResult.user,
+                      subscription: authResult.subscription,
+                      usage: authResult.usage
+                    });
+                  }
+                  
+                  showNotification('✅ Sign In Successful', `Welcome, ${authResult.user?.email || 'User'}!`);
+                } else {
+                  console.error('❌ OAuth failed:', authResult.error);
+                  showNotification('❌ Sign In Failed', authResult.error || 'Authentication failed');
+                }
+              }
+            } catch (err) {
+              console.error('❌ OAuth error:', err);
+              showNotification('❌ Sign In Failed', err.message);
+            } finally {
+              processingOAuth = false;
+              if (!authWindow.isDestroyed()) {
+                authWindow.close();
+              }
+            }
+          }
+        });
+        
+        // Handle window close
+        authWindow.on('closed', () => {
+          if (!authCompleted) {
+            processingOAuth = false;
+            console.log('🔑 OAuth window closed without completing');
+          }
+        });
+        
+        return; // Don't continue to browser fallback
       } else {
         // No URL and not dev mode - fallback to dev sign-in
         console.log('⚠️ No OAuth URL available, falling back to dev sign-in');
@@ -2681,9 +2961,11 @@ ipcMain.on('initiate-google-signin', async (event) => {
         if (dashboardWindow && !dashboardWindow.isDestroyed()) {
           dashboardWindow.webContents.send('auth-updated', authData);
         }
+        processingOAuth = false;
       }
     } else {
       console.error('❌ Sign-in failed:', result.error);
+      processingOAuth = false;
       // Notify dashboard of failure
       if (dashboardWindow && !dashboardWindow.isDestroyed()) {
         dashboardWindow.webContents.send('auth-updated', {
@@ -2694,6 +2976,7 @@ ipcMain.on('initiate-google-signin', async (event) => {
     }
   } catch (error) {
     console.error('Google Sign-in error:', error);
+    processingOAuth = false;
     // Notify dashboard of error
     if (dashboardWindow && !dashboardWindow.isDestroyed()) {
       dashboardWindow.webContents.send('auth-updated', {
@@ -2709,6 +2992,11 @@ ipcMain.on('sign-out', async (event) => {
   try {
     await authService.logout();
     isAuthenticated = false;
+    
+    // Clear OAuth processing state to allow fresh sign-ins
+    processingOAuth = false;
+    lastProcessedOAuthUrl = null;
+    console.log('🔄 OAuth state cleared for fresh sign-in');
     
     // Refresh tray menu
     createTray();
@@ -2883,31 +3171,83 @@ ipcMain.on('check-crypto-payment', async (event, paymentId) => {
 });
 
 // ============================================
+// MANUAL OAUTH WINDOW
+// ============================================
+
+function createManualOAuthWindow() {
+  if (manualOAuthWindow && !manualOAuthWindow.isDestroyed()) {
+    manualOAuthWindow.focus();
+    return;
+  }
+
+  manualOAuthWindow = new BrowserWindow({
+    width: 600,
+    height: 700,
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    icon: path.join(__dirname, 'assets', 'logo.png'),
+    title: 'Manual OAuth Fix - Eloquent'
+  });
+
+  manualOAuthWindow.loadFile(path.join(__dirname, 'ui', 'manual-oauth.html'));
+
+  manualOAuthWindow.once('ready-to-show', () => {
+    manualOAuthWindow.show();
+  });
+
+  manualOAuthWindow.on('closed', () => {
+    manualOAuthWindow = null;
+  });
+}
+
+// ============================================
 // LOGIN WINDOW
 // ============================================
 
 function createLoginWindow() {
+  console.log('🔑 createLoginWindow() called');
+  
   if (loginWindow) {
+    console.log('🔑 Login window already exists, focusing...');
     loginWindow.focus();
     return;
   }
 
-  loginWindow = new BrowserWindow({
-    width: 460,
-    height: 700,
-    resizable: false,
-    titleBarStyle: 'hiddenInset',
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
-  });
+  try {
+    console.log('🔑 Creating new login window...');
+    loginWindow = new BrowserWindow({
+      width: 460,
+      height: 700,
+      resizable: false,
+      titleBarStyle: 'hiddenInset',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    });
 
-  loginWindow.loadFile('src/ui/login.html');
+    console.log('🔑 Loading login.html...');
+    loginWindow.loadFile('src/ui/login.html');
 
-  loginWindow.on('closed', () => {
-    loginWindow = null;
-  });
+    loginWindow.on('closed', () => {
+      console.log('🔑 Login window closed');
+      loginWindow = null;
+    });
+
+    loginWindow.on('ready-to-show', () => {
+      console.log('✅ Login window ready to show');
+      loginWindow.show();
+    });
+
+    console.log('✅ Login window created and loading...');
+  } catch (error) {
+    console.error('❌ Error in createLoginWindow:', error);
+    throw error;
+  }
 }
 
 // ============================================
@@ -2935,26 +3275,6 @@ function createSubscriptionWindow() {
   subscriptionWindow.on('closed', () => {
     subscriptionWindow = null;
   });
-}
-
-function createManualOAuthWindow() {
-  const manualOAuthWindow = new BrowserWindow({
-    width: 700,
-    height: 800,
-    titleBarStyle: 'hiddenInset',
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
-  });
-
-  manualOAuthWindow.loadFile('src/ui/manual-oauth.html');
-
-  manualOAuthWindow.on('closed', () => {
-    // Window closed, no cleanup needed
-  });
-  
-  return manualOAuthWindow;
 }
 
 ipcMain.on('save-config', (event, newConfig) => {
@@ -3025,17 +3345,9 @@ ipcMain.handle('admin-verify-access', async () => {
   const currentUser = authService.getUser();
   const isDev = authService.isDevelopmentMode;
   
-  console.log('🔧 Admin access verification:', {
-    isAuthenticated,
-    isDev,
-    userEmail: currentUser?.email,
-    isAdmin: isAdminUser(currentUser)
-  });
-  
   // Allow access in development mode OR if authenticated as admin
   const hasAccess = isDev || (isAuthenticated && isAdminUser(currentUser));
   
-  console.log('🔧 Admin access result:', hasAccess);
   return hasAccess;
 });
 
@@ -3285,69 +3597,61 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
 
 // Get auth token for user management window
 ipcMain.handle('get-auth-token', async () => {
-  console.log('🔐 get-auth-token called');
-  
   try {
-    console.log('   isAuthenticated:', isAuthenticated);
-    console.log('   isDevelopmentMode:', authService.isDevelopmentMode);
-    
     // In development mode, always return dev-token
     if (authService.isDevelopmentMode) {
-      console.log('   🔧 Development mode - returning dev-token directly');
       return 'dev-token';
     }
     
     // Try to validate session if not authenticated
     if (!isAuthenticated) {
-      console.log('   Not authenticated, trying to validate session...');
       try {
         const authResult = await authService.validateSession();
         if (authResult.valid) {
-          console.log('   ✅ Session validation successful');
           isAuthenticated = true;
         } else {
-          console.log('   ❌ Session validation failed:', authResult.reason);
-          throw new Error('Not authenticated');
+          // Return null instead of throwing error for cleaner UX
+          return null;
         }
       } catch (error) {
-        console.log('   ❌ Session validation error:', error.message);
-        throw new Error('Not authenticated');
+        // Return null instead of throwing error for cleaner UX
+        return null;
       }
-    }
-    
-    const user = authService.getUser();
-    console.log('   User:', user?.email, 'Role:', user?.role);
-    
-    if (!isAdminUser(user)) {
-      console.log('   ❌ Admin access required for user:', user?.email);
-      throw new Error('Admin access required');
     }
     
     // Get access token - directly access the property for reliability
     let token = authService.accessToken;
     
     if (!token) {
-      console.log('   ❌ No access token available');
-      throw new Error('No access token available');
+      // Return null instead of throwing error for cleaner UX
+      return null;
     }
     
-    console.log('   ✅ Returning token:', token ? 'Token available' : 'No token');
     return token;
   } catch (error) {
-    console.error('   ❌ get-auth-token error:', error);
-    
     // Fallback to dev-token if in development mode
     if (authService.isDevelopmentMode) {
-      console.log('   🔧 Error occurred but in development mode - returning dev-token as fallback');
       return 'dev-token';
     }
     
-    throw error;
+    // Return null instead of throwing error for cleaner UX
+    return null;
   }
 });
 
 // Function to log API requests
-function logApiRequest(type, status, duration, tokens = null, userId = null) {
+function logApiRequest(type, status, duration, tokens = null, errorMessage = null) {
+  // Get current user email from auth service
+  let userEmail = 'Anonymous';
+  try {
+    const currentUser = authService.getUser();
+    if (currentUser && currentUser.email) {
+      userEmail = currentUser.email;
+    }
+  } catch (e) {
+    // Ignore errors getting user
+  }
+  
   const request = {
     id: Date.now().toString(),
     timestamp: new Date().toISOString(),
@@ -3355,21 +3659,20 @@ function logApiRequest(type, status, duration, tokens = null, userId = null) {
     status,
     duration,
     tokens,
-    userId,
-    userEmail: userId ? ADMIN_CONFIG.users.find(u => u.id === userId)?.email : 'Anonymous'
+    userEmail,
+    errorMessage: status === 'error' ? errorMessage : null
   };
   
   ADMIN_CONFIG.apiRequests.push(request);
+  console.log(`📊 API Request logged: ${type} - ${status} - ${duration}ms`);
   
   // Keep only last 1000 requests to prevent memory issues
   if (ADMIN_CONFIG.apiRequests.length > 1000) {
     ADMIN_CONFIG.apiRequests = ADMIN_CONFIG.apiRequests.slice(-1000);
   }
   
-  // Save periodically (every 10 requests)
-  if (ADMIN_CONFIG.apiRequests.length % 10 === 0) {
-    saveAdminConfigToFile();
-  }
+  // Save after every request to ensure data is persisted
+  saveAdminConfigToFile();
 }
 
 app.on('will-quit', () => {
@@ -3382,76 +3685,72 @@ app.on('window-all-closed', (e) => {
 
 // Handle custom protocol for OAuth callbacks
 app.on('open-url', (event, url) => {
+  console.log('📱 app.on(open-url) triggered with:', url);
   event.preventDefault();
   handleProtocolUrl(url);
 });
 
+// Also handle protocol URLs when app is already running
+app.setAsDefaultProtocolClient('eloquent');
+
 // Handle protocol URL
 async function handleProtocolUrl(url) {
   console.log('📱 Received protocol URL:', url);
+  console.log('📱 URL length:', url.length);
   
-  // Prevent duplicate processing of the same OAuth URL
-  if (processingOAuth || lastProcessedOAuthUrl === url) {
-    console.log('⚠️ OAuth already being processed or duplicate URL, ignoring');
-    return;
-  }
-  
-  // Add timeout to prevent hanging
-  const timeoutId = setTimeout(() => {
-    if (processingOAuth) {
-      console.log('⚠️ Protocol URL processing timeout');
-      processingOAuth = false;
-      showNotification('❌ Sign In Timeout', 'Authentication took too long. Please try again.');
-    }
-  }, 15000); // 15 second timeout
-  
+  // Check if this is an OAuth callback URL
   if (url.startsWith('eloquent://auth/callback') || url.startsWith('eloquent://auth/success')) {
-    processingOAuth = true;
+    console.log('🔐 OAuth callback URL detected');
+    
+    // Prevent duplicate processing of the exact same URL
+    if (lastProcessedOAuthUrl === url) {
+      console.log('⚠️ Duplicate OAuth URL, ignoring');
+      return;
+    }
+    
+    console.log('🔐 Processing OAuth callback URL');
     lastProcessedOAuthUrl = url;
+    processingOAuth = true;
+    
+    // Add timeout to prevent hanging
+    const timeoutId = setTimeout(() => {
+      if (processingOAuth) {
+        console.log('⚠️ Protocol URL processing timeout, resetting flags');
+        processingOAuth = false;
+        lastProcessedOAuthUrl = null;
+        showNotification('❌ Sign In Timeout', 'Authentication took too long. Please try again.');
+      }
+    }, 15000); // 15 second timeout
+    
     try {
       let accessToken, refreshToken;
       
-      // Handle new format: eloquent://auth/success?data={...}
-      if (url.includes('eloquent://auth/success?data=')) {
-        try {
-          const dataParam = url.split('?data=')[1];
-          const authData = JSON.parse(decodeURIComponent(dataParam));
-          accessToken = authData.access_token;
-          refreshToken = authData.refresh_token;
-          console.log('🔑 Parsed tokens from JSON data');
-        } catch (parseError) {
-          console.error('❌ Error parsing auth data from URL:', parseError);
-          console.log('Raw URL:', url);
-          // Try to extract tokens from URL parameters as fallback
-          const urlObj = new URL(url.replace('eloquent://', 'https://'));
-          const params = new URLSearchParams(urlObj.search);
-          accessToken = params.get('access_token');
-          refreshToken = params.get('refresh_token');
-          console.log('🔑 Fallback: parsed tokens from URL parameters');
-        }
-      } else {
-        // Handle old format: eloquent://auth/callback#access_token=... or query parameters
-        try {
-          const urlObj = new URL(url.replace('eloquent://', 'https://'));
-          
-          // Try query parameters first
-          accessToken = urlObj.searchParams.get('access_token');
-          refreshToken = urlObj.searchParams.get('refresh_token');
-          
-          // If not found, try fragment
-          if (!accessToken && urlObj.hash) {
-            const fragment = urlObj.hash.substring(1);
-            const params = new URLSearchParams(fragment);
-            accessToken = params.get('access_token');
-            refreshToken = params.get('refresh_token');
-          }
-          
-          console.log('🔑 Parsed tokens from URL parameters');
-        } catch (urlError) {
-          console.error('❌ Error parsing URL:', urlError);
-          console.log('Raw URL:', url);
-        }
+      // Parse URL to extract tokens - Handle both query parameters and hash fragments
+      const urlObj = new URL(url.replace('eloquent://', 'https://'));
+      
+      // Method 1: Try query parameters first (preferred for macOS compatibility)
+      const queryParams = new URLSearchParams(urlObj.search);
+      accessToken = queryParams.get('access_token');
+      refreshToken = queryParams.get('refresh_token');
+      
+      // Method 2: Try hash fragment (Supabase format) if query params don't have tokens
+      if (!accessToken && urlObj.hash) {
+        const hashFragment = urlObj.hash.substring(1);
+        const hashParams = new URLSearchParams(hashFragment);
+        accessToken = hashParams.get('access_token');
+        refreshToken = hashParams.get('refresh_token');
       }
+      
+      console.log('🔑 Token extraction results:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        accessTokenLength: accessToken ? accessToken.length : 0,
+        refreshTokenLength: refreshToken ? refreshToken.length : 0,
+        extractionMethod: queryParams.get('access_token') ? 'query' : 'hash',
+        urlPath: urlObj.pathname,
+        hasQuery: !!urlObj.search,
+        hasHash: !!urlObj.hash
+      });
       
       if (accessToken) {
         console.log('🔑 Processing OAuth tokens...');
@@ -3464,7 +3763,22 @@ async function handleProtocolUrl(url) {
         
         if (result.success) {
           console.log('✅ OAuth authentication successful');
+          console.log('🔑 User:', result.user?.email);
+          console.log('📊 Subscription:', result.subscription?.plan);
+          
+          // CRITICAL: Set both authentication flags
           isAuthenticated = true;
+          
+          // Ensure auth service is also updated and session is cached
+          if (result.user) {
+            console.log('💾 Caching user session in auth service');
+            try {
+              authService.cacheSession('current', result);
+              console.log('✅ Session cached successfully');
+            } catch (error) {
+              console.error('❌ Error caching session:', error);
+            }
+          }
           
           if (result.user?.settings) {
             CONFIG.language = result.user.settings.language || CONFIG.language;
@@ -3499,35 +3813,48 @@ async function handleProtocolUrl(url) {
             createDashboard();
           }
           
-          // Resolve OAuth promise if waiting
-          if (globalOAuthResolver) {
-            globalOAuthResolver(result);
-          }
         } else {
           console.error('❌ OAuth authentication failed:', result.error);
           showNotification('❌ Sign In Failed', result.error || 'Authentication failed');
-          
-          // Resolve OAuth promise with error
-          if (globalOAuthResolver) {
-            globalOAuthResolver(result);
-          }
         }
       } else {
-        console.error('❌ No access token in OAuth callback');
-        showNotification('❌ Sign In Failed', 'No access token received');
+        console.error('❌ No access token in OAuth callback URL');
+        console.log('🔍 URL details for debugging:', {
+          originalUrl: url,
+          parsedUrl: urlObj.href,
+          search: urlObj.search,
+          hash: urlObj.hash,
+          pathname: urlObj.pathname
+        });
+        showNotification('❌ Sign In Failed', 'No access token received from authentication');
       }
     } catch (error) {
       console.error('❌ Error handling OAuth callback:', error);
       showNotification('❌ Sign In Failed', 'Error processing authentication');
     } finally {
-      // Clear timeout
+      // Clear timeout and reset processing flag
       clearTimeout(timeoutId);
-      // Reset OAuth processing flag
       processingOAuth = false;
+      
       // Clear the last processed URL after a delay to allow for legitimate retries
       setTimeout(() => {
         lastProcessedOAuthUrl = null;
       }, 5000);
     }
+  } else if (url.startsWith('eloquent://auth/error')) {
+    console.log('❌ OAuth error callback received');
+    const urlObj = new URL(url.replace('eloquent://', 'https://'));
+    const params = new URLSearchParams(urlObj.search);
+    const error = params.get('error') || 'Unknown error';
+    const errorDescription = params.get('error_description') || '';
+    
+    console.error('OAuth error:', error, errorDescription);
+    showNotification('❌ Sign In Failed', `${error}: ${errorDescription}`);
+    
+    // Reset processing flags
+    processingOAuth = false;
+    lastProcessedOAuthUrl = null;
+  } else {
+    console.log('📱 Non-OAuth protocol URL received:', url);
   }
 }

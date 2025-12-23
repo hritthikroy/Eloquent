@@ -7,7 +7,6 @@
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "prod": "NODE_ENV=production electron .",
-
     "build": "electron-builder --mac --arm64",
     "build:arm64": "electron-builder --mac --arm64",
     "build:x64": "electron-builder --mac --x64",
@@ -15,12 +14,10 @@
     "build:signed": "electron-builder --mac --arm64 --publish never",
     "build:unsigned": "electron-builder --mac --arm64 --publish never",
     "reset-permissions": "tccutil reset Microphone && tccutil reset Accessibility && echo '✅ Permissions reset. Please restart the app.'",
-    
     "backend:dev": "cd backend-go && go run main.go",
     "backend:build": "cd backend-go && go build -o eloquent-backend .",
     "backend:test": "cd backend-go && go test ./...",
     "backend:clean": "cd backend-go && go clean && rm -f eloquent-backend",
-    
     "start:full": "npm run backend:dev & npm start",
     "test": "echo 'No tests specified yet'",
     "lint": "echo 'No linting configured yet'",
@@ -28,7 +25,6 @@
     "build:optimized": "node scripts/optimize-build.js",
     "analyze-bundle": "npx webpack-bundle-analyzer dist-webpack/main.js",
     "size-check": "du -sh dist/ && ls -lh dist/*.dmg dist/*.zip 2>/dev/null || echo 'No build files found'",
-    
     "check-env": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')){console.log('❌ .env file missing. Copy from .env.example');process.exit(1);} const env=fs.readFileSync('.env','utf8'); console.log('🔍 Environment Status:'); console.log('Groq API:', env.includes('gsk_') ? '✅ Configured' : '❌ Missing'); console.log('Supabase:', env.includes('supabase.co') && !env.includes('your-project') ? '✅ Configured' : '❌ Missing');\""
   },
   "devDependencies": {
@@ -42,6 +38,7 @@
     "@supabase/supabase-js": "^2.88.0",
     "axios": "^1.6.0",
     "dotenv": "^17.2.3",
+    "electron-store": "^11.0.2",
     "form-data": "^4.0.0"
   },
   "build": {

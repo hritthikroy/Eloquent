@@ -36,22 +36,36 @@ class AuthBridge {
 
   // High-performance Google sign-in using Go backend
   async signInWithGoogle() {
-    console.log('🔐 AuthBridge.signInWithGoogle called, isDevelopmentMode:', this.isDevelopmentMode);
+    console.log('🔐 AuthBridge.signInWithGoogle called');
+    console.log('🔐 Environment check:');
+    console.log('   FORCE_DEV_MODE:', process.env.FORCE_DEV_MODE);
+    console.log('   FORCE_QUICK_SIGNIN:', process.env.FORCE_QUICK_SIGNIN);
+    console.log('   isDevelopmentMode:', this.isDevelopmentMode);
     
-    if (this.isDevelopmentMode) {
-      console.log('🔧 Development mode - simulating Google sign-in');
-      // In development mode, simulate successful sign-in directly without opening a URL
+    // Use quick sign-in if in development mode OR if quick sign-in is forced
+    const useQuickSignIn = this.isDevelopmentMode || process.env.FORCE_QUICK_SIGNIN === 'true';
+    
+    if (useQuickSignIn) {
+      console.log('🔧 Using quick sign-in mode');
+      // Quick sign-in: simulate successful sign-in directly without opening a URL
       const devResult = await this.handleOAuthCallback({ 
-        access_token: 'dev-token',
-        refresh_token: 'dev-refresh-token'
+        access_token: 'quick-signin-token',
+        refresh_token: 'quick-signin-refresh-token'
       });
-      return { 
-        success: true, 
-        isDevelopment: true,
-        skipBrowserOpen: true,
-        user: devResult.user,
-        subscription: devResult.subscription
-      };
+      
+      if (devResult.success) {
+        console.log('✅ Quick sign-in successful');
+        return { 
+          success: true, 
+          isDevelopment: true,
+          skipBrowserOpen: true,
+          user: devResult.user,
+          subscription: devResult.subscription
+        };
+      } else {
+        console.error('❌ Quick sign-in failed:', devResult.error);
+        return { success: false, error: devResult.error };
+      }
     }
 
     try {
@@ -60,32 +74,28 @@ class AuthBridge {
       const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
       const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key';
       
-      console.log('🔐 Checking Supabase credentials...');
+      console.log('🔐 Production mode - checking Supabase credentials...');
       console.log('   SUPABASE_URL:', supabaseUrl ? 'set' : 'not set');
       console.log('   SUPABASE_ANON_KEY:', supabaseAnonKey ? 'set (length: ' + supabaseAnonKey.length + ')' : 'not set');
       
       // Check if we have valid Supabase credentials
       if (supabaseUrl.includes('your-project.supabase.co') || supabaseAnonKey === 'your-anon-key' || !supabaseUrl || !supabaseAnonKey) {
-        // Development mode fallback - simulate sign-in directly
-        console.log('🔧 No valid Supabase credentials - using development mode fallback');
-        const devResult = await this.handleOAuthCallback({ 
-          access_token: 'dev-token',
-          refresh_token: 'dev-refresh-token'
-        });
+        console.error('❌ Invalid Supabase credentials in production mode');
         return { 
-          success: true, 
-          isDevelopment: true,
-          skipBrowserOpen: true,
-          user: devResult.user,
-          subscription: devResult.subscription
+          success: false, 
+          error: 'Supabase credentials not configured properly' 
         };
       }
 
-      // Create Supabase OAuth URL directly
-      const redirectUrl = process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/success';
-      const oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+      // Create Supabase OAuth URL with forced account selection
+      const redirectUrl = process.env.OAUTH_REDIRECT_URL || 'https://agile-basin-06335-9109082620ce.herokuapp.com/auth/success';
+      
+      // Use prompt=consent to force account picker and re-consent every time
+      // This ensures users can switch accounts properly
+      const oauthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}&prompt=consent`;
       
       console.log('🌐 Generated OAuth URL:', oauthUrl);
+      console.log('🔄 Redirect URL:', redirectUrl);
 
       return {
         success: true,
@@ -104,25 +114,36 @@ class AuthBridge {
   // Handle OAuth callback with Go backend processing
   async handleOAuthCallback(session) {
     try {
-      // In development mode, simulate successful callback
-      if (this.isDevelopmentMode) {
-        // Store dev tokens
-        this.accessToken = 'dev-token';
-        this.refreshToken = 'dev-refresh-token';
+      console.log('🔐 handleOAuthCallback called');
+      console.log('🔐 Session data:', session);
+      console.log('🔐 isDevelopmentMode:', this.isDevelopmentMode);
+      console.log('🔐 FORCE_QUICK_SIGNIN:', process.env.FORCE_QUICK_SIGNIN);
+      
+      // Use quick sign-in if in development mode OR if quick sign-in is forced
+      const useQuickSignIn = this.isDevelopmentMode || process.env.FORCE_QUICK_SIGNIN === 'true';
+      
+      if (useQuickSignIn) {
+        console.log('🔧 Quick sign-in mode - creating admin session');
+        // Store tokens
+        this.accessToken = session.access_token || 'quick-signin-token';
+        this.refreshToken = session.refresh_token || 'quick-signin-refresh-token';
         
-        const devResult = {
+        const adminResult = {
           success: true,
           user: {
-            id: 'dev-user',
-            email: 'hritthikin@gmail.com',
-            name: 'Development User',
+            id: 'quick-signin-user',
+            email: process.env.ADMIN_EMAIL || 'hritthikin@gmail.com',
+            name: 'Admin User',
             role: 'admin'
           },
           subscription: { plan: 'enterprise', status: 'active' },
           usage: { currentMonth: 0, totalMinutes: 0, limit: -1 }
         };
-        this.cacheSession('current', devResult);
-        return devResult;
+        
+        console.log('💾 Caching admin session:', adminResult);
+        this.cacheSession('current', adminResult);
+        console.log('✅ Admin session cached successfully');
+        return adminResult;
       }
 
       // For production, we need to get user data from Supabase first
@@ -212,12 +233,9 @@ class AuthBridge {
 
     // Check if we have an access token
     if (!this.accessToken) {
-      console.log('⚠️ No access token available for validation');
-      
       // Try to use cached session as fallback
       const fallbackCache = this.getCachedSession('current');
       if (fallbackCache) {
-        console.log('🔌 Using cached session as fallback (no token)');
         return {
           valid: true,
           offline: true,
@@ -288,9 +306,12 @@ class AuthBridge {
 
   // Fast authentication check
   isAuthenticated() {
-    if (this.isDevelopmentMode) return true;
+    if (this.isDevelopmentMode) {
+      return true;
+    }
     
     const cached = this.getCachedSession('current');
+    
     if (cached && this.isCacheValid(cached)) {
       return true;
     }
@@ -453,11 +474,31 @@ class AuthBridge {
   }
 
   isDevMode() {
-    return process.env.FORCE_DEV_MODE === 'true' ||
-           process.env.SUPABASE_URL === 'https://your-project.supabase.co' ||
-           process.env.SUPABASE_ANON_KEY === 'your-anon-key' ||
-           !process.env.SUPABASE_URL ||
-           !process.env.SUPABASE_ANON_KEY;
+    // First check if development mode is explicitly forced
+    if (process.env.FORCE_DEV_MODE === 'true') {
+      console.log('🔧 Development mode forced via FORCE_DEV_MODE=true');
+      return true;
+    }
+    
+    // Check if quick sign-in is forced (acts like dev mode)
+    if (process.env.FORCE_QUICK_SIGNIN === 'true') {
+      console.log('🔧 Quick sign-in mode forced via FORCE_QUICK_SIGNIN=true');
+      return true;
+    }
+    
+    // Then check if Supabase credentials are missing or invalid
+    const hasInvalidSupabase = process.env.SUPABASE_URL === 'https://your-project.supabase.co' ||
+                               process.env.SUPABASE_ANON_KEY === 'your-anon-key' ||
+                               !process.env.SUPABASE_URL ||
+                               !process.env.SUPABASE_ANON_KEY;
+    
+    if (hasInvalidSupabase) {
+      console.log('🔧 Development mode activated due to invalid/missing Supabase credentials');
+      return true;
+    }
+    
+    console.log('🏭 Production mode - valid Supabase credentials found');
+    return false;
   }
 
   getGoClientPath() {

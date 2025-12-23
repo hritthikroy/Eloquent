@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -557,9 +558,66 @@ func (s *UserService) TrackUsage(userID string, minutes int, usageType, mode, la
 		logEntry.ErrorMessage = &errorMsg[0]
 	}
 
-	// In real implementation, insert into database
 	fmt.Printf("Tracking usage: %+v\n", logEntry)
 
+	// Only update usage for successful transcriptions
+	if !success || minutes <= 0 {
+		return nil
+	}
+
+	// Update user's usage_current_month in database
+	updateURL := fmt.Sprintf("%s/rest/v1/users?id=eq.%s", s.supabase.URL, userID)
+	
+	// First get current usage
+	user, err := s.GetUserByID(userID)
+	if err != nil {
+		fmt.Printf("Error getting user for usage update: %v\n", err)
+		return err
+	}
+	
+	newUsage := user.UsageCurrentMonth + minutes
+	
+	updateBody := map[string]interface{}{
+		"usage_current_month": newUsage,
+	}
+	
+	bodyBytes, err := json.Marshal(updateBody)
+	if err != nil {
+		fmt.Printf("Error marshaling usage update: %v\n", err)
+		return err
+	}
+	
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		fmt.Printf("Error creating usage update request: %v\n", err)
+		return err
+	}
+	
+	req.Header.Set("Authorization", "Bearer "+s.supabase.ServiceKey)
+	req.Header.Set("apikey", s.supabase.ServiceKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Prefer", "return=minimal")
+	
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error updating usage in database: %v\n", err)
+		return err
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		fmt.Printf("Failed to update usage, status: %d\n", resp.StatusCode)
+		return fmt.Errorf("failed to update usage: %d", resp.StatusCode)
+	}
+	
+	// Invalidate cache so next fetch gets fresh data
+	s.cacheMutex.Lock()
+	s.usersCache = nil
+	s.cacheMutex.Unlock()
+	
+	fmt.Printf("✅ Updated usage for user %s: %d -> %d minutes\n", userID, user.UsageCurrentMonth, newUsage)
+	
 	return nil
 }
 

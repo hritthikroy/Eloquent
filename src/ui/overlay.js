@@ -68,10 +68,13 @@ async function initAudio() {
     audioContext = new AudioContext({ latencyHint: 'interactive' });
     const source = audioContext.createMediaStreamSource(stream);
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64;
-    analyser.smoothingTimeConstant = 0.85;
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.5; // Balanced: responsive but smooth
+    analyser.minDecibels = -85;
+    analyser.maxDecibels = -10;
     source.connect(analyser);
     dataArray = new Uint8Array(analyser.frequencyBinCount);
+    console.log('✅ Audio initialized - microphone connected');
     animate();
   } catch (err) {
     console.error('Mic error:', err);
@@ -79,27 +82,46 @@ async function initAudio() {
   }
 }
 
-// ULTRA-FAST Real audio animation with optimizations
+// Real-time audio animation - smooth and responsive
 let frameCount = 0;
 function animate() {
   animationId = requestAnimationFrame(animate);
-  
-  // PERFORMANCE BOOST: Only update every other frame for smoother performance
   frameCount++;
-  if (frameCount % 2 !== 0) return;
   
   analyser.getByteFrequencyData(dataArray);
 
-  // Map frequency data to 6 bars (center has highest energy)
+  // Calculate RMS volume for better voice detection
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    sum += dataArray[i] * dataArray[i];
+  }
+  const rmsVolume = Math.sqrt(sum / dataArray.length);
+  
+  // Dynamic sensitivity based on voice presence
+  const volumeBoost = rmsVolume > 20 ? 1.3 : 1.0;
+
+  // Map frequency data to 6 bars - focus on voice frequencies (100-3000 Hz)
   for (let i = 0; i < 6; i++) {
-    const idx = Math.floor((i / 6) * dataArray.length);
-    const target = (dataArray[idx] / 255) * 16 + 2;
-    barHeights[i] = barHeights[i] * 0.7 + target * 0.3;
+    const startBin = 2;
+    const endBin = Math.floor(dataArray.length * 0.4);
+    const idx = startBin + Math.floor((i / 6) * (endBin - startBin));
+    
+    // Average nearby bins for smoother result
+    const val1 = dataArray[Math.max(0, idx - 1)] || 0;
+    const val2 = dataArray[idx] || 0;
+    const val3 = dataArray[Math.min(dataArray.length - 1, idx + 1)] || 0;
+    const avgVal = (val1 + val2 + val3) / 3;
+    
+    const rawValue = avgVal * volumeBoost;
+    const target = (rawValue / 255) * 16 + 2;
+    
+    // Smooth interpolation: 0.5/0.5 - balanced response
+    barHeights[i] = barHeights[i] * 0.5 + target * 0.5;
   }
 
   drawBars();
   
-  // PERFORMANCE BOOST: Update timer every 30 frames (~2 times per second is enough)
+  // Update timer every 30 frames
   if (frameCount % 30 === 0) {
     updateTimer();
   }
