@@ -1352,19 +1352,15 @@ function startRecording() {
 
   playSound('start');
   performanceMonitor.measureRecordingLatency();
-  // Optimized audio settings for clear English speech capture
+  // Simple recording - no effects that block output
+  // Effects like norm, silence, compand require full file read and block streaming
   recordingProcess = spawn('rec', [
     '-r', '16000',        // 16kHz - optimal for Whisper
     '-c', '1',            // Mono
     '-b', '16',           // 16-bit depth
     '-t', 'wav',
-    audioFile,
-    'highpass', '80',     // Cut rumble below 80Hz
-    'lowpass', '8000',    // Keep full speech range up to 8kHz
-    'norm', '-0.5',       // Normalize to -0.5dB (prevents clipping)
-    'silence', '1', '0.1', '0.5%',  // Remove leading silence
-    'compand', '0.005,0.1', '-60,-60,-40,-20,-20,-15,0,-10', '-5', '-90', '0.02',
-    'gain', '-n', '-3'    // Final normalization with -3dB headroom
+    audioFile
+    // No effects - they cause Out:0 issue on macOS CoreAudio
   ]);
 
   // Add better logging for the recording process
