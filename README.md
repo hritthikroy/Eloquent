@@ -6,6 +6,10 @@ Professional voice-to-text desktop application with AI-powered transcription and
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## 🌐 Website
+
+Visit the official website: **[Eloquent Landing Page](https://hritthikroy.github.io/Eloquent/)**
+
 ## Features
 
 - 🎤 **Voice Recording** - High-quality audio capture with one-click recording
