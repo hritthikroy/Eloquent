@@ -99,6 +99,34 @@ let isAuthenticated = false;
 let processingOAuth = false; // Flag to prevent duplicate OAuth processing
 let lastProcessedOAuthUrl = null; // Track last processed URL
 
+// Helper function to find sox/rec binary
+function getRecordingBinary() {
+  const possiblePaths = [
+    'rec', // System PATH (development)
+    '/opt/homebrew/bin/rec', // Homebrew ARM Mac
+    '/usr/local/bin/rec', // Homebrew Intel Mac
+    '/usr/bin/rec', // Linux
+    path.join(process.resourcesPath || '', 'bin', 'rec'), // Bundled in app
+    path.join(__dirname, '..', 'assets', 'bin', 'mac', 'rec'), // Dev bundled
+  ];
+  
+  for (const binPath of possiblePaths) {
+    try {
+      if (binPath === 'rec') {
+        // Check if rec is in PATH
+        const { execSync } = require('child_process');
+        execSync('which rec', { stdio: 'ignore' });
+        return 'rec';
+      } else if (fs.existsSync(binPath)) {
+        return binPath;
+      }
+    } catch (e) {
+      // Continue to next path
+    }
+  }
+  return null;
+}
+
 // Reset OAuth flags at startup
 console.log('🔄 Initializing OAuth processing flags');
 processingOAuth = false;
@@ -1352,9 +1380,24 @@ function startRecording() {
 
   playSound('start');
   performanceMonitor.measureRecordingLatency();
+  
+  // Find the rec binary
+  const recBinary = getRecordingBinary();
+  if (!recBinary) {
+    console.error('❌ Sox/rec not found. Please install: brew install sox');
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('error', 'Sox not installed. Run: brew install sox');
+    }
+    showNotification('Setup Required', 'Please install sox: brew install sox');
+    isProcessing = false;
+    return;
+  }
+  
+  console.log(`🎤 Using recording binary: ${recBinary}`);
+  
   // Simple recording - no effects that block output
   // Effects like norm, silence, compand require full file read and block streaming
-  recordingProcess = spawn('rec', [
+  recordingProcess = spawn(recBinary, [
     '-r', '16000',        // 16kHz - optimal for Whisper
     '-c', '1',            // Mono
     '-b', '16',           // 16-bit depth
@@ -3503,11 +3546,11 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
       const response = await axios({
         method: 'GET',
         url: url,
-        timeout: 5000,
+        timeout: 10000, // Increased timeout for slow connections
         validateStatus: (status) => status >= 200 && status < 600
       });
       
-      console.log(`   ✅ Health check response: ${response.status}`);
+      console.log(`   ✅ Health check response: ${response.status}`, response.data);
       
       return {
         success: response.status >= 200 && response.status < 300,
@@ -3516,10 +3559,18 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
       };
     } catch (error) {
       console.error('   ❌ Health check failed:', error.message);
+      
+      // More specific error handling
+      let status = 500;
+      if (error.code === 'ECONNREFUSED') status = 503;
+      else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') status = 504;
+      else if (error.code === 'ENOTFOUND') status = 503;
+      
       return {
         success: false,
-        status: error.code === 'ECONNREFUSED' ? 503 : 500,
-        error: error.message
+        status: status,
+        error: error.message,
+        code: error.code
       };
     }
   }

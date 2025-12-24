@@ -1,161 +1,124 @@
-# 🎤 Eloquent - Voice-to-Text macOS App
+# Eloquent
 
-Professional voice dictation application with AI enhancement, built with Electron and Go backend.
+Professional voice-to-text desktop application with AI-powered transcription and smart rewriting.
 
-## ✨ Features
+![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-- 🎤 **Ultra-fast voice transcription** with Groq API
-- 🤖 **AI text enhancement** and grammar correction
-- 🎯 **Auto-paste at cursor** with accessibility integration
-- 📊 **Usage tracking** and subscription management
-- 🔐 **Secure authentication** with Supabase
-- 💳 **Stripe subscriptions** for premium features
-- ⚡ **High-performance Go backend** (70% less memory usage)
+## Features
 
-## 🚀 Quick Start
+- 🎤 **Voice Recording** - High-quality audio capture with one-click recording
+- 🤖 **AI Transcription** - Powered by Groq's Whisper API for accurate speech-to-text
+- ✨ **Smart Rewrite** - AI-powered text enhancement and grammar correction
+- 📋 **Auto-Paste** - Automatically paste transcribed text to any application
+- 🔐 **Google OAuth** - Secure authentication with Google accounts
+- 💳 **Subscription Plans** - Free, Pro, and Enterprise tiers
+- 🌐 **Cloud Backend** - Reliable Go backend hosted on Heroku
+- 🖥️ **Cross-Platform** - Available for macOS (Apple Silicon) and Windows
 
-### Prerequisites
-- **Go 1.21+** for backend
-- **Node.js 18+** for Electron app
-- **macOS** (for Electron app)
+## Download
 
-### Installation
+Download the latest release from [GitHub Releases](https://github.com/hritthikroy/Eloquent/releases).
 
-1. **Clone and install dependencies**
+| Platform | File |
+|----------|------|
+| macOS (Apple Silicon) | `Eloquent-2.1.0-mac-arm64.dmg` |
+| Windows 10/11 | `Eloquent-2.1.0-win-x64.exe` |
+
+## Requirements
+
+### macOS
+- macOS 10.15 (Catalina) or later
+- Apple Silicon (M1/M2/M3) Mac
+- [Sox](https://sox.sourceforge.net/) for audio recording: `brew install sox`
+
+### Windows
+- Windows 10 or later (64-bit)
+- Sox for audio recording (included in installer or install separately)
+
+## Quick Start
+
+1. Download the installer for your platform
+2. Install the application
+3. Sign in with your Google account
+4. Press `Alt+Space` to start recording
+5. Press `ESC` to stop and transcribe
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Alt+Space` | Start/Stop standard recording |
+| `Alt+Shift+Space` | Start AI rewrite mode |
+| `ESC` | Stop recording |
+
+## Development Setup
+
 ```bash
-git clone <repository-url>
-cd EloquentElectron
+# Clone the repository
+git clone https://github.com/hritthikroy/Eloquent.git
+cd Eloquent
+
+# Install dependencies
 npm install
-cd backend-go && go mod tidy && cd ..
-```
 
-2. **Configure environment**
-```bash
-# Copy environment template
+# Create .env file from example
 cp .env.example .env
-cp backend-go/.env.example backend-go/.env
+# Edit .env with your API keys
 
-# Edit .env files with your credentials:
-# - SUPABASE_URL
-# - SUPABASE_SERVICE_KEY
-# - GROQ_API_KEY
-# - STRIPE_SECRET_KEY
+# Run in development mode
+npm run dev
+
+# Build for production
+npm run build:mac-arm64  # macOS Apple Silicon
+npm run build:win        # Windows
 ```
 
-3. **Start the application**
-```bash
-# Start backend
-cd backend-go && go run main.go &
+## Environment Variables
 
-# Start Electron app
-npm start
+Create a `.env` file with:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+ELOQUENT_API_URL=your_backend_url
 ```
 
-## 📁 Project Structure
+## Tech Stack
+
+- **Frontend**: Electron, HTML/CSS/JavaScript
+- **Backend**: Go (Golang)
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth with Google OAuth
+- **AI**: Groq Whisper API
+- **Hosting**: Heroku
+
+## Project Structure
 
 ```
 EloquentElectron/
-├── src/                    # Source code
-│   ├── main.js            # Main Electron process
-│   ├── services/          # Core services
-│   │   ├── auth-service.js
-│   │   ├── performance-monitor.js
-│   │   └── performance-optimizer.js
-│   ├── utils/             # Utility modules
-│   │   ├── ai-prompts.js
-│   │   ├── admin-check.js
-│   │   ├── fast-startup.js
-│   │   └── utils.js
-│   └── ui/                # User interface files
-│       ├── dashboard.html
-│       ├── overlay.html
-│       ├── admin.html
-│       ├── login.html
-│       ├── subscription.html
-│       └── manual-oauth.html
-├── backend-go/            # Go backend server
-├── assets/                # Static assets
-├── docs/                  # Documentation
-│   ├── QUICKSTART.md
-│   └── PERFORMANCE_OPTIMIZATIONS.md
-├── .env                   # Environment configuration
-└── package.json          # Node.js dependencies
+├── src/                 # Electron app source
+│   ├── main.js         # Main process
+│   ├── preload.js      # Preload scripts
+│   ├── ui/             # UI components
+│   ├── services/       # Business logic
+│   └── utils/          # Utilities
+├── backend-go/         # Go backend
+├── build/              # Build resources (icons)
+├── dist/               # Built applications
+└── docs/               # Documentation
 ```
 
-## 🎯 Usage
+## License
 
-### Keyboard Shortcuts
-- **Alt + Shift + Space** - Start AI Rewrite (recommended)
-- **Alt + Space** - Start Standard transcription
-- **Enter** - Stop recording
-- **Cmd + Shift + D** - Open dashboard
-- **Cmd + Shift + A** - Open admin panel (admin users only)
+MIT License - see [LICENSE](LICENSE) for details.
 
-### First Recording
-1. Press **Alt + Shift + Space**
-2. Speak your text
-3. Press **Enter** to stop
-4. Text automatically pastes at cursor!
+## Author
 
-## 🔧 Development
-
-### Scripts
-```bash
-# Development
-npm run dev              # Start Electron in dev mode
-npm run start:full       # Start backend + frontend
-
-# Production
-npm run build           # Build distributable app
-npm run build:signed    # Build signed app
-
-# Backend
-npm run backend:dev     # Start Go server
-npm run backend:build   # Build Go binary
-npm run backend:test    # Run Go tests
-```
-
-## 🚀 Performance
-
-| Metric | Go Backend | Previous (Node.js) |
-|--------|------------|-------------------|
-| **Memory Usage** | 30-50MB | 150-200MB |
-| **Startup Time** | <100ms | 2-3 seconds |
-| **Requests/sec** | 15,000+ | 5,000 |
-| **Binary Size** | 15MB | 50MB+ |
-
-## 📚 Documentation
-
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Get up and running in 5 minutes
-- **[Performance Guide](docs/PERFORMANCE_OPTIMIZATIONS.md)** - Optimization details
-- **[Backend Documentation](backend-go/README.md)** - Go backend setup
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-#### "Connection refused" error
-```bash
-# Make sure Go backend is running
-cd backend-go && go run main.go
-```
-
-#### Microphone permission denied
-```bash
-# Reset permissions
-npm run reset-permissions
-# Then restart the app
-```
-
-#### Auto-paste not working
-1. Go to **System Settings** > **Privacy & Security** > **Accessibility**
-2. Find **Electron** or **Eloquent** and enable it
-3. Restart the app
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+Created by [Hritthik Roy](https://github.com/hritthikroy)
 
 ---
 
-**Built with ❤️ using Go and Electron**
+*Eloquent - Transform your voice into text, effortlessly.*

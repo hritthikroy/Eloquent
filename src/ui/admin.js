@@ -222,8 +222,14 @@ async function checkBackendHealth() {
     }
     
     // Also check if we got valid health data even if success flag is wrong
-    if (result.data && result.data.status === 'ok') {
+    if (result.data && (result.data.status === 'ok' || result.data.status === 'healthy')) {
       console.log('✅ Backend is healthy (data check)');
+      return true;
+    }
+    
+    // Check if data exists at all - means backend responded
+    if (result.data) {
+      console.log('✅ Backend responded with data');
       return true;
     }
     
@@ -247,13 +253,14 @@ function showBackendInstructions() {
   const instructions = document.createElement('div');
   instructions.className = 'alert alert-info';
   instructions.innerHTML = `
-    <strong>🔧 Backend Server Not Running</strong><br><br>
-    <strong>Quick Start Options:</strong><br>
-    1. <strong>Easy:</strong> Double-click <code>start-backend.sh</code> (Mac/Linux) or <code>start-backend.bat</code> (Windows)<br>
-    2. <strong>Terminal:</strong> Run <code>./start-backend.sh</code> in EloquentElectron directory<br>
-    3. <strong>Manual:</strong> <code>cd backend-go && go run main.go</code><br>
-    4. <strong>Full Dev:</strong> Run <code>./dev.sh</code> to start both backend and frontend<br><br>
-    <strong>Note:</strong> The backend runs on port 3000. Make sure no other service is using this port.<br>
+    <strong>🔧 Cannot Connect to Backend Server</strong><br><br>
+    <strong>Possible Issues:</strong><br>
+    1. <strong>Network:</strong> Check your internet connection<br>
+    2. <strong>Server:</strong> The backend server may be temporarily unavailable<br>
+    3. <strong>Firewall:</strong> Your firewall may be blocking the connection<br><br>
+    <strong>For Development:</strong><br>
+    - Run <code>./start-backend.sh</code> to start local backend<br>
+    - Or run <code>./dev.sh</code> to start both backend and frontend<br><br>
     <button id="retryConnection" class="btn btn-primary btn-small" style="margin-top: 15px;">🔄 Retry Connection</button>
     <button id="showTroubleshooting" class="btn btn-secondary btn-small" style="margin-top: 15px; margin-left: 10px;">🛠️ Troubleshooting</button>
   `;
