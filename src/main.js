@@ -33,6 +33,18 @@ if (!app) {
   process.exit(0);
 }
 
+// Override userData path in development to avoid sandbox issues
+if (!app.isPackaged) {
+  const userDataPath = path.join(__dirname, '..', 'userData');
+  app.setPath('userData', userDataPath);
+  console.log(`🔧 Development mode: Using local userData path: ${userDataPath}`);
+  
+  // Disable sandbox and GPU for stability in dev environment
+  app.commandLine.appendSwitch('no-sandbox');
+  app.commandLine.appendSwitch('disable-gpu');
+  app.commandLine.appendSwitch('disable-software-rasterizer');
+}
+
 // Suppress security warnings in development - multiple methods for reliability
 app.commandLine.appendSwitch('disable-web-security');
 app.commandLine.appendSwitch('disable-features', 'VizDisplayCompositor');

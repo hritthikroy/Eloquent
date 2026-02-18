@@ -30,6 +30,7 @@ api-usage.json
 history.json
 config.json
 admin-config.json
+userData/
 
 # Electron cache
 electron-cache/
