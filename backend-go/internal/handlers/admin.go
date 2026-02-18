@@ -102,7 +102,10 @@ func (h *AdminHandler) GetAllUsers(c *gin.Context) {
 
 	users, err := h.userService.GetAllUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch users",
+			"details": err.Error(),
+		})
 		return
 	}
 

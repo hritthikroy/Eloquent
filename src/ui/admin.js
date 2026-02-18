@@ -164,7 +164,11 @@ async function loadAdminData() {
         return;
       }
       
-      throw new Error(`HTTP ${result.status}: ${result.error}`);
+      let errorMsg = result.error || 'Unknown error';
+      if (result.data && result.data.details) {
+        errorMsg += ` (${result.data.details})`;
+      }
+      throw new Error(`HTTP ${result.status}: ${errorMsg}`);
     }
     
     const stats = result.data;
@@ -316,7 +320,7 @@ async function loadUsers() {
     
     // Create abort controller for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Increased to 30s
     
     const result = await ipcRenderer.invoke('admin-backend-request', {
       method: 'GET',
@@ -334,7 +338,11 @@ async function loadUsers() {
         return;
       }
       
-      throw new Error(`HTTP ${result.status}: ${result.error}`);
+      let errorMsg = result.error || 'Unknown error';
+      if (result.data && result.data.details) {
+        errorMsg += ` (${result.data.details})`;
+      }
+      throw new Error(`HTTP ${result.status}: ${errorMsg}`);
     }
     
     const data = result.data;
@@ -694,7 +702,12 @@ async function viewUserDetails(userId) {
         showAlert('User not found', 'error');
         return;
       }
-      throw new Error(result.error || 'Failed to fetch user details');
+      
+      let errorMsg = result.error || 'Failed to fetch user details';
+      if (result.data && result.data.details) {
+        errorMsg += ` (${result.data.details})`;
+      }
+      throw new Error(errorMsg);
     }
     
     showUserModal(result.data);

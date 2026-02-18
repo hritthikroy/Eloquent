@@ -3591,6 +3591,8 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
     };
   }
   
+  let startTime = Date.now();
+  
   try {
     const url = `${getAPIUrl()}${endpoint}`;
     console.log('   Making request to:', url);
@@ -3602,7 +3604,7 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
         'Authorization': 'Bearer dev-token',
         'Content-Type': 'application/json'
       },
-      timeout: 10000,
+      timeout: 30000, // Increased to 30s to match frontend timeout
       validateStatus: function (status) {
         // Accept any status code to handle it properly
         return status >= 200 && status < 600;
@@ -3614,15 +3616,30 @@ ipcMain.handle('admin-backend-request', async (event, { method, endpoint, data }
     }
     
     const response = await axios(config);
-    console.log(`   ✅ Response: ${response.status}`);
+    const duration = Date.now() - startTime;
+    console.log(`   ✅ Response: ${response.status} (${duration}ms)`);
     
-    return {
-      success: response.status >= 200 && response.status < 300,
+    const success = response.status >= 200 && response.status < 300;
+    const result = {
+      success,
       status: response.status,
       data: response.data
     };
+
+    if (!success && response.data && response.data.error) {
+      result.error = response.data.error;
+    }
+    
+    // Log the request
+    logApiRequest('admin-backend', success ? 'success' : 'error', duration, null, result.error);
+    
+    return result;
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error('   ❌ Backend request failed:', error.message);
+    
+    // Log the error
+    logApiRequest('admin-backend', 'error', duration, null, error.message);
     
     // Check if it's a connection error
     if (error.code === 'ECONNREFUSED') {
