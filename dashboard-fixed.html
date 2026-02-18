@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <title>Eloquent - Voice to Text</title>
+  <link rel="stylesheet" href="dashboard-styles.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">Eloquent</div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Main</div>
+      <div class="sidebar-item active" data-section="home">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+        </svg>
+        Home
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Tools</div>
+      <div class="sidebar-item" data-section="history">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+        </svg>
+        History
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Support</div>
+      <div class="sidebar-item" data-section="settings">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+        </svg>
+        Settings
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="home-section">
+      <h1>Welcome to Eloquent</h1>
+      <p class="subtitle">Transform your voice into text with AI-powered transcription</p>
+    </div>
+
+    <div id="history-section" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h1 style="margin: 0;">History</h1>
+        <button class="btn clear-all-btn">Clear All</button>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <input type="text" id="historySearch" placeholder="Search transcriptions...">
+      </div>
+      <div id="historyList"></div>
+      <div id="emptyHistory" class="card" style="text-align: center; padding: 60px 20px; display: none;">
+        <div style="font-size: 56px; margin-bottom: 16px; opacity: 0.3;">🎤</div>
+        <h3>No transcriptions yet</h3>
+        <p>Press ⌥D to start your first recording</p>
+      </div>
+    </div>
+
+    <div id="settings-section" style="display: none;">
+      <h1>Settings</h1>
+      <div class="card">
+        <h3>Recording language</h3>
+        <select id="language">
+          <option value="en">English</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+        </select>
+      </div>
+      <div class="card">
+        <h3>AI Intelligence Mode</h3>
+        <select id="aiMode">
+          <option value="qn">QN - Text Optimizer</option>
+          <option value="code">Code Mode</option>
+          <option value="grammar">Grammar Fix Only</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+    </div>
+  </div>
+
+  <script src="EloquentElectron/src/ui/dashboard.js"></script>
+</body>
+</html>
