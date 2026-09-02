@@ -2119,10 +2119,6 @@ async function stopRecording() {
         if (actionResult && actionResult.isSinging) {
           await jarvisManager.sing(jarvisReply, speakingVoice);
         } else {
-          // Full-Duplex: Start recording concurrently so user can barge-in and overlap anytime!
-          if (isJarvisLoopActive && !isRecording) {
-            startRecording();
-          }
           await jarvisManager.speak(jarvisReply, speakingVoice);
         }
       }
@@ -2157,31 +2153,12 @@ async function stopRecording() {
 
       // Real-time hands-free turn taking loop - Tony Stark Suit 24/7 Mode
       if (isJarvisLoopActive) {
-        if (lastInterruptedUtterance || jarvisSpeechDetected) {
-          console.log('🎙️ Seamless Full-Duplex handoff: User interjected and is actively speaking, continuing turn...');
-        } else {
-          console.log('🎙️ Tony Stark Suit Mode: Re-arming clean mic for continuous 24/7 ambient dialogue...');
-          // Discard any residual recording from speech playback without triggering a ghost turn!
-          if (isRecording || recordingProcess) {
-            isRecording = false;
-            if (audioRecorder.recordingProcess) {
-              try { audioRecorder.recordingProcess.kill('SIGKILL'); } catch (e) {}
-              audioRecorder.recordingProcess = null;
-              audioRecorder.isRecording = false;
-            }
-            recordingProcess = null;
-            jarvisSpeechDetected = false;
-            jarvisSpeechStartTime = 0;
-            jarvisLastSpeechTime = 0;
-            jarvisSpeechFrames = 0;
-            jarvisAutoStopTriggered = false;
-          }
-          setTimeout(() => {
-            if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
-            overlayWindow.webContents.send('jarvis-listening');
-            startRecording();
-          }, 90);
-        }
+        console.log('🎙️ Tony Stark Suit Mode: Re-arming clean mic for next conversational turn...');
+        setTimeout(() => {
+          if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
+          overlayWindow.webContents.send('jarvis-listening');
+          startRecording();
+        }, 120);
       } else {
         hideOverlay();
       }
