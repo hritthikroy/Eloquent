@@ -250,28 +250,6 @@
       flex: 1;
     }
 
-    /* Live speech transcript stream */
-    .live-transcript {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.95);
-      max-width: 220px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: none;
-      font-weight: 500;
-      letter-spacing: -0.01em;
-      transition: opacity 0.15s ease-in;
-    }
-
-    .overlay.has-transcript .live-transcript {
-      display: block;
-    }
-
-    .overlay.has-transcript .rec-label {
-      display: none;
-    }
-
     .overlay.error .waveform {
       display: none;
     }
@@ -286,7 +264,6 @@
     </div>
 
     <span class="rec-label">Recording</span>
-    <div class="live-transcript" id="liveTranscript"></div>
 
     <div class="waveform">
       <canvas id="waveCanvas"></canvas>

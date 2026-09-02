@@ -979,7 +979,7 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 420;
+  const windowWidth = 280;
   const windowHeight = 50;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 20;
@@ -1351,11 +1351,46 @@ function createUserManagement() {
 
 let liveStreamingInterval = null;
 let isStreamingChunk = false;
+let liveTypedText = '';
+
+function typeLiveTextAtCursor(text) {
+  if (!text || process.platform !== 'darwin') return;
+  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const script = `tell application "System Events" to keystroke "${escaped}"`;
+  exec(`osascript -e '${script}'`, (err) => {
+    if (err) console.log('Live typing err:', err.message);
+  });
+}
+
+function replaceLiveDraftWithFinal(charCount, finalText) {
+  clipboard.writeText(finalText);
+  if (process.platform === 'darwin') {
+    const script = `
+      tell application "System Events"
+        repeat ${charCount} times
+          key code 51
+        end repeat
+        keystroke "v" using command down
+      end tell
+    `;
+    exec(`osascript -e '${script}'`, (err) => {
+      if (err) {
+        console.log('Draft replace error, falling back to paste:', err.message);
+        pasteTextRobust(finalText);
+      } else {
+        console.log('✅ Live draft magically replaced with final polished text!');
+      }
+    });
+  } else {
+    pasteTextRobust(finalText);
+  }
+}
 
 function startLiveStreaming(filePath) {
   stopLiveStreaming();
+  liveTypedText = '';
 
-  // Poll every 1.4 seconds for live speech transcript preview
+  // Poll every 1.3 seconds for real-time live typing directly into the active text field
   liveStreamingInterval = setInterval(async () => {
     if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
 
@@ -1369,8 +1404,25 @@ function startLiveStreaming(filePath) {
 
       const previewText = await transcribePreview(snapshotPath);
       if (previewText && previewText.trim().length > 0 && isRecording) {
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('live-transcript', previewText.trim());
+        const cleanPreview = previewText.trim();
+        
+        // Calculate new words to type at cursor
+        let textToType = '';
+        if (!liveTypedText) {
+          textToType = cleanPreview;
+          liveTypedText = cleanPreview;
+        } else if (cleanPreview.length > liveTypedText.length && cleanPreview.toLowerCase().startsWith(liveTypedText.toLowerCase().substring(0, Math.min(10, liveTypedText.length)))) {
+          textToType = cleanPreview.substring(liveTypedText.length);
+          liveTypedText = cleanPreview;
+        } else if (!cleanPreview.toLowerCase().includes(liveTypedText.toLowerCase())) {
+          // If transcript adjusted earlier words, type remaining addition
+          textToType = ' ' + cleanPreview;
+          liveTypedText += ' ' + cleanPreview;
+        }
+
+        if (textToType) {
+          console.log(`✍️ Live typing into writing field: "${textToType}"`);
+          typeLiveTextAtCursor(textToType);
         }
       }
       fs.unlink(snapshotPath, () => {});
@@ -1379,7 +1431,7 @@ function startLiveStreaming(filePath) {
     } finally {
       isStreamingChunk = false;
     }
-  }, 1400);
+  }, 1300);
 }
 
 function stopLiveStreaming() {
@@ -1615,12 +1667,15 @@ async function stopRecording() {
       });
     }
 
-    // PERFORMANCE BOOST: Paste immediately - overlay is already closed
-    // Reduced delay from 200ms to 50ms since overlay is already gone
-    setTimeout(() => {
-      pasteTextRobust(finalText);
-      // Sound already played when window closed, no need to play again
-    }, 50);
+    // If live text was written at the cursor, replace the draft with the final polished text!
+    if (liveTypedText && liveTypedText.length > 0 && process.platform === 'darwin') {
+      console.log(`✨ Magically replacing live draft (${liveTypedText.length} chars) with polished text...`);
+      replaceLiveDraftWithFinal(liveTypedText.length, finalText);
+    } else {
+      setTimeout(() => {
+        pasteTextRobust(finalText);
+      }, 50);
+    }
 
     // Track API usage locally
     if (apiKey && apiKey.trim() !== '') {
