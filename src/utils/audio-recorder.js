@@ -162,13 +162,15 @@ class AudioRecorder {
     
     console.log(`🎤 Using recording binary: ${recBinary}`);
     
-    // Simple recording - no effects that block output
+    // Recording with full noise cancellation (filters room rumble, AC hum, desk bumps & electronic hiss)
     this.recordingProcess = spawn(recBinary, [
-      '-r', '16000',        // 16kHz - optimal for Whisper
       '-c', '1',            // Mono
       '-b', '16',           // 16-bit depth
       '-t', 'wav',
-      outputPath
+      outputPath,
+      'rate', '16000',      // Resample cleanly to 16kHz for Whisper
+      'highpass', '80',     // Cut low-frequency AC hum, desk vibration & room rumble (<80Hz)
+      'lowpass', '7500'     // Cut high-frequency electronic hiss & fan noise (>7.5kHz)
     ]);
 
     // Log output for debugging

@@ -878,7 +878,7 @@ function playSound(type) {
 
 // Shortcut system
 let lastShortcutTime = 0;
-const SHORTCUT_DEBOUNCE = 25;
+const SHORTCUT_DEBOUNCE = 300;
 let shortcutLock = false;
 
 function handleShortcut(action, mode = 'standard') {
@@ -1401,6 +1401,7 @@ async function transcribePreview(snapshotPath) {
     form.append('language', 'en');
     form.append('response_format', 'json');
     form.append('temperature', '0');
+    form.append('prompt', 'Hello, this is voice dictation for software code, notes, cursor, text fields, AI prompts, and rewrite commands.');
 
     const res = await axios.post(
       'https://api.groq.com/openai/v1/audio/transcriptions',
@@ -1410,9 +1411,15 @@ async function transcribePreview(snapshotPath) {
           ...form.getHeaders(),
           'Authorization': `Bearer ${getActiveAPIKey()}`
         },
-        timeout: 3500
+        timeout: 3500,
+        validateStatus: status => status < 500
       }
     );
+
+    if (res.status === 429) {
+      console.warn('⚠️ Preview rate limited (429), pausing chunk');
+      return '';
+    }
 
     return res.data?.text || '';
   } catch (err) {
@@ -1425,13 +1432,13 @@ function startLiveStreaming(filePath) {
   liveWordsTyped = [];
   totalLiveCharsTyped = 0;
 
-  // Stream live words to cursor every ~1 second
+  // Stream live words to cursor every ~2.2s (smooth cadence, stays well within 20 RPM limit)
   liveStreamingInterval = setInterval(async () => {
     if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
 
     try {
       const stats = await fsPromises.stat(filePath);
-      if (stats.size < 32000) return; // Wait for ~1s of audio
+      if (stats.size < 28000) return; // Wait for ~0.9s of audio
 
       isStreamingChunk = true;
       const snapshotPath = `${filePath}.snap.wav`;
@@ -1460,7 +1467,7 @@ function startLiveStreaming(filePath) {
     } finally {
       isStreamingChunk = false;
     }
-  }, 1100);
+  }, 2200);
 }
 
 function stopLiveStreaming() {
@@ -1552,8 +1559,8 @@ async function stopRecording() {
     maxRecordingTimeout = null;
   }
 
-  if (isProcessing) {
-    console.log('⚠️ Already processing recording');
+  if (isProcessing || (!isRecording && !recordingProcess)) {
+    console.log('⚠️ No active recording in progress to stop');
     return;
   }
 
@@ -1753,33 +1760,73 @@ async function transcribe(filePath) {
   form.append('response_format', 'json');
   form.append('temperature', '0'); // Zero temperature for English = most accurate
   
-  // Add prompt to improve accuracy for conversational English
-  form.append('prompt', 'This is a voice dictation in clear English. Transcribe accurately with proper punctuation.');
+  // Natural context prompt: guides acoustic recognition for technical words without hallucinating
+  form.append('prompt', 'Hello, this is voice dictation for software code, notes, cursor, text fields, AI prompts, and rewrite commands.');
 
   try {
-    const response = await axios.post(
-      'https://api.groq.com/openai/v1/audio/transcriptions',
-      form,
-      {
-        headers: {
-          ...form.getHeaders(),
-          'Authorization': `Bearer ${getActiveAPIKey()}`
-        },
-        // Resilient timeout based on audio duration and file size
-        timeout: uploadTimeout,
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        validateStatus: function (status) {
-          return status < 500;
+    let response;
+    try {
+      response = await axios.post(
+        'https://api.groq.com/openai/v1/audio/transcriptions',
+        form,
+        {
+          headers: {
+            ...form.getHeaders(),
+            'Authorization': `Bearer ${getActiveAPIKey()}`
+          },
+          timeout: uploadTimeout,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          validateStatus: status => status < 500
         }
+      );
+    } catch (postErr) {
+      response = { status: 500, data: { error: { message: postErr.message } } };
+    }
+
+    // Auto-recovery on 429 Rate Limit: wait 2 seconds and retry once
+    if (response.status === 429) {
+      console.warn('⚠️ Whisper rate limit reached (429). Waiting 2s and retrying...');
+      await new Promise(r => setTimeout(r, 2000));
+
+      const retryForm = new FormData();
+      retryForm.append('file', fs.createReadStream(filePath), {
+        filename: 'recording.wav',
+        contentType: 'audio/wav'
+      });
+      retryForm.append('model', 'whisper-large-v3-turbo');
+      retryForm.append('language', 'en');
+      retryForm.append('response_format', 'json');
+      retryForm.append('temperature', '0');
+      retryForm.append('prompt', 'Hello, this is voice dictation for software code, notes, cursor, text fields, AI prompts, and rewrite commands.');
+
+      try {
+        response = await axios.post(
+          'https://api.groq.com/openai/v1/audio/transcriptions',
+          retryForm,
+          {
+            headers: {
+              ...retryForm.getHeaders(),
+              'Authorization': `Bearer ${getActiveAPIKey()}`
+            },
+            timeout: uploadTimeout,
+            validateStatus: status => status < 500
+          }
+        );
+      } catch (retryErr) {
+        console.warn('⚠️ Whisper retry failed:', retryErr.message);
       }
-    );
+    }
 
     const transcriptionTime = Date.now() - transcriptionStart;
-    console.log(`⚡ Transcription completed in ${transcriptionTime}ms`);
+    console.log(`⚡ Transcription completed in ${transcriptionTime}ms (status: ${response.status})`);
 
-    // Check for API errors
+    // Fallback to live draft if API is unavailable
     if (response.status !== 200) {
+      if (liveWordsTyped && liveWordsTyped.length > 0) {
+        console.warn('⚠️ Whisper API returned error, safely falling back to live draft text!');
+        return liveWordsTyped.join(' ');
+      }
       const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
       logApiRequest('whisper', 'error', transcriptionTime, null, errorMsg);
       throw new Error(errorMsg);
@@ -1999,31 +2046,15 @@ function postProcessTranscription(text) {
 async function applyGrammarFixes(text) {
   const startTime = Date.now();
   
-  const grammarPrompt = `You are an advanced grammar and transcription correction AI. Your job is to fix voice-to-text transcription errors and make the text perfect.
+  const grammarPrompt = `You are an elite grammar, punctuation, and voice-to-text contextual correction AI.
+Your job is to understand what the speaker actually said, fix transcription mishearings, and output grammatically perfect, natural text.
 
 CRITICAL RULES:
-1. Fix ALL spelling mistakes and typos
-2. Add proper punctuation (periods, commas, question marks, exclamation points)
-3. Capitalize sentences, names, and proper nouns correctly
-4. Fix grammar errors (subject-verb agreement, tense, etc.)
-5. Complete incomplete sentences if the meaning is clear
-6. Fix word recognition errors (e.g., "recognigar" → "recognizer", "parfectly" → "perfectly")
-7. Add missing words that make sentences complete
-8. Keep the EXACT same meaning and intent
-9. Maintain the speaker's tone and style
-10. Return ONLY the corrected text, no explanations
-
-EXAMPLES:
-Input: "can you make this recognigar vary smouther and recognage voice parfectly if has some sentance missing fix properly"
-Output: "Can you make this recognizer very smooth and recognize voice perfectly? If it has some sentences missing, fix it properly."
-
-Input: "hey can you send me that file i need it for the meeting tomorrow"
-Output: "Hey, can you send me that file? I need it for the meeting tomorrow."
-
-Input: "i want to add voice shortcut when i say hey queen it start recording"
-Output: "I want to add a voice shortcut. When I say 'Hey Queen', it starts recording."
-
-Now fix this text:`;
+1. DEEP CONTEXT RECOVERY: Deduce and fix words misheard by speech recognition based on context (e.g., "car inside" → "cursor inside", "light detection" → "live dictation", "chac kevery" → "check every", "under stend" → "understanding", "noice" → "noise", "ultar" → "ultra").
+2. REMOVE REPETITIONS & STUTTER: Remove verbal loops, repeated greetings, and false starts (e.g., "hello hello hello", "please please").
+3. FIX ALL GRAMMAR & TYPOS: Subject-verb agreement, tense consistency, spelling, and proper punctuation (periods, commas, question marks).
+4. PRESERVE INTENT: Keep the speaker's exact meaning and voice, but make it articulate and correct.
+5. CLEAN OUTPUT ONLY: Return ONLY the final corrected text. No explanations or quotes.`;
 
   try {
     const { content, model, usage } = await callGroqChatCompletion([
