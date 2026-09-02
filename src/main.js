@@ -49,6 +49,7 @@ const audioRecorder = new AudioRecorder();
 const pasteHelper = new PasteHelper();
 const soundPlayer = new SoundPlayer();
 const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
+const actionRunner = require('./utils/action-runner');
 
 // Exit early if electron is not available (during build)
 if (!app) {
@@ -1019,10 +1020,20 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
-    console.log('🛑 ESC pressed - completely stopping and silencing Jarvis');
+    console.log('🛑 ESC pressed - canceling and silencing session immediately');
     isJarvisLoopActive = false;
     jarvisManager.stopSpeaking();
-    stopRecording();
+    if (isRecording) {
+      if (recordingProcess) {
+        try { recordingProcess.kill(); } catch (e) {}
+        recordingProcess = null;
+      }
+      isRecording = false;
+      isProcessing = false;
+      if (audioRecorder) {
+        audioRecorder.stopRecording().catch(() => {});
+      }
+    }
     hideOverlay();
   }
 }
@@ -1672,6 +1683,11 @@ function startRecording() {
   playSound('start');
   performanceMonitor.measureRecordingLatency();
   
+  // VAD state for automatic hands-free turn taking in Jarvis mode
+  let jarvisSpeechDetected = false;
+  let jarvisLastSpeechTime = 0;
+  let jarvisAutoStopTriggered = false;
+
   // Use cross-platform audio recorder
   audioRecorder.startRecording(audioFile)
     .then((success) => {
@@ -1683,12 +1699,24 @@ function startRecording() {
       recordingProcess = audioRecorder.recordingProcess;
       startLiveStreaming(audioFile);
       
-      // Wire real voice amplitude from SoX VU meter to overlay & live barge-in detection
+      // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
         // Live Barge-In: if user speaks while AI is speaking, immediately cut off speech to listen
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking && amplitude > 0.20) {
           console.log('⚡ Barge-in detected: User speaking mid-sentence. Halting AI speech immediately.');
           jarvisManager.stopSpeaking();
+        }
+
+        // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
+        if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
+          if (amplitude > 0.16) {
+            jarvisSpeechDetected = true;
+            jarvisLastSpeechTime = Date.now();
+          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 1300)) {
+            console.log('🗣️ Natural pause in speech detected (1.3s silence). Auto-submitting to agent...');
+            jarvisAutoStopTriggered = true;
+            stopRecording();
+          }
         }
 
         if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1815,7 +1843,14 @@ async function stopRecording() {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
         }
-        jarvisReply = await askJarvis(originalText, activeAgent);
+        // 1. Check if an Autonomous Office Action should be executed directly on macOS
+        const actionResult = actionRunner.handleAction(originalText, activeAgent);
+        if (actionResult && actionResult.handled) {
+          console.log(`⚡ Office Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
+          jarvisReply = actionResult.speech;
+        } else {
+          jarvisReply = await askJarvis(originalText, activeAgent);
+        }
       }
 
       finalText = jarvisReply;

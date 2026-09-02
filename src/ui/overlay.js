@@ -230,25 +230,28 @@ ipcRenderer.on('set-mode', (_, m) => {
   updateTimer();
 });
 
+let currentAgentName = 'Ava';
+
 // Jarvis / Ava state listeners
+ipcRenderer.on('set-agent-name', (_, agentName) => {
+  if (agentName) currentAgentName = agentName;
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel && agentName) recLabel.textContent = agentName;
+});
+
 ipcRenderer.on('jarvis-thinking', () => {
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = 'Thinking...';
+  if (recLabel) recLabel.textContent = `${currentAgentName} Thinking...`;
 });
 
 ipcRenderer.on('jarvis-speaking', () => {
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = 'Speaking...';
+  if (recLabel) recLabel.textContent = `${currentAgentName} Speaking...`;
 });
 
 ipcRenderer.on('jarvis-listening', () => {
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = 'Ava';
-});
-
-ipcRenderer.on('set-agent-name', (_, agentName) => {
-  const recLabel = document.querySelector('.rec-label');
-  if (recLabel && agentName) recLabel.textContent = agentName;
+  if (recLabel) recLabel.textContent = 'Listening...';
 });
 
 // Listen for recording start time from main process
