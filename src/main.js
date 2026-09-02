@@ -168,6 +168,7 @@ const CONFIG = {
   language: process.env.LANGUAGE || 'en',
   customDictionary: '',
   aiMode: process.env.AI_MODE || 'auto',
+  aiModel: process.env.GROQ_MODEL || 'qwen/qwen3.8-27b',
   preserveClipboard: process.env.PRESERVE_CLIPBOARD === 'true',
   autoGrammarFix: process.env.AUTO_GRAMMAR_FIX !== 'false',
   autoPasteMode: 'direct'
@@ -1464,11 +1465,9 @@ async function stopRecording() {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
 
-    // PERFORMANCE BOOST: Close overlay with sound synchronization and animation
-    // Play success sound and trigger fade-out animation
+    // Trigger Magic Processing visual state while AI processes
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      playSound('success'); // Play sound when closing starts
-      hideOverlay();
+      overlayWindow.webContents.send('processing', currentMode);
     }
 
     console.log('🎤 Transcribing...');
@@ -1491,6 +1490,12 @@ async function stopRecording() {
 
     if (!finalText || finalText.trim().length === 0) {
       throw new Error('No speech detected. Please try again.');
+    }
+
+    // Play success sound and smoothly hide overlay now that text is ready
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      playSound('success');
+      hideOverlay();
     }
 
     console.log(`✅ Final text: "${finalText.substring(0, 100)}..."`);
@@ -1666,62 +1671,86 @@ async function transcribe(filePath) {
   }
 }
 
+// Robust Groq Chat Completion with automatic model fallback
+async function callGroqChatCompletion(messages, options = {}) {
+  const candidateModels = [
+    CONFIG.aiModel,
+    process.env.GROQ_MODEL,
+    'qwen/qwen3.8-27b',
+    'llama-3.3-70b-versatile',
+    'openai/gpt-oss-120b'
+  ].filter(Boolean);
+
+  const uniqueModels = [...new Set(candidateModels)];
+  let lastError = null;
+
+  for (const model of uniqueModels) {
+    try {
+      const response = await axios.post(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          model: model,
+          messages: messages,
+          temperature: options.temperature !== undefined ? options.temperature : 0.3,
+          max_tokens: options.max_tokens || 1500
+        },
+        {
+          headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
+          timeout: options.timeout || 20000,
+          validateStatus: function (status) {
+            return status < 500;
+          }
+        }
+      );
+
+      if (response.status === 200 && response.data?.choices?.[0]?.message?.content) {
+        return { content: response.data.choices[0].message.content, model: model, usage: response.data.usage };
+      }
+
+      console.warn(`⚠️ Model ${model} returned status ${response.status}, attempting fallback...`);
+      lastError = new Error(response.data?.error?.message || `API error: ${response.status}`);
+    } catch (err) {
+      console.warn(`⚠️ Model ${model} failed (${err.message}), attempting fallback...`);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All candidate AI models failed.');
+}
+
 async function rewrite(text) {
   const startTime = Date.now();
-  
+  console.log('🤖 Starting AI rewrite...');
+
   // Get the appropriate AI prompt based on mode
   const aiPrompt = AI_PROMPTS[CONFIG.aiMode] || AI_PROMPTS.auto;
-  
+
   // Adjust temperature based on mode
   const creativeTemp = CONFIG.aiMode === 'auto' ? 0.4 : 0.3;
 
   try {
-    const response = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
+    const { content, model, usage } = await callGroqChatCompletion([
       {
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: aiPrompt
-          },
-          { role: 'user', content: `Rewrite this: ${text}` }
-        ],
-        temperature: creativeTemp,
-        max_tokens: 1500
+        role: 'system',
+        content: aiPrompt
       },
-    {
-      headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-      // PERFORMANCE BOOST: Reduced timeout - Groq is fast
-      timeout: 20000,
-      validateStatus: function (status) {
-        return status < 500;
-      }
-    }
-    );
+      { role: 'user', content: `Rewrite this: ${text}` }
+    ], { temperature: creativeTemp, max_tokens: 1500 });
 
     const rewriteTime = Date.now() - startTime;
-    console.log(`⚡ AI rewrite completed in ${rewriteTime}ms`);
-
-    // Check for API errors
-    if (response.status !== 200) {
-      const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
-      logApiRequest('llama-rewrite', 'error', rewriteTime, null, errorMsg);
-      throw new Error(errorMsg);
-    }
+    console.log(`⚡ AI rewrite completed using ${model} in ${rewriteTime}ms`);
 
     // Track API usage
     if (dashboardWindow && !dashboardWindow.isDestroyed()) {
       dashboardWindow.webContents.send('api-request', 'llama');
     }
-    
-    // Log API request for admin panel
-    logApiRequest('llama-rewrite', 'success', rewriteTime, response.data.usage?.total_tokens);
 
-    return response.data.choices[0].message.content;
+    logApiRequest('ai-rewrite', 'success', rewriteTime, usage?.total_tokens);
+    return content.trim();
   } catch (error) {
     const rewriteTime = Date.now() - startTime;
-    logApiRequest('llama-rewrite', 'error', rewriteTime, null, error.message);
+    console.error('❌ AI rewrite failed:', error.message);
+    logApiRequest('ai-rewrite', 'error', rewriteTime, null, error.message);
     throw error;
   }
 }
@@ -1852,35 +1881,16 @@ Output: "I want to add a voice shortcut. When I say 'Hey Queen', it starts recor
 Now fix this text:`;
 
   try {
-    const response = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
+    const { content, model, usage } = await callGroqChatCompletion([
       {
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: grammarPrompt
-          },
-          { role: 'user', content: text }
-        ],
-        temperature: 0.2,  // Slightly higher for better sentence completion
-        max_tokens: 2000   // More tokens for longer corrections
+        role: 'system',
+        content: grammarPrompt
       },
-      {
-        headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-        timeout: 30000,
-        validateStatus: function (status) {
-          return status < 500; // Resolve only if the status code is less than 500
-        }
-      }
-    );
+      { role: 'user', content: text }
+    ], { temperature: 0.2, max_tokens: 2000, timeout: 30000 });
 
-    // Check for API errors
-    if (response.status !== 200) {
-      const errorMsg = response.data?.error?.message || `API error: ${response.status}`;
-      logApiRequest('llama-grammar', 'error', Date.now() - startTime, null, errorMsg);
-      throw new Error(errorMsg);
-    }
+    const fixTime = Date.now() - startTime;
+    console.log(`⚡ Grammar fixes applied using ${model} in ${fixTime}ms`);
 
     // Track API usage
     if (dashboardWindow && !dashboardWindow.isDestroyed()) {
@@ -1888,12 +1898,14 @@ Now fix this text:`;
     }
     
     // Log API request for admin panel
-    logApiRequest('llama-grammar', 'success', Date.now() - startTime, response.data.usage?.total_tokens);
+    logApiRequest('llama-grammar', 'success', fixTime, usage?.total_tokens);
 
-    return response.data.choices[0].message.content;
+    return content.trim();
   } catch (error) {
-    logApiRequest('llama-grammar', 'error', Date.now() - startTime, null, error.message);
-    throw error;
+    const fixTime = Date.now() - startTime;
+    console.warn('⚠️ Grammar fix failed:', error.message);
+    logApiRequest('llama-grammar', 'error', fixTime, null, error.message);
+    return text; // Return uncorrected text on error to avoid breaking workflow
   }
 }
 

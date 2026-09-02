@@ -161,7 +161,7 @@ function updateTimer() {
 ipcRenderer.on('set-mode', (_, m) => {
   mode = m;
   if (overlay) {
-    overlay.classList.remove('fade-out', 'error');
+    overlay.classList.remove('fade-out', 'error', 'processing');
     overlay.classList.toggle('rewrite', m === 'rewrite');
   }
   
@@ -177,11 +177,33 @@ ipcRenderer.on('set-mode', (_, m) => {
   startVisualizer();
 });
 
+// Magic Processing state: show glowing animation while AI is transcribing/rewriting
+ipcRenderer.on('processing', (_, m) => {
+  if (overlay) {
+    overlay.classList.remove('fade-out', 'error');
+    overlay.classList.add('processing');
+  }
+  
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+  }
+  
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) {
+    recLabel.textContent = (m || mode) === 'rewrite' ? '✨ Enhancing...' : '⚡ Transcribing...';
+  }
+  
+  // Waveform runs an energetic magic shimmer
+  currentAmp = 0.85;
+  startVisualizer();
+});
+
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   startTime = recordingStartTime || Date.now();
   if (overlay) {
-    overlay.classList.remove('fade-out', 'error');
+    overlay.classList.remove('fade-out', 'error', 'processing');
   }
   updateTimer();
   startVisualizer();
