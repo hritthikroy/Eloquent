@@ -979,10 +979,10 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 240;
-  const windowHeight = 44;
+  const windowWidth = 280;
+  const windowHeight = 50;
   const x = cursorPosition.x - (windowWidth / 2);
-  const y = cursorPosition.y - windowHeight - 16;
+  const y = cursorPosition.y - windowHeight - 20;
 
   const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
   const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));

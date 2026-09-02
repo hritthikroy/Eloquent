@@ -33,7 +33,6 @@ let animationId;
 let startTime = Date.now();
 let canvasW = 60;
 let canvasH = 20;
-let frameCount = 0;
 
 // PERFORMANCE BOOST: Pre-calculate constants
 const BAR_WIDTH = 2;
@@ -60,62 +59,109 @@ function setupCanvas() {
 // Smooth bar heights (6 bars, mirrored to make 12)
 let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
 
-let currentAmp = 0.25;
-let isAnimating = false;
-
-// IPC listener for real-time audio amplitude from main process
-ipcRenderer.on('amplitude', (_, amp) => {
-  if (typeof amp === 'number') {
-    currentAmp = Math.max(0.15, Math.min(1.0, amp));
+// Initialize audio
+async function initAudio() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+    audioContext = new AudioContext({ latencyHint: 'interactive' });
+    const source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 64;
+    analyser.smoothingTimeConstant = 0.85;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    animate();
+  } catch (err) {
+    console.error('Mic error:', err);
+    animateFake();
   }
-});
+}
 
-ipcRenderer.on('voice-activity', (_, hasVoice) => {
-  if (hasVoice) {
-    currentAmp = Math.max(currentAmp, 0.6);
-  }
-});
-
-// Ultra-lightweight 60fps waveform loop
+// ULTRA-FAST Real audio animation with optimizations
+let frameCount = 0;
 function animate() {
-  if (!isAnimating) return;
   animationId = requestAnimationFrame(animate);
   
+  // PERFORMANCE BOOST: Only update every other frame for smoother performance
   frameCount++;
-  const t = frameCount * 0.08;
+  if (frameCount % 2 !== 0) return;
   
+  analyser.getByteFrequencyData(dataArray);
+
+  // Map frequency data to 6 bars (center has highest energy)
   for (let i = 0; i < 6; i++) {
-    const centerFactor = 1 - (i / 6) * 0.35;
-    const wave = Math.sin(t + i * 0.7) * 0.5 + 0.5;
-    const target = (wave * 12 * currentAmp + 2) * centerFactor;
-    // Smooth exponential smoothing
-    barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
+    const idx = Math.floor((i / 6) * dataArray.length);
+    const target = (dataArray[idx] / 255) * 16 + 2;
+    barHeights[i] = barHeights[i] * 0.7 + target * 0.3;
   }
-  
+
   drawBars();
-}
-
-function startVisualizer() {
-  if (!isAnimating) {
-    isAnimating = true;
-    animate();
+  
+  // PERFORMANCE BOOST: Update timer every 30 frames (~2 times per second is enough)
+  if (frameCount % 30 === 0) {
+    updateTimer();
   }
 }
 
-function stopVisualizer() {
-  isAnimating = false;
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
+// ULTRA-FAST Fake animation fallback with optimizations
+function animateFake() {
+  let t = 0;
+  let frameCount = 0;
+  function loop() {
+    animationId = requestAnimationFrame(loop);
+    frameCount++;
+    
+    // PERFORMANCE BOOST: Update bars every 3rd frame
+    if (frameCount % 3 === 0) {
+      for (let i = 0; i < 6; i++) {
+        const centerFactor = 1 - (i / 6) * 0.4;
+        const target = (Math.sin(t * 0.06 + i * 0.5) * 6 + 10) * centerFactor;
+        barHeights[i] = barHeights[i] * 0.8 + target * 0.2;
+      }
+      drawBars();
+      t++;
+    }
+    
+    // PERFORMANCE BOOST: Update timer every 60 frames
+    if (frameCount % 60 === 0) {
+      updateTimer();
+    }
   }
-  if (ctx && canvas) {
-    ctx.clearRect(0, 0, canvasW, canvasH);
+  loop();
+}
+
+// Quick popup animation - fast and energetic
+function animateQuickPopup() {
+  let t = 0;
+  let frameCount = 0;
+  function loop() {
+    animationId = requestAnimationFrame(loop);
+    frameCount++;
+    
+    // PERFORMANCE: Update every other frame
+    if (frameCount % 2 === 0) {
+      for (let i = 0; i < 6; i++) {
+        const centerFactor = 1 - (i / 6) * 0.3;
+        const target = (Math.sin(t * 0.15 + i * 0.8) * 8 + 12) * centerFactor;
+        barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
+      }
+      drawBars();
+      t++;
+    }
+    
+    if (frameCount % 30 === 0) {
+      updateTimer();
+    }
   }
+  loop();
 }
 
 // ULTRA-FAST Draw mirrored bars with optimizations
 function drawBars() {
   if (!ctx || !canvas) {
+    console.error('Cannot draw bars - canvas not ready');
     return;
   }
   
@@ -160,72 +206,54 @@ function updateTimer() {
 // Set mode
 ipcRenderer.on('set-mode', (_, m) => {
   mode = m;
-  if (overlay) {
-    overlay.classList.remove('fade-out', 'error', 'processing');
-    overlay.classList.toggle('rewrite', m === 'rewrite');
-  }
+  overlay.classList.toggle('rewrite', m === 'rewrite');
   
   // Update label based on mode
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) {
-    recLabel.textContent = m === 'rewrite' ? 'AI Rewriter' : 'Recording';
+    if (m === 'rewrite') {
+      recLabel.textContent = 'AI Rewriter';
+    } else {
+      recLabel.textContent = 'Recording';
+    }
   }
   
-  // Ensure timer is visible and reset
-  startTime = Date.now();
+  // Ensure timer is visible and initialized
   updateTimer();
-  startVisualizer();
-});
-
-// Magic Processing state: show glowing animation while AI is transcribing/rewriting
-ipcRenderer.on('processing', (_, m) => {
-  if (overlay) {
-    overlay.classList.remove('fade-out', 'error');
-    overlay.classList.add('processing');
-  }
-  
-  if (window.timerInterval) {
-    clearInterval(window.timerInterval);
-    window.timerInterval = null;
-  }
-  
-  const recLabel = document.querySelector('.rec-label');
-  if (recLabel) {
-    recLabel.textContent = (m || mode) === 'rewrite' ? '✨ Enhancing...' : '⚡ Transcribing...';
-  }
-  
-  // Waveform runs an energetic magic shimmer
-  currentAmp = 0.85;
-  startVisualizer();
 });
 
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
-  startTime = recordingStartTime || Date.now();
-  if (overlay) {
-    overlay.classList.remove('fade-out', 'error', 'processing');
-  }
-  updateTimer();
-  startVisualizer();
+  console.log('🎙️ Recording started event received:', recordingStartTime);
+  startTime = recordingStartTime;
+  updateTimer(); // Update immediately
   
   // Start timer updates every second
   if (window.timerInterval) clearInterval(window.timerInterval);
   window.timerInterval = setInterval(() => {
     updateTimer();
+    console.log('⏱️ Timer updated');
   }, 1000);
+  
+  console.log('✅ Timer interval started');
 });
 
 // Quick popup mode
 ipcRenderer.on('quick-popup-mode', (_, enabled) => {
   quickPopupMode = enabled;
-  if (overlay) {
-    overlay.classList.toggle('quick-popup', enabled);
-  }
+  overlay.classList.toggle('quick-popup', enabled);
+  
   if (enabled) {
+    // Update canvas size for quick popup
     canvasW = 40;
     canvasH = 16;
     setupCanvas();
+    
+    // Initialize timer for quick mode
     updateTimer();
+    
+    // Start quick animation immediately
+    animateQuickPopup();
   }
 });
 
@@ -233,88 +261,121 @@ ipcRenderer.on('quick-popup-mode', (_, enabled) => {
 ipcRenderer.on('error', (_, errorMsg) => {
   console.error('Recording error:', errorMsg);
   
-  stopVisualizer();
-  if (window.timerInterval) {
-    clearInterval(window.timerInterval);
-    window.timerInterval = null;
-  }
+  // Stop animations and timer
+  if (animationId) cancelAnimationFrame(animationId);
+  if (window.timerInterval) clearInterval(window.timerInterval);
   
-  if (overlay) {
-    overlay.classList.add('error');
-  }
+  // Add error class to overlay for styling
+  overlay.classList.add('error');
   
+  // Update overlay to show error state
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) {
     recLabel.textContent = 'Error';
   }
   
+  // Show error message in timer area (truncate if too long)
   const displayMsg = errorMsg ? (errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg) : 'Unknown error';
-  if (timer) {
-    timer.textContent = displayMsg;
-    timer.title = errorMsg || 'Error';
-  }
+  timer.textContent = displayMsg;
+  timer.title = errorMsg || 'Error'; // Full message on hover
+  
+  // Clear waveform
+  ctx.clearRect(0, 0, canvasW, canvasH);
 });
 
 // Listen for close-with-animation from main process
 ipcRenderer.on('close-with-animation', () => {
+  console.log('🎬 Close with animation requested');
+  
+  // Add fade-out animation
   if (overlay) {
     overlay.classList.add('fade-out');
   }
-  stopVisualizer();
-  if (window.timerInterval) {
-    clearInterval(window.timerInterval);
-    window.timerInterval = null;
+  
+  // Clean up audio resources
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
   }
-});
-
-// Stop recording (triggered by ESC key)
-function stopRecording() {
-  console.log('🛑 ESC pressed - stopping recording');
-  if (overlay) {
-    overlay.classList.add('fade-out');
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
   }
-  stopVisualizer();
   if (window.timerInterval) {
     clearInterval(window.timerInterval);
     window.timerInterval = null;
   }
   
+  // Window will be closed by main process after animation
+});
+
+// Stop recording (triggered by ESC key)
+function stopRecording() {
+  console.log('🛑 ESC pressed - stopping recording');
+  
+  // Add fade-out animation before closing
+  if (overlay) {
+    overlay.classList.add('fade-out');
+  }
+  
+  // Clean up audio resources
+  if (audioContext) {
+    audioContext.close();
+    audioContext = null;
+  }
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+  }
+  
+  // Notify main process to stop recording with a small delay for animation
   setTimeout(() => {
     ipcRenderer.send('stop-recording');
-  }, 100);
+    console.log('✅ Stop recording signal sent to main process');
+  }, 150); // Small delay to allow fade-out animation
 }
 
-// ESC key to stop recording
+// ESC key to stop recording (works in both modes)
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     e.preventDefault();
     e.stopPropagation();
+    console.log('⌨️ ESC key detected in overlay');
     stopRecording();
   }
 });
 
 // Initialize when DOM is ready
 function initialize() {
+  console.log('🎬 Initializing overlay...');
+  
   if (!initializeElements()) {
     console.error('❌ Failed to initialize elements');
     return;
   }
   
   setupCanvas();
-  updateTimer();
-  startVisualizer();
-  console.log('✅ Overlay elements & canvas ready');
+  updateTimer(); // Show initial time (will show 0:00 until recording starts)
+  initAudio();
+  
+  console.log('✅ Overlay initialized successfully');
 }
 
 // Run initialization
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initialize);
 } else {
+  // DOM is already loaded
   initialize();
 }
 
 // Cleanup
 window.addEventListener('beforeunload', () => {
-  stopVisualizer();
+  if (audioContext) audioContext.close();
+  if (animationId) cancelAnimationFrame(animationId);
   if (window.timerInterval) clearInterval(window.timerInterval);
 });

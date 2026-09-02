@@ -12,20 +12,25 @@
       box-sizing: border-box;
     }
 
-    html, body {
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
       -webkit-app-region: drag;
       user-select: none;
       overflow: hidden;
-      background: transparent !important;
-      transform: translate3d(0, 0, 0);
+      background: transparent;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translateZ(0);
       backface-visibility: hidden;
+      will-change: transform;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeSpeed;
     }
 
-    /* ULTRA-FAST Pill-shaped overlay with hardware acceleration & zero flicker */
+    /* ULTRA-FAST Pill-shaped overlay with hardware acceleration */
     .overlay {
       height: 40px;
       background: #1e293b;
@@ -38,19 +43,15 @@
       gap: 10px;
       position: relative;
       overflow: hidden;
-      transform: translate3d(0, 0, 0);
+      /* PERFORMANCE BOOST: Hardware acceleration and compositing */
+      transform: translateZ(0);
       backface-visibility: hidden;
       will-change: transform, opacity;
+      /* PERFORMANCE BOOST: Force GPU layer */
+      -webkit-transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
+      /* PERFORMANCE BOOST: Optimize rendering */
       contain: layout style paint;
-      opacity: 1;
-      transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-    }
-
-    /* Smooth exit animation */
-    .overlay.fade-out {
-      opacity: 0;
-      transform: translate3d(0, -6px, 0);
-      pointer-events: none;
     }
 
     /* Recording indicator - pulsing ring */
@@ -86,39 +87,6 @@
 
     .overlay.rewrite .rec-dot {
       background: #a855f7;
-    }
-
-    /* Magic Processing State with glowing shimmer & spin */
-    .overlay.processing {
-      border-color: rgba(168, 85, 247, 0.6);
-      box-shadow: 0 4px 25px rgba(168, 85, 247, 0.4);
-    }
-
-    .overlay.processing .rec-ring {
-      border-color: #c084fc;
-      border-top-color: #38bdf8;
-      animation: magicSpin 0.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    }
-
-    .overlay.processing .rec-dot {
-      background: #c084fc;
-      animation: magicPulse 0.7s ease-in-out infinite;
-    }
-
-    .overlay.processing .rec-label {
-      color: #e9d5ff;
-      font-weight: 600;
-    }
-
-    @keyframes magicSpin {
-      0% { transform: rotate(0deg) scale(1); }
-      50% { transform: rotate(180deg) scale(1.15); }
-      100% { transform: rotate(360deg) scale(1); }
-    }
-
-    @keyframes magicPulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(0.75); opacity: 0.7; }
     }
 
     @keyframes ringPulse {
@@ -165,6 +133,27 @@
     }
 
 
+
+    /* Entrance animation */
+    .overlay {
+      animation: slideIn 0.2s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Exit animation */
+    .overlay.fade-out {
+      animation: fadeOut 0.2s ease-out forwards;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      50% { opacity: 0.7; transform: translateY(-4px) scale(0.98); }
+      to { opacity: 0; transform: translateY(-8px) scale(0.95); }
+    }
 
     /* Quick popup mode - faster, more dramatic animations */
     .overlay.quick-popup {
