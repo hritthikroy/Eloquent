@@ -12,23 +12,20 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
       -webkit-app-region: drag;
       user-select: none;
       overflow: hidden;
-      background: transparent;
-      /* PERFORMANCE BOOST: Hardware acceleration */
-      transform: translateZ(0);
+      background: transparent !important;
+      transform: translate3d(0, 0, 0);
       backface-visibility: hidden;
-      will-change: transform;
-      /* PERFORMANCE BOOST: Disable text rendering optimizations for speed */
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeSpeed;
     }
 
-    /* ULTRA-FAST Pill-shaped overlay with hardware acceleration */
+    /* ULTRA-FAST Pill-shaped overlay with hardware acceleration & zero flicker */
     .overlay {
       height: 40px;
       background: #1e293b;
@@ -41,15 +38,19 @@
       gap: 10px;
       position: relative;
       overflow: hidden;
-      /* PERFORMANCE BOOST: Hardware acceleration and compositing */
-      transform: translateZ(0);
+      transform: translate3d(0, 0, 0);
       backface-visibility: hidden;
       will-change: transform, opacity;
-      /* PERFORMANCE BOOST: Force GPU layer */
-      -webkit-transform: translateZ(0);
-      -webkit-backface-visibility: hidden;
-      /* PERFORMANCE BOOST: Optimize rendering */
       contain: layout style paint;
+      opacity: 1;
+      transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    }
+
+    /* Smooth exit animation */
+    .overlay.fade-out {
+      opacity: 0;
+      transform: translate3d(0, -6px, 0);
+      pointer-events: none;
     }
 
     /* Recording indicator - pulsing ring */
@@ -131,27 +132,6 @@
     }
 
 
-
-    /* Entrance animation */
-    .overlay {
-      animation: slideIn 0.2s ease-out;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Exit animation */
-    .overlay.fade-out {
-      animation: fadeOut 0.2s ease-out forwards;
-    }
-
-    @keyframes fadeOut {
-      from { opacity: 1; transform: translateY(0) scale(1); }
-      50% { opacity: 0.7; transform: translateY(-4px) scale(0.98); }
-      to { opacity: 0; transform: translateY(-8px) scale(0.95); }
-    }
 
     /* Quick popup mode - faster, more dramatic animations */
     .overlay.quick-popup {

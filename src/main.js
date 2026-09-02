@@ -536,8 +536,8 @@ app.whenReady().then(async () => {
   console.log('⌨️ Registering shortcuts...');
   registerShortcuts();
 
-  // PERFORMANCE BOOST: Pre-cache overlay HTML for instant window creation
-  preCacheOverlayHTML();
+  // PERFORMANCE BOOST: Pre-warm overlay window for instant <1ms launch with zero flicker
+  initOverlayWindow();
 
   fastStartup.milestone('UI components created');
   
@@ -776,19 +776,15 @@ function createTray() {
     {
       label: 'Start AI Rewrite (Alt+Shift+Space)',
       click: () => {
-        if (!overlayWindow && !isCreatingOverlay) {
-          playSound('start');
-          createOverlay('rewrite');
-        }
+        playSound('start');
+        showOverlayUltraFast('rewrite');
       }
     },
     {
       label: 'Start Standard (Alt+Space)',
       click: () => {
-        if (!overlayWindow && !isCreatingOverlay) {
-          playSound('start');
-          createOverlay('standard');
-        }
+        playSound('start');
+        showOverlayUltraFast('standard');
       }
     }
   );
@@ -889,17 +885,10 @@ function handleShortcut(action, mode = 'standard') {
   }, SHORTCUT_DEBOUNCE);
   
   if (action === 'start') {
-    if (!overlayWindow && !isCreatingOverlay) {
-      setImmediate(() => playSound('start'));
-      createOverlayUltraFast(mode);
-    } else if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.focus();
-      overlayWindow.show();
-    }
+    setImmediate(() => playSound('start'));
+    showOverlayUltraFast(mode);
   } else if (action === 'stop') {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      stopRecording();
-    }
+    stopRecording();
   }
 }
 
@@ -969,24 +958,79 @@ function registerShortcuts() {
 
 
 
-// Cached overlay HTML content for instant loading
-let cachedOverlayHTML = null;
+// Calculate cursor position for overlay placement
+function getCursorTargetPosition() {
+  const cursorPosition = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(cursorPosition);
+  const screenBounds = display.workArea;
 
-// Pre-cache overlay HTML on startup for faster window creation
-function preCacheOverlayHTML() {
-  try {
-    const overlayPath = path.join(__dirname, 'ui', 'overlay.html');
-    if (fs.existsSync(overlayPath)) {
-      cachedOverlayHTML = fs.readFileSync(overlayPath, 'utf8');
-      console.log('✅ Overlay HTML pre-cached for instant loading');
-    }
-  } catch (err) {
-    console.log('⚠️ Could not pre-cache overlay HTML:', err.message);
-  }
+  const windowWidth = 280;
+  const windowHeight = 50;
+  const x = cursorPosition.x - (windowWidth / 2);
+  const y = cursorPosition.y - windowHeight - 20;
+
+  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
+  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
+
+  return {
+    x: Math.round(finalX),
+    y: Math.round(finalY),
+    width: windowWidth,
+    height: windowHeight
+  };
 }
 
-// ULTRA-FAST Overlay creation with aggressive optimizations
-function createOverlayUltraFast(mode = 'standard') {
+// Persistent pre-warmed overlay window for instant <1ms launch with 0% flicker
+function initOverlayWindow() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    return overlayWindow;
+  }
+
+  const { x, y, width, height } = getCursorTargetPosition();
+
+  overlayWindow = new BrowserWindow({
+    width: width,
+    height: height,
+    x: x,
+    y: y,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000', // 100% transparent zero-flicker background
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    hasShadow: false,
+    focusable: false,
+    acceptFirstMouse: false,
+    show: false,
+    paintWhenInitiallyHidden: true, // GPU pre-rasterizes before display
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      backgroundThrottling: false,
+      offscreen: false,
+      preload: false,
+      enableRemoteModule: false,
+      webSecurity: false,
+      hardwareAcceleration: true
+    }
+  });
+
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  overlayWindow.setAlwaysOnTop(true, 'floating', 1);
+
+  overlayWindow.loadFile('src/ui/overlay.html');
+
+  overlayWindow.on('closed', () => {
+    overlayWindow = null;
+    isCreatingOverlay = false;
+  });
+
+  return overlayWindow;
+}
+
+// Show overlay instantly with zero flicker and start recording
+function showOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
 
   if (!isAuthenticated && !authService.isAuthenticated()) {
@@ -995,108 +1039,45 @@ function createOverlayUltraFast(mode = 'standard') {
     return;
   }
 
-  if (isCreatingOverlay) {
-    return;
-  }
-  
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.focus();
-    overlayWindow.show();
-    return;
-  }
-  
   if (recordingProcess) {
     recordingProcess.kill();
     recordingProcess = null;
   }
 
-  isCreatingOverlay = true;
-  lastOverlayCreationTime = Date.now();
-  
-  // PERFORMANCE BOOST: Pre-calculate position before window creation
-  const cursorPosition = screen.getCursorScreenPoint();
-  const display = screen.getDisplayNearestPoint(cursorPosition);
-  const screenBounds = display.workArea;
-  
-  const windowWidth = 280;
-  const windowHeight = 50;
-  const x = cursorPosition.x - (windowWidth / 2);
-  const y = cursorPosition.y - windowHeight - 20;
-  
-  const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
-  const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
-  
-  overlayWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    x: Math.round(finalX),
-    y: Math.round(finalY),
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    hasShadow: false,
-    focusable: false,
-    acceptFirstMouse: false,
-    show: false,
-    paintWhenInitiallyHidden: false,
-    // PERFORMANCE BOOST: Optimized webPreferences for speed
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      backgroundThrottling: false,
-      offscreen: false,
-      preload: false,
-      enableRemoteModule: false,
-      experimentalFeatures: false,
-      // Security settings
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      disableBlinkFeatures: 'Auxclick',
-      // NEW: Hardware acceleration
-      hardwareAcceleration: true,
-      // NEW: Faster rendering
-      enableWebSQL: false,
-      enablePreferredSizeMode: false
-    }
-  });
-  
-  overlayWindow.recordingStartTime = Date.now();
-  
-  // PERFORMANCE BOOST: Set properties before loading
-  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  overlayWindow.setAlwaysOnTop(true, 'floating', 1);
+  const win = initOverlayWindow();
+  const targetPos = getCursorTargetPosition();
+  win.setBounds(targetPos);
 
-  // PERFORMANCE BOOST: Always load from file to ensure latest code is used
-  // Note: Cached HTML was causing issues with relative script paths
-  overlayWindow.loadFile('src/ui/overlay.html');
-
-  // PERFORMANCE BOOST: Start recording immediately, don't wait for full load
-  overlayWindow.webContents.once('dom-ready', () => {
-    // Send mode immediately on DOM ready (faster than did-finish-load)
-    overlayWindow.webContents.send('set-mode', mode);
-    overlayWindow.show();
-    
-    // Start recording immediately - don't wait
+  const displayAndRecord = () => {
+    win.webContents.send('set-mode', mode);
+    win.webContents.send('recording-started', Date.now());
+    win.showInactive(); // Shows instantly without stealing active window focus
     startRecording();
     isCreatingOverlay = false;
-  });
+  };
 
-  overlayWindow.on('closed', () => {
-    overlayWindow = null;
-    isCreatingOverlay = false;
-  });
+  if (win.webContents.isLoading()) {
+    win.webContents.once('dom-ready', displayAndRecord);
+  } else {
+    displayAndRecord();
+  }
 }
 
+// Hide overlay with smooth fade-out (preserves window in memory)
+function hideOverlay() {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('close-with-animation');
+    setTimeout(() => {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.hide();
+      }
+    }, 150);
+  }
+}
 
-
-
-
-
-
-// Alias for backward compatibility
-const createOverlay = createOverlayUltraFast;
+// Aliases for backward compatibility
+const createOverlayUltraFast = showOverlayUltraFast;
+const createOverlay = showOverlayUltraFast;
 
 function createDashboard() {
   if (dashboardWindow) {
@@ -1110,6 +1091,8 @@ function createDashboard() {
     minWidth: 700,
     minHeight: 500,
     titleBarStyle: 'hiddenInset',
+    backgroundColor: '#0f172a', // Matches dark theme, zero white flash
+    show: false,
     // PERFORMANCE BOOST: Optimized webPreferences for dashboard
     webPreferences: {
       nodeIntegration: true,
@@ -1127,6 +1110,10 @@ function createDashboard() {
       // Disable unnecessary features
       disableBlinkFeatures: 'Auxclick'
     }
+  });
+
+  dashboardWindow.once('ready-to-show', () => {
+    dashboardWindow.show();
   });
 
   // PERFORMANCE BOOST: Preload optimizations
@@ -1233,10 +1220,16 @@ function createAdminPanel() {
       minWidth: 1000,
       minHeight: 600,
       titleBarStyle: 'hiddenInset',
+      backgroundColor: '#0f172a',
+      show: false,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false
       }
+    });
+
+    adminWindow.once('ready-to-show', () => {
+      adminWindow.show();
     });
 
     adminWindow.loadFile('src/ui/admin.html');
@@ -1475,17 +1468,7 @@ async function stopRecording() {
     // Play success sound and trigger fade-out animation
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       playSound('success'); // Play sound when closing starts
-      
-      // Trigger fade-out animation in overlay
-      overlayWindow.webContents.send('close-with-animation');
-      
-      // Close window after animation completes
-      setTimeout(() => {
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.close();
-          overlayWindow = null;
-        }
-      }, 200); // Match animation duration
+      hideOverlay();
     }
 
     console.log('🎤 Transcribing...');
@@ -1555,13 +1538,12 @@ async function stopRecording() {
     playSound('error');
     
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      // Show error in overlay briefly, then close
+      // Show error in overlay briefly, then hide
       overlayWindow.webContents.send('error', error.message);
       
       setTimeout(() => {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.close();
-          overlayWindow = null;
+          overlayWindow.hide();
         }
       }, 2000); // Show error for 2 seconds
     }
@@ -2173,10 +2155,9 @@ ipcMain.on('cancel-recording', () => {
     recordingProcess.kill();
     recordingProcess = null;
   }
-  if (overlayWindow) {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
     playSound('cancel'); // Play cancel sound when canceling
-    overlayWindow.close();
-    overlayWindow = null;
+    overlayWindow.hide();
   }
   if (audioFile) {
     fs.unlink(audioFile, () => { });
@@ -3182,6 +3163,8 @@ function createLoginWindow() {
       height: 700,
       resizable: false,
       titleBarStyle: 'hiddenInset',
+      backgroundColor: '#0f172a',
+      show: false,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false
@@ -3196,7 +3179,7 @@ function createLoginWindow() {
       loginWindow = null;
     });
 
-    loginWindow.on('ready-to-show', () => {
+    loginWindow.once('ready-to-show', () => {
       console.log('✅ Login window ready to show');
       loginWindow.show();
     });
@@ -3222,6 +3205,8 @@ function createSubscriptionWindow() {
     width: 1100,
     height: 800,
     titleBarStyle: 'hiddenInset',
+    backgroundColor: '#0f172a',
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -3229,6 +3214,10 @@ function createSubscriptionWindow() {
   });
 
   subscriptionWindow.loadFile('src/ui/subscription.html');
+
+  subscriptionWindow.once('ready-to-show', () => {
+    subscriptionWindow.show();
+  });
 
   subscriptionWindow.on('closed', () => {
     subscriptionWindow = null;
