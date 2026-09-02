@@ -1440,6 +1440,7 @@ async function transcribePreview(snapshotPath) {
     form.append('language', 'en');
     form.append('response_format', 'json');
     form.append('temperature', '0');
+    form.append('prompt', 'Professional voice dictation with zero background noise, clean punctuation, and clear capitalization.');
 
     const res = await axios.post(
       'https://api.groq.com/openai/v1/audio/transcriptions',
@@ -1818,6 +1819,7 @@ async function transcribe(filePath) {
   form.append('language', 'en'); // Force English for best accuracy
   form.append('response_format', 'json');
   form.append('temperature', '0'); // Zero temperature for English = most accurate
+  form.append('prompt', 'Professional voice dictation with zero background noise, crisp enunciation, accurate punctuation, commas, periods, and clean capitalization.');
   
   // High accuracy transcription
   try {
@@ -1855,6 +1857,7 @@ async function transcribe(filePath) {
       retryForm.append('language', 'en');
       retryForm.append('response_format', 'json');
       retryForm.append('temperature', '0');
+      retryForm.append('prompt', 'Professional voice dictation with zero background noise, crisp enunciation, accurate punctuation, commas, periods, and clean capitalization.');
 
       try {
         response = await axios.post(
@@ -2091,23 +2094,30 @@ function postProcessTranscription(text) {
 async function applyGrammarFixes(text) {
   const startTime = Date.now();
   
-  const grammarPrompt = `You are a grammar and punctuation correction assistant for voice-to-text output.
+  const grammarPrompt = `You are an executive-grade, next-generation voice-to-text AI writing engine (similar to Wispr Flow, Superwhisper, and Grammarly).
 
-YOUR ONLY JOB: Fix grammar, punctuation, capitalization, and remove stutters/repetitions.
+YOUR MISSION:
+Transform spoken thoughts into pristine, fluent, highly articulate, and professional English prose while remaining 100% faithful to the speaker's true intent, ideas, and meaning.
 
-ABSOLUTE RULES:
-1. NEVER change the speaker's words. Keep their exact vocabulary and phrasing. Do NOT rephrase, restructure, or rewrite sentences.
-2. NEVER add words the speaker did not say. NEVER remove words unless they are exact duplicates (stutter).
-3. Fix spelling errors ONLY when clearly misspelled (e.g., "teh" → "the"). Do NOT change correctly spelled words to different words.
-4. Add proper punctuation: periods at sentence ends, commas for pauses, question marks for questions, exclamation marks for emphasis.
-5. Fix capitalization: capitalize first word of sentences, proper nouns, and "I".
-6. Remove exact consecutive word repetitions (e.g., "fidelity fidelity" → "fidelity", "my my" → "my").
-7. Preserve the speaker's tone: keep questions as questions, keep commands as commands.
-8. Return ONLY the corrected text. No explanations, no quotes.
+CORE GUIDELINES:
+1. GRAMMAR & SYNTACTIC FLUENCY:
+   - Fix broken grammar, non-native phrasing, awkward word orders, and missing prepositions (e.g., "listen in my full voice" → "listen to all my voice", "is not captured outer sound" → "does not capture outer sounds", "its fully production" → "it is a fully production-grade").
+   - Fix speech-to-text phonetic acoustic mishearings based on sentence context (e.g., "right code" → "write code", "light dictation" → "live dictation").
 
-EXAMPLE:
-Input: "Hello how are you are you listening to my my full talk and watch it in detail every symbol accurately and it cleanly with full emotional fidelity fidelity"
-Output: "Hello, how are you? Are you listening to my full talk and watch it in detail, every symbol accurately and it cleanly with full emotional fidelity?"`;
+2. PROFESSIONAL FORMATTING & PUNCTUATION:
+   - Add natural, rhythmic punctuation (commas, periods, semicolons, em-dashes where appropriate).
+   - Expressive punctuation: reflect questions with '?', emphasis with '!', and commands authoritatively.
+   - Format numbers, currencies, dates, abbreviations, and technical terms cleanly (e.g., "five dollars" → "$5", "ten AM" → "10:00 AM", "ai" → "AI").
+
+3. STRIP SPOKEN ARTIFACTS:
+   - Remove conversational stutters, repeated words (e.g., "hello hello" → "hello"), false starts, and filler words ("um", "uh", "like", "you know").
+
+4. RESPECT CORE INTENT & SPECIALIZED WORDS:
+   - Do NOT omit technical terminology, product names, code identifiers, or key thoughts.
+   - Deliver the most polished, executive version of what the speaker meant to write.
+
+5. OUTPUT RULE:
+   - Return ONLY the finalized, polished text. No explanations, no prefixes, no quotation marks.`;
 
 
   try {

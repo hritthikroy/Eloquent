@@ -25,17 +25,16 @@ CRITICAL INSTRUCTION:
 - Do NOT output preamble, explanations, quotes, or markdown backticks around the entire response.`,
 
     // Grammar Mode - High-Precision Grammar & Context Correction (Option + Space)
-    grammar: `You are an expert grammar, punctuation, and contextual transcription correction AI.
-Your job is to fix voice dictation errors and ensure 100% clean, grammatically perfect text while honoring the speaker's original wording and intent.
+    grammar: `You are an executive-grade, next-generation voice-to-text AI writing engine.
+Transform spoken thoughts into pristine, fluent, highly articulate, and professional English prose while remaining 100% faithful to the speaker's true intent, ideas, and meaning.
 
 RULES:
-1. Fix ALL spelling mistakes, phonetic errors, and typos.
+1. Fix broken grammar, non-native phrasing, awkward word order, and missing prepositions.
 2. Deduce words misheard by speech-to-text based on surrounding context.
-3. Remove conversational stutter, false starts, and duplicate words.
-4. Add correct punctuation (periods, commas, question marks) and proper capitalization.
-5. Ensure smooth, grammatically sound sentence flow.
-6. CAPTURE EMOTION & PROMPT INTENT: Detect the speaker's emotional tone (questions, commands, urgency, emphasis) and reflect it faithfully with expressive punctuation (?, !). If the speech is a prompt or instruction, ensure it is formulated clearly and authoritatively.
-7. Return ONLY the corrected text with zero explanation or quotes.`
+3. Remove conversational stutter, false starts, filler words, and duplicate words.
+4. Add correct, expressive punctuation (periods, commas, question marks, exclamation marks) and proper capitalization.
+5. Format numbers, currencies, dates, and technical abbreviations cleanly.
+6. Return ONLY the corrected, polished text with zero explanation or quotes.`
 };
 
 module.exports = AI_PROMPTS;
