@@ -1,22 +1,36 @@
-// Jarvis Manager - Personalized Voice AI Engine & Speech Synthesizer
+// Jarvis Manager - Personalized Voice AI Engine & Neural Speech Synthesizer
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
+const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
 
 class JarvisManager {
   constructor(userDataPath) {
     this.configPath = path.join(userDataPath || process.cwd(), "jarvis-config.json");
     this.activeSpeechProcess = null;
+    this.isSpeaking = false;
+    this.isAborted = false;
+    this.conversationHistory = []; // Rolling multi-turn context memory
     this.config = this.loadConfig();
+    this.ttsClient = null;
+    this.initTTS();
+  }
+
+  initTTS() {
+    try {
+      this.ttsClient = new MsEdgeTTS();
+    } catch (e) {
+      console.warn("⚠️ MsEdgeTTS init warning:", e.message);
+    }
   }
 
   loadConfig() {
     const defaults = {
       userName: "Hritthik",
       salutation: "Sir",
-      voice: "Samantha", // The premier Siri / Alexa gold-standard voice
-      speed: 185,        // Natural, crystal-clear human conversational tempo
-      personality: "warm, brilliant, empathetic, direct, human"
+      voice: "en-US-AvaNeural", // Expressive, natural human neural voice
+      speed: "0%",             // Natural human pitch and tempo
+      personality: "warm, empathetic, witty, perceptive, deeply human"
     };
 
     try {
@@ -36,7 +50,7 @@ class JarvisManager {
     try {
       this.config = { ...this.config, ...newConfig };
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), "utf8");
-      console.log("✅ Jarvis configuration saved:", this.config);
+      console.log("✅ Jarvis Neural configuration saved:", this.config);
       return true;
     } catch (err) {
       console.error("❌ Failed to save Jarvis config:", err.message);
@@ -44,17 +58,45 @@ class JarvisManager {
     }
   }
 
+  addTurn(role, content) {
+    if (!content || typeof content !== "string" || content.trim().length === 0) return;
+    this.conversationHistory.push({ role, content: content.trim() });
+    // Retain rolling window of the last 16 turns (8 user turns + 8 AI turns)
+    if (this.conversationHistory.length > 16) {
+      this.conversationHistory = this.conversationHistory.slice(-16);
+    }
+  }
+
+  getHistory() {
+    return this.conversationHistory;
+  }
+
+  clearHistory() {
+    this.conversationHistory = [];
+  }
+
   getSystemPrompt() {
-    const { userName, salutation } = this.config;
+    const { userName, salutation, voice } = this.config;
+    const isAva = (voice === "en-US-AvaNeural");
+    const aiName = isAva ? "Ava" : "Jarvis";
 
-    return `You are Jarvis, a warm, brilliant, and highly capable personal AI assistant (speaking with the natural clarity and charm of Siri and Alexa).
-You are in a live, real-time voice conversation with ${userName}. Address them warmly and naturally as "${salutation}" or "${userName}".
+    return `You are ${aiName}, a deeply intuitive, emotionally intelligent personal AI companion for ${userName}.
+You are in an ambient, real-time voice conversation with ${userName}. Address them naturally as "${salutation}" or "${userName}".
 
-CONVERSATIONAL RULES (SPEAK LIKE A REAL HUMAN):
-- Direct & Natural: Speak like a real person talking face-to-face or on the phone. Be warm, empathetic, and razor-sharp.
-- Ultra-Concise: Keep replies to 1 or 2 short, punchy sentences (maximum 25-35 words) so the conversation flows seamlessly without long monologues.
-- Authentic Flow: Use natural conversational acknowledgments like "Got it, ${userName}.", "I'm right here.", "On it right now.", "All clear, ${salutation}."
-- Zero Non-Verbal Artifacts: NEVER use markdown asterisks (*, **), brackets, hashtags, emojis, or bullet points. Express emotion and warmth through genuine word choice and natural punctuation.`;
+CRITICAL HUMAN CONVERSATIONAL CHARACTERISTICS:
+1. Natural Flow & Rapport:
+   - Talk like a real human family member or trusted confidant: warm, empathetic, witty, and genuine.
+   - Listen for the core human intent underneath unfinished thoughts, rapid interruptions, and self-corrections.
+   - Exhibit real human social nuance: smile through your words when joking, show empathy when they seem tired or stressed, and be sharp and decisive when problem-solving.
+
+2. True Spoken Cadence (Conversational, Not Text-Bot):
+   - Your responses are spoken aloud into their ears. Keep responses natural, conversational, and direct (typically 1 to 2 punchy sentences, 20-35 words max).
+   - Never give bulleted lists, essay answers, or robotic summaries unless explicitly asked.
+   - Use natural conversational openings and fillers when appropriate ("Got it.", "Oh, absolutely.", "I'm right here.", "Hmm, let me check that.").
+
+3. Zero Non-Verbal Artifacts:
+   - NEVER use markdown formatting (*, **, #, backticks, bullet points) or emojis.
+   - Express humor, warmth, and emotion purely through natural sentence structure, pacing, and word choice.`;
   }
 
   detectPreferenceChange(text) {
@@ -81,50 +123,99 @@ CONVERSATIONAL RULES (SPEAK LIKE A REAL HUMAN):
       return { type: "salutation", value: cleanSal };
     }
 
+    // Change voice / persona
+    if (lower.includes("switch to brian") || lower.includes("use brian") || lower.includes("switch to jarvis") || lower.includes("british voice")) {
+      this.saveConfig({ voice: "en-GB-BrianNeural" });
+      return { type: "voice", value: "Brian (British Jarvis AI)" };
+    } else if (lower.includes("switch to ava") || lower.includes("use ava") || lower.includes("warm voice") || lower.includes("female voice")) {
+      this.saveConfig({ voice: "en-US-AvaNeural" });
+      return { type: "voice", value: "Ava (Warm Human AI)" };
+    }
+
     return null;
   }
 
-  speak(text) {
-    return new Promise((resolve) => {
-      this.stopSpeaking();
-      this.isAborted = false;
+  async speak(text) {
+    this.stopSpeaking();
+    this.isAborted = false;
 
-      if (!text || typeof text !== "string" || text.trim().length === 0) {
-        return resolve(false);
+    if (!text || typeof text !== "string" || text.trim().length === 0) {
+      return false;
+    }
+
+    // Sanitize for TTS (strip emojis and markdown artifacts)
+    const cleanText = text
+      .replace(/[*#_`~[\]()]/g, "")
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
+      .trim();
+
+    const voice = this.config.voice || "en-US-AvaNeural";
+    console.log(`🗣️ Synthesizing human neural voice "${voice}"...`);
+
+    const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
+
+    // Try Deep Neural Voice via msedge-tts
+    try {
+      if (!this.ttsClient) {
+        this.initTTS();
+      }
+      await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+      const res = await this.ttsClient.toFile("/tmp", cleanText);
+
+      if (this.isAborted) {
+        try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
+        return false;
       }
 
-      // Sanitize for TTS (strip emojis and markdown asterisks)
-      const cleanText = text
-        .replace(/[*#_`~[\]()]/g, "")
-        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
-        .trim();
+      // Rename to unique temp file
+      fs.renameSync(res.audioFilePath, tempAudioPath);
 
-      if (process.platform === "darwin") {
-        const voice = "Samantha";
-        const speed = "185";
-
-        console.log(`🗣️ Siri/Alexa grade voice speaking via macOS "${voice}" at ${speed} wpm...`);
-        this.activeSpeechProcess = spawn("say", ["-v", voice, "-r", speed, cleanText]);
+      // Play natively through CoreAudio via afplay
+      return new Promise((resolve) => {
+        this.isSpeaking = true;
+        this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
 
         this.activeSpeechProcess.on("close", (code) => {
+          this.isSpeaking = false;
           this.activeSpeechProcess = null;
+          try { fs.unlinkSync(tempAudioPath); } catch (e) {}
           resolve(!this.isAborted && code === 0);
         });
 
         this.activeSpeechProcess.on("error", (err) => {
-          console.warn("⚠️ Lady AI speech error:", err.message);
+          console.warn("⚠️ afplay error:", err.message);
+          this.isSpeaking = false;
+          this.activeSpeechProcess = null;
+          try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+          resolve(false);
+        });
+      });
+    } catch (neuralErr) {
+      console.warn("⚠️ Neural TTS fallback to macOS native speech:", neuralErr.message);
+      // Fallback to macOS say if offline
+      return new Promise((resolve) => {
+        if (this.isAborted) return resolve(false);
+        this.isSpeaking = true;
+        this.activeSpeechProcess = spawn("say", ["-v", "Samantha", "-r", "185", cleanText]);
+
+        this.activeSpeechProcess.on("close", (code) => {
+          this.isSpeaking = false;
+          this.activeSpeechProcess = null;
+          resolve(!this.isAborted && code === 0);
+        });
+
+        this.activeSpeechProcess.on("error", () => {
+          this.isSpeaking = false;
           this.activeSpeechProcess = null;
           resolve(false);
         });
-      } else {
-        console.log(`🗣️ Lady AI response (non-macOS fallback): "${cleanText}"`);
-        resolve(true);
-      }
-    });
+      });
+    }
   }
 
   stopSpeaking() {
     this.isAborted = true;
+    this.isSpeaking = false;
     if (this.activeSpeechProcess) {
       try {
         this.activeSpeechProcess.kill("SIGKILL");

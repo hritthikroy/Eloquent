@@ -871,6 +871,29 @@ function createTray() {
               createTray();
             }
           }))
+        },
+        {
+          label: '🗣️ Human Voice Persona',
+          submenu: [
+            { id: 'en-US-AvaNeural', name: 'Ava (Warm, Empathetic Human - Default)' },
+            { id: 'en-GB-BrianNeural', name: 'Brian (British Jarvis - Authentic)' }
+          ].map(v => ({
+            label: v.name,
+            type: 'radio',
+            checked: jarvisManager.config.voice === v.id,
+            click: () => {
+              jarvisManager.saveConfig({ voice: v.id });
+              jarvisManager.speak(`Voice updated. I am right here with you, ${jarvisManager.config.salutation}.`);
+              createTray();
+            }
+          }))
+        },
+        {
+          label: '🧹 Reset Conversation Memory',
+          click: () => {
+            jarvisManager.clearHistory();
+            showNotification('Memory Reset', 'Conversation context has been cleared.');
+          }
         }
       ]
     }
@@ -1646,8 +1669,14 @@ function startRecording() {
       recordingProcess = audioRecorder.recordingProcess;
       startLiveStreaming(audioFile);
       
-      // Wire real voice amplitude from SoX VU meter to overlay
+      // Wire real voice amplitude from SoX VU meter to overlay & live barge-in detection
       audioRecorder.onAmplitude = (amplitude) => {
+        // Live Barge-In: if user speaks while AI is speaking, immediately cut off speech to listen
+        if (currentMode === 'jarvis' && jarvisManager.isSpeaking && amplitude > 0.20) {
+          console.log('⚡ Barge-in detected: User speaking mid-sentence. Halting AI speech immediately.');
+          jarvisManager.stopSpeaking();
+        }
+
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           const hasVoiceActivity = amplitude > 0.15;
           overlayWindow.webContents.send('amplitude', amplitude);
@@ -2142,31 +2171,38 @@ async function rewrite(text) {
   }
 }
 
-// Conversational Jarvis Executive AI Brain
+// Conversational Jarvis / Ava Executive AI Brain with Multi-Turn Memory
 async function askJarvis(userSpeech) {
   const startTime = Date.now();
   const systemPrompt = jarvisManager.getSystemPrompt();
 
   try {
-    console.log('🧠 Querying Jarvis conversational brain...');
-    const { content, usage, model } = await callGroqChatCompletion([
+    console.log('🧠 Querying human conversational brain with multi-turn memory...');
+    jarvisManager.addTurn('user', userSpeech);
+
+    const messages = [
       { role: 'system', content: systemPrompt },
-      { role: 'user', content: userSpeech }
-    ], {
-      temperature: 0.5,
-      max_tokens: 350,
+      ...jarvisManager.getHistory()
+    ];
+
+    const { content, usage, model } = await callGroqChatCompletion(messages, {
+      temperature: 0.6,
+      max_tokens: 250,
       timeout: 15000
     });
 
+    const reply = content.trim();
+    jarvisManager.addTurn('assistant', reply);
+
     const elapsed = Date.now() - startTime;
-    console.log(`⚡ Jarvis responded in ${elapsed}ms using ${model}`);
+    console.log(`⚡ Human AI companion responded in ${elapsed}ms using ${model}`);
     logApiRequest('jarvis-talk', 'success', elapsed, usage?.total_tokens);
 
-    return content.trim();
+    return reply;
   } catch (error) {
-    console.error('❌ Jarvis AI query failed:', error.message);
+    console.error('❌ AI query failed:', error.message);
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
-    return `At your service, ${jarvisManager.config.salutation}. I heard your request clearly, but experienced a brief network timeout.`;
+    return `I am right here with you, ${jarvisManager.config.salutation}. I heard you, but hit a slight connection glitch. What were you saying?`;
   }
 }
 
