@@ -59,14 +59,6 @@ class PasteHelper {
     clipboard.writeText(text);
     console.log('✅ Text copied to clipboard');
 
-    // Check if auto-paste is available
-    if (!this.isAutoPasteAvailable()) {
-      console.log('⚠️ Auto-paste not available - text in clipboard');
-      if (fallbackToClipboard) {
-        return false; // Indicate that only clipboard was used
-      }
-    }
-
     // Try platform-specific auto-paste
     try {
       let success = false;
@@ -107,24 +99,17 @@ class PasteHelper {
   async pasteMacOS() {
     console.log('🎯 Attempting macOS auto-paste...');
     
-    // Check accessibility permission
+    // Trigger prompt if permission not yet recorded
     try {
-      const hasPermission = systemPreferences.isTrustedAccessibilityClient(false);
-      if (!hasPermission) {
-        console.log('⚠️ No Accessibility permission');
-        return false;
+      if (!systemPreferences.isTrustedAccessibilityClient(false)) {
+        systemPreferences.isTrustedAccessibilityClient(true);
       }
     } catch (error) {
-      console.log('⚠️ Could not check accessibility permission:', error.message);
-      return false;
+      // Ignore check errors and proceed to osascript
     }
 
-    // Use AppleScript with Cmd+V (most reliable when we have permission)
-    const pasteScript = `
-      tell application "System Events"
-        keystroke "v" using command down
-      end tell
-    `;
+    // Use AppleScript with Cmd+V
+    const pasteScript = `tell application "System Events" to keystroke "v" using command down`;
     
     return new Promise((resolve) => {
       setTimeout(() => {

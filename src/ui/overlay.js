@@ -1,12 +1,13 @@
 const { ipcRenderer } = require('electron');
 
 // Wait for DOM to be fully loaded before accessing elements
-let canvas, ctx, timer, overlay;
+let canvas, ctx, timer, overlay, liveTranscriptEl;
 
 function initializeElements() {
   canvas = document.getElementById('waveCanvas');
   timer = document.getElementById('timer');
   overlay = document.getElementById('overlay');
+  liveTranscriptEl = document.getElementById('liveTranscript');
   
   if (!canvas) {
     console.error('Canvas element not found!');
@@ -20,7 +21,7 @@ function initializeElements() {
     return false;
   }
   
-  console.log('✅ Elements initialized:', { canvas: !!canvas, ctx: !!ctx, timer: !!timer, overlay: !!overlay });
+  console.log('✅ Elements initialized:', { canvas: !!canvas, ctx: !!ctx, timer: !!timer, overlay: !!overlay, liveTranscript: !!liveTranscriptEl });
   return true;
 }
 
@@ -199,11 +200,24 @@ ipcRenderer.on('processing', (_, m) => {
   startVisualizer();
 });
 
+// Real-time live speech transcript streaming
+ipcRenderer.on('live-transcript', (_, text) => {
+  if (liveTranscriptEl && text && text.trim().length > 0) {
+    liveTranscriptEl.textContent = text.trim();
+    if (overlay) {
+      overlay.classList.add('has-transcript');
+    }
+  }
+});
+
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   startTime = recordingStartTime || Date.now();
   if (overlay) {
-    overlay.classList.remove('fade-out', 'error', 'processing');
+    overlay.classList.remove('fade-out', 'error', 'processing', 'has-transcript');
+  }
+  if (liveTranscriptEl) {
+    liveTranscriptEl.textContent = '';
   }
   updateTimer();
   startVisualizer();

@@ -15,6 +15,16 @@ try {
   console.log('Electron not available during build process');
   module.exports = {};
 }
+
+// Enforce single instance lock to prevent duplicate apps and duplicate overlay pills
+if (app) {
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    console.log('⚠️ Another instance of Eloquent is already running. Quitting duplicate.');
+    app.quit();
+    process.exit(0);
+  }
+}
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
@@ -886,7 +896,11 @@ function handleShortcut(action, mode = 'standard') {
   }, SHORTCUT_DEBOUNCE);
   
   if (action === 'start') {
-    setImmediate(() => playSound('start'));
+    if (isRecording) {
+      console.log('🛑 Shortcut pressed while recording - toggling stop');
+      stopRecording();
+      return;
+    }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
     stopRecording();
@@ -965,7 +979,7 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 280;
+  const windowWidth = 420;
   const windowHeight = 50;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 20;
@@ -1335,15 +1349,86 @@ function createUserManagement() {
   });
 }
 
+let liveStreamingInterval = null;
+let isStreamingChunk = false;
 
+function startLiveStreaming(filePath) {
+  stopLiveStreaming();
+
+  // Poll every 1.4 seconds for live speech transcript preview
+  liveStreamingInterval = setInterval(async () => {
+    if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
+
+    try {
+      const stats = await fsPromises.stat(filePath);
+      if (stats.size < 35000) return; // Need at least ~1s of audio
+
+      isStreamingChunk = true;
+      const snapshotPath = `${filePath}.snap.wav`;
+      await fsPromises.copyFile(filePath, snapshotPath);
+
+      const previewText = await transcribePreview(snapshotPath);
+      if (previewText && previewText.trim().length > 0 && isRecording) {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('live-transcript', previewText.trim());
+        }
+      }
+      fs.unlink(snapshotPath, () => {});
+    } catch (err) {
+      // Non-blocking preview error
+    } finally {
+      isStreamingChunk = false;
+    }
+  }, 1400);
+}
+
+function stopLiveStreaming() {
+  if (liveStreamingInterval) {
+    clearInterval(liveStreamingInterval);
+    liveStreamingInterval = null;
+  }
+  isStreamingChunk = false;
+}
+
+async function transcribePreview(snapshotPath) {
+  try {
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('file', fs.createReadStream(snapshotPath), {
+      filename: 'preview.wav',
+      contentType: 'audio/wav'
+    });
+    form.append('model', 'whisper-large-v3-turbo');
+    form.append('language', 'en');
+    form.append('response_format', 'json');
+    form.append('temperature', '0');
+
+    const res = await axios.post(
+      'https://api.groq.com/openai/v1/audio/transcriptions',
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          'Authorization': `Bearer ${getActiveAPIKey()}`
+        },
+        timeout: 4000
+      }
+    );
+
+    return res.data?.text || '';
+  } catch (err) {
+    return '';
+  }
+}
 
 function startRecording() {
   // Prevent duplicate recording processes
-  if (recordingProcess) {
+  if (recordingProcess || isRecording) {
     console.log('⚠️ Recording already in progress - skipping');
     return;
   }
 
+  isRecording = true;
   performanceMonitor.startRecording();
 
   audioFile = path.join(app.getPath('temp'), `eloquent-${Date.now()}.wav`);
@@ -1377,6 +1462,7 @@ function startRecording() {
       
       console.log('✅ Recording started successfully');
       recordingProcess = audioRecorder.recordingProcess;
+      startLiveStreaming(audioFile);
       
       // Simulate amplitude for overlay (visual feedback)
       let amplitudeInterval = setInterval(() => {
@@ -1399,6 +1485,8 @@ function startRecording() {
     .catch((error) => {
       console.error('❌ Failed to start recording:', error);
       isProcessing = false;
+      isRecording = false;
+      stopLiveStreaming();
       
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('error', `Recording failed: ${error.message}`);
@@ -1421,6 +1509,8 @@ async function stopRecording() {
   }
 
   isProcessing = true;
+  isRecording = false;
+  stopLiveStreaming();
   console.log('🛑 Stopping recording...');
   
   // Calculate recording duration
