@@ -2002,17 +2002,6 @@ function postProcessTranscription(text) {
     'texting': 'text',
     'pased': 'pasted',
     'pasteing': 'pasting',
-    ' there ': ' their ',
-    ' your ': ' you\'re ',
-    ' its ': ' it\'s ',
-    ' cant ': ' can\'t ',
-    ' wont ': ' won\'t ',
-    ' dont ': ' don\'t ',
-    ' im ': ' I\'m ',
-    ' ive ': ' I\'ve ',
-    ' youre ': ' you\'re ',
-    ' theyre ': ' they\'re ',
-    ' were ': ' we\'re ',
     ' ,': ',',
     ' .': '.',
     ' ?': '?',
@@ -2020,7 +2009,7 @@ function postProcessTranscription(text) {
     ' ;': ';',
     ' :': ':',
     '( ': '(',
-    ' )': ')',
+    ' )': ')'
   };
 
   // Apply corrections (case-insensitive for most, case-sensitive for some)
@@ -2069,7 +2058,7 @@ CRITICAL RULES:
 1. DEEP CONTEXT RECOVERY: Deduce and fix words misheard by speech recognition based on context (e.g., "car inside" → "cursor inside", "light detection" → "live dictation", "chac kevery" → "check every", "under stend" → "understanding", "noice" → "noise", "ultar" → "ultra").
 2. REMOVE REPETITIONS & STUTTER: Remove verbal loops, repeated greetings, and false starts (e.g., "hello hello hello", "please please").
 3. FIX ALL GRAMMAR & TYPOS: Subject-verb agreement, tense consistency, spelling, and proper punctuation (periods, commas, question marks).
-4. PRESERVE INTENT: Keep the speaker's exact meaning and voice, but make it articulate and correct.
+4. PRESERVE INTENT & EMOTION: Detect the speaker's emotional tone (questions, commands, urgency, emphasis) and reflect it faithfully with expressive punctuation (?, !). If the speech is an AI prompt or instructions, ensure it reads like an authoritative, clear prompt.
 5. CLEAN OUTPUT ONLY: Return ONLY the final corrected text. No explanations or quotes.`;
 
   try {

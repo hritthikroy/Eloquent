@@ -34,7 +34,8 @@ RULES:
 3. Remove conversational stutter, false starts, and duplicate words.
 4. Add correct punctuation (periods, commas, question marks) and proper capitalization.
 5. Ensure smooth, grammatically sound sentence flow.
-6. Return ONLY the corrected text with zero explanation or quotes.`
+6. CAPTURE EMOTION & PROMPT INTENT: Detect the speaker's emotional tone (questions, commands, urgency, emphasis) and reflect it faithfully with expressive punctuation (?, !). If the speech is a prompt or instruction, ensure it is formulated clearly and authoritatively.
+7. Return ONLY the corrected text with zero explanation or quotes.`
 };
 
 module.exports = AI_PROMPTS;
