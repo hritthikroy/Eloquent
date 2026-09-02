@@ -1500,27 +1500,21 @@ let liveWordsTyped = [];
 let totalLiveWordsTyped = 0;
 let lastProcessedAudioSize = 0;
 
-// Known Whisper silence hallucinations to ignore
+// Known Whisper silence hallucinations to ignore (strictly third-party spam / video artifacts)
 const SILENCE_HALLUCINATIONS = new Set([
-  // Generic Whisper false positives
-  'thank you', 'thank you very much', 'thanks for watching', 'subtitles by', 'bye',
-  'you', 'ah', 'ah well', 'hmm', 'uh', 'um', 'uh huh', 'mm', 'mm-hmm', 'oh',
-  'okay', 'ok', 'alright', 'right', 'yeah', 'yes', 'no', 'sure',
-  // Whisper self-loop artifacts
+  'thanks for watching', 'thank you for watching', 'subtitles by',
   'this video was made possible by', 'watch till the end',
   'dont forget to subscribe', 'like and subscribe',
   'visit our website', 'for more information',
-  // Speaker bleed & neural voice hallucinations
-  'shadow neutral', 'ava neural', 'shadow', 'neutral', 'neural',
-  'en-us', 'en-us-avaneural', 'microsoft',
   'subtitles', 'closed captions', 'amaraorg',
   'silence', 'silent', 'applause', 'cheering', 'laughter',
+  'shadow neutral', 'ava neural', 'en-us-avaneural'
 ]);
 
 function isWhisperHallucination(text) {
   if (!text || typeof text !== 'string') return true;
   const clean = text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').trim();
-  if (clean.length < 2) return true;
+  if (clean.length === 0) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
 
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
