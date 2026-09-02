@@ -2409,8 +2409,8 @@ async function askJarvis(userSpeech, activeAgent = null) {
     ];
 
     const { content, usage, model } = await callGroqChatCompletion(messages, {
-      temperature: 0.4,
-      max_tokens: 80,
+      temperature: 0.72,
+      max_tokens: 160,
       timeout: 10000
     });
 
