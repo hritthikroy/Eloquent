@@ -606,7 +606,12 @@ If the user revealed a personal habit, project update, emotional state, interest
           await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
           this._cachedVoice = voice;
         }
-        const res = await this.ttsClient.toFile("/tmp", cleanText);
+        // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
+        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 7s")), 7000)
+        );
+        const res = await Promise.race([toFilePromise, timeoutPromise]);
 
         // Check if this synthesis was superseded or aborted while awaiting download
         if (this.currentSpeechId !== speechId || this.isAborted) {
@@ -654,8 +659,16 @@ If the user revealed a personal habit, project update, emotional state, interest
       } catch (neuralErr) {
         console.warn(`⚠️ Neural TTS attempt ${attempt} warning:`, neuralErr.message);
         if (attempt === 2) {
-          console.error("❌ Neural speech synthesis failed after 2 attempts. Silently aborting without robotic fallback.");
-          return false;
+          console.warn("⚠️ Neural TTS unavailable. Using emergency macOS voice fallback so user is never left in silence.");
+          try {
+            this.isSpeaking = true;
+            execSync(`say "${cleanText.replace(/"/g, '\\"')}"`, { timeout: 10000 });
+            this.isSpeaking = false;
+            return true;
+          } catch (sayErr) {
+            this.isSpeaking = false;
+            return false;
+          }
         }
         await new Promise(r => setTimeout(r, 250));
       }

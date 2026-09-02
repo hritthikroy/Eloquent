@@ -1764,9 +1764,10 @@ function startRecording() {
       
       // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
-        // Full-Duplex Overlap: While AI is speaking, detect user vocal interjection/barge-in
+        // Full-Duplex Overlap: While AI is speaking, detect deliberate user vocal interjection/barge-in
+        // 0.45 threshold ensures loud direct human voice triggers barge-in while MacBook speaker bleed (<0.32) is ignored!
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
-          if (amplitude >= 0.20) {
+          if (amplitude >= 0.45) {
             console.log('⚡ Full-Duplex Overlap! Hritthik interjected mid-sentence. Halting AI speech gracefully...');
             lastInterruptedUtterance = jarvisManager.currentUtterance;
             jarvisManager.stopSpeaking();
@@ -1781,7 +1782,7 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          const SPEECH_THRESHOLD = 0.15; // Requires real voice ('=' or '#')
+          const SPEECH_THRESHOLD = 0.12; // Sensitive to real human voice
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
 
           if (isSpeechFrame) {
@@ -1797,18 +1798,18 @@ function startRecording() {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // 1. Natural Pause: 280ms silence after >= 100ms real speech (instant response!)
-            const isNaturalPause = !isSpeechFrame && (silenceMs >= 280) && (speechDurationMs >= 100);
-            // 2. Hard Speech Cap: 4.5s total elapsed speech
-            const isMaxSpeechCap = speechDurationMs >= 4500;
+            // 1. Natural Pause: 320ms silence after >= 120ms real speech (instant response!)
+            const isNaturalPause = !isSpeechFrame && (silenceMs >= 320) && (speechDurationMs >= 120);
+            // 2. Hard Speech Cap: 6.0s total elapsed speech for full expressive thoughts
+            const isMaxSpeechCap = speechDurationMs >= 6000;
 
             if (isNaturalPause || isMaxSpeechCap) {
-              const reason = isMaxSpeechCap ? "4.5s max speech cap" : `${silenceMs}ms natural pause`;
+              const reason = isMaxSpeechCap ? "6.0s max speech cap" : `${silenceMs}ms natural pause`;
               console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${speechDurationMs}ms speech)...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
-            } else if (!isSpeechFrame && silenceMs > 1200 && jarvisSpeechFrames < 2) {
-              // Isolated solitary noise blip with prolonged silence (>1.2s) — reset to listen cleanly
+            } else if (!isSpeechFrame && silenceMs > 1500 && jarvisSpeechFrames < 2) {
+              // Isolated solitary noise blip with prolonged silence (>1.5s) — reset to listen cleanly
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;
@@ -2118,9 +2119,20 @@ async function stopRecording() {
           console.log('🎙️ Seamless Full-Duplex handoff: User interjected and is actively speaking, continuing turn...');
         } else {
           console.log('🎙️ Tony Stark Suit Mode: Re-arming clean mic for continuous 24/7 ambient dialogue...');
-          // Refresh recording buffer to discard any speaker bleed from completed playback
-          if (isRecording) {
-            stopRecording();
+          // Discard any residual recording from speech playback without triggering a ghost turn!
+          if (isRecording || recordingProcess) {
+            isRecording = false;
+            if (audioRecorder.recordingProcess) {
+              try { audioRecorder.recordingProcess.kill('SIGKILL'); } catch (e) {}
+              audioRecorder.recordingProcess = null;
+              audioRecorder.isRecording = false;
+            }
+            recordingProcess = null;
+            jarvisSpeechDetected = false;
+            jarvisSpeechStartTime = 0;
+            jarvisLastSpeechTime = 0;
+            jarvisSpeechFrames = 0;
+            jarvisAutoStopTriggered = false;
           }
           setTimeout(() => {
             if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
