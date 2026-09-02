@@ -1776,8 +1776,8 @@ function startRecording() {
             jarvisSpeechFrames++;
           } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 650)) {
             // Natural silence detected after speech!
-            // Any speech with >= 2 frames or sustained >= 150ms is real speech — submit immediately!
-            if (jarvisSpeechFrames >= 2 || (jarvisSpeechFrames >= 1 && (Date.now() - jarvisSpeechStartTime >= 150))) {
+            // Require >= 2 frames (~250ms+) to ensure full word/sentence was spoken
+            if (jarvisSpeechFrames >= 2) {
               const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime + 130;
               console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech (${jarvisSpeechFrames} frames). Auto-submitting...`);
               jarvisAutoStopTriggered = true;
@@ -1812,15 +1812,23 @@ function startRecording() {
     });
 }
 
+// Atomic lock to prevent duplicate parallel stopRecording executions
+let isStopRecordingLock = false;
+
 // OPTIMIZED: Fast and reliable stopRecording function
 async function stopRecording() {
+  if (isStopRecordingLock) {
+    return;
+  }
+  isStopRecordingLock = true;
+
   if (maxRecordingTimeout) {
     clearTimeout(maxRecordingTimeout);
     maxRecordingTimeout = null;
   }
 
   if (isProcessing || (!isRecording && !recordingProcess)) {
-    console.log('⚠️ No active recording in progress to stop');
+    isStopRecordingLock = false;
     return;
   }
 
@@ -2029,8 +2037,12 @@ async function stopRecording() {
         // Show notification with specialist agent name and role
         showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
 
-        // Speak response aloud with the specialist agent's dedicated real-human voice!
-        await jarvisManager.speak(jarvisReply, activeAgent.voice);
+        // Speak response aloud or Sing with acoustic accompaniment (Sur, Taal, Laya)!
+        if (actionResult && actionResult.isSinging) {
+          await jarvisManager.sing(jarvisReply, activeAgent.voice);
+        } else {
+          await jarvisManager.speak(jarvisReply, activeAgent.voice);
+        }
       }
 
       // Save to history
@@ -2158,6 +2170,7 @@ async function stopRecording() {
   } finally {
     // Cleanup
     isProcessing = false;
+    isStopRecordingLock = false;
     const fileToCleanup = targetAudioFile || sessionAudioFile;
     if (audioFile === fileToCleanup) {
       audioFile = null;
@@ -2439,6 +2452,8 @@ function postProcessTranscription(text) {
   text = text.trim().replace(/\s+/g, ' ');
 
   const corrections = {
+    'eva': 'Ava',
+    'Eva': 'Ava',
     'recognigar': 'recognizer',
     'recognage': 'recognize',
     'parfectly': 'perfectly',

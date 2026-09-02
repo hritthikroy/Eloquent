@@ -430,6 +430,100 @@ class JarvisManager {
     return false;
   }
 
+  async sing(songText, customVoice = null) {
+    this.stopSpeaking();
+    const speechId = ++this.currentSpeechId;
+    this.isAborted = false;
+
+    const voice = customVoice || this.config.voice || "en-US-AvaNeural";
+    console.log(`🎵 Synthesizing Ava singing serenade with Sur, Taal, and Laya (Job #${speechId})...`);
+
+    const tempVocalPath = `/tmp/eloquent_vocal_${Date.now()}.mp3`;
+    const tempBackingPath = `/tmp/eloquent_backing_${Date.now()}.wav`;
+    const tempMixedPath = `/tmp/eloquent_song_${Date.now()}.wav`;
+
+    try {
+      if (!this.ttsClient) {
+        this.initTTS();
+      }
+      if (this._cachedVoice !== voice) {
+        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        this._cachedVoice = voice;
+      }
+
+      // 1. Synthesize vocal melody
+      const cleanSong = songText.replace(/[*#_`~[\]()]/g, "").trim();
+      const res = await this.ttsClient.toFile("/tmp", cleanSong);
+      fs.renameSync(res.audioFilePath, tempVocalPath);
+
+      // 2. Measure vocal duration using soxi
+      let vocalDuration = 12;
+      try {
+        const durStr = execSync(`soxi -D "${tempVocalPath}" 2>/dev/null`).toString().trim();
+        vocalDuration = Math.max(4, Math.ceil(parseFloat(durStr)) + 1);
+      } catch (e) {}
+
+      // 3. Generate acoustic string accompaniment matching Sur, Taal, and Laya
+      // Sur: C Major -> Am -> F -> G progression (C4, E4, G4, C5, A3, F3, etc.)
+      // Taal: 4/4 meter (0.5s per quarter note)
+      // Laya: 120 BPM tempo with studio acoustic reverb
+      const beat = 0.5;
+      const repeats = Math.ceil(vocalDuration / 8);
+      const chordSeq = [];
+      for (let r = 0; r < repeats; r++) {
+        chordSeq.push(`synth ${beat} pluck C4 : synth ${beat} pluck E4 : synth ${beat} pluck G4 : synth ${beat} pluck C5`);
+        chordSeq.push(`synth ${beat} pluck A3 : synth ${beat} pluck C4 : synth ${beat} pluck E4 : synth ${beat} pluck A4`);
+        chordSeq.push(`synth ${beat} pluck F3 : synth ${beat} pluck A3 : synth ${beat} pluck C4 : synth ${beat} pluck F4`);
+        chordSeq.push(`synth ${beat} pluck G3 : synth ${beat} pluck B3 : synth ${beat} pluck D4 : synth ${beat} pluck G4`);
+      }
+      const synthCmd = `sox -n -r 24000 "${tempBackingPath}" ${chordSeq.join(" : ")} reverb 50 50 80 norm -6`;
+      execSync(synthCmd, { timeout: 4000 });
+
+      // 4. Mix Ava's vocal with the acoustic backing track
+      execSync(`sox -m -v 1.0 "${tempVocalPath}" -v 0.35 "${tempBackingPath}" "${tempMixedPath}" norm -1`, { timeout: 4000 });
+
+      // 5. Play master mixed acoustic serenade through CoreAudio afplay
+      try { execSync("killall afplay 2>/dev/null || true"); } catch (e) {}
+
+      return new Promise((resolve) => {
+        if (this.currentSpeechId !== speechId || this.isAborted) {
+          try { fs.unlinkSync(tempVocalPath); fs.unlinkSync(tempBackingPath); fs.unlinkSync(tempMixedPath); } catch (e) {}
+          return resolve(false);
+        }
+
+        this.isSpeaking = true;
+        this.activeSpeechProcess = spawn("afplay", [tempMixedPath]);
+
+        this.activeSpeechProcess.on("close", (code) => {
+          setTimeout(() => {
+            this.isSpeaking = false;
+            this.activeSpeechProcess = null;
+            try {
+              if (fs.existsSync(tempVocalPath)) fs.unlinkSync(tempVocalPath);
+              if (fs.existsSync(tempBackingPath)) fs.unlinkSync(tempBackingPath);
+              if (fs.existsSync(tempMixedPath)) fs.unlinkSync(tempMixedPath);
+            } catch (e) {}
+            resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
+          }, 200);
+        });
+
+        this.activeSpeechProcess.on("error", () => {
+          this.isSpeaking = false;
+          this.activeSpeechProcess = null;
+          try {
+            if (fs.existsSync(tempVocalPath)) fs.unlinkSync(tempVocalPath);
+            if (fs.existsSync(tempBackingPath)) fs.unlinkSync(tempBackingPath);
+            if (fs.existsSync(tempMixedPath)) fs.unlinkSync(tempMixedPath);
+          } catch (e) {}
+          resolve(false);
+        });
+      });
+    } catch (err) {
+      console.warn("⚠️ Singing synthesis fallback to spoken mode:", err.message);
+      return this.speak(songText, voice);
+    }
+  }
+
   stopSpeaking() {
     this.isAborted = true;
     this.isSpeaking = false;

@@ -257,18 +257,25 @@ class AudioRecorder {
     return null;
   }
 
-  /**
-   * Stop Unix recording
-   */
   async stopUnixRecording() {
     if (this.recordingProcess) {
-      this.recordingProcess.kill('SIGINT');
+      try {
+        this.recordingProcess.kill('SIGTERM');
+      } catch (e) {
+        try { this.recordingProcess.kill('SIGINT'); } catch (err) {}
+      }
       console.log('✅ Unix recording stopped');
       
-      // Wait for process to exit
+      // Wait for process to exit with 400ms SIGKILL fallback
       await new Promise((resolve) => {
+        if (!this.recordingProcess) return resolve();
         this.recordingProcess.on('close', resolve);
-        setTimeout(resolve, 1000); // Timeout after 1 second
+        setTimeout(() => {
+          if (this.recordingProcess) {
+            try { this.recordingProcess.kill('SIGKILL'); } catch (e) {}
+          }
+          resolve();
+        }, 400);
       });
       
       return this.audioFilePath;
