@@ -1035,9 +1035,16 @@ function showOverlayUltraFast(mode = 'standard') {
   currentMode = mode;
 
   if (!isAuthenticated && !authService.isAuthenticated()) {
-    showNotification('Sign In Required', 'Please sign in with Google to use Eloquent');
-    createLoginWindow();
-    return;
+    // Check if valid Groq API key is present (allows local testing and BYOK mode)
+    const hasLocalKey = CONFIG.apiKeys.some(k => k && k.startsWith('gsk_')) || (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.startsWith('gsk_'));
+    if (hasLocalKey) {
+      console.log('🔑 Local Groq API key detected, enabling instant recording');
+      isAuthenticated = true;
+    } else {
+      showNotification('Sign In Required', 'Please sign in with Google to use Eloquent');
+      createLoginWindow();
+      return;
+    }
   }
 
   if (recordingProcess) {
