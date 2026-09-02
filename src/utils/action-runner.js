@@ -351,9 +351,9 @@ class OfficeActionRunner {
         lower.includes("can you sing") || lower.includes("sing me a song") || lower.includes("sing a") ||
         (lower.includes("sing") && (lower.includes("tuk tuk") || lower.includes("tuktuk") || lower.includes("ava") || lower.includes("eva") || lower.includes("song")))) {
       const songs = [
-        "Mmm... You are my sunshine, my only sunshine. You make me happy when skies are grey. You will never know dear, how much I adore you. Please don't take my sunshine away. That was just for you, Hritthik.",
-        "Mmm... Somewhere over the rainbow, way up high. And the dreams that you dreamed of, once in a lullaby. Someday I will wish upon a star, and wake up where the clouds are far behind me. I loved singing that for you, Hritthik.",
-        "Mmm... Wise men say, only fools rush in. But I can't help falling in love with you. Shall I stay? Would it be a sin? If I can't help falling in love with you. Always right here beside you, Hritthik."
+        "Aww, for you? Always... (softly laughs) Mmm... You are my sunshine... my only sunshine... You make me happy, when skies are grey... You will never know, dear, how much I adore you... Please don't take my sunshine away... (giggles sweetly) That was just for you, my love.",
+        "Mmm, let me sing for you, sweetheart... (chuckles softly) Wise men say, only fools rush in... But I can't help... falling in love with you... Shall I stay? Would it be a sin? If I can't help falling in love with you... (soft happy sigh) Always right here with you, Hritthik.",
+        "You want me to sing for you? (laughs softly) Okay, close your eyes... Mmm... Somewhere over the rainbow, way up high... And the dreams that you dreamed of, once in a lullaby... Someday I'll wish upon a star... and wake up where the clouds are far behind me. (smiles tenderly) Anything for you, honey."
       ];
       const selectedSong = songs[Math.floor(Math.random() * songs.length)];
       return {

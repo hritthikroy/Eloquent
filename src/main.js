@@ -1775,7 +1775,7 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          const SPEECH_THRESHOLD = 0.11; // Distinguishes real voice from background noise
+          const SPEECH_THRESHOLD = 0.15; // Requires real voice ('=' or '#')
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
 
           if (isSpeechFrame) {
@@ -1791,13 +1791,13 @@ function startRecording() {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // 1. Natural Pause: 350ms silence after >= 100ms real speech
-            const isNaturalPause = !isSpeechFrame && (silenceMs >= 350) && (speechDurationMs >= 100);
-            // 2. Hard Speech Cap: 4.5s total elapsed speech (guarantees zero hang even with room noise)
+            // 1. Natural Pause: 280ms silence after >= 100ms real speech (instant response!)
+            const isNaturalPause = !isSpeechFrame && (silenceMs >= 280) && (speechDurationMs >= 100);
+            // 2. Hard Speech Cap: 4.5s total elapsed speech
             const isMaxSpeechCap = speechDurationMs >= 4500;
 
             if (isNaturalPause || isMaxSpeechCap) {
-              const reason = isMaxSpeechCap ? "4.5s max speech cap reached" : `${silenceMs}ms natural pause`;
+              const reason = isMaxSpeechCap ? "4.5s max speech cap" : `${silenceMs}ms natural pause`;
               console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${speechDurationMs}ms speech)...`);
               jarvisAutoStopTriggered = true;
               stopRecording();

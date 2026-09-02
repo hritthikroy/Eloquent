@@ -187,15 +187,13 @@ class AudioRecorder {
       if (vuMatch && this.onAmplitude) {
         const rawBars = vuMatch[1] + vuMatch[2];
         const signalChars = rawBars.replace(/[\s]/g, '');
-        let energy = 0;
+        let vocalEnergy = 0;
         for (const ch of signalChars) {
-          if (ch === '-' || ch === ':') energy += 0.5; // Ambient floor / noise
-          else if (ch === '=') energy += 2.0;          // Real human vocal signal
-          else if (ch === '#' || ch === '!') energy += 3.0; // Vocal peaks
-          else energy += 1.0;
+          if (ch === '=') vocalEnergy += 2.0;          // Real human vocal signal
+          else if (ch === '#' || ch === '!') vocalEnergy += 3.0; // Vocal peaks
         }
-        // Accurate amplitude: 0.0 in room silence, 0.02-0.06 in ambient noise, 0.20-1.0 in real voice
-        const amplitude = Math.min(energy / 14, 1.0);
+        // Accurate vocal amplitude: 0.0 in room silence/fan noise, 0.20-1.0 in real voice
+        const amplitude = Math.min(vocalEnergy / 10, 1.0);
         this.onAmplitude(amplitude);
       }
     });
