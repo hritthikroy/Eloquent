@@ -63,6 +63,29 @@ let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
 let currentAmp = 0.25;
 let isAnimating = false;
 
+// Initialize real microphone audio for organic voice reaction
+async function initAudio() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+    audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.5; // Responsive and smooth
+    analyser.minDecibels = -85;
+    analyser.maxDecibels = -10;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    console.log('✅ Real audio initialized - microphone connected with full emotion');
+    startVisualizer();
+  } catch (err) {
+    console.warn('Microphone WebAudio fallback to simulated:', err);
+    startVisualizer();
+  }
+}
+
 // IPC listener for real-time audio amplitude from main process
 ipcRenderer.on('amplitude', (_, amp) => {
   if (typeof amp === 'number') {
@@ -76,26 +99,56 @@ ipcRenderer.on('voice-activity', (_, hasVoice) => {
   }
 });
 
-// Ultra-lightweight 60fps waveform loop
+// Real voice 60fps waveform loop with full voice emotion
 function animate() {
   if (!isAnimating) return;
   animationId = requestAnimationFrame(animate);
-  
   frameCount++;
-  const t = frameCount * 0.08;
   
-  for (let i = 0; i < 6; i++) {
-    const centerFactor = 1 - (i / 6) * 0.35;
-    const wave = Math.sin(t + i * 0.7) * 0.5 + 0.5;
-    const target = (wave * 12 * currentAmp + 2) * centerFactor;
-    // Smooth exponential smoothing
-    barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
+  if (analyser && dataArray) {
+    // REAL VOICE CAPTURING: reacts to actual voice pitch, volume, and timbre
+    analyser.getByteFrequencyData(dataArray);
+
+    let sum = 0;
+    for (let i = 0; i < dataArray.length; i++) {
+      sum += dataArray[i] * dataArray[i];
+    }
+    const rmsVolume = Math.sqrt(sum / dataArray.length);
+    const volumeBoost = rmsVolume > 15 ? 1.4 : 1.0;
+
+    for (let i = 0; i < HALF_BARS; i++) {
+      const startBin = 2;
+      const endBin = Math.floor(dataArray.length * 0.4);
+      const idx = startBin + Math.floor((i / HALF_BARS) * (endBin - startBin));
+
+      const val1 = dataArray[Math.max(0, idx - 1)] || 0;
+      const val2 = dataArray[idx] || 0;
+      const val3 = dataArray[Math.min(dataArray.length - 1, idx + 1)] || 0;
+      const avgVal = (val1 + val2 + val3) / 3;
+
+      const rawValue = avgVal * volumeBoost;
+      const target = Math.max((rawValue / 255) * 16 + 2, 2.5);
+
+      barHeights[i] = barHeights[i] * 0.5 + target * 0.5;
+    }
+  } else {
+    // Fallback if mic stream initializing
+    const t = frameCount * 0.08;
+    for (let i = 0; i < HALF_BARS; i++) {
+      const centerFactor = 1 - (i / 6) * 0.35;
+      const wave = Math.sin(t + i * 0.7) * 0.5 + 0.5;
+      const target = (wave * 12 * currentAmp + 2) * centerFactor;
+      barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
+    }
   }
   
   drawBars();
 }
 
 function startVisualizer() {
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
   if (!isAnimating) {
     isAnimating = true;
     animate();
@@ -116,7 +169,6 @@ function stopVisualizer() {
 // ULTRA-FAST Draw mirrored bars with optimizations
 function drawBars() {
   if (!ctx || !canvas) {
-    console.error('Cannot draw bars - canvas not ready');
     return;
   }
   
@@ -128,16 +180,21 @@ function drawBars() {
   const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
   ctx.fillStyle = color;
   
-  // PERFORMANCE BOOST: Batch all rectangles
+  // Draw rounded equalizer bars
   for (let i = 0; i < HALF_BARS; i++) {
-    const h = Math.max(barHeights[i] * 0.6, 2);
+    const h = Math.max(barHeights[i] * 0.75, 2.5);
     const offset = (i * (BAR_WIDTH + BAR_GAP)) + BAR_GAP / 2;
     const y = centerY - h / 2;
 
-    // Right side bar
-    ctx.fillRect(centerX + offset, y, BAR_WIDTH, h);
-    // Left side bar (mirrored)
-    ctx.fillRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h);
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(centerX + offset, y, BAR_WIDTH, h, 1);
+      ctx.roundRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h, 1);
+      ctx.fill();
+    } else {
+      ctx.fillRect(centerX + offset, y, BAR_WIDTH, h);
+      ctx.fillRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h);
+    }
   }
 }
 
@@ -303,7 +360,7 @@ function initialize() {
   
   setupCanvas();
   updateTimer();
-  startVisualizer();
+  initAudio();
   console.log('✅ Overlay elements & canvas ready');
 }
 
