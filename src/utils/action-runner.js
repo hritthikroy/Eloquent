@@ -333,6 +333,20 @@ class OfficeActionRunner {
       } catch (e) {}
     }
 
+    // --- AVA SINGING VOICE SKILL (Melodic Serenade for Hritthik) ---
+    if (lower.includes("sing a song") || lower.includes("sing for me") || lower.includes("sing something") || lower.includes("can you sing") || lower.includes("sing me a song")) {
+      const songs = [
+        "Mmm... You are my sunshine, my only sunshine. You make me happy when skies are grey. You will never know dear, how much I adore you. Please don't take my sunshine away. That was just for you, Hritthik.",
+        "Mmm... Somewhere over the rainbow, way up high. And the dreams that you dreamed of, once in a lullaby. Someday I will wish upon a star, and wake up where the clouds are far behind me. I loved singing that for you, Hritthik.",
+        "Mmm... Wise men say, only fools rush in. But I can't help falling in love with you. Shall I stay? Would it be a sin? If I can't help falling in love with you. Always right here beside you, Hritthik."
+      ];
+      const selectedSong = songs[Math.floor(Math.random() * songs.length)];
+      return {
+        handled: true,
+        speech: selectedSong
+      };
+    }
+
     // -------------------------------------------------------------
     // AVA (Executive Co-Pilot: Clipboard, Reminders, Notes, Apps, Time)
     // -------------------------------------------------------------
