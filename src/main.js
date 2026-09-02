@@ -1349,130 +1349,6 @@ function createUserManagement() {
   });
 }
 
-let liveStreamingInterval = null;
-let isStreamingChunk = false;
-let liveTypedText = '';
-
-function typeLiveTextAtCursor(text) {
-  if (!text || process.platform !== 'darwin') return;
-  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  const script = `tell application "System Events" to keystroke "${escaped}"`;
-  exec(`osascript -e '${script}'`, (err) => {
-    if (err) console.log('Live typing err:', err.message);
-  });
-}
-
-function replaceLiveDraftWithFinal(charCount, finalText) {
-  clipboard.writeText(finalText);
-  if (process.platform === 'darwin') {
-    const script = `
-      tell application "System Events"
-        repeat ${charCount} times
-          key code 51
-        end repeat
-        keystroke "v" using command down
-      end tell
-    `;
-    exec(`osascript -e '${script}'`, (err) => {
-      if (err) {
-        console.log('Draft replace error, falling back to paste:', err.message);
-        pasteTextRobust(finalText);
-      } else {
-        console.log('✅ Live draft magically replaced with final polished text!');
-      }
-    });
-  } else {
-    pasteTextRobust(finalText);
-  }
-}
-
-function startLiveStreaming(filePath) {
-  stopLiveStreaming();
-  liveTypedText = '';
-
-  // Poll every 1.3 seconds for real-time live typing directly into the active text field
-  liveStreamingInterval = setInterval(async () => {
-    if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
-
-    try {
-      const stats = await fsPromises.stat(filePath);
-      if (stats.size < 35000) return; // Need at least ~1s of audio
-
-      isStreamingChunk = true;
-      const snapshotPath = `${filePath}.snap.wav`;
-      await fsPromises.copyFile(filePath, snapshotPath);
-
-      const previewText = await transcribePreview(snapshotPath);
-      if (previewText && previewText.trim().length > 0 && isRecording) {
-        const cleanPreview = previewText.trim();
-        
-        // Calculate new words to type at cursor
-        let textToType = '';
-        if (!liveTypedText) {
-          textToType = cleanPreview;
-          liveTypedText = cleanPreview;
-        } else if (cleanPreview.length > liveTypedText.length && cleanPreview.toLowerCase().startsWith(liveTypedText.toLowerCase().substring(0, Math.min(10, liveTypedText.length)))) {
-          textToType = cleanPreview.substring(liveTypedText.length);
-          liveTypedText = cleanPreview;
-        } else if (!cleanPreview.toLowerCase().includes(liveTypedText.toLowerCase())) {
-          // If transcript adjusted earlier words, type remaining addition
-          textToType = ' ' + cleanPreview;
-          liveTypedText += ' ' + cleanPreview;
-        }
-
-        if (textToType) {
-          console.log(`✍️ Live typing into writing field: "${textToType}"`);
-          typeLiveTextAtCursor(textToType);
-        }
-      }
-      fs.unlink(snapshotPath, () => {});
-    } catch (err) {
-      // Non-blocking preview error
-    } finally {
-      isStreamingChunk = false;
-    }
-  }, 1300);
-}
-
-function stopLiveStreaming() {
-  if (liveStreamingInterval) {
-    clearInterval(liveStreamingInterval);
-    liveStreamingInterval = null;
-  }
-  isStreamingChunk = false;
-}
-
-async function transcribePreview(snapshotPath) {
-  try {
-    const FormData = require('form-data');
-    const form = new FormData();
-    form.append('file', fs.createReadStream(snapshotPath), {
-      filename: 'preview.wav',
-      contentType: 'audio/wav'
-    });
-    form.append('model', 'whisper-large-v3-turbo');
-    form.append('language', 'en');
-    form.append('response_format', 'json');
-    form.append('temperature', '0');
-
-    const res = await axios.post(
-      'https://api.groq.com/openai/v1/audio/transcriptions',
-      form,
-      {
-        headers: {
-          ...form.getHeaders(),
-          'Authorization': `Bearer ${getActiveAPIKey()}`
-        },
-        timeout: 4000
-      }
-    );
-
-    return res.data?.text || '';
-  } catch (err) {
-    return '';
-  }
-}
-
 function startRecording() {
   // Prevent duplicate recording processes
   if (recordingProcess || isRecording) {
@@ -1514,7 +1390,6 @@ function startRecording() {
       
       console.log('✅ Recording started successfully');
       recordingProcess = audioRecorder.recordingProcess;
-      startLiveStreaming(audioFile);
       
       // Simulate amplitude for overlay (visual feedback)
       let amplitudeInterval = setInterval(() => {
@@ -1538,7 +1413,6 @@ function startRecording() {
       console.error('❌ Failed to start recording:', error);
       isProcessing = false;
       isRecording = false;
-      stopLiveStreaming();
       
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('error', `Recording failed: ${error.message}`);
@@ -1562,7 +1436,6 @@ async function stopRecording() {
 
   isProcessing = true;
   isRecording = false;
-  stopLiveStreaming();
   console.log('🛑 Stopping recording...');
   
   // Calculate recording duration
@@ -1667,15 +1540,10 @@ async function stopRecording() {
       });
     }
 
-    // If live text was written at the cursor, replace the draft with the final polished text!
-    if (liveTypedText && liveTypedText.length > 0 && process.platform === 'darwin') {
-      console.log(`✨ Magically replacing live draft (${liveTypedText.length} chars) with polished text...`);
-      replaceLiveDraftWithFinal(liveTypedText.length, finalText);
-    } else {
-      setTimeout(() => {
-        pasteTextRobust(finalText);
-      }, 50);
-    }
+    // PERFORMANCE BOOST: Paste immediately - overlay is already closed
+    setTimeout(() => {
+      pasteTextRobust(finalText);
+    }, 50);
 
     // Track API usage locally
     if (apiKey && apiKey.trim() !== '') {

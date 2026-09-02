@@ -33,6 +33,7 @@ let animationId;
 let startTime = Date.now();
 let canvasW = 60;
 let canvasH = 20;
+let frameCount = 0;
 
 // PERFORMANCE BOOST: Pre-calculate constants
 const BAR_WIDTH = 2;
@@ -302,6 +303,7 @@ function initialize() {
   
   setupCanvas();
   updateTimer();
+  startVisualizer();
   console.log('✅ Overlay elements & canvas ready');
 }
 
