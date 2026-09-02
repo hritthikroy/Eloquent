@@ -1437,13 +1437,17 @@ async function stopRecording() {
   isProcessing = true;
   isRecording = false;
   console.log('🛑 Stopping recording...');
-  
+
+  // Instantly hide overlay - no transcribing UI or animation lingering
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    hideOverlay();
+  }
+
   // Calculate recording duration
   const recordingDuration = recordingStartTime ? Date.now() - recordingStartTime : 0;
 
   // Stop recording process using cross-platform recorder
   try {
-    // Clear amplitude interval if it exists
     if (audioRecorder.amplitudeInterval) {
       clearInterval(audioRecorder.amplitudeInterval);
       audioRecorder.amplitudeInterval = null;
@@ -1476,7 +1480,7 @@ async function stopRecording() {
       throw new Error('Recording too short. Please speak for at least 1 second.');
     }
 
-    const recordingDuration = Math.max(1, Math.round((stats.size - 44) / 32000));
+    const recordingDurationSec = Math.max(1, Math.round((stats.size - 44) / 32000));
     const apiKey = getActiveAPIKey();
 
     let finalText;
@@ -1486,13 +1490,6 @@ async function stopRecording() {
     if (!apiKey || apiKey.trim() === '') {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
-
-    // Trigger Magic Processing visual state with glowing spin while AI processes
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('processing', currentMode);
-    }
-
-    console.log('🎤 Transcribing...');
     originalText = await transcribe(audioFile);
     
     if (currentMode === 'rewrite') {
