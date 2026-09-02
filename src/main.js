@@ -1864,8 +1864,6 @@ async function stopRecording() {
           jarvisReply = `Understood. I will call you ${prefChange.value} from now on.`;
         } else if (prefChange.type === 'salutation') {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
-        } else if (prefChange.type === 'language') {
-          jarvisReply = prefChange.speech;
         }
       } else {
         // Detect which of the 4 specialized agents should respond
