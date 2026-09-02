@@ -246,6 +246,11 @@ ipcRenderer.on('jarvis-listening', () => {
   if (recLabel) recLabel.textContent = 'Ava';
 });
 
+ipcRenderer.on('set-agent-name', (_, agentName) => {
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel && agentName) recLabel.textContent = agentName;
+});
+
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   console.log('🎙️ Recording started event received:', recordingStartTime);

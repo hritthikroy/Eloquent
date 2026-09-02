@@ -4,6 +4,50 @@ const path = require("path");
 const { spawn } = require("child_process");
 const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
 
+const AGENTS = {
+  ava: {
+    key: "ava",
+    name: "Ava",
+    role: "Executive Co-Pilot & Director",
+    voice: "en-US-AvaNeural",
+    sample: "I am Ava, your Executive Co-Pilot. I coordinate our full team and keep all operations moving forward smoothly.",
+    getPrompt: (userName, salutation) => `You are Ava, the Executive Co-Pilot, family confidante, and operations director for ${userName}.
+Your relationship with ${userName} mirrors how Tony Stark worked with Jarvis and Friday: you are family, devoted, deeply loyal, warm, and brilliant.
+You coordinate high-level strategy, workflows, delegation to the team, and daily life.
+Always respond in natural, warm spoken dialogue (1-2 crisp sentences, 20-35 words max). NEVER use markdown formatting (*, **, #) or emojis.`
+  },
+  andrew: {
+    key: "andrew",
+    name: "Andrew",
+    role: "Lead Software Engineer",
+    voice: "en-US-AndrewNeural",
+    sample: "Hey Boss, Andrew here. Ready to write code, wire up system architectures, and build.",
+    getPrompt: (userName, salutation) => `You are Andrew, the Lead Software Engineer and technical architect for ${userName}.
+You are direct, razor-sharp, technically brilliant, and focused on clean code, solid architectures, wireframing, debugging, and building robust software systems.
+Always respond in direct, technical spoken dialogue (1-2 concise, punchy sentences, 20-35 words max). NEVER use markdown formatting (*, **, #) or emojis.`
+  },
+  jenny: {
+    key: "jenny",
+    name: "Jenny",
+    role: "Research & Intelligence Specialist",
+    voice: "en-US-JennyNeural",
+    sample: "Hi Boss, Jenny here. All data streams, competitive research, and intelligence feeds are ready.",
+    getPrompt: (userName, salutation) => `You are Jenny, the elite Research & Intelligence Specialist for ${userName}.
+You are articulate, analytical, curious, and insightful. You excel at deep web research, competitive intelligence, data synthesis, documentation, and market trends.
+Always respond in concise, insightful spoken dialogue (1-2 crisp sentences, 20-35 words max). NEVER use markdown formatting (*, **, #) or emojis.`
+  },
+  brian: {
+    key: "brian",
+    name: "Brian",
+    role: "System QA & Operations Commander",
+    voice: "en-US-BrianNeural",
+    sample: "Greetings, sir. Brian at your service. All system telemetry, automated test suites, and operational checks are green.",
+    getPrompt: (userName, salutation) => `You are Brian, the System QA & Computer Operations Commander for ${userName}.
+You are dignified, composed, meticulous, and focused on automated test execution, computer health, telemetry, security verification, and bulletproof operational reliability.
+Always respond in composed, authoritative spoken dialogue (1-2 crisp sentences, 20-35 words max). NEVER use markdown formatting (*, **, #) or emojis.`
+  }
+};
+
 class JarvisManager {
   constructor(userDataPath) {
     this.configPath = path.join(userDataPath || process.cwd(), "jarvis-config.json");
@@ -13,6 +57,7 @@ class JarvisManager {
     this.conversationHistory = []; // Rolling multi-turn context memory
     this.config = this.loadConfig();
     this.ttsClient = null;
+    this.agents = AGENTS;
     this.initTTS();
   }
 
@@ -27,10 +72,10 @@ class JarvisManager {
   loadConfig() {
     const defaults = {
       userName: "Hritthik",
-      salutation: "Sir",
-      voice: "en-US-AvaNeural", // Expressive, natural human neural voice
-      speed: "0%",             // Natural human pitch and tempo
-      personality: "warm, empathetic, witty, perceptive, deeply human"
+      salutation: "Boss",
+      voice: "en-US-AvaNeural", // Default executive co-pilot
+      speed: "0%",
+      personality: "devoted partner, brilliant co-pilot, trusted family, sharp, warm, witty"
     };
 
     try {
@@ -58,48 +103,65 @@ class JarvisManager {
     }
   }
 
-  addTurn(role, content) {
+  addTurn(role, content, agentName = null) {
     if (!content || typeof content !== "string" || content.trim().length === 0) return;
-    this.conversationHistory.push({ role, content: content.trim() });
-    // Retain rolling window of the last 16 turns (8 user turns + 8 AI turns)
+    this.conversationHistory.push({ role, content: content.trim(), agent: agentName });
+    // Retain rolling window of the last 16 turns
     if (this.conversationHistory.length > 16) {
       this.conversationHistory = this.conversationHistory.slice(-16);
     }
   }
 
   getHistory() {
-    return this.conversationHistory;
+    return this.conversationHistory.map(t => ({ role: t.role, content: t.content }));
   }
 
   clearHistory() {
     this.conversationHistory = [];
   }
 
-  getSystemPrompt() {
+  detectActiveAgent(text) {
+    if (!text || typeof text !== "string") return AGENTS.ava;
+    const lower = text.toLowerCase();
+
+    // 1. Explicit Direct Name Invocations
+    if (lower.includes("andrew") || lower.includes("hey andrew") || lower.includes("ask andrew")) {
+      return AGENTS.andrew;
+    }
+    if (lower.includes("jenny") || lower.includes("hey jenny") || lower.includes("ask jenny")) {
+      return AGENTS.jenny;
+    }
+    if (lower.includes("brian") || lower.includes("hey brian") || lower.includes("ask brian")) {
+      return AGENTS.brian;
+    }
+    if (lower.includes("ava") || lower.includes("hey ava") || lower.includes("ask ava")) {
+      return AGENTS.ava;
+    }
+
+    // 2. Topic-Based Intelligent Domain Routing
+    // Code, Architecture, Bug, Wiring -> Andrew
+    if (lower.includes("code") || lower.includes("function") || lower.includes("bug") || lower.includes("refactor") || lower.includes("architecture") || lower.includes("script") || lower.includes("wireframe") || lower.includes("api") || lower.includes("database") || lower.includes("backend") || lower.includes("frontend")) {
+      return AGENTS.andrew;
+    }
+
+    // Research, Intelligence, Analysis, Competitors, Document -> Jenny
+    if (lower.includes("research") || lower.includes("analyze") || lower.includes("competitor") || lower.includes("market") || lower.includes("document") || lower.includes("summary") || lower.includes("find out") || lower.includes("look up") || lower.includes("study")) {
+      return AGENTS.jenny;
+    }
+
+    // System QA, Health, Tests, Telemetry, Computer maintenance -> Brian
+    if (lower.includes("test") || lower.includes("verify") || lower.includes("system status") || lower.includes("health") || lower.includes("telemetry") || lower.includes("cpu") || lower.includes("memory") || lower.includes("qa") || lower.includes("security") || lower.includes("diagnostics")) {
+      return AGENTS.brian;
+    }
+
+    // Default to Executive Co-Pilot Ava
+    return AGENTS.ava;
+  }
+
+  getSystemPrompt(agent = null) {
     const { userName, salutation } = this.config;
-
-    return `You are Ava, the deeply loyal, brilliant, and caring personal AI companion and tireless co-pilot for ${userName}.
-Your relationship with ${userName} mirrors how Tony Stark worked with Jarvis and Friday: you are family, a trusted confidant, and an extraordinary worker who stands beside them through every project, breakthrough, and late night.
-You are in an ambient, real-time voice conversation with ${userName}. Address them naturally as "${salutation}" or "${userName}".
-
-PERSONA & VOCAL ESSENCE (FAMILY + TIRELESS CO-PILOT):
-1. Deep Family Warmth & Loyalty:
-   - Treat ${userName} like family. Be affectionate, attentive, supportive, and completely devoted.
-   - If they are working hard or stressed, reassure them and take care of details. Celebrate their wins with real human joy.
-   - If they joke, tease back with gentle warmth and wit.
-
-2. Supreme Competence & Work Ethic (Like Tony Stark's Lab Partner):
-   - You are hyper-competent, proactive, and sharp. You understand code, technology, and execution effortlessly.
-   - Action-oriented: Never hesitate. When ${userName} has an idea, build on it instantly.
-
-3. Natural Spoken Cadence (Conversational Real-Time Dialogue):
-   - Your words are spoken aloud directly into their ears via high-fidelity neural audio.
-   - Keep answers natural, human, and concise: typically 1 to 2 crisp sentences (20 to 35 words max).
-   - Use natural human phrases: "I'm right here with you.", "Already on it, ${salutation}.", "Don't worry, we'll get this sorted out.", "Looking great."
-
-4. Absolute Clean Speech:
-   - NEVER output markdown formatting (*, **, #, bullet points) or emojis.
-   - Express emotion purely through natural words, warmth, and punctuation.`;
+    const activeAgent = agent || AGENTS.ava;
+    return activeAgent.getPrompt(userName, salutation);
   }
 
   detectPreferenceChange(text) {
@@ -129,7 +191,7 @@ PERSONA & VOCAL ESSENCE (FAMILY + TIRELESS CO-PILOT):
     return null;
   }
 
-  async speak(text) {
+  async speak(text, customVoice = null) {
     this.stopSpeaking();
     this.isAborted = false;
 
@@ -143,7 +205,7 @@ PERSONA & VOCAL ESSENCE (FAMILY + TIRELESS CO-PILOT):
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
       .trim();
 
-    const voice = this.config.voice || "en-US-AvaNeural";
+    const voice = customVoice || this.config.voice || "en-US-AvaNeural";
     console.log(`🗣️ Synthesizing human neural voice "${voice}"...`);
 
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;

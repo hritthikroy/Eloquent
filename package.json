@@ -30,7 +30,8 @@
     "build:optimized": "node scripts/optimize-build.js",
     "analyze-bundle": "npx webpack-bundle-analyzer dist-webpack/main.js",
     "size-check": "du -sh dist/ && ls -lh dist/*.dmg dist/*.zip 2>/dev/null || echo 'No build files found'",
-    "check-env": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')){console.log('❌ .env file missing. Copy from .env.example');process.exit(1);} const env=fs.readFileSync('.env','utf8'); console.log('🔍 Environment Status:'); console.log('Groq API:', env.includes('gsk_') ? '✅ Configured' : '❌ Missing'); console.log('Supabase:', env.includes('supabase.co') && !env.includes('your-project') ? '✅ Configured' : '❌ Missing');\""
+    "check-env": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env')){console.log('❌ .env file missing. Copy from .env.example');process.exit(1);} const env=fs.readFileSync('.env','utf8'); console.log('🔍 Environment Status:'); console.log('Groq API:', env.includes('gsk_') ? '✅ Configured' : '❌ Missing'); console.log('Supabase:', env.includes('supabase.co') && !env.includes('your-project') ? '✅ Configured' : '❌ Missing');\"",
+    "test-voices": "node scripts/test-voices.js"
   },
   "devDependencies": {
     "@electron/notarize": "^2.2.0",

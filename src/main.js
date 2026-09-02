@@ -853,6 +853,36 @@ function createTray() {
       }
     },
     {
+      label: '🎧 Voice Testing Suite',
+      submenu: [
+        {
+          label: '▶️ Team Rollcall (Test All 4 Voices)',
+          click: () => {
+            showNotification('🎧 Team Rollcall', 'Playing all 4 agent voices through your speakers...');
+            const { exec } = require('child_process');
+            exec('node scripts/test-voices.js', { cwd: path.join(__dirname, '..') });
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '▶️ Test Ava (Executive Co-Pilot)',
+          click: () => jarvisManager.speak(jarvisManager.agents.ava.sample, jarvisManager.agents.ava.voice)
+        },
+        {
+          label: '▶️ Test Jenny (Research & Intelligence)',
+          click: () => jarvisManager.speak(jarvisManager.agents.jenny.sample, jarvisManager.agents.jenny.voice)
+        },
+        {
+          label: '▶️ Test Andrew (Lead Software Engineer)',
+          click: () => jarvisManager.speak(jarvisManager.agents.andrew.sample, jarvisManager.agents.andrew.voice)
+        },
+        {
+          label: '▶️ Test Brian (System QA Commander)',
+          click: () => jarvisManager.speak(jarvisManager.agents.brian.sample, jarvisManager.agents.brian.voice)
+        }
+      ]
+    },
+    {
       label: '🤖 Ava Preferences',
       submenu: [
         {
@@ -1767,9 +1797,10 @@ async function stopRecording() {
         overlayWindow.webContents.send('jarvis-thinking');
       }
 
-      // Check for voice preference change (e.g. "call me Hritthik", "switch voice to Samantha")
+      // Check for voice preference change (e.g. "call me Hritthik", "address me as Boss")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
       let jarvisReply = '';
+      let activeAgent = jarvisManager.agents.ava;
 
       if (prefChange) {
         if (prefChange.type === 'name') {
@@ -1778,7 +1809,13 @@ async function stopRecording() {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
         }
       } else {
-        jarvisReply = await askJarvis(originalText);
+        // Detect which of the 4 specialized agents should respond
+        activeAgent = jarvisManager.detectActiveAgent(originalText);
+        console.log(`🎯 Routing query to specialist: ${activeAgent.name} (${activeAgent.role})`);
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('set-agent-name', activeAgent.name);
+        }
+        jarvisReply = await askJarvis(originalText, activeAgent);
       }
 
       finalText = jarvisReply;
@@ -1789,8 +1826,8 @@ async function stopRecording() {
 
       playSound('success');
 
-      // Show notification with Ava response
-      showNotification(`🤖 Ava (${jarvisManager.config.salutation})`, jarvisReply);
+      // Show notification with specialist agent name and role
+      showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
 
       // Save to history
       saveToHistory({
@@ -1798,12 +1835,13 @@ async function stopRecording() {
         text: jarvisReply,
         originalText: originalText,
         mode: 'jarvis',
+        agent: activeAgent.name,
         timestamp: new Date().toISOString(),
         duration: recordingDuration
       });
 
-      // Speak response aloud with configured custom voice
-      const speechSuccess = await jarvisManager.speak(jarvisReply);
+      // Speak response aloud with the specialist agent's dedicated real-human voice!
+      const speechSuccess = await jarvisManager.speak(jarvisReply, activeAgent.voice);
 
       // If user aborted during speech with ESC
       if (!isJarvisLoopActive) {
@@ -1819,7 +1857,7 @@ async function stopRecording() {
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
-        }, 600);
+        }, 400);
       } else {
         hideOverlay();
       }
@@ -2153,14 +2191,15 @@ async function rewrite(text) {
   }
 }
 
-// Conversational Jarvis / Ava Executive AI Brain with Multi-Turn Memory
-async function askJarvis(userSpeech) {
+// Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
+async function askJarvis(userSpeech, activeAgent = null) {
   const startTime = Date.now();
-  const systemPrompt = jarvisManager.getSystemPrompt();
+  const agent = activeAgent || jarvisManager.agents.ava;
+  const systemPrompt = jarvisManager.getSystemPrompt(agent);
 
   try {
-    console.log('🧠 Querying human conversational brain with multi-turn memory...');
-    jarvisManager.addTurn('user', userSpeech);
+    console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory...`);
+    jarvisManager.addTurn('user', userSpeech, 'user');
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -2174,15 +2213,15 @@ async function askJarvis(userSpeech) {
     });
 
     const reply = content.trim();
-    jarvisManager.addTurn('assistant', reply);
+    jarvisManager.addTurn('assistant', reply, agent.name);
 
     const elapsed = Date.now() - startTime;
-    console.log(`⚡ Human AI companion responded in ${elapsed}ms using ${model}`);
+    console.log(`⚡ [${agent.name}] responded in ${elapsed}ms using ${model}`);
     logApiRequest('jarvis-talk', 'success', elapsed, usage?.total_tokens);
 
     return reply;
   } catch (error) {
-    console.error('❌ AI query failed:', error.message);
+    console.error(`❌ [${agent.name}] AI query failed:`, error.message);
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
     return `I am right here with you, ${jarvisManager.config.salutation}. I heard you, but hit a slight connection glitch. What were you saying?`;
   }
