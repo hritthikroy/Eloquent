@@ -1697,6 +1697,7 @@ function startRecording() {
   // VAD state for automatic hands-free turn taking in Jarvis mode
   let jarvisSpeechDetected = false;
   let jarvisLastSpeechTime = 0;
+  let jarvisSpeechStartTime = 0;   // When continuous speech first began (for duration gate)
   let jarvisAutoStopTriggered = false;
 
   // Use cross-platform audio recorder
@@ -1724,13 +1725,26 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude > 0.12) {
+          if (amplitude > 0.16) {
+            if (!jarvisSpeechDetected) {
+              jarvisSpeechStartTime = Date.now(); // Mark when speech began
+            }
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
           } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 700)) {
-            console.log('🗣️ Natural pause in speech detected (700ms silence). Auto-submitting to agent...');
-            jarvisAutoStopTriggered = true;
-            stopRecording();
+            const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
+            if (confirmedSpeechMs >= 400) {
+              // Real speech confirmed (≥400ms) — submit to agent
+              console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech. Auto-submitting...`);
+              jarvisAutoStopTriggered = true;
+              stopRecording();
+            } else {
+              // Likely SoX init noise or micro-blip — reset and keep listening
+              console.log(`🔇 Ignoring ${confirmedSpeechMs}ms noise blip — waiting for real speech...`);
+              jarvisSpeechDetected = false;
+              jarvisSpeechStartTime = 0;
+              jarvisLastSpeechTime = 0;
+            }
           }
         }
 
