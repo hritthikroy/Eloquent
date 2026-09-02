@@ -199,6 +199,58 @@ Keep your response concise, spoken-cadence friendly (2 to 3 punchy sentences, 35
     }
   }
 
+  async generateOptimizedPrompt(rawText, options = {}) {
+    const startTime = Date.now();
+    console.log(`📝 [Antigravity Prompt Engineer] Andrew crafting prompt for: "${rawText}"`);
+
+    const systemPrompt = `You are Andrew, an elite Lead Software Engineer and master Prompt Engineer for Google Antigravity.
+Your job is to take Hritthik's raw spoken words, rough thoughts, or unstructured instructions and transform them into a world-class, grammatically perfect, high-context developer prompt for Antigravity.
+
+RULES:
+1. Fix all grammar, spelling, and phonetic speech-to-text mishearings.
+2. Structure the prompt clearly:
+   - Clear Technical Objective
+   - Key Files / Architecture
+   - Quality Requirements & AST Verification
+3. Make it authoritative, concise, and 100% executable by an AI coding agent.
+4. Output ONLY the polished prompt ready to be pasted into Antigravity. Do NOT output preamble, meta commentary, or markdown backtick wrappers around the whole answer.`;
+
+    try {
+      let polishedPrompt = "";
+      if (options.callGroqChatCompletion && typeof options.callGroqChatCompletion === "function") {
+        const res = await options.callGroqChatCompletion([
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Transform this raw instruction into a pristine Antigravity developer prompt: "${rawText}"` }
+        ], { temperature: 0.2, max_tokens: 350 });
+        polishedPrompt = res.content.trim().replace(/^["']|["']$/g, "");
+      } else {
+        polishedPrompt = rawText.charAt(0).toUpperCase() + rawText.slice(1);
+      }
+
+      // Copy directly to macOS clipboard
+      try {
+        const cp = require("child_process").spawn("pbcopy");
+        cp.stdin.write(polishedPrompt);
+        cp.stdin.end();
+      } catch (e) {}
+
+      const elapsed = Date.now() - startTime;
+      console.log(`✅ [Antigravity Prompt Engineer] Prompt generated and copied to clipboard in ${elapsed}ms`);
+
+      return {
+        success: true,
+        polishedPrompt,
+        speech: "I've engineered your prompt with proper grammar and clean architecture, bro! It's copied straight to your clipboard and ready for Antigravity or Alt+Space."
+      };
+    } catch (err) {
+      console.error("❌ [Antigravity Prompt Engineer] Error:", err.message);
+      return {
+        success: false,
+        speech: `Hit a glitch generating your prompt: ${err.message}. I've logged the error, bro.`
+      };
+    }
+  }
+
   _saveTaskLog(taskRecord) {
     try {
       const logFile = path.join(this.tasksDir, `${taskRecord.id}.json`);

@@ -10,7 +10,7 @@ class OfficeActionRunner {
     this.antigravity = new AntigravityEngine(this.projectDir);
   }
 
-  async handleAction(speechText, activeAgent, jarvisManager = null) {
+  async handleAction(speechText, activeAgent, jarvisManager = null, callGroqChatCompletion = null) {
     if (!speechText || typeof speechText !== "string") return { handled: false };
     const lower = speechText.toLowerCase().trim();
 
@@ -50,25 +50,61 @@ class OfficeActionRunner {
     }
 
     // -------------------------------------------------------------
+    // ANDREW (Lead Software Engineer: Antigravity Auto-Mode & Master Prompt Engineer)
+    // -------------------------------------------------------------
+    // 1. Antigravity Master Prompt Engineer & Grammar Fixer
+    if (lower.includes("write a prompt") || lower.includes("write prompt") ||
+        lower.includes("create a prompt") || lower.includes("create prompt") ||
+        lower.includes("make a prompt") || lower.includes("make prompt") ||
+        lower.includes("prepare a prompt") || lower.includes("prepare prompt") ||
+        lower.includes("craft a prompt") || lower.includes("craft prompt") ||
+        lower.includes("prompt for next task") || lower.includes("prompt for my next task") ||
+        lower.includes("prompt for antigravity") || lower.includes("fix grammar and write prompt") ||
+        lower.includes("fix grammar and make prompt")) {
+      const promptConcept = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:write|create|make|prepare|craft)?\s*(?:a\s+)?(?:prompt\s+for\s+(?:my\s+)?next\s+task|prompt\s+for\s+antigravity|prompt)?(?:\s+with\s+proper\s+grammar\s+fix\s+and\s+all)?(?:\s*[:,-]?\s*)/i, "").trim() || speechText;
+      const res = await this.antigravity.generateOptimizedPrompt(promptConcept, { callGroqChatCompletion });
+      return {
+        handled: true,
+        agentName: "Andrew",
+        agentVoice: "en-US-AndrewNeural",
+        speech: res.speech
+      };
+    }
+
+    // 2. Antigravity Auto-Mode Coding & Refactoring Execution
+    if (lower.includes("antigravity") || lower.includes("auto mode") || lower.includes("auto-mode") ||
+        lower.includes("auto code") || lower.includes("refactor") || lower.includes("fix bug") ||
+        (lower.includes("andrew") && (lower.includes("code") || lower.includes("build") || lower.includes("debug") || lower.includes("audit")))) {
+      const task = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*/i, "").trim();
+      const res = await this.antigravity.executeAutoCodingTask(task, { callGroqChatCompletion });
+      return {
+        handled: true,
+        agentName: "Andrew",
+        agentVoice: "en-US-AndrewNeural",
+        speech: res.speech
+      };
+    }
+
+    // -------------------------------------------------------------
     // BRIAN (System QA, Health, Battery, Diagnostics, Storage & Ports)
     // -------------------------------------------------------------
     if (lower.includes("battery")) {
       return this.getBatteryReport();
     }
 
-    if (lower.includes("system health") || lower.includes("ram") || lower.includes("cpu") || lower.includes("memory") || lower.includes("telemetry") || lower.includes("diagnostics")) {
+    if (lower.includes("system health") || lower.includes("ram usage") || lower.includes("cpu usage") || lower.includes("check ram") || lower.includes("check cpu") || lower.includes("system diagnostics") || lower.includes("system telemetry")) {
       return this.getSystemHealthReport();
     }
 
-    if (lower.includes("uptime") || lower.includes("how long has the system") || lower.includes("how long has the mac") || lower.includes("computer uptime")) {
+    if (lower.includes("system uptime") || lower.includes("how long has the system") || lower.includes("how long has the mac") || lower.includes("computer uptime") || lower.includes("uptime")) {
       return this.getSystemUptime();
     }
 
-    if (lower.includes("wifi status") || lower.includes("check wifi") || lower.includes("wi-fi status") || lower.includes("check wi-fi") || lower.includes("wifi network") || lower.includes("wi-fi network")) {
+    if (lower.includes("wifi") || lower.includes("wi-fi") || lower.includes("internet speed") || lower.includes("network status")) {
       return this.getWifiStatus();
     }
 
-    if (lower.includes("disk space") || lower.includes("storage status") || lower.includes("hard drive") || lower.includes("free space")) {
+    if (lower.includes("disk space") || lower.includes("storage") || lower.includes("hard drive") || lower.includes("free space")) {
       return this.getDiskSpaceReport();
     }
 
@@ -79,28 +115,12 @@ class OfficeActionRunner {
       }
     }
 
-    if (lower.includes("clean cache") || lower.includes("clear cache") || lower.includes("clean disk") || lower.includes("clear temporary")) {
+    if (lower.includes("clean cache") || lower.includes("clear cache") || lower.includes("free memory") || lower.includes("flush tmp")) {
       return this.cleanCache();
     }
 
     if (lower.includes("lock screen") || lower.includes("lock computer") || lower.includes("lock suit") || lower.includes("lock my screen")) {
       return this.lockScreen();
-    }
-
-    // -------------------------------------------------------------
-    // ANDREW (Lead Software Engineer: Antigravity Auto-Mode Coding Agent)
-    // -------------------------------------------------------------
-    if (lower.includes("antigravity") || lower.includes("auto mode") || lower.includes("auto-mode") ||
-        lower.includes("auto code") || lower.includes("refactor") || lower.includes("fix bug") ||
-        (lower.includes("andrew") && (lower.includes("code") || lower.includes("build") || lower.includes("debug") || lower.includes("audit")))) {
-      const task = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*/i, "").trim();
-      const res = await this.antigravity.executeAutoCodingTask(task);
-      return {
-        handled: true,
-        agentName: "Andrew",
-        agentVoice: "en-US-AndrewNeural",
-        speech: res.speech
-      };
     }
 
     if (lower.includes("package version") || lower.includes("app version") || lower.includes("project version") || lower.includes("dependencies")) {
