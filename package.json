@@ -1,7 +1,7 @@
 {
   "name": "eloquent",
   "version": "2.1.0",
-  "description": "Professional voice-to-text macOS application with enhanced AI recognition, subscription management, and ultra-reliable pasting",
+  "description": "Professional voice-to-text desktop application with enhanced AI recognition, subscription management, and ultra-reliable pasting for macOS and Windows",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
@@ -46,7 +46,10 @@
     "axios": "^1.6.0",
     "dotenv": "^17.2.3",
     "electron-store": "^11.0.2",
-    "form-data": "^4.0.0"
+    "form-data": "^4.0.0",
+    "node-record-lpcm16": "^1.0.1",
+    "robotjs": "^0.6.0",
+    "node-wav": "^0.0.2"
   },
   "build": {
     "appId": "com.eloquent.app",

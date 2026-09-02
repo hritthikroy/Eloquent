@@ -12,34 +12,49 @@ Visit the official website: **[Eloquent Landing Page](https://hritthikroy.github
 
 ## Features
 
-- 🎤 **Voice Recording** - High-quality audio capture with one-click recording
+- 🎤 **Voice Recording** - High-quality audio capture with one-click recording (Windows/macOS/Linux)
 - 🤖 **AI Transcription** - Powered by Groq's Whisper API for accurate speech-to-text
-- ✨ **Smart Rewrite** - AI-powered text enhancement and grammar correction
-- 📋 **Auto-Paste** - Automatically paste transcribed text to any application
+- ✨ **AI Rewrite Mode** - AI-powered text enhancement using Llama 3.3-70b (Alt+Shift+Space)
+- 📋 **Auto-Paste** - Automatically paste transcribed text to any application (cross-platform)
 - 🔐 **Google OAuth** - Secure authentication with Google accounts
 - 💳 **Subscription Plans** - Free, Pro, and Enterprise tiers
 - 🌐 **Cloud Backend** - Reliable Go backend hosted on Heroku
-- 🖥️ **Cross-Platform** - Available for macOS (Apple Silicon) and Windows
+- 🖥️ **Cross-Platform** - Fully functional on Windows, macOS, and Linux
+- 🎯 **Smart Enhancement** - Removes filler words, fixes grammar, improves clarity
+- 🔊 **Sound Feedback** - Cross-platform audio notifications
 
 ## Download
 
 Download the latest release from [GitHub Releases](https://github.com/hritthikroy/Eloquent/releases).
 
-| Platform | File |
-|----------|------|
-| macOS (Apple Silicon) | `Eloquent-2.1.0-mac-arm64.dmg` |
-| Windows 10/11 | `Eloquent-2.1.0-win-x64.exe` |
+| Platform | File | Architecture |
+|----------|------|--------------|
+| macOS (Apple Silicon) | `Eloquent-2.1.0-mac-arm64.dmg` | ARM64 (M1/M2/M3) |
+| Windows 10/11 | `Eloquent-2.1.0-win-x64.exe` | x64 (64-bit) |
+| Windows ARM | `Eloquent-2.1.0-win-arm64.exe` | ARM64 |
+
+**New in v2.1.0:**
+- ✅ Full Windows support with native audio recording
+- ✅ Cross-platform auto-paste (Windows/macOS/Linux)
+- ✅ AI Rewrite mode with Llama 3.3-70b
+- ✅ Enhanced error handling and platform detection
 
 ## Requirements
 
-### macOS
-- macOS 10.15 (Catalina) or later
-- Apple Silicon (M1/M2/M3) Mac
-- [Sox](https://sox.sourceforge.net/) for audio recording: `brew install sox`
-
 ### Windows
 - Windows 10 or later (64-bit)
-- Sox for audio recording (included in installer or install separately)
+- **Optional:** Sox for enhanced audio recording - `choco install sox`
+- All audio recording methods have automatic fallbacks
+
+### macOS
+- macOS 10.15 (Catalina) or later
+- Apple Silicon (M1/M2/M3) or Intel Mac
+- [Sox](https://sox.sourceforge.net/) for audio recording: `brew install sox`
+
+### Linux
+- Any modern Linux distribution
+- Sox for audio recording: `sudo apt-get install sox` (Ubuntu/Debian)
+- Optional: xdotool for auto-paste: `sudo apt-get install xdotool`
 
 ## Quick Start
 
@@ -54,15 +69,18 @@ Download the latest release from [GitHub Releases](https://github.com/hritthikro
 | Shortcut | Action |
 |----------|--------|
 | `Alt+Space` | Start/Stop standard recording |
-| `Alt+Shift+Space` | Start AI rewrite mode |
+| `Alt+Shift+Space` | Start AI rewrite mode ✨ |
 | `ESC` | Stop recording |
+| `Ctrl+Shift+D` (Win) / `Cmd+Shift+D` (Mac) | Open Dashboard |
 
-## Development Setup
+**Note:** On macOS, use `Option` instead of `Alt` and `Command` instead of `Ctrl`
+
+## Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/hritthikroy/Eloquent.git
-cd Eloquent
+cd Eloquent/EloquentElectron
 
 # Install dependencies
 npm install
@@ -77,7 +95,12 @@ npm run dev
 # Build for production
 npm run build:mac-arm64  # macOS Apple Silicon
 npm run build:win        # Windows
+npm run build:all        # Both platforms
 ```
+
+**For detailed Windows setup instructions, see [WINDOWS_SETUP.md](WINDOWS_SETUP.md)**
+
+**For a 5-minute quick start, see [QUICK_START.md](QUICK_START.md)**
 
 ## Environment Variables
 

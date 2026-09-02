@@ -18,15 +18,25 @@ try {
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
+const fsPromises = fs.promises;
 const { exec, spawn } = require('child_process');
 const AI_PROMPTS = require('./utils/ai-prompts');
 const performanceMonitor = require('./services/performance-monitor');
 const authService = require('./services/auth-bridge');
 const { isAdminUser } = require('./utils/admin-check');
 const FastStartup = require('./utils/fast-startup');
+const AudioRecorder = require('./utils/audio-recorder');
+const PasteHelper = require('./utils/paste-helper');
+const SoundPlayer = require('./utils/sound-player');
+const { perfOptimizer } = require('./utils/performance-optimizer');
 
 // Initialize fast startup optimizer
 const fastStartup = new FastStartup();
+
+// Initialize cross-platform utilities
+const audioRecorder = new AudioRecorder();
+const pasteHelper = new PasteHelper();
+const soundPlayer = new SoundPlayer();
 
 // Exit early if electron is not available (during build)
 if (!app) {
@@ -394,29 +404,7 @@ function checkAccessibilityPermission() {
 
 // Function to prompt user to enable accessibility
 function promptAccessibilityPermission() {
-  const result = dialog.showMessageBoxSync({
-    type: 'info',
-    title: '🎯 Enable Auto-Paste Feature',
-    message: 'Make Eloquent paste text automatically at your cursor?',
-    detail: '🎯 AUTO-PASTE BENEFITS:\n• Text appears instantly where you\'re typing\n• No need to press Cmd+V\n• Seamless workflow\n\n🔧 SETUP STEPS:\n1. Click "Open Settings" below\n2. Find "Electron" or "Eloquent" in the list\n3. Toggle it ON ✅\n4. Restart Eloquent\n\n📋 BACKUP: Text is always copied to clipboard regardless\n\n⚠️ SECURITY: Only allows pasting transcribed text, nothing else',
-    buttons: ['Open Settings', 'Maybe Later', 'Keep Clipboard Only'],
-    defaultId: 0,
-    cancelId: 1
-  });
-
-  if (result === 0) {
-    // Open System Settings to Accessibility
-    exec('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"');
-
-    // Show follow-up notification
-    setTimeout(() => {
-      showNotification('🔧 Setup Instructions', 'Find "Electron" or "Eloquent" in the list and toggle it ON. Then restart Eloquent.');
-    }, 2000);
-  } else if (result === 1) {
-    showNotification('📋 Clipboard Mode', 'Text will be copied to clipboard. Press Cmd+V to paste. You can enable auto-paste anytime from the menu.');
-  }
-
-  return result;
+  return pasteHelper.promptEnableAutoPaste();
 }
 
 // Suppress all unhandled errors and rejections to prevent system dialogs
@@ -804,7 +792,8 @@ function createTray() {
   );
 
   // Auto-paste status (only show if not enabled)
-  if (!systemPreferences.isTrustedAccessibilityClient(false)) {
+  const autoPasteAvailable = pasteHelper.isAutoPasteAvailable();
+  if (!autoPasteAvailable) {
     menuTemplate.push(
       { type: 'separator' },
       {
@@ -872,38 +861,10 @@ function createTray() {
   }
 }
 
-// Enhanced sound system with better audio feedback
+// Enhanced sound system with cross-platform support
 function playSound(type) {
-  // Skip sound on non-macOS platforms
-  if (process.platform !== 'darwin') {
-    console.log(`🔊 Sound: ${type} (skipped on ${process.platform})`);
-    return;
-  }
-
-  const sounds = {
-    start: '/System/Library/Sounds/Tink.aiff',
-    success: '/System/Library/Sounds/Glass.aiff',
-    error: '/System/Library/Sounds/Basso.aiff',
-    cancel: '/System/Library/Sounds/Funk.aiff',
-    notification: '/System/Library/Sounds/Ping.aiff'
-  };
-
-  const soundFile = sounds[type] || sounds.notification;
-
-  // Adjust volume based on sound type for better UX
-  let volume = 0.7; // Default volume
-  if (type === 'success') {
-    volume = 0.6; // Slightly softer for success to match closing animation
-  } else if (type === 'error') {
-    volume = 0.8; // Slightly louder for errors to get attention
-  }
-
-  // Play sound with volume control
-  exec(`afplay "${soundFile}" -v ${volume}`, (error) => {
-    if (error) {
-      console.error(`Sound playback error (${type}):`, error.message);
-    }
-  });
+  console.log(`🔊 Playing sound: ${type} on ${process.platform}`);
+  soundPlayer.play(type);
 }
 
 // Shortcut system
@@ -1393,71 +1354,44 @@ function startRecording() {
   playSound('start');
   performanceMonitor.measureRecordingLatency();
   
-  // Find the rec binary
-  const recBinary = getRecordingBinary();
-  if (!recBinary) {
-    console.error('❌ Sox/rec not found. Please install: brew install sox');
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('error', 'Sox not installed. Run: brew install sox');
-    }
-    showNotification('Setup Required', 'Please install sox: brew install sox');
-    isProcessing = false;
-    return;
-  }
-  
-  console.log(`🎤 Using recording binary: ${recBinary}`);
-  
-  // Simple recording - no effects that block output
-  // Effects like norm, silence, compand require full file read and block streaming
-  recordingProcess = spawn(recBinary, [
-    '-r', '16000',        // 16kHz - optimal for Whisper
-    '-c', '1',            // Mono
-    '-b', '16',           // 16-bit depth
-    '-t', 'wav',
-    audioFile
-    // No effects - they cause Out:0 issue on macOS CoreAudio
-  ]);
-
-  // Add better logging for the recording process
-  recordingProcess.stdout.on('data', (data) => {
-    console.log('📊 Sox stdout:', data.toString());
-  });
-
-  recordingProcess.stderr.on('data', (data) => {
-    console.log('📊 Sox stderr:', data.toString());
-  });
-
-  let amplitudeInterval = setInterval(() => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      const baseAmplitude = Math.random() * 0.3 + 0.1;
-      const voiceBoost = Math.random() > 0.7 ? Math.random() * 0.4 : 0;
-      const amplitude = Math.min(baseAmplitude + voiceBoost, 1.0);
-      const hasVoiceActivity = amplitude > 0.25;
+  // Use cross-platform audio recorder
+  audioRecorder.startRecording(audioFile)
+    .then((success) => {
+      if (!success) {
+        throw new Error('Failed to start recording');
+      }
       
-      overlayWindow.webContents.send('amplitude', amplitude);
-      overlayWindow.webContents.send('voice-activity', hasVoiceActivity);
-    } else {
-      clearInterval(amplitudeInterval);
-    }
-  }, 50);
-
-  recordingProcess.on('close', () => {
-    clearInterval(amplitudeInterval);
-  });
-
-  recordingProcess.on('error', (err) => {
-    console.error('Recording process error:', err);
-    clearInterval(amplitudeInterval);
-    isProcessing = false;
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('error', 'Recording failed. Please install sox: brew install sox');
-    }
-  });
-
-  recordingProcess.on('exit', (code, signal) => {
-    console.log(`Recording process exited with code ${code}, signal ${signal}`);
-    clearInterval(amplitudeInterval);
-  });
+      console.log('✅ Recording started successfully');
+      recordingProcess = audioRecorder.recordingProcess;
+      
+      // Simulate amplitude for overlay (visual feedback)
+      let amplitudeInterval = setInterval(() => {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          const baseAmplitude = Math.random() * 0.3 + 0.1;
+          const voiceBoost = Math.random() > 0.7 ? Math.random() * 0.4 : 0;
+          const amplitude = Math.min(baseAmplitude + voiceBoost, 1.0);
+          const hasVoiceActivity = amplitude > 0.25;
+          
+          overlayWindow.webContents.send('amplitude', amplitude);
+          overlayWindow.webContents.send('voice-activity', hasVoiceActivity);
+        } else {
+          clearInterval(amplitudeInterval);
+        }
+      }, 50);
+      
+      // Store interval for cleanup
+      audioRecorder.amplitudeInterval = amplitudeInterval;
+    })
+    .catch((error) => {
+      console.error('❌ Failed to start recording:', error);
+      isProcessing = false;
+      
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('error', `Recording failed: ${error.message}`);
+      }
+      
+      showNotification('Setup Required', AudioRecorder.getInstallInstructions());
+    });
 }
 
 // OPTIMIZED: Fast and reliable stopRecording function
@@ -1473,15 +1407,23 @@ async function stopRecording() {
   // Calculate recording duration
   const recordingDuration = recordingStartTime ? Date.now() - recordingStartTime : 0;
 
-  // Stop recording process immediately
-  if (recordingProcess) {
-    recordingProcess.kill('SIGINT');
+  // Stop recording process using cross-platform recorder
+  try {
+    // Clear amplitude interval if it exists
+    if (audioRecorder.amplitudeInterval) {
+      clearInterval(audioRecorder.amplitudeInterval);
+      audioRecorder.amplitudeInterval = null;
+    }
+    
+    const stoppedFile = await audioRecorder.stopRecording();
+    recordingProcess = null;
+    
+    // Small delay to ensure file is written
+    await new Promise(r => setTimeout(r, 100));
+  } catch (error) {
+    console.error('❌ Error stopping recording:', error);
     recordingProcess = null;
   }
-
-  // PERFORMANCE BOOST: Reduced wait time from 200ms to 100ms
-  // Sox writes the file quickly, we just need a brief moment
-  await new Promise(r => setTimeout(r, 100));
 
   try {
     // Validate audio file
@@ -1952,85 +1894,23 @@ Now fix this text:`;
 function pasteTextRobust(text) {
   console.log(`📋 Pasting text: ${text.length} characters`);
 
-  // Always copy to clipboard first (guaranteed fallback)
-  clipboard.writeText(text);
-  console.log('✅ Text copied to clipboard');
-
-  // Check auto paste mode setting
-  if (CONFIG.autoPasteMode === 'clipboard') {
-    console.log('📋 Clipboard mode - manual paste required');
-    showNotification('📋 Text Ready', 'Press Cmd+V to paste');
-    return;
-  }
-
-  // Check if we have Accessibility permission FIRST (with error handling)
-  let hasAccessibility = false;
-  try {
-    hasAccessibility = systemPreferences.isTrustedAccessibilityClient(false);
-  } catch (error) {
-    console.log('⚠️ Could not check accessibility permission:', error.message);
-    hasAccessibility = false;
-  }
-  
-  if (!hasAccessibility) {
-    console.log('⚠️ No Accessibility permission - cannot auto-paste');
-    console.log('📋 Text is in clipboard - press Cmd+V to paste');
-    
-    // Show notification with instructions
-    showNotification('📋 Press Cmd+V to Paste', 'Enable Accessibility for auto-paste');
-    
-    // Prompt user to enable accessibility (only once per session)
-    if (!global.accessibilityPromptShown) {
-      global.accessibilityPromptShown = true;
-      setTimeout(() => {
-        promptAccessibilityPermission();
-      }, 500);
+  // Use cross-platform paste helper
+  pasteHelper.pasteText(text, {
+    preserveClipboard: CONFIG.preserveClipboard,
+    showNotification: true,
+    fallbackToClipboard: true
+  }).then((success) => {
+    if (success) {
+      showNotification('✅ Text Pasted', 'Text inserted automatically');
+    } else {
+      const pasteKey = process.platform === 'darwin' ? 'Cmd+V' : 'Ctrl+V';
+      showNotification('📋 Press ' + pasteKey + ' to Paste', 'Text is in clipboard');
     }
-    return;
-  }
-
-  // We have Accessibility permission - try auto-paste
-  console.log('🎯 Attempting auto-paste (Accessibility enabled)...');
-  
-  // Use AppleScript with Cmd+V (most reliable when we have permission)
-  const pasteScript = `
-    tell application "System Events"
-      keystroke "v" using command down
-    end tell
-  `;
-  
-  setTimeout(() => {
-    exec(`osascript -e '${pasteScript}'`, (error) => {
-      if (error) {
-        console.log('⚠️ AppleScript paste failed:', error.message);
-        
-        // Try cliclick as backup
-        exec('cliclick kd:cmd t:v ku:cmd', (cliclickError) => {
-          if (cliclickError) {
-            console.log('⚠️ cliclick also failed:', cliclickError.message);
-            showNotification('📋 Press Cmd+V', 'Auto-paste failed, text in clipboard');
-          } else {
-            console.log('✅ Auto-paste successful (cliclick)');
-            showNotification('✅ Text Pasted', 'Text inserted automatically');
-          }
-        });
-      } else {
-        console.log('✅ Auto-paste successful (AppleScript)');
-        showNotification('✅ Text Pasted', 'Text inserted automatically');
-      }
-    });
-  }, 100); // Small delay to ensure focus is on target app
-
-  // Restore clipboard if needed
-  if (CONFIG.preserveClipboard) {
-    const oldClipboard = clipboard.readText();
-    if (oldClipboard !== text) {
-      setTimeout(() => {
-        clipboard.writeText(oldClipboard);
-        console.log('✅ Original clipboard restored');
-      }, 4000);
-    }
-  }
+  }).catch((error) => {
+    console.error('❌ Paste error:', error);
+    const pasteKey = process.platform === 'darwin' ? 'Cmd+V' : 'Ctrl+V';
+    showNotification('📋 Press ' + pasteKey, 'Auto-paste failed, text in clipboard');
+  });
 }
 
 // Show system notification with better UX
