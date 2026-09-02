@@ -238,89 +238,23 @@
       gap: 8px;
       width: 100%;
     }
-
-    /* Live Real-Time Text Card (Like Grammarly) */
-    .live-card {
-      background: rgba(15, 23, 42, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      padding: 8px 14px;
-      max-width: 320px;
-      min-width: 200px;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      display: none;
-      opacity: 0;
-      transform: translateY(-4px);
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      text-align: left;
-    }
-
-    .live-card.visible {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .live-card-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-
-    .live-badge {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #22c55e;
-    }
-
-    .overlay.rewrite ~ .live-card .live-badge {
-      color: #a855f7;
-    }
-
-    .live-text {
-      font-size: 13px;
-      line-height: 1.4;
-      color: #f8fafc;
-      word-wrap: break-word;
-      font-weight: 400;
-    }
-
-    .live-text.polishing {
-      color: #38bdf8;
-      font-style: italic;
-    }
   </style>
 </head>
 
 <body>
-  <div class="overlay-container">
-    <div class="overlay" id="overlay">
-      <div class="rec-indicator">
-        <div class="rec-ring"></div>
-        <div class="rec-dot"></div>
-      </div>
-
-      <span class="rec-label">Recording</span>
-
-      <div class="waveform">
-        <canvas id="waveCanvas"></canvas>
-      </div>
-
-      <div class="timer" id="timer">0:00</div>
+  <div class="overlay" id="overlay">
+    <div class="rec-indicator">
+      <div class="rec-ring"></div>
+      <div class="rec-dot"></div>
     </div>
 
-    <!-- Live Real-Time Text Rendering & Fixing (Like Grammarly) -->
-    <div class="live-card" id="liveCard">
-      <div class="live-card-header">
-        <span class="live-badge" id="liveBadge">✨ Real-time Voice</span>
-      </div>
-      <div class="live-text" id="liveText">Listening to your voice...</div>
+    <span class="rec-label">Recording</span>
+
+    <div class="waveform">
+      <canvas id="waveCanvas"></canvas>
     </div>
+
+    <div class="timer" id="timer">0:00</div>
   </div>
 
   <script src="overlay.js"></script>

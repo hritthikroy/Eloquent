@@ -1002,8 +1002,8 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 340;
-  const windowHeight = 130;
+  const windowWidth = 260;
+  const windowHeight = 44;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 15;
 
@@ -1405,26 +1405,23 @@ function typeLiveTextAtCursor(text) {
 function replaceLiveWordsWithFinal(wordCount, finalText) {
   clipboard.writeText(finalText);
   if (process.platform === 'darwin' && wordCount > 0) {
-    console.log(`✨ Replacing ${wordCount} live words with polished text using instant selection (zero backspaces)...`);
-    // Select backward word-by-word with Shift+Option+Left Arrow, then paste over selection instantly
+    console.log(`✨ Selecting ${wordCount} live words and replacing with polished final text (zero backspaces)...`);
+    // Select the words we typed backward using Shift+Option+Left Arrow
     const script = `tell application "System Events"
       repeat ${wordCount} times
         key code 123 using {shift down, option down}
       end repeat
-      delay 0.03
-      keystroke "v" using command down
     end tell`;
     const child = spawn('osascript', ['-e', script]);
     child.on('error', (err) => {
-      console.log('Selection replace error, falling back to paste:', err.message);
+      console.log('Selection error, pasting directly:', err.message);
       pasteTextRobust(finalText);
     });
     child.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ Polished text replaced selection cleanly');
-      } else {
+      // Once selection keystrokes are finished and modifiers released, paste final text over selection
+      setTimeout(() => {
         pasteTextRobust(finalText);
-      }
+      }, 70);
     });
   } else {
     pasteTextRobust(finalText);
@@ -1500,23 +1497,21 @@ function startLiveStreaming(filePath) {
           return;
         }
 
-        const words = cleanPreview.split(/\s+/).filter(w => w.length > 0);
+        const rawWords = cleanPreview.split(/\s+/).filter(w => w.length > 0);
+        
+        // Strip trailing punctuation (.,?!:;...) from intermediate live words so we don't chop sentences
+        const cleanWords = rawWords.map(w => w.replace(/[.,?!:;]+$/g, ''));
         
         // Type newly spoken words directly at the cursor in user's active window
-        if (words.length > liveWordsTyped.length) {
-          const newWords = words.slice(liveWordsTyped.length);
+        if (cleanWords.length > liveWordsTyped.length) {
+          const newWords = cleanWords.slice(liveWordsTyped.length);
           const textToType = (liveWordsTyped.length === 0 ? '' : ' ') + newWords.join(' ');
           
-          liveWordsTyped = words;
+          liveWordsTyped = cleanWords;
           totalLiveWordsTyped += newWords.length;
           
           console.log(`✍️ Real-time live text typing at cursor: "${textToType}" (${newWords.length} new words)`);
           typeLiveTextAtCursor(textToType);
-        }
-
-        // Also update overlay visual card
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('live-preview', cleanPreview);
         }
       }
       fs.unlink(snapshotPath, () => {});
