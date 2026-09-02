@@ -18,6 +18,13 @@
       user-select: none;
       overflow: hidden;
       background: transparent;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       /* PERFORMANCE BOOST: Hardware acceleration */
       transform: translateZ(0);
       backface-visibility: hidden;
@@ -40,6 +47,7 @@
       padding: 0 16px;
       gap: 10px;
       position: relative;
+      flex-shrink: 0;
       overflow: hidden;
       /* PERFORMANCE BOOST: Hardware acceleration and compositing */
       transform: translateZ(0);
@@ -107,6 +115,9 @@
       font-weight: 500;
       color: rgba(255, 255, 255, 0.9);
       white-space: nowrap;
+      max-width: 155px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Waveform - compact inline */
