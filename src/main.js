@@ -1857,6 +1857,7 @@ async function stopRecording() {
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
       let jarvisReply = '';
       let activeAgent = jarvisManager.agents.ava;
+      let standupAlreadySpoken = false;
 
       if (prefChange) {
         if (prefChange.type === 'name') {
@@ -1873,7 +1874,6 @@ async function stopRecording() {
         }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
         const actionResult = await actionRunner.handleAction(originalText, activeAgent);
-        let standupAlreadySpoken = false;
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
             console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
