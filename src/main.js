@@ -116,6 +116,8 @@ let tray = null;
 let recording = null;
 let audioFile = null;
 let recordingProcess = null;
+const MAX_RECORDING_DURATION_MS = 10 * 60 * 1000; // 10 minutes max safeguard
+let maxRecordingTimeout = null;
 let currentMode = 'standard';
 let isAuthenticated = false;
 let processingOAuth = false; // Flag to prevent duplicate OAuth processing
@@ -1346,6 +1348,17 @@ function startRecording() {
   audioFile = path.join(app.getPath('temp'), `eloquent-${Date.now()}.wav`);
   recordingStartTime = Date.now();
 
+  // Set 10-minute auto-stop safeguard to prevent runaway recordings
+  if (maxRecordingTimeout) {
+    clearTimeout(maxRecordingTimeout);
+    maxRecordingTimeout = null;
+  }
+  maxRecordingTimeout = setTimeout(() => {
+    console.log('⏱️ Maximum recording duration reached (10 minutes). Auto-stopping...');
+    showNotification('⏱️ 10-Minute Limit Reached', 'Recording stopped automatically to keep dictation fast and within limits.');
+    stopRecording();
+  }, MAX_RECORDING_DURATION_MS);
+
   // Send the recording start time to the overlay for accurate timer
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.webContents.send('recording-started', recordingStartTime);
@@ -1396,6 +1409,11 @@ function startRecording() {
 
 // OPTIMIZED: Fast and reliable stopRecording function
 async function stopRecording() {
+  if (maxRecordingTimeout) {
+    clearTimeout(maxRecordingTimeout);
+    maxRecordingTimeout = null;
+  }
+
   if (isProcessing) {
     console.log('⚠️ Already processing recording');
     return;
@@ -1580,6 +1598,15 @@ async function transcribe(filePath) {
     throw new Error('Recording too short. Please speak for at least 1 second.');
   }
 
+  // Safeguard: Check 24MB limit (Groq Whisper ceiling is 25MB)
+  if (stats.size > 24 * 1024 * 1024) {
+    logApiRequest('whisper', 'error', Date.now() - transcriptionStart, null, 'Recording exceeds 24MB limit');
+    throw new Error('Recording is too long (> 24MB). Please keep recordings under 10 minutes for fast dictation.');
+  }
+
+  // Dynamic resilient timeout: scales with audio size (30s minimum, up to 90s for multi-minute audio)
+  const uploadTimeout = Math.max(30000, Math.min(90000, Math.round((stats.size / 1000000) * 8000)));
+
   const FormData = require('form-data');
   const form = new FormData();
   
@@ -1606,8 +1633,8 @@ async function transcribe(filePath) {
           ...form.getHeaders(),
           'Authorization': `Bearer ${getActiveAPIKey()}`
         },
-        // PERFORMANCE BOOST: Reduced timeout - Groq is fast, 15s should be plenty
-        timeout: 15000,
+        // Resilient timeout based on audio duration and file size
+        timeout: uploadTimeout,
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         validateStatus: function (status) {
