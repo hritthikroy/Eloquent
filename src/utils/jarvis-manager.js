@@ -168,14 +168,17 @@ class JarvisManager {
   addTurn(role, content, agentName = null) {
     if (!content || typeof content !== "string" || content.trim().length === 0) return;
     this.conversationHistory.push({ role, content: content.trim(), agent: agentName });
-    // Retain rolling window of the last 16 turns
-    if (this.conversationHistory.length > 16) {
-      this.conversationHistory = this.conversationHistory.slice(-16);
+    // Retain rolling window of the last 20 turns
+    if (this.conversationHistory.length > 20) {
+      this.conversationHistory = this.conversationHistory.slice(-20);
     }
   }
 
   getHistory() {
-    return this.conversationHistory.map(t => ({ role: t.role, content: t.content }));
+    return this.conversationHistory.map(t => ({
+      role: t.role,
+      content: t.role === "assistant" && t.agent ? `[${t.agent}]: ${t.content}` : t.content
+    }));
   }
 
   clearHistory() {

@@ -1713,11 +1713,11 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude > 0.16) {
+          if (amplitude > 0.12) {
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
-          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 1300)) {
-            console.log('🗣️ Natural pause in speech detected (1.3s silence). Auto-submitting to agent...');
+          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 800)) {
+            console.log('🗣️ Natural pause in speech detected (800ms silence). Auto-submitting to agent...');
             jarvisAutoStopTriggered = true;
             stopRecording();
           }
