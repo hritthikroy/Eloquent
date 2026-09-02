@@ -1520,7 +1520,7 @@ const SILENCE_HALLUCINATIONS = new Set([
 function isWhisperHallucination(text) {
   if (!text || typeof text !== 'string') return true;
   const clean = text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').trim();
-  if (clean.length < 3) return true;
+  if (clean.length < 2) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
 
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
@@ -1531,7 +1531,8 @@ function isWhisperHallucination(text) {
   if (clean.startsWith('subtitles by') || clean.includes('amaraorg') || clean.includes('closed caption')) return true;
 
   // Detect consecutive word repetition loops (e.g. "please, please, please", "you you you", "so so so")
-  if (/\b(\w+)(?:[,\s]+\1){2,}\b/i.test(text)) {
+  // Exclude 'tuk' or 'tuktuk' so names are never discarded
+  if (!clean.includes('tuk') && /\b(\w+)(?:[,\s]+\1){2,}\b/i.test(text)) {
     return true;
   }
 
@@ -1699,6 +1700,18 @@ function stopLiveStreaming() {
   isStreamingChunk = false;
 }
 
+function ensureHealthyMicVolume() {
+  if (process.platform === 'darwin') {
+    try {
+      const curVol = parseInt(execSync('osascript -e "input volume of (get volume settings)"', { timeout: 1000 }).toString().trim(), 10);
+      if (isNaN(curVol) || curVol < 50) {
+        console.log(`🎙️ Microphone input volume was too low (${curVol}%). Elevating to 85% for crystal-clear dictation.`);
+        execSync('osascript -e "set volume input volume 85"', { timeout: 1000 });
+      }
+    } catch (e) {}
+  }
+}
+
 function startRecording() {
   // Prevent duplicate recording processes
   if (recordingProcess || isRecording) {
@@ -1706,6 +1719,7 @@ function startRecording() {
     return;
   }
 
+  ensureHealthyMicVolume();
   isRecording = true;
   performanceMonitor.startRecording();
 
@@ -1767,23 +1781,31 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude >= 0.06) {
+          if (amplitude >= 0.04) {
             if (!jarvisSpeechDetected) {
               jarvisSpeechStartTime = Date.now();
             }
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
             jarvisSpeechFrames++;
-          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 650)) {
-            // Natural silence detected after speech!
-            // Require >= 2 frames (~250ms+) to ensure full word/sentence was spoken
-            if (jarvisSpeechFrames >= 2) {
-              const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime + 130;
-              console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech (${jarvisSpeechFrames} frames). Auto-submitting...`);
+          } else if (jarvisSpeechDetected) {
+            const silenceMs = Date.now() - jarvisLastSpeechTime;
+            const speechDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime + 130;
+
+            // Multi-Tier Natural Silence Detection:
+            // 1. Natural pause: 550ms silence after >= 120ms speech
+            // 2. Quick breath after longer speech: 400ms silence after >= 2000ms speech
+            // 3. Safety cap: 250ms silence after >= 6000ms speech
+            const isNaturalPause = (silenceMs >= 550 && speechDurationMs >= 120);
+            const isQuickBreath = (speechDurationMs >= 2000 && silenceMs >= 400);
+            const isLongSpeechCap = (speechDurationMs >= 6000 && silenceMs >= 250);
+
+            if (isNaturalPause || isQuickBreath || isLongSpeechCap) {
+              console.log(`🗣️ Natural pause detected (${speechDurationMs}ms speech, ${silenceMs}ms silence). Auto-submitting to Tuk Tuk...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
-            } else if (Date.now() - jarvisLastSpeechTime > 1200) {
-              // Isolated solitary blip with prolonged silence (>1.2s) — reset to listen cleanly
+            } else if (silenceMs > 1500 && jarvisSpeechFrames < 2) {
+              // Isolated solitary blip with prolonged silence (>1.5s) — reset to listen cleanly
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;

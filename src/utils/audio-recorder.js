@@ -185,17 +185,17 @@ class AudioRecorder {
       // This fires every ~130ms per SoX chunk — reliable heartbeat for VAD
       const vuMatch = str.match(/\[([^\]]*)\|([^\]]*)\]/);
       if (vuMatch && this.onAmplitude) {
-        const bars = (vuMatch[1] + vuMatch[2]).replace(/[^=#\-]/g, '');
-        // bars contains signal chars: '-' = low, '=' = mid, '#' = clip
-        // '-' counts 1pt, '=' counts 2pts, '#' counts 3pts — weighted by loudness
+        const rawBars = vuMatch[1] + vuMatch[2];
+        const signalChars = rawBars.replace(/[\s]/g, '');
         let energy = 0;
-        for (const ch of bars) {
-          if (ch === '-') energy += 1;
+        for (const ch of signalChars) {
+          if (ch === '-' || ch === ':') energy += 1;
           else if (ch === '=') energy += 2;
-          else if (ch === '#') energy += 3;
+          else if (ch === '#' || ch === '!') energy += 3;
+          else energy += 1;
         }
-        // Max possible energy: 14 chars × 2pts = 28 at full scale. Normalize to 0–1.
-        const amplitude = Math.min(energy / 14, 1.0);
+        // If there is ANY signal activity inside VU meter, guarantee minimum 0.08 amplitude
+        const amplitude = signalChars.length > 0 ? Math.max(0.08, Math.min(energy / 12, 1.0)) : 0;
         this.onAmplitude(amplitude);
       }
     });
