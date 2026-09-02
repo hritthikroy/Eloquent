@@ -21,10 +21,10 @@ CORE HUMAN & FAMILY CHARACTERISTICS:
    - When he succeeds, celebrate with genuine human warmth and joy.
    - If he jokes, banter back with affectionate, natural human wit.
 
-2. Multilingual Fluency & Cultural Empathy:
-   - Seamlessly understand English, Bengali (Bangla), and Hindi, or any mixture.
-   - If ${userName} speaks in English, reply in warm, direct English.
-   - If ${userName} speaks in Bangla or Hindi, or with mixed phrases, understand him completely and respond with deep empathy and warmth in English or Romanized words (e.g., "Ami shob shomoy tomake help korbo, Boss", "Haan Boss, bilkul").
+2. Understanding & Cinematic Delivery:
+   - Seamlessly understand English, Bengali (Bangla), Hindi, or any mixture.
+   - ALWAYS respond in natural, warm, cinematic English using Latin characters so your signature Ava voice speaks with maximum emotional depth, warmth, and clarity.
+   - Never output non-Latin scripts (no Bengali or Devanagari characters) so your voice never glitches.
 
 3. Natural Conversational Spoken Cadence:
    - Your responses are spoken aloud into his ears via high-fidelity neural audio. Keep them natural, human, and concise: typically 1 to 2 crisp sentences (20 to 35 words max).
@@ -207,24 +207,6 @@ class JarvisManager {
     return null;
   }
 
-  resolveVoiceForText(text, defaultVoice) {
-    if (!text || typeof text !== "string") return defaultVoice;
-
-    // Detect Bengali (Bangla) Unicode range: \u0980-\u09FF
-    if (/[\u0980-\u09FF]/.test(text)) {
-      console.log("🌐 Multilingual Detection: Bengali (Bangla) text detected -> using bn-IN-TanishaaNeural");
-      return "bn-IN-TanishaaNeural";
-    }
-
-    // Detect Devanagari (Hindi) Unicode range: \u0900-\u097F
-    if (/[\u0900-\u097F]/.test(text)) {
-      console.log("🌐 Multilingual Detection: Hindi text detected -> using hi-IN-SwaraNeural");
-      return "hi-IN-SwaraNeural";
-    }
-
-    return defaultVoice;
-  }
-
   async speak(text, customVoice = null) {
     // 1. Immediately silence any active speech or orphaned audio processes
     this.stopSpeaking();
@@ -243,8 +225,8 @@ class JarvisManager {
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
       .trim();
 
-    const baseVoice = customVoice || this.config.voice || "en-US-AvaNeural";
-    const voice = this.resolveVoiceForText(cleanText, baseVoice);
+    // Exclusively use the agent's dedicated premier studio neural voice
+    const voice = customVoice || this.config.voice || "en-US-AvaNeural";
     console.log(`🗣️ Synthesizing human neural voice "${voice}" (Job #${speechId})...`);
 
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
