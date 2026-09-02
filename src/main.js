@@ -1472,9 +1472,9 @@ async function stopRecording() {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
 
-    // Trigger Magic Processing visual state while AI processes
+    // Hide overlay immediately on stop - no transcribing UI shown
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.webContents.send('processing', currentMode);
+      hideOverlay();
     }
 
     console.log('🎤 Transcribing...');
@@ -1499,11 +1499,8 @@ async function stopRecording() {
       throw new Error('No speech detected. Please try again.');
     }
 
-    // Play success sound and smoothly hide overlay now that text is ready
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      playSound('success');
-      hideOverlay();
-    }
+    // Play success chime now that text is ready
+    playSound('success');
 
     console.log(`✅ Final text: "${finalText.substring(0, 100)}..."`);
 
