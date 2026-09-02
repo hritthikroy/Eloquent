@@ -240,7 +240,10 @@ function updateTimer() {
 // Set mode
 ipcRenderer.on('set-mode', (_, m) => {
   mode = m;
-  overlay.classList.toggle('rewrite', m === 'rewrite');
+  if (overlay) {
+    overlay.classList.remove('fade-out');
+    overlay.classList.toggle('rewrite', m === 'rewrite');
+  }
   
   // Update label based on mode
   const recLabel = document.querySelector('.rec-label');
@@ -260,9 +263,38 @@ ipcRenderer.on('set-mode', (_, m) => {
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   console.log('🎙️ Recording started event received:', recordingStartTime);
   startTime = recordingStartTime;
-  updateTimer(); // Update immediately
 
-  // Start timer updates every second
+  // 1. Remove fade-out class so overlay becomes visible immediately
+  if (overlay) {
+    overlay.classList.remove('fade-out');
+  }
+
+  // 2. Reset equalizer bars and canvas
+  if (barHeights) {
+    barHeights.fill(3);
+  }
+  if (ctx) {
+    ctx.clearRect(0, 0, canvasW, canvasH);
+  }
+
+  // 3. Re-arm or resume real mic audio visualizer
+  if (!audioContext || audioContext.state === 'closed') {
+    initAudio();
+  } else if (audioContext.state === 'suspended') {
+    audioContext.resume().then(() => {
+      if (!animationId) animate();
+    }).catch((err) => {
+      console.log('Audio resume error, falling back:', err.message);
+      if (!animationId) animateFromIPC();
+    });
+  } else if (!animationId) {
+    animate();
+  }
+
+  // 4. Update timer immediately
+  updateTimer();
+
+  // 5. Start timer updates every second
   if (window.timerInterval) clearInterval(window.timerInterval);
   window.timerInterval = setInterval(() => {
     updateTimer();
@@ -323,10 +355,9 @@ ipcRenderer.on('close-with-animation', () => {
     overlay.classList.add('fade-out');
   }
   
-  // Clean up audio resources
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
+  // Suspend audio context instead of closing to allow instant resume on next session
+  if (audioContext && audioContext.state === 'running') {
+    audioContext.suspend().catch(() => {});
   }
   if (animationId) {
     cancelAnimationFrame(animationId);
@@ -349,10 +380,9 @@ function stopRecording() {
     overlay.classList.add('fade-out');
   }
   
-  // Clean up audio resources
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
+  // Suspend audio context instead of closing
+  if (audioContext && audioContext.state === 'running') {
+    audioContext.suspend().catch(() => {});
   }
   if (animationId) {
     cancelAnimationFrame(animationId);
