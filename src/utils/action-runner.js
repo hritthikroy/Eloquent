@@ -310,6 +310,29 @@ class OfficeActionRunner {
       return { handled: true, speech: `Rolling a die... You got a ${roll}!` };
     }
 
+    // Spoken Math & Calculations (Alexa-style instant calculator)
+    const mathMatch = lower.match(/(?:what is|calculate|what's|how much is)\s+([0-9\s\+\-\*\/\.\(\)\^xXtimesplusminusdividedbypercentof]+)/i);
+    if (mathMatch && mathMatch[1] && /\d/.test(mathMatch[1])) {
+      try {
+        const expr = mathMatch[1]
+          .replace(/times|x/gi, "*")
+          .replace(/divided by/gi, "/")
+          .replace(/plus/gi, "+")
+          .replace(/minus/gi, "-")
+          .replace(/percent of/gi, "* 0.01 *")
+          .replace(/%/g, "* 0.01")
+          .replace(/[^0-9\+\-\*\/\.\(\)]/g, "");
+        if (expr && expr.length > 0 && /^[\d\.\+\-\*\/\(\)\s]+$/.test(expr)) {
+          // eslint-disable-next-line no-new-func
+          const result = Function(`'use strict'; return (${expr})`)();
+          if (typeof result === "number" && !isNaN(result) && isFinite(result)) {
+            const cleanRes = Number.isInteger(result) ? result : result.toFixed(2);
+            return { handled: true, speech: `That is ${cleanRes}.` };
+          }
+        }
+      } catch (e) {}
+    }
+
     // -------------------------------------------------------------
     // AVA (Executive Co-Pilot: Clipboard, Reminders, Notes, Apps, Time)
     // -------------------------------------------------------------
