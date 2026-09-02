@@ -278,6 +278,38 @@ class OfficeActionRunner {
       return this.openGitHub();
     }
 
+    // --- ALEXA-LIKE EVERYDAY SKILLS (Weather, Timers, Clock, Jokes, Random) ---
+    if (lower.includes("weather") || lower.includes("what's the weather") || lower.includes("is it raining")) {
+      try { exec('open -a Weather 2>/dev/null'); } catch (e) {}
+      return { handled: true, speech: "Opening the Weather forecast for you now." };
+    }
+
+    if (lower.includes("set a timer") || lower.includes("set timer") || lower.includes("open clock") || lower.includes("set an alarm") || lower.includes("open timer")) {
+      try { exec('open -a Clock 2>/dev/null'); } catch (e) {}
+      return { handled: true, speech: "Opening Clock and timers for you now." };
+    }
+
+    if (lower.includes("tell me a joke") || lower.includes("tell a joke") || lower.includes("say something funny") || lower.includes("make me laugh")) {
+      const jokes = [
+        "Why do programmers prefer dark mode? Because light attracts bugs!",
+        "There are 10 types of people in the world: those who understand binary, and those who don't.",
+        "A SQL query walks into a bar, walks up to two tables and asks: Can I join you?",
+        "Why was the JavaScript developer sad? Because they didn't Node how to Express themselves!"
+      ];
+      const joke = jokes[Math.floor(Math.random() * jokes.length)];
+      return { handled: true, speech: joke };
+    }
+
+    if (lower.includes("flip a coin") || lower.includes("toss a coin")) {
+      const outcome = Math.random() < 0.5 ? "Heads!" : "Tails!";
+      return { handled: true, speech: `Flipping a coin... It's ${outcome}` };
+    }
+
+    if (lower.includes("roll a die") || lower.includes("roll dice")) {
+      const roll = Math.floor(Math.random() * 6) + 1;
+      return { handled: true, speech: `Rolling a die... You got a ${roll}!` };
+    }
+
     // -------------------------------------------------------------
     // AVA (Executive Co-Pilot: Clipboard, Reminders, Notes, Apps, Time)
     // -------------------------------------------------------------

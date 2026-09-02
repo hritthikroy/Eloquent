@@ -176,7 +176,8 @@ class JarvisManager {
     if (lower.includes("brian") || lower.includes("hey brian") || lower.includes("ask brian")) {
       return AGENTS.brian;
     }
-    if (lower.includes("ava") || lower.includes("hey ava") || lower.includes("ask ava")) {
+    if (lower.includes("ava") || lower.includes("hey ava") || lower.includes("ask ava") ||
+        lower.includes("alexa") || lower.includes("hey alexa")) {
       return AGENTS.ava;
     }
 

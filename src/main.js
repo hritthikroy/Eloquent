@@ -1011,6 +1011,7 @@ function handleShortcut(action, mode = 'standard') {
   if (action === 'start') {
     if (mode === 'jarvis') {
       isJarvisLoopActive = true;
+      playSound('start'); // Alexa-style activation chime
     }
     if (isRecording) {
       console.log('🛑 Shortcut pressed while recording - toggling stop');
