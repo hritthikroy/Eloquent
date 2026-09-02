@@ -85,6 +85,7 @@ async function initAudio() {
 }
 
 // Listen for amplitude data from main process
+let smoothAmplitude = 0;
 ipcRenderer.on('amplitude', (_, amp) => {
   ipcAmplitude = amp;
 });
@@ -98,12 +99,20 @@ function animateFromIPC() {
     frameCount++;
     
     if (frameCount % 2 === 0) {
+      // Smooth amplitude: fast attack (0.5), slow decay (0.85) for natural voice feel
+      if (ipcAmplitude > smoothAmplitude) {
+        smoothAmplitude = smoothAmplitude * 0.5 + ipcAmplitude * 0.5; // Fast rise
+      } else {
+        smoothAmplitude = smoothAmplitude * 0.85 + ipcAmplitude * 0.15; // Slow decay
+      }
+      
       for (let i = 0; i < 6; i++) {
         const centerFactor = 1 - (i / 6) * 0.3;
-        // Mix IPC amplitude with slight wave motion for organic look
-        const waveOffset = Math.sin(t * 0.08 + i * 0.6) * 2;
-        const target = (ipcAmplitude * 16 + waveOffset + 2) * centerFactor;
-        barHeights[i] = barHeights[i] * 0.6 + Math.max(target, 2) * 0.4;
+        // Per-bar random offset for organic lively movement
+        const waveOffset = Math.sin(t * 0.1 + i * 0.7) * 1.5 + Math.sin(t * 0.17 + i * 1.3) * 1;
+        const barAmplitude = smoothAmplitude + (Math.random() - 0.5) * smoothAmplitude * 0.3;
+        const target = (barAmplitude * 18 + waveOffset + 2) * centerFactor;
+        barHeights[i] = barHeights[i] * 0.55 + Math.max(target, 2) * 0.45;
       }
       drawBars();
       t++;

@@ -1472,9 +1472,11 @@ function startLiveStreaming(filePath) {
         // This prevents Whisper's cumulative re-transcription from diverging and typing hallucinated content
         if (newWords.length > liveWordsTyped.length) {
           // Verify prefix consistency — the new transcription must match what we already typed
+          // Strip punctuation so "Hello." vs "Hello," doesn't count as divergence
           let prefixMatches = true;
+          const stripPunct = (w) => w.toLowerCase().replace(/[^a-z0-9']/g, '');
           for (let i = 0; i < liveWordsTyped.length; i++) {
-            if (newWords[i].toLowerCase() !== liveWordsTyped[i].toLowerCase()) {
+            if (stripPunct(newWords[i]) !== stripPunct(liveWordsTyped[i])) {
               prefixMatches = false;
               console.log(`⚠️ Live preview diverged at word ${i}: "${liveWordsTyped[i]}" vs "${newWords[i]}" — skipping`);
               break;
