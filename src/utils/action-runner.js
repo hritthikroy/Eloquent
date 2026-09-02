@@ -37,7 +37,9 @@ class OfficeActionRunner {
       return this.getSuitStatus();
     }
 
-    if (lower.includes("go to sleep") || lower.includes("stand down") || lower.includes("shut down suit") || lower.includes("goodbye ava") || lower.includes("bye ava") || lower.includes("exit suit")) {
+    if (lower.includes("go to sleep") || lower.includes("stand down") || lower.includes("shut down suit") || 
+        lower.includes("goodbye tuk tuk") || lower.includes("bye tuk tuk") ||
+        lower.includes("goodbye ava") || lower.includes("bye ava") || lower.includes("exit suit")) {
       return {
         handled: true,
         speech: "Standing down and entering standby mode. I'm right here whenever you need me.",
@@ -344,10 +346,10 @@ class OfficeActionRunner {
       } catch (e) {}
     }
 
-    // --- AVA SINGING VOICE SKILL (Melodic Serenade with Sur, Taal & Laya) ---
+    // --- TUK TUK SINGING VOICE SKILL (Melodic Serenade with Sur, Taal & Laya) ---
     if (lower.includes("sing a song") || lower.includes("sing for me") || lower.includes("sing something") || 
         lower.includes("can you sing") || lower.includes("sing me a song") || lower.includes("sing a") ||
-        (lower.includes("sing") && (lower.includes("ava") || lower.includes("eva") || lower.includes("song")))) {
+        (lower.includes("sing") && (lower.includes("tuk tuk") || lower.includes("tuktuk") || lower.includes("ava") || lower.includes("eva") || lower.includes("song")))) {
       const songs = [
         "Mmm... You are my sunshine, my only sunshine. You make me happy when skies are grey. You will never know dear, how much I adore you. Please don't take my sunshine away. That was just for you, Hritthik.",
         "Mmm... Somewhere over the rainbow, way up high. And the dreams that you dreamed of, once in a lullaby. Someday I will wish upon a star, and wake up where the clouds are far behind me. I loved singing that for you, Hritthik.",
@@ -362,7 +364,7 @@ class OfficeActionRunner {
     }
 
     // -------------------------------------------------------------
-    // AVA (Executive Co-Pilot: Clipboard, Reminders, Notes, Apps, Time)
+    // TUK TUK (Executive Co-Pilot: Clipboard, Reminders, Notes, Apps, Time)
     // -------------------------------------------------------------
     if (lower.includes("read clipboard") || lower.includes("read what i copied") || lower.includes("what is on my clipboard") || lower.includes("clipboard content")) {
       return this.readClipboard();
@@ -454,7 +456,7 @@ class OfficeActionRunner {
       isStandup: true,
       steps: [
         {
-          agent: "Ava",
+          agent: "Tuk Tuk",
           role: "Executive Co-Founder & Team Lead",
           voice: "en-US-AvaNeural",
           speech: "Morning team! Standup is live. Let's sync up bro. Andrew, what's our engineering velocity?"
@@ -478,7 +480,7 @@ class OfficeActionRunner {
           speech: `Brian here bro. Power is at ${battPct} percent, memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} CPU cores. Telemetry is rock solid.`
         },
         {
-          agent: "Ava",
+          agent: "Tuk Tuk",
           role: "Executive Co-Founder & Team Lead",
           voice: "en-US-AvaNeural",
           speech: "Love the energy team! We're locked in and ready to build bro. What are we tackling first?"

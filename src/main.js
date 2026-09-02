@@ -865,8 +865,8 @@ function createTray() {
         },
         { type: 'separator' },
         {
-          label: '▶️ Test Ava (Executive Co-Pilot)',
-          click: () => jarvisManager.speak(jarvisManager.agents.ava.sample, jarvisManager.agents.ava.voice)
+          label: '▶️ Test Tuk Tuk (Soul Companion & Co-Founder)',
+          click: () => jarvisManager.speak(jarvisManager.agents.tuktuk.sample, jarvisManager.agents.tuktuk.voice)
         },
         {
           label: '▶️ Test Jenny (Research & Intelligence)',
@@ -883,7 +883,7 @@ function createTray() {
       ]
     },
     {
-      label: '🤖 Ava Preferences',
+      label: '🤖 Tuk Tuk Preferences',
       submenu: [
         {
           label: `👤 Custom Name: ${jarvisManager.config.userName}`,
@@ -1946,7 +1946,7 @@ async function stopRecording() {
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
       const delegation = jarvisManager.evaluateTaskAssignment(originalText);
       let jarvisReply = '';
-      let activeAgent = jarvisManager.agents.ava;
+      let activeAgent = jarvisManager.agents.tuktuk;
       let standupAlreadySpoken = false;
 
       if (prefChange) {
@@ -1956,7 +1956,7 @@ async function stopRecording() {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
         }
       } else if (delegation) {
-        console.log(`🤝 Intelligent Task Assignment: Ava delegating to ${delegation.assignedAgent.name} (${delegation.assignedAgent.role})`);
+        console.log(`🤝 Intelligent Task Assignment: Tuk Tuk delegating to ${delegation.assignedAgent.name} (${delegation.assignedAgent.role})`);
 
         // 1. Ava assigns the task out loud
         if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -2420,7 +2420,7 @@ async function rewrite(text) {
 // Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
 async function askJarvis(userSpeech, activeAgent = null) {
   const startTime = Date.now();
-  const agent = activeAgent || jarvisManager.agents.ava;
+  const agent = activeAgent || jarvisManager.agents.tuktuk;
   const systemPrompt = jarvisManager.getSystemPrompt(agent);
 
   try {
@@ -2460,8 +2460,15 @@ function postProcessTranscription(text) {
   text = text.trim().replace(/\s+/g, ' ');
 
   const corrections = {
-    'eva': 'Ava',
-    'Eva': 'Ava',
+    'tuktuk': 'Tuk Tuk',
+    'tuk tuk': 'Tuk Tuk',
+    'Tuktuk': 'Tuk Tuk',
+    'tok tok': 'Tuk Tuk',
+    'took took': 'Tuk Tuk',
+    'eva': 'Tuk Tuk',
+    'Eva': 'Tuk Tuk',
+    'ava': 'Tuk Tuk',
+    'Ava': 'Tuk Tuk',
     'recognigar': 'recognizer',
     'recognage': 'recognize',
     'parfectly': 'perfectly',
