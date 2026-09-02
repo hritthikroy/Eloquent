@@ -1725,7 +1725,7 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude > 0.16) {
+          if (amplitude > 0.10) {
             if (!jarvisSpeechDetected) {
               jarvisSpeechStartTime = Date.now(); // Mark when speech began
             }
@@ -1733,13 +1733,13 @@ function startRecording() {
             jarvisLastSpeechTime = Date.now();
           } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 700)) {
             const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
-            if (confirmedSpeechMs >= 400) {
-              // Real speech confirmed (≥400ms) — submit to agent
+            if (confirmedSpeechMs >= 300) {
+              // Real speech confirmed (≥300ms sustained) — submit to agent
               console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech. Auto-submitting...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
             } else {
-              // Likely SoX init noise or micro-blip — reset and keep listening
+              // Noise blip — reset and keep listening
               console.log(`🔇 Ignoring ${confirmedSpeechMs}ms noise blip — waiting for real speech...`);
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
@@ -1749,7 +1749,7 @@ function startRecording() {
         }
 
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          const hasVoiceActivity = amplitude > 0.15;
+          const hasVoiceActivity = amplitude > 0.10;
           overlayWindow.webContents.send('amplitude', amplitude);
           overlayWindow.webContents.send('voice-activity', hasVoiceActivity);
         }

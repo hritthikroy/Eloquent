@@ -161,18 +161,17 @@ class AudioRecorder {
     }
     
     console.log(`🎤 Using recording binary: ${recBinary}`);
-    
-    // Real-time acoustic noise filtering:
-    // - highpass 80: eliminates AC hum (50Hz/60Hz), room rumble, desk thumps, and mechanical vibrations
-    // - lowpass 7500: eliminates ultrasonic hiss, laptop fan whine, and high-frequency coil noise
+
+    // Record without filters — SoX is running at 48kHz (macOS CoreAudio ignores 16kHz request)
+    // Filters tuned for 16kHz would destroy voice signal at 48kHz. Whisper handles noise natively.
+    // Use 'stat -freq' effect to emit RMS/peak stats per chunk for reliable VAD amplitude.
     this.recordingProcess = spawn(recBinary, [
-      '-r', '16000',        // 16kHz - optimal for Whisper
+      '-r', '16000',        // Requested; SoX may use 48000 — both work fine for Whisper
       '-c', '1',            // Mono
       '-b', '16',           // 16-bit depth
       '-t', 'wav',
       outputPath,
-      'highpass', '80',
-      'lowpass', '7500'
+      'stat', '-freq'       // Emit per-chunk RMS stats to stderr — reliable amplitude source
     ]);
 
     // Log output for debugging
@@ -182,17 +181,35 @@ class AudioRecorder {
 
     this.recordingProcess.stderr.on('data', (data) => {
       const str = data.toString();
-      console.log('📊 Sox stderr:', str);
-      
-      // Parse SoX VU meter for real voice amplitude: [     =|=     ] or [    -|-    ]
+      // Only log non-stat lines (suppress noisy per-sample stat output)
+      if (!str.startsWith('Samples') && !str.startsWith('Length') && !str.startsWith('Scaled') &&
+          !str.startsWith('Maximum') && !str.startsWith('Minimum') && !str.startsWith('Midline') &&
+          !str.startsWith('Mean') && !str.startsWith('RMS') && !str.startsWith('Rough') &&
+          !str.startsWith('Volume') && !str.startsWith('Flat') && !str.startsWith('Pk') &&
+          !str.startsWith('Crest') && !str.startsWith('Bit-depth')) {
+        console.log('📊 Sox stderr:', str);
+      }
+
+      // --- PRIMARY: Parse RMS amplitude from stat output ---
+      // stat outputs: "RMS amplitude:      0.003456"
+      const rmsMatch = str.match(/RMS amplitude:\s+([\d.]+)/i);
+      if (rmsMatch && this.onAmplitude) {
+        const rmsRaw = parseFloat(rmsMatch[1]);
+        // RMS range 0.0–1.0 (16-bit normalized). Typical voice is 0.02–0.2
+        // Scale up 5x so normal speech reads 0.1–1.0 for VAD
+        const amplitude = Math.min(rmsRaw * 5, 1.0);
+        this.onAmplitude(amplitude);
+        return;
+      }
+
+      // --- FALLBACK: VU bar character counting (when stat not available) ---
       const vuMatch = str.match(/\[([^\]]*)\|([^\]]*)\]/);
       if (vuMatch && this.onAmplitude) {
         const leftVU = vuMatch[1];
         const rightVU = vuMatch[2];
-        // Count signal characters (=, -, #) — more = louder
+        // Count signal characters: each = ≈ 1/14 of full scale (14 chars total at 48kHz)
         const signalChars = (leftVU + rightVU).replace(/[^=\-#]/g, '').length;
-        // Normalize: max ~12 signal chars in the VU display
-        const amplitude = Math.min(signalChars / 10, 1.0);
+        const amplitude = Math.min(signalChars / 8, 1.0);
         this.onAmplitude(amplitude);
       }
     });
