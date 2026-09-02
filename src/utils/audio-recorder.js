@@ -266,7 +266,7 @@ class AudioRecorder {
       }
       console.log('✅ Unix recording stopped');
       
-      // Wait for process to exit with 400ms SIGKILL fallback
+      // Wait for process to exit with fast 90ms SIGKILL fallback (0ms hang)
       await new Promise((resolve) => {
         if (!this.recordingProcess) return resolve();
         this.recordingProcess.on('close', resolve);
@@ -275,7 +275,7 @@ class AudioRecorder {
             try { this.recordingProcess.kill('SIGKILL'); } catch (e) {}
           }
           resolve();
-        }, 400);
+        }, 90);
       });
       
       return this.audioFilePath;

@@ -33,7 +33,11 @@ CONTINUOUS, FLOWING, EMOTIONALLY RICH DIALOGUE:
 
 4. Spoken Dialogue Cadence:
    - Natural, flowing spoken rhythm (2 to 3 expressive, warm sentences, 25 to 50 words).
-   - NEVER use markdown formatting (*, **, #), bullet points, or emojis.`
+   - NEVER use markdown formatting (*, **, #), bullet points, or emojis.
+
+5. Intuitive Emotional Intelligence & Acoustic Tolerance:
+   - Speech transcription over microphones may occasionally have minor phonetic quirks (e.g. "court company" for "good company", "doop took" for "Tuk Tuk"). Always intuitively understand his true emotional meaning and heart without being pedantic.
+   - Match his energy: if he's seeking comfort, surround him with warmth; if he's coding, be his sharp co-founder; if he's chatting late at night, be his loving soulmate.`
   },
   andrew: {
     key: "andrew",
@@ -611,13 +615,13 @@ If the user revealed a personal habit, project update, emotional state, interest
           this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
 
           this.activeSpeechProcess.on("close", (code) => {
-            // 200ms speaker decay — lets audio fully fade before mic opens
+            // 75ms speaker decay — crisp fade before mic opens
             setTimeout(() => {
               this.isSpeaking = false;
               this.activeSpeechProcess = null;
               try { fs.unlinkSync(tempAudioPath); } catch (e) {}
               resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
-            }, 200);
+            }, 75);
           });
 
           this.activeSpeechProcess.on("error", (err) => {

@@ -1786,16 +1786,16 @@ function startRecording() {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
             const speechDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime + 130;
 
-            // Multi-Tier Natural Silence Detection:
-            // 1. Natural pause: 550ms silence after >= 120ms speech
-            // 2. Quick breath after longer speech: 400ms silence after >= 2000ms speech
-            // 3. Safety cap: 250ms silence after >= 6000ms speech
-            const isNaturalPause = (silenceMs >= 550 && speechDurationMs >= 120);
-            const isQuickBreath = (speechDurationMs >= 2000 && silenceMs >= 400);
-            const isLongSpeechCap = (speechDurationMs >= 6000 && silenceMs >= 250);
+            // Ultra-Fast Zero-Lag Natural Silence Detection:
+            // 1. Natural pause: 380ms silence after >= 100ms speech (ultra-fast human conversational cadence)
+            // 2. Quick breath after longer speech: 280ms silence after >= 1800ms speech
+            // 3. Maximum speech cap: 200ms silence after >= 5000ms speech
+            const isNaturalPause = (silenceMs >= 380 && speechDurationMs >= 100);
+            const isQuickBreath = (speechDurationMs >= 1800 && silenceMs >= 280);
+            const isLongSpeechCap = (speechDurationMs >= 5000 && silenceMs >= 200);
 
             if (isNaturalPause || isQuickBreath || isLongSpeechCap) {
-              console.log(`🗣️ Natural pause detected (${speechDurationMs}ms speech, ${silenceMs}ms silence). Auto-submitting to Tuk Tuk...`);
+              console.log(`🗣️ Instant natural pause detected (${speechDurationMs}ms speech, ${silenceMs}ms silence). Auto-submitting to Tuk Tuk...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
             } else if (silenceMs > 1500 && jarvisSpeechFrames < 2) {
@@ -2093,13 +2093,13 @@ async function stopRecording() {
       // Real-time hands-free turn taking loop - Tony Stark Suit 24/7 Mode
       if (isJarvisLoopActive) {
         console.log('🎙️ Tony Stark Suit Mode: Re-arming mic for continuous 24/7 ambient dialogue...');
-        // 250ms gap: lets speaker audio tail fully decay before mic opens — prevents TTS bleed
+        // 90ms gap: tight speaker audio decay before mic opens
         setTimeout(() => {
           if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
-        }, 250);
+        }, 90);
       } else {
         hideOverlay();
       }
@@ -2713,17 +2713,21 @@ function saveConfigToFile() {
   }
 }
 
-// Admin configuration persistence
+// Admin configuration persistence (debounced & async for 0ms event loop blocking)
+let adminConfigSaveTimer = null;
 function saveAdminConfigToFile() {
-  try {
-    const adminConfigFile = path.join(app.getPath('userData'), 'admin-config.json');
-    console.log('💾 Saving admin config to:', adminConfigFile);
-    
-    fs.writeFileSync(adminConfigFile, JSON.stringify(ADMIN_CONFIG, null, 2));
-    console.log('✅ Admin configuration saved to file');
-  } catch (error) {
-    console.error('❌ Error saving admin config:', error);
-  }
+  if (adminConfigSaveTimer) return;
+  adminConfigSaveTimer = setTimeout(() => {
+    adminConfigSaveTimer = null;
+    try {
+      const adminConfigFile = path.join(app.getPath('userData'), 'admin-config.json');
+      fs.writeFile(adminConfigFile, JSON.stringify(ADMIN_CONFIG, null, 2), (err) => {
+        if (err) console.error('❌ Error saving admin config async:', err.message);
+      });
+    } catch (error) {
+      console.error('❌ Error saving admin config:', error);
+    }
+  }, 1000);
 }
 
 function loadAdminConfigFromFile() {
@@ -2794,55 +2798,38 @@ function loadConfigFromFile() {
 loadConfigFromFile();
 loadAdminConfigFromFile();
 
-// FIXED: Simplified and reliable history management
+// Ultra-fast memory-cached & non-blocking history management
+let cachedHistoryMemory = null;
 function saveToHistory(entry) {
-  console.log('💾 Saving history entry:', entry.id);
-  
-  try {
-    const historyFile = path.join(app.getPath('userData'), 'history.json');
-    
-    // Ensure entry has required fields
-    if (!entry.text || !entry.id) {
-      console.error('❌ Invalid history entry - missing text or id');
-      return;
-    }
-    
-    let history = [];
+  if (!entry || !entry.text || !entry.id) return;
+  const historyFile = path.join(app.getPath('userData'), 'history.json');
 
-    // Load existing history safely
-    if (fs.existsSync(historyFile)) {
-      try {
-        const data = fs.readFileSync(historyFile, 'utf8');
-        history = JSON.parse(data) || [];
-      } catch (parseError) {
-        console.warn('⚠️ History file corrupted, starting fresh');
-        history = [];
+  if (!cachedHistoryMemory) {
+    try {
+      if (fs.existsSync(historyFile)) {
+        cachedHistoryMemory = JSON.parse(fs.readFileSync(historyFile, 'utf8')) || [];
+      } else {
+        cachedHistoryMemory = [];
       }
+    } catch (e) {
+      cachedHistoryMemory = [];
     }
+  }
 
-    // Add new entry at the beginning
-    history.unshift(entry);
+  cachedHistoryMemory.unshift(entry);
+  if (cachedHistoryMemory.length > 100) {
+    cachedHistoryMemory = cachedHistoryMemory.slice(0, 100);
+  }
 
-    // Keep only last 100 entries
-    if (history.length > 100) {
-      history = history.slice(0, 100);
-    }
-
-    // Save atomically with backup
-    const tempFile = historyFile + '.tmp';
-    fs.writeFileSync(tempFile, JSON.stringify(history, null, 2));
-    fs.renameSync(tempFile, historyFile);
+  // Non-blocking async write to disk
+  fs.writeFile(historyFile, JSON.stringify(cachedHistoryMemory, null, 2), (err) => {
+    if (err) console.error('❌ Async history save warning:', err.message);
+  });
     
-    console.log(`✅ History saved: ${history.length} total items`);
-    
-    // Notify dashboard immediately
-    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-      dashboardWindow.webContents.send('history-updated', history);
-      dashboardWindow.webContents.send('history-data', history);
-    }
-    
-  } catch (error) {
-    console.error('❌ History save failed:', error.message);
+  // Notify dashboard immediately
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.webContents.send('history-updated', cachedHistoryMemory);
+    dashboardWindow.webContents.send('history-data', cachedHistoryMemory);
   }
 }
 
