@@ -1378,11 +1378,58 @@ function createUserManagement() {
 
 // =========================================================================
 // =========================================================================
-// REAL-TIME LIVE TEXT RENDERING & FIXING (LIKE GRAMMARLY - ZERO BACKSPACES)
+// REAL-TIME LIVE TEXT RENDERING DIRECTLY AT CURSOR (ZERO BACKSPACES)
 // =========================================================================
 let liveStreamingInterval = null;
 let isStreamingChunk = false;
+let liveWordsTyped = [];
+let totalLiveWordsTyped = 0;
 let lastProcessedAudioSize = 0;
+
+// Known Whisper silence hallucinations to ignore
+const SILENCE_HALLUCINATIONS = [
+  'thank you', 'thank you.', 'thank you very much', 'thank you very much.',
+  'thanks for watching', 'thanks for watching.', 'subtitles by', 'bye', 'bye.', 'you', 'you.'
+];
+
+function typeLiveTextAtCursor(text) {
+  if (!text || process.platform !== 'darwin') return;
+  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  // Type directly into user's active window/cursor via System Events
+  const child = spawn('osascript', ['-e', `tell application "System Events" to keystroke "${escaped}"`]);
+  child.on('error', (err) => {
+    console.log('Live typing error:', err.message);
+  });
+}
+
+function replaceLiveWordsWithFinal(wordCount, finalText) {
+  clipboard.writeText(finalText);
+  if (process.platform === 'darwin' && wordCount > 0) {
+    console.log(`✨ Replacing ${wordCount} live words with polished text using instant selection (zero backspaces)...`);
+    // Select backward word-by-word with Shift+Option+Left Arrow, then paste over selection instantly
+    const script = `tell application "System Events"
+      repeat ${wordCount} times
+        key code 123 using {shift down, option down}
+      end repeat
+      delay 0.03
+      keystroke "v" using command down
+    end tell`;
+    const child = spawn('osascript', ['-e', script]);
+    child.on('error', (err) => {
+      console.log('Selection replace error, falling back to paste:', err.message);
+      pasteTextRobust(finalText);
+    });
+    child.on('close', (code) => {
+      if (code === 0) {
+        console.log('✅ Polished text replaced selection cleanly');
+      } else {
+        pasteTextRobust(finalText);
+      }
+    });
+  } else {
+    pasteTextRobust(finalText);
+  }
+}
 
 async function transcribePreview(snapshotPath) {
   try {
@@ -1423,9 +1470,11 @@ async function transcribePreview(snapshotPath) {
 
 function startLiveStreaming(filePath) {
   stopLiveStreaming();
+  liveWordsTyped = [];
+  totalLiveWordsTyped = 0;
   lastProcessedAudioSize = 0;
 
-  // Stream live words to floating overlay card in real-time (like Grammarly)
+  // Stream live words directly into active window text field in real-time
   liveStreamingInterval = setInterval(async () => {
     if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
 
@@ -1442,9 +1491,30 @@ function startLiveStreaming(filePath) {
       const previewText = await transcribePreview(snapshotPath);
       if (previewText && previewText.trim().length > 0 && isRecording) {
         const cleanPreview = previewText.trim();
-        console.log(`🎙️ Real-time live speech: "${cleanPreview}"`);
+        const lower = cleanPreview.toLowerCase().replace(/[.!?,]/g, '').trim();
+
+        // Discard silence hallucinations
+        if (SILENCE_HALLUCINATIONS.includes(lower)) {
+          console.log(`🔇 Discarding Whisper silence hallucination: "${cleanPreview}"`);
+          fs.unlink(snapshotPath, () => {});
+          return;
+        }
+
+        const words = cleanPreview.split(/\s+/).filter(w => w.length > 0);
         
-        // Render real-time speech and fixing in floating UI card (like Grammarly)
+        // Type newly spoken words directly at the cursor in user's active window
+        if (words.length > liveWordsTyped.length) {
+          const newWords = words.slice(liveWordsTyped.length);
+          const textToType = (liveWordsTyped.length === 0 ? '' : ' ') + newWords.join(' ');
+          
+          liveWordsTyped = words;
+          totalLiveWordsTyped += newWords.length;
+          
+          console.log(`✍️ Real-time live text typing at cursor: "${textToType}" (${newWords.length} new words)`);
+          typeLiveTextAtCursor(textToType);
+        }
+
+        // Also update overlay visual card
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('live-preview', cleanPreview);
         }
@@ -1655,10 +1725,18 @@ async function stopRecording() {
       });
     }
 
-    // Clean atomic paste directly at cursor (ZERO BACKSPACES - Like Grammarly)
-    setTimeout(() => {
-      pasteTextRobust(finalText);
-    }, 60);
+    // Replace live-typed words with polished final text using instant word selection (zero backspaces)
+    const wordsToReplace = totalLiveWordsTyped;
+    totalLiveWordsTyped = 0;
+    liveWordsTyped = [];
+
+    if (wordsToReplace > 0 && process.platform === 'darwin') {
+      replaceLiveWordsWithFinal(wordsToReplace, finalText);
+    } else {
+      setTimeout(() => {
+        pasteTextRobust(finalText);
+      }, 50);
+    }
 
     // Track API usage locally
     if (apiKey && apiKey.trim() !== '') {
