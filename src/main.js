@@ -1962,12 +1962,13 @@ async function stopRecording() {
       // Real-time hands-free turn taking loop - Tony Stark Suit 24/7 Mode
       if (isJarvisLoopActive) {
         console.log('🎙️ Tony Stark Suit Mode: Re-arming mic for continuous 24/7 ambient dialogue...');
+        // 250ms gap: lets speaker audio tail fully decay before mic opens — prevents TTS bleed
         setTimeout(() => {
           if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
-        }, 150);
+        }, 250);
       } else {
         hideOverlay();
       }

@@ -129,28 +129,64 @@ class OfficeActionRunner {
       return await this.getPublicRepoStats();
     }
 
-    if (lower.includes("open youtube")) {
+    // --- WEB & APP LAUNCHER (Ava executes instantly) ---
+    if (lower.includes("youtube") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch") || lower.includes("play"))) {
       try { exec('open "https://www.youtube.com"'); } catch (e) {}
       return { handled: true, speech: "Opening YouTube now, Boss." };
     }
 
-    if (lower.includes("open chatgpt") || lower.includes("open chat gpt")) {
+    if (lower.includes("spotify") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch") || lower.includes("play"))) {
+      try { exec('open -a Spotify || open "https://open.spotify.com"'); } catch (e) {}
+      return { handled: true, speech: "Launching Spotify now, Boss." };
+    }
+
+    if (lower.includes("netflix") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch"))) {
+      try { exec('open "https://www.netflix.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening Netflix now, Boss." };
+    }
+
+    if ((lower.includes("chatgpt") || lower.includes("chat gpt")) && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://chatgpt.com"'); } catch (e) {}
       return { handled: true, speech: "Opening ChatGPT now, Boss." };
     }
 
-    if (lower.includes("open twitter") || lower.includes("open x")) {
+    if ((lower.includes("twitter") || lower.includes("open x ") || lower.includes("launch x")) && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://x.com"'); } catch (e) {}
       return { handled: true, speech: "Opening X now, Boss." };
     }
 
-    if (lower.includes("open gmail") || lower.includes("open mail")) {
+    if ((lower.includes("gmail") || lower.includes("open mail") || lower.includes("launch mail")) && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://mail.google.com"'); } catch (e) {}
       return { handled: true, speech: "Opening Gmail now, Boss." };
     }
 
-    if (lower.includes("search google for") || lower.includes("search for") || lower.includes("google ")) {
-      const match = speechText.match(/(?:search google for|search for|google)\s+(.+)/i);
+    if (lower.includes("whatsapp") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
+      try { exec('open -a WhatsApp || open "https://web.whatsapp.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening WhatsApp now, Boss." };
+    }
+
+    if (lower.includes("instagram") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
+      try { exec('open "https://www.instagram.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening Instagram now, Boss." };
+    }
+
+    if (lower.includes("notion") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
+      try { exec('open -a Notion || open "https://www.notion.so"'); } catch (e) {}
+      return { handled: true, speech: "Opening Notion now, Boss." };
+    }
+
+    if (lower.includes("figma") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
+      try { exec('open "https://www.figma.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening Figma now, Boss." };
+    }
+
+    if (lower.includes("google maps") || (lower.includes("maps") && lower.includes("open"))) {
+      try { exec('open "https://maps.google.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening Google Maps now, Boss." };
+    }
+
+    if (lower.includes("search google for") || lower.includes("search for") || lower.includes("google search")) {
+      const match = speechText.match(/(?:search google for|search for|google search for|google)\s+(.+)/i);
       if (match && match[1]) {
         return this.searchWeb(match[1].replace(/[.,?!]/g, "").trim());
       }
