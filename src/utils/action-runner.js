@@ -2,10 +2,12 @@
 const { execSync, exec } = require("child_process");
 const os = require("os");
 const path = require("path");
+const AntigravityEngine = require("./antigravity-engine");
 
 class OfficeActionRunner {
   constructor() {
     this.projectDir = path.resolve(__dirname, "../..");
+    this.antigravity = new AntigravityEngine(this.projectDir);
   }
 
   async handleAction(speechText, activeAgent, jarvisManager = null) {
@@ -86,8 +88,21 @@ class OfficeActionRunner {
     }
 
     // -------------------------------------------------------------
-    // ANDREW (Lead Software Engineer: Git, Diff, Commits, Package, Syntax)
+    // ANDREW (Lead Software Engineer: Antigravity Auto-Mode Coding Agent)
     // -------------------------------------------------------------
+    if (lower.includes("antigravity") || lower.includes("auto mode") || lower.includes("auto-mode") ||
+        lower.includes("auto code") || lower.includes("refactor") || lower.includes("fix bug") ||
+        (lower.includes("andrew") && (lower.includes("code") || lower.includes("build") || lower.includes("debug") || lower.includes("audit")))) {
+      const task = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*/i, "").trim();
+      const res = await this.antigravity.executeAutoCodingTask(task);
+      return {
+        handled: true,
+        agentName: "Andrew",
+        agentVoice: "en-US-AndrewNeural",
+        speech: res.speech
+      };
+    }
+
     if (lower.includes("package version") || lower.includes("app version") || lower.includes("project version") || lower.includes("dependencies")) {
       return this.getPackageVersion();
     }

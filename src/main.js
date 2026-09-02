@@ -2066,18 +2066,21 @@ async function stopRecording() {
           overlayWindow.webContents.send('jarvis-speaking');
         }
 
+        const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
+        const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
+
         // Show notification with specialist agent name and role
-        showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
+        showNotification(`🤖 ${speakingAgentName}`, jarvisReply);
 
         // Speak response aloud or Sing with acoustic accompaniment (Sur, Taal, Laya)!
         if (actionResult && actionResult.isSinging) {
-          await jarvisManager.sing(jarvisReply, activeAgent.voice);
+          await jarvisManager.sing(jarvisReply, speakingVoice);
         } else {
           // Full-Duplex: Start recording concurrently so user can barge-in and overlap anytime!
           if (isJarvisLoopActive && !isRecording) {
             startRecording();
           }
-          await jarvisManager.speak(jarvisReply, activeAgent.voice);
+          await jarvisManager.speak(jarvisReply, speakingVoice);
         }
       }
 
