@@ -185,18 +185,41 @@ class JarvisManager {
     }
 
     // 2. Topic-Based Intelligent Domain Routing
-    // Code, Architecture, Bug, Wiring -> Andrew
-    if (lower.includes("code") || lower.includes("function") || lower.includes("bug") || lower.includes("refactor") || lower.includes("architecture") || lower.includes("script") || lower.includes("wireframe") || lower.includes("api") || lower.includes("database") || lower.includes("backend") || lower.includes("frontend")) {
+    // Code, Engineering, Git, Dev -→ Andrew
+    if (lower.includes("code") || lower.includes("function") || lower.includes("bug") ||
+        lower.includes("refactor") || lower.includes("architecture") || lower.includes("script") ||
+        lower.includes("wireframe") || lower.includes("api") || lower.includes("database") ||
+        lower.includes("backend") || lower.includes("frontend") || lower.includes("git") ||
+        lower.includes("commit") || lower.includes("deploy") || lower.includes("build") ||
+        lower.includes("fix the") || lower.includes("debug") || lower.includes("error in") ||
+        lower.includes("pull request") || lower.includes("merge") || lower.includes("branch") ||
+        lower.includes("syntax") || lower.includes("npm") || lower.includes("package") ||
+        lower.includes("test suite") || lower.includes("run test") || lower.includes("vscode") ||
+        lower.includes("electron") || lower.includes("react") || lower.includes("node")) {
       return AGENTS.andrew;
     }
 
-    // Research, Intelligence, Analysis, Competitors, Document -> Jenny
-    if (lower.includes("research") || lower.includes("analyze") || lower.includes("competitor") || lower.includes("market") || lower.includes("document") || lower.includes("summary") || lower.includes("find out") || lower.includes("look up") || lower.includes("study")) {
+    // Research, Intelligence, Analysis, Wikipedia, Search -→ Jenny
+    if (lower.includes("research") || lower.includes("analyze") || lower.includes("competitor") ||
+        lower.includes("market") || lower.includes("document") || lower.includes("summary") ||
+        lower.includes("find out") || lower.includes("look up") || lower.includes("study") ||
+        lower.includes("wikipedia") || lower.includes("search for") || lower.includes("google") ||
+        lower.includes("what is") || lower.includes("who is") || lower.includes("tell me about") ||
+        lower.includes("explain") || lower.includes("how does") || lower.includes("how do") ||
+        lower.includes("news") || lower.includes("article") || lower.includes("information") ||
+        lower.includes("data on") || lower.includes("facts about") || lower.includes("latest on")) {
       return AGENTS.jenny;
     }
 
-    // System QA, Health, Tests, Telemetry, Computer maintenance -> Brian
-    if (lower.includes("test") || lower.includes("verify") || lower.includes("system status") || lower.includes("health") || lower.includes("telemetry") || lower.includes("cpu") || lower.includes("memory") || lower.includes("qa") || lower.includes("security") || lower.includes("diagnostics")) {
+    // System, Health, QA, Diagnostics, Hardware -→ Brian
+    if (lower.includes("test") || lower.includes("verify") || lower.includes("system status") ||
+        lower.includes("health") || lower.includes("telemetry") || lower.includes("cpu") ||
+        lower.includes("memory") || lower.includes("qa") || lower.includes("security") ||
+        lower.includes("diagnostics") || lower.includes("battery") || lower.includes("ram") ||
+        lower.includes("disk") || lower.includes("storage") || lower.includes("wifi") ||
+        lower.includes("network") || lower.includes("uptime") || lower.includes("port") ||
+        lower.includes("latency") || lower.includes("ping") || lower.includes("server") ||
+        lower.includes("clean cache") || lower.includes("lock screen") || lower.includes("performance")) {
       return AGENTS.brian;
     }
 
@@ -301,10 +324,13 @@ class JarvisManager {
           this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
 
           this.activeSpeechProcess.on("close", (code) => {
-            this.isSpeaking = false;
-            this.activeSpeechProcess = null;
-            try { fs.unlinkSync(tempAudioPath); } catch (e) {}
-            resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
+            // 200ms speaker decay — lets audio fully fade before mic opens
+            setTimeout(() => {
+              this.isSpeaking = false;
+              this.activeSpeechProcess = null;
+              try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+              resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
+            }, 200);
           });
 
           this.activeSpeechProcess.on("error", (err) => {

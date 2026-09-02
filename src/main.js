@@ -1500,20 +1500,34 @@ let totalLiveWordsTyped = 0;
 let lastProcessedAudioSize = 0;
 
 // Known Whisper silence hallucinations to ignore
-const SILENCE_HALLUCINATIONS = [
+const SILENCE_HALLUCINATIONS = new Set([
   // Generic Whisper false positives
-  'thank you', 'thank you.', 'thank you very much', 'thank you very much.',
-  'thanks for watching', 'thanks for watching.', 'subtitles by', 'bye', 'bye.',
-  'you', 'you.', 'ah', 'ah.', 'ah, well.', 'ah well', 'hmm', 'hmm.',
-  'uh', 'uh.', 'um', 'um.', 'uh huh', 'uh huh.', 'mm', 'mm.',
-  'mm-hmm', 'mm-hmm.', 'oh', 'oh.', 'okay', 'okay.', 'ok', 'ok.',
-  'alright', 'alright.', 'right', 'right.', 'yeah', 'yeah.',
-  'yes', 'yes.', 'no', 'no.', 'sure', 'sure.',
+  'thank you', 'thank you very much', 'thanks for watching', 'subtitles by', 'bye',
+  'you', 'ah', 'ah well', 'hmm', 'uh', 'um', 'uh huh', 'mm', 'mm-hmm', 'oh',
+  'okay', 'ok', 'alright', 'right', 'yeah', 'yes', 'no', 'sure',
   // Whisper self-loop artifacts
   'this video was made possible by', 'watch till the end',
-  'don\'t forget to subscribe', 'like and subscribe',
+  'dont forget to subscribe', 'like and subscribe',
   'visit our website', 'for more information',
-];
+  // Speaker bleed & neural voice hallucinations
+  'shadow neutral', 'ava neural', 'shadow', 'neutral', 'neural',
+  'en-us', 'en-us-avaneural', 'microsoft',
+  'subtitles', 'closed captions', 'amaraorg',
+  'silence', 'silent', 'applause', 'cheering', 'laughter',
+]);
+
+function isWhisperHallucination(text) {
+  if (!text || typeof text !== 'string') return true;
+  const clean = text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').trim();
+  if (clean.length < 3) return true;
+  if (SILENCE_HALLUCINATIONS.has(clean)) return true;
+  // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
+  const trimmed = text.trim();
+  if (/^\[.+\]$/.test(trimmed) || /^\(.+\)$/.test(trimmed) || /^\*.+\*$/.test(trimmed)) return true;
+  // Subtitles / video metadata phantom text
+  if (clean.startsWith('subtitles by') || clean.includes('amaraorg') || clean.includes('closed caption')) return true;
+  return false;
+}
 
 function typeLiveTextAtCursor(text) {
   if (!text || process.platform !== 'darwin') return;
@@ -1620,7 +1634,7 @@ function startLiveStreaming(filePath) {
         const lower = cleanPreview.toLowerCase().replace(/[.!?,]/g, '').trim();
 
         // Discard silence hallucinations
-        if (SILENCE_HALLUCINATIONS.includes(lower)) {
+        if (isWhisperHallucination(cleanPreview)) {
           console.log(`🔇 Discarding Whisper silence hallucination: "${cleanPreview}"`);
           fs.unlink(snapshotPath, () => {});
           return;
@@ -1874,8 +1888,7 @@ async function stopRecording() {
 
     if (currentMode === 'jarvis') {
       // Silently discard Whisper hallucinations — don't waste an AI call on phantom speech
-      const transcriptLower = originalText.toLowerCase().trim().replace(/[.,?!]/g, '');
-      if (SILENCE_HALLUCINATIONS.includes(transcriptLower) || originalText.trim().length < 3) {
+      if (isWhisperHallucination(originalText)) {
         console.log(`🔇 Jarvis: discarding Whisper hallucination "${originalText}" — re-arming mic...`);
         isProcessing = false;
         if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {

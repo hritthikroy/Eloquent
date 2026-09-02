@@ -129,15 +129,97 @@ class OfficeActionRunner {
       return await this.getPublicRepoStats();
     }
 
+    // --- MUSIC & AUDIO CONTROLS (Play, Pause, Resume, Skip) ---
+    if (lower.includes("play music") || lower.includes("play some music") || lower.includes("play a song") || lower.includes("play songs") || lower.includes("start music") || lower.includes("turn on music") || lower.includes("play track") || (lower.includes("music") && (lower.includes("play") || lower.includes("turn on") || lower.includes("start"))) || (lower.includes("spotify") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch") || lower.includes("play")))) {
+      try {
+        exec('osascript -e \'tell application "Spotify" to play\' 2>/dev/null || open -a Spotify || open "https://open.spotify.com"');
+      } catch (e) {}
+      return { handled: true, speech: "Starting music on Spotify now, Boss." };
+    }
+
+    if (lower.includes("pause music") || lower.includes("stop music") || lower.includes("pause song") || lower.includes("stop song") || lower.includes("pause track")) {
+      try {
+        exec('osascript -e \'tell application "Spotify" to pause\' 2>/dev/null || osascript -e \'tell application "Music" to pause\' 2>/dev/null');
+      } catch (e) {}
+      return { handled: true, speech: "Music paused, Boss." };
+    }
+
+    if (lower.includes("resume music") || lower.includes("unpause music") || lower.includes("continue music")) {
+      try {
+        exec('osascript -e \'tell application "Spotify" to play\' 2>/dev/null || osascript -e \'tell application "Music" to play\' 2>/dev/null');
+      } catch (e) {}
+      return { handled: true, speech: "Resuming music playback, Boss." };
+    }
+
+    if (lower.includes("next song") || lower.includes("next track") || lower.includes("skip song") || lower.includes("skip track")) {
+      try {
+        exec('osascript -e \'tell application "Spotify" to next track\' 2>/dev/null || osascript -e \'tell application "Music" to next track\' 2>/dev/null');
+      } catch (e) {}
+      return { handled: true, speech: "Skipping to next track, Boss." };
+    }
+
+    if (lower.includes("previous song") || lower.includes("previous track")) {
+      try {
+        exec('osascript -e \'tell application "Spotify" to previous track\' 2>/dev/null || osascript -e \'tell application "Music" to previous track\' 2>/dev/null');
+      } catch (e) {}
+      return { handled: true, speech: "Playing previous track, Boss." };
+    }
+
+    // --- GAMING & ENTERTAINMENT ---
+    if (lower.includes("play a game") || lower.includes("play game") || lower.includes("play games") || lower.includes("launch game") || lower.includes("start game") || lower.includes("open steam")) {
+      try {
+        exec('open -a Steam 2>/dev/null || open "https://poki.com"');
+      } catch (e) {}
+      return { handled: true, speech: "Opening gaming hub now, Boss." };
+    }
+
+    // --- SCREEN & VISION STATUS ---
+    if (lower.includes("see our screen") || lower.includes("see my screen") || lower.includes("seeing our screen") || lower.includes("seeing my screen") || lower.includes("look at our screen") || lower.includes("look at my screen") || lower.includes("can you see the screen") || lower.includes("can you see my screen")) {
+      return {
+        handled: true,
+        speech: "I don't have direct optical vision on your display yet Boss, but I'm monitoring all your system processes, active apps, and audio feeds."
+      };
+    }
+
+    // --- SYSTEM SHORTCUTS & CAPTURE ---
+    if (lower.includes("take screenshot") || lower.includes("take a screenshot") || lower.includes("capture screen") || lower.includes("screen capture")) {
+      try {
+        exec('screencapture -i ~/Desktop/Screenshot_$(date +%s).png');
+      } catch (e) {}
+      return { handled: true, speech: "Screenshot crosshairs active on your display, Boss." };
+    }
+
+    if (lower.includes("dark mode") || lower.includes("light mode") || lower.includes("toggle appearance")) {
+      try {
+        exec("osascript -e 'tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode'");
+      } catch (e) {}
+      return { handled: true, speech: "Toggled system appearance mode, Boss." };
+    }
+
+    if (lower.includes("open browser") || lower.includes("launch browser") || lower.includes("open chrome")) {
+      try { exec('open -a "Google Chrome" 2>/dev/null || open -a Safari'); } catch (e) {}
+      return { handled: true, speech: "Opening web browser now, Boss." };
+    }
+
+    if (lower.includes("open calculator") || lower.includes("launch calculator")) {
+      try { exec('open -a Calculator'); } catch (e) {}
+      return { handled: true, speech: "Opening Calculator now, Boss." };
+    }
+
+    if (lower.includes("open calendar") || lower.includes("launch calendar")) {
+      try { exec('open -a Calendar'); } catch (e) {}
+      return { handled: true, speech: "Opening Calendar now, Boss." };
+    }
+
+    if ((lower.includes("downloads") || lower.includes("downloads folder")) && (lower.includes("open") || lower.includes("show"))) {
+      try { exec('open ~/Downloads'); } catch (e) {}
+      return { handled: true, speech: "Opening Downloads folder now, Boss." };
+    }
+
     // --- WEB & APP LAUNCHER (Ava executes instantly) ---
     if (lower.includes("youtube") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch") || lower.includes("play"))) {
       try { exec('open "https://www.youtube.com"'); } catch (e) {}
       return { handled: true, speech: "Opening YouTube now, Boss." };
-    }
-
-    if (lower.includes("spotify") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch") || lower.includes("play"))) {
-      try { exec('open -a Spotify || open "https://open.spotify.com"'); } catch (e) {}
-      return { handled: true, speech: "Launching Spotify now, Boss." };
     }
 
     if (lower.includes("netflix") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch"))) {
