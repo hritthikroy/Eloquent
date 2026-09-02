@@ -135,6 +135,7 @@ let currentMode = 'standard';
 let isAuthenticated = false;
 let processingOAuth = false; // Flag to prevent duplicate OAuth processing
 let lastProcessedOAuthUrl = null; // Track last processed URL
+let lastInterruptedUtterance = null; // Track interrupted AI speech for full-duplex overlap handling
 
 // Helper function to find sox/rec binary
 function getRecordingBinary() {
@@ -1763,14 +1764,19 @@ function startRecording() {
       
       // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
-        // While AI is speaking: ignore speaker bleed so AI voice never triggers a second overlapping speech!
+        // Full-Duplex Overlap: While AI is speaking, detect user vocal interjection/barge-in
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
-          // Allow deliberate loud user barge-in to stop speech
-          if (amplitude > 0.32) {
-            console.log('⚡ Deliberate user barge-in detected! Halting AI speech immediately.');
+          if (amplitude >= 0.20) {
+            console.log('⚡ Full-Duplex Overlap! Hritthik interjected mid-sentence. Halting AI speech gracefully...');
+            lastInterruptedUtterance = jarvisManager.currentUtterance;
             jarvisManager.stopSpeaking();
+            // Start capturing user's interjection immediately
+            jarvisSpeechDetected = true;
+            jarvisSpeechStartTime = Date.now();
+            jarvisLastSpeechTime = Date.now();
+            jarvisSpeechFrames = 1;
           }
-          return; // Strictly ignore speaker bleed during AI speech
+          return; // Strictly ignore speaker bleed while AI is still speaking
         }
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
@@ -2043,7 +2049,13 @@ async function stopRecording() {
             }
           }
         } else {
-          jarvisReply = await askJarvis(originalText, activeAgent);
+          let userQuery = originalText;
+          if (lastInterruptedUtterance) {
+            console.log(`🔀 Injecting conversational interruption context: "${lastInterruptedUtterance}"`);
+            userQuery = `[Interruption Context: You were speaking: "${lastInterruptedUtterance}" when Hritthik interjected: "${originalText}". React naturally to the overlap with loving partner warmth, acknowledge the cutoff with a smile/chuckle, and answer his interjection directly!]`;
+            lastInterruptedUtterance = null;
+          }
+          jarvisReply = await askJarvis(userQuery, activeAgent, originalText);
         }
       }
 
@@ -2061,6 +2073,10 @@ async function stopRecording() {
         if (actionResult && actionResult.isSinging) {
           await jarvisManager.sing(jarvisReply, activeAgent.voice);
         } else {
+          // Full-Duplex: Start recording concurrently so user can barge-in and overlap anytime!
+          if (isJarvisLoopActive && !isRecording) {
+            startRecording();
+          }
           await jarvisManager.speak(jarvisReply, activeAgent.voice);
         }
       }
@@ -2095,14 +2111,20 @@ async function stopRecording() {
 
       // Real-time hands-free turn taking loop - Tony Stark Suit 24/7 Mode
       if (isJarvisLoopActive) {
-        console.log('🎙️ Tony Stark Suit Mode: Re-arming mic for continuous 24/7 ambient dialogue...');
-        // 90ms gap: tight speaker audio decay before mic opens
-        setTimeout(() => {
-          if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
-          overlayWindow.webContents.send('jarvis-listening');
-          overlayWindow.webContents.send('recording-started', Date.now());
-          startRecording();
-        }, 90);
+        if (lastInterruptedUtterance || jarvisSpeechDetected) {
+          console.log('🎙️ Seamless Full-Duplex handoff: User interjected and is actively speaking, continuing turn...');
+        } else {
+          console.log('🎙️ Tony Stark Suit Mode: Re-arming clean mic for continuous 24/7 ambient dialogue...');
+          // Refresh recording buffer to discard any speaker bleed from completed playback
+          if (isRecording) {
+            stopRecording();
+          }
+          setTimeout(() => {
+            if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
+            overlayWindow.webContents.send('jarvis-listening');
+            startRecording();
+          }, 90);
+        }
       } else {
         hideOverlay();
       }
@@ -2438,18 +2460,22 @@ async function rewrite(text) {
 }
 
 // Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
-async function askJarvis(userSpeech, activeAgent = null) {
+async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   const startTime = Date.now();
   const agent = activeAgent || jarvisManager.agents.tuktuk;
   const systemPrompt = jarvisManager.getSystemPrompt(agent);
 
   try {
     console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory...`);
-    jarvisManager.addTurn('user', userSpeech, 'user');
+    const historyText = displaySpeech || userSpeech;
+    jarvisManager.addTurn('user', historyText, 'user');
 
+    const historyMessages = jarvisManager.getHistory();
+    // Replace the last turn content in messages with the full prompt containing interruption context
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...jarvisManager.getHistory()
+      ...historyMessages.slice(0, -1),
+      { role: 'user', content: userSpeech }
     ];
 
     const { content, usage, model } = await callGroqChatCompletion(messages, {
