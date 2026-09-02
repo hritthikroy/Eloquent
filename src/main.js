@@ -1872,7 +1872,7 @@ async function stopRecording() {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
         }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
-        const actionResult = actionRunner.handleAction(originalText, activeAgent);
+        const actionResult = await actionRunner.handleAction(originalText, activeAgent);
         let standupAlreadySpoken = false;
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
