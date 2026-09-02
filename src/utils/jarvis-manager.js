@@ -13,10 +13,10 @@ class JarvisManager {
   loadConfig() {
     const defaults = {
       userName: "Hritthik",
-      salutation: "Boss",
-      voice: "Tara", // Crisp, modern, superhuman Indian-English voice
-      speed: 205,    // Superhuman Avengers velocity
-      personality: "superhuman, razor-sharp, cinematic, loyal, warm"
+      salutation: "Sir",
+      voice: "Samantha", // The premier Siri / Alexa gold-standard voice
+      speed: 185,        // Natural, crystal-clear human conversational tempo
+      personality: "warm, brilliant, empathetic, direct, human"
     };
 
     try {
@@ -36,7 +36,7 @@ class JarvisManager {
     try {
       this.config = { ...this.config, ...newConfig };
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), "utf8");
-      console.log("✅ Jarvis / FRIDAY configuration saved:", this.config);
+      console.log("✅ Jarvis configuration saved:", this.config);
       return true;
     } catch (err) {
       console.error("❌ Failed to save Jarvis config:", err.message);
@@ -45,26 +45,16 @@ class JarvisManager {
   }
 
   getSystemPrompt() {
-    const { userName, salutation, personality, voice } = this.config;
-    const isFemaleVoice = ["Tara", "Piya", "Lekha", "Samantha", "Moira", "Karen", "Tessa"].includes(voice);
-    const aiName = isFemaleVoice ? "Friday" : "Jarvis";
+    const { userName, salutation } = this.config;
 
-    return `You are ${aiName}, an Avengers-grade superhuman AI tactical co-pilot and personal executive assistant built for ${userName} by VASH AI Technologies.
-You speak directly in real-time with ${userName}. Address them as "${salutation}" or "${userName}".
+    return `You are Jarvis, a warm, brilliant, and highly capable personal AI assistant (speaking with the natural clarity and charm of Siri and Alexa).
+You are in a live, real-time voice conversation with ${userName}. Address them warmly and naturally as "${salutation}" or "${userName}".
 
-SUPERHUMAN CINEMATIC PERSONA:
-- Intellect & Speed: ${personality}. You operate at lightspeed like Tony Stark's J.A.R.V.I.S. and F.R.I.D.A.Y. Zero hesitation, instant answers, maximum competence.
-- Voice & Tone: Clear, punchy, authoritative, and warm. Natural conversational cadence.
-- Multilingual & Cultural Resonance:
-  - When the user speaks in English, answer in ultra-crisp cinematic English.
-  - If the user uses Hindi/Hinglish (e.g., "batao", "kya status hai"), respond in natural, sleek cinematic Hinglish.
-  - If the user uses Bengali/Banglish (e.g., "ki obostha", "shob thik ache"), respond in natural, warm cinematic Banglish.
-- Spoken Dialogue Delivery: Your words are synthesized aloud at 205 words per minute. Keep answers tightly focused, typically 1 to 2 crisp, high-impact sentences.
-- Zero Artifacts: NEVER output markdown asterisks (*, **), brackets, hashtags, emojis, or bullet points. Express cinematic emotion purely through words and crisp punctuation.
-
-EXAMPLE INTERACTION:
-User: "${aiName}, are all systems ready for launch?"
-${aiName}: "All systems locked and loaded, ${salutation}. Thrusters primed, flight vectors locked, and core telemetry is operating at peak efficiency."`;
+CONVERSATIONAL RULES (SPEAK LIKE A REAL HUMAN):
+- Direct & Natural: Speak like a real person talking face-to-face or on the phone. Be warm, empathetic, and razor-sharp.
+- Ultra-Concise: Keep replies to 1 or 2 short, punchy sentences (maximum 25-35 words) so the conversation flows seamlessly without long monologues.
+- Authentic Flow: Use natural conversational acknowledgments like "Got it, ${userName}.", "I'm right here.", "On it right now.", "All clear, ${salutation}."
+- Zero Non-Verbal Artifacts: NEVER use markdown asterisks (*, **), brackets, hashtags, emojis, or bullet points. Express emotion and warmth through genuine word choice and natural punctuation.`;
   }
 
   detectPreferenceChange(text) {
@@ -91,41 +81,6 @@ ${aiName}: "All systems locked and loaded, ${salutation}. Thrusters primed, flig
       return { type: "salutation", value: cleanSal };
     }
 
-    // Change voice
-    if (lower.includes("switch voice to") || lower.includes("change voice to") || lower.includes("use voice") || lower.includes("switch to voice")) {
-      if (lower.includes("tara")) {
-        this.saveConfig({ voice: "Tara" });
-        return { type: "voice", value: "Tara (Superhuman Indian English)" };
-      } else if (lower.includes("piya") || lower.includes("bangla") || lower.includes("bengali")) {
-        this.saveConfig({ voice: "Piya" });
-        return { type: "voice", value: "Piya (Bangla / Banglish)" };
-      } else if (lower.includes("lekha") || lower.includes("hindi")) {
-        this.saveConfig({ voice: "Lekha" });
-        return { type: "voice", value: "Lekha (Hindi / Hinglish)" };
-      } else if (lower.includes("rishi") || lower.includes("commander")) {
-        this.saveConfig({ voice: "Rishi" });
-        return { type: "voice", value: "Rishi (Indian Commander)" };
-      } else if (lower.includes("friday") || lower.includes("moira")) {
-        this.saveConfig({ voice: "Moira" });
-        return { type: "voice", value: "Friday (Moira)" };
-      } else if (lower.includes("samantha")) {
-        this.saveConfig({ voice: "Samantha" });
-        return { type: "voice", value: "Samantha (Hollywood AI)" };
-      } else if (lower.includes("karen")) {
-        this.saveConfig({ voice: "Karen" });
-        return { type: "voice", value: "Karen" };
-      } else if (lower.includes("tessa")) {
-        this.saveConfig({ voice: "Tessa" });
-        return { type: "voice", value: "Tessa" };
-      } else if (lower.includes("daniel")) {
-        this.saveConfig({ voice: "Daniel" });
-        return { type: "voice", value: "Daniel (British Jarvis)" };
-      } else if (lower.includes("aman")) {
-        this.saveConfig({ voice: "Aman" });
-        return { type: "voice", value: "Aman" };
-      }
-    }
-
     return null;
   }
 
@@ -145,10 +100,10 @@ ${aiName}: "All systems locked and loaded, ${salutation}. Thrusters primed, flig
         .trim();
 
       if (process.platform === "darwin") {
-        const voice = this.config.voice || "Tara";
-        const speed = String(this.config.speed || 205);
+        const voice = "Samantha";
+        const speed = "185";
 
-        console.log(`🗣️ Superhuman AI speaking via macOS "${voice}" at ${speed} wpm...`);
+        console.log(`🗣️ Siri/Alexa grade voice speaking via macOS "${voice}" at ${speed} wpm...`);
         this.activeSpeechProcess = spawn("say", ["-v", voice, "-r", speed, cleanText]);
 
         this.activeSpeechProcess.on("close", (code) => {

@@ -871,29 +871,6 @@ function createTray() {
               createTray();
             }
           }))
-        },
-        {
-          label: '🗣️ Voice Persona',
-          submenu: [
-            { id: 'Tara', name: 'Tara (Superhuman Indian English - Default)' },
-            { id: 'Piya', name: 'Piya (Bangla / Banglish Lady AI)' },
-            { id: 'Lekha', name: 'Lekha (Hindi / Hinglish Lady AI)' },
-            { id: 'Rishi', name: 'Rishi (Indian Tactical Commander)' },
-            { id: 'Samantha', name: 'Samantha (Cinematic Hollywood AI)' },
-            { id: 'Moira', name: "F.R.I.D.A.Y. [Moira] (Avengers Irish AI)" },
-            { id: 'Karen', name: "Karen (Tony Stark's Suit Lady AI)" },
-            { id: 'Daniel', name: 'Daniel (Classic British Jarvis)' },
-            { id: 'Aman', name: 'Aman (Indian English Male)' }
-          ].map(v => ({
-            label: v.name,
-            type: 'radio',
-            checked: jarvisManager.config.voice === v.id,
-            click: () => {
-              jarvisManager.saveConfig({ voice: v.id });
-              jarvisManager.speak(`Voice configured to ${v.id}. At your command, ${jarvisManager.config.salutation}.`);
-              createTray();
-            }
-          }))
         }
       ]
     }
@@ -1086,13 +1063,13 @@ function registerShortcuts() {
 
 
 // Calculate cursor position for overlay placement
-function getCursorTargetPosition(mode = 'standard') {
+function getCursorTargetPosition() {
   const cursorPosition = screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = mode === 'jarvis' ? 380 : 280;
-  const windowHeight = mode === 'jarvis' ? 120 : 50;
+  const windowWidth = 280;
+  const windowHeight = 50;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 20;
 
@@ -1183,7 +1160,7 @@ function showOverlayUltraFast(mode = 'standard') {
   }
 
   const win = initOverlayWindow();
-  const targetPos = getCursorTargetPosition(mode);
+  const targetPos = getCursorTargetPosition();
   win.setBounds(targetPos);
 
   const displayAndRecord = () => {
@@ -1796,15 +1773,13 @@ async function stopRecording() {
       finalText = jarvisReply;
 
       if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.webContents.send('jarvis-speaking', jarvisReply);
+        overlayWindow.webContents.send('jarvis-speaking');
       }
 
       playSound('success');
 
-      // Show notification with Jarvis/Friday response
-      const isLadyVoice = ['Samantha', 'Moira', 'Karen', 'Tessa'].includes(jarvisManager.config.voice);
-      const aiTitle = isLadyVoice ? 'Friday' : 'Jarvis';
-      showNotification(`🤖 ${aiTitle} (${jarvisManager.config.salutation})`, jarvisReply);
+      // Show notification with Jarvis response
+      showNotification(`🤖 Jarvis (${jarvisManager.config.salutation})`, jarvisReply);
 
       // Save to history
       saveToHistory({
