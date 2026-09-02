@@ -1499,14 +1499,12 @@ async function stopRecording() {
       console.log('🤖 AI rewriting...');
       finalText = await rewrite(originalText);
     } else {
-      finalText = originalText;
-      if (CONFIG.autoGrammarFix) {
-        try {
-          finalText = await applyGrammarFixes(originalText);
-        } catch (error) {
-          console.warn('Grammar fix failed:', error.message);
-          finalText = originalText;
-        }
+      console.log('📝 Standard mode: applying normal grammar & punctuation fixes...');
+      try {
+        finalText = await applyGrammarFixes(originalText);
+      } catch (error) {
+        console.warn('Grammar fix failed, using original transcript:', error.message);
+        finalText = originalText;
       }
     }
 
