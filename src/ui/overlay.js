@@ -31,14 +31,14 @@ let analyser;
 let dataArray;
 let animationId;
 let startTime = Date.now();
-let canvasW = 60;
-let canvasH = 20;
+let canvasW = 66;
+let canvasH = 22;
 let frameCount = 0;
 
-// PERFORMANCE BOOST: Pre-calculate constants
-const BAR_WIDTH = 2;
+// Dynamic acoustic parameters
+const BAR_WIDTH = 2.5;
 const BAR_GAP = 3;
-const HALF_BARS = 6;
+const HALF_BARS = 6; // 12 mirrored bars total across 66px
 
 // Setup canvas after DOM ready
 function setupCanvas() {
@@ -58,27 +58,34 @@ function setupCanvas() {
 }
 
 // Smooth bar heights (6 bars, mirrored to make 12)
-let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
+let barHeights = new Float32Array(6).fill(2.5);
 
 let currentAmp = 0.25;
 let isAnimating = false;
+let noiseFloor = 12.0; // Adaptive background noise cancellation baseline
 
-// Initialize real microphone audio for organic voice reaction
+// Initialize real microphone audio with FULL NOISE CANCELLATION & AGC
 async function initAudio() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      audio: {
+        echoCancellation: true,      // Hardware/driver echo cancellation
+        noiseSuppression: true,      // Built-in WebRTC noise cancellation (cleans fan/ambient hum)
+        autoGainControl: true,       // Auto-levels soft vs loud speech
+        channelCount: 1,
+        sampleRate: 48000
+      }
     });
     audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     const source = audioContext.createMediaStreamSource(stream);
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.5; // Responsive and smooth
+    analyser.smoothingTimeConstant = 0.45; // Snappy & emotionally responsive
     analyser.minDecibels = -85;
     analyser.maxDecibels = -10;
     source.connect(analyser);
     dataArray = new Uint8Array(analyser.frequencyBinCount);
-    console.log('✅ Real audio initialized - microphone connected with full emotion');
+    console.log('✅ Real audio initialized: Full Noise Cancellation + Acoustic Voice Measurement active');
     startVisualizer();
   } catch (err) {
     console.warn('Microphone WebAudio fallback to simulated:', err);
@@ -99,45 +106,85 @@ ipcRenderer.on('voice-activity', (_, hasVoice) => {
   }
 });
 
-// Real voice 60fps waveform loop with full voice emotion
+// 60fps Emotional voice waveform loop with adaptive noise gating & formant measurement
 function animate() {
   if (!isAnimating) return;
   animationId = requestAnimationFrame(animate);
   frameCount++;
   
   if (analyser && dataArray) {
-    // REAL VOICE CAPTURING: reacts to actual voice pitch, volume, and timbre
+    // 1. Capture real audio spectrum
     analyser.getByteFrequencyData(dataArray);
 
+    // 2. Measure overall voice acoustic energy (RMS)
     let sum = 0;
     for (let i = 0; i < dataArray.length; i++) {
       sum += dataArray[i] * dataArray[i];
     }
-    const rmsVolume = Math.sqrt(sum / dataArray.length);
-    const volumeBoost = rmsVolume > 15 ? 1.4 : 1.0;
+    const rms = Math.sqrt(sum / dataArray.length);
+
+    // 3. Adaptive Noise Floor Tracking (Background noise cancellation)
+    if (rms < noiseFloor) {
+      noiseFloor = noiseFloor * 0.92 + rms * 0.08; // Rapid downward tracking on silence
+    } else {
+      noiseFloor = noiseFloor * 0.998 + rms * 0.002; // Very slow drift for ambient noise
+    }
+    noiseFloor = Math.max(6.0, Math.min(26.0, noiseFloor));
+
+    // Signal-to-Noise Ratio (voice energy above ambient room floor)
+    const voiceSNR = Math.max(0, rms - noiseFloor);
+    const isSpeaking = voiceSNR > 2.5;
+
+    // 4. Human Voice Formant Bands (Fundamental pitch, vowels, consonants, air)
+    const bandBins = [
+      [1, 2],    // 100-280 Hz: Pitch / Chest voice fundamental
+      [3, 5],    // 280-560 Hz: Warmth / Body vowels ("oo", "ah")
+      [6, 10],   // 560-1100 Hz: Formant 1 (clarity & core vowels)
+      [11, 18],  // 1100-2000 Hz: Formant 2 (speech articulation & diction)
+      [19, 32],  // 2000-3500 Hz: Emotional presence & consonant bite
+      [33, 48]   // 3500-5500 Hz: Sibilance ("s", "sh", "th", breath)
+    ];
+
+    const t = frameCount * 0.05;
 
     for (let i = 0; i < HALF_BARS; i++) {
-      const startBin = 2;
-      const endBin = Math.floor(dataArray.length * 0.4);
-      const idx = startBin + Math.floor((i / HALF_BARS) * (endBin - startBin));
+      let bandEnergy = 0;
+      const [bStart, bEnd] = bandBins[i];
+      for (let b = bStart; b <= bEnd; b++) {
+        bandEnergy += dataArray[b] || 0;
+      }
+      bandEnergy /= (bEnd - bStart + 1);
 
-      const val1 = dataArray[Math.max(0, idx - 1)] || 0;
-      const val2 = dataArray[idx] || 0;
-      const val3 = dataArray[Math.min(dataArray.length - 1, idx + 1)] || 0;
-      const avgVal = (val1 + val2 + val3) / 3;
+      // Noise gate: Subtract noise floor per band
+      const cleanEnergy = Math.max(0, bandEnergy - noiseFloor * 1.15);
 
-      const rawValue = avgVal * volumeBoost;
-      const target = Math.max((rawValue / 255) * 16 + 2, 2.5);
+      let target;
+      if (isSpeaking && cleanEnergy > 0) {
+        // High-emotion dynamic vocal response with perceptual curve
+        const normalized = Math.min(1.0, cleanEnergy / 185);
+        const curved = Math.pow(normalized, 0.72); // Perceptual expansion
+        const emotionBoost = Math.min(1.75, 1.0 + (voiceSNR / 28));
+        target = Math.max(2.5, curved * 18 * emotionBoost);
+      } else {
+        // Idle organic breathing pulse when quiet (calm, alive, zero jitter)
+        const breath = Math.sin(t + i * 0.6) * 0.7 + 2.3;
+        target = Math.max(2.0, breath);
+      }
 
-      barHeights[i] = barHeights[i] * 0.5 + target * 0.5;
+      // Ballistics: Snappy Attack (voice pops up instantly), Musical Decay (smooth glide down)
+      if (target > barHeights[i]) {
+        barHeights[i] = barHeights[i] * 0.22 + target * 0.78; // Fast attack
+      } else {
+        barHeights[i] = barHeights[i] * 0.83 + target * 0.17; // Musical smooth decay
+      }
     }
   } else {
-    // Fallback if mic stream initializing
+    // Fallback while connecting
     const t = frameCount * 0.08;
     for (let i = 0; i < HALF_BARS; i++) {
       const centerFactor = 1 - (i / 6) * 0.35;
       const wave = Math.sin(t + i * 0.7) * 0.5 + 0.5;
-      const target = (wave * 12 * currentAmp + 2) * centerFactor;
+      const target = (wave * 12 * currentAmp + 2.5) * centerFactor;
       barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
     }
   }
@@ -166,7 +213,7 @@ function stopVisualizer() {
   }
 }
 
-// ULTRA-FAST Draw mirrored bars with optimizations
+// ULTRA-FAST Draw mirrored bars with emotional gradient & pill curves
 function drawBars() {
   if (!ctx || !canvas) {
     return;
@@ -177,19 +224,31 @@ function drawBars() {
   const centerX = canvasW / 2;
   const centerY = canvasH / 2;
 
-  const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
-  ctx.fillStyle = color;
+  // Rich, vibrant multi-stop linear gradient for depth and emotion
+  const grad = ctx.createLinearGradient(0, 0, 0, canvasH);
+  if (mode === 'rewrite') {
+    grad.addColorStop(0, '#c084fc');   // Radiant Lilac top
+    grad.addColorStop(0.5, '#a855f7'); // Vibrant Purple center
+    grad.addColorStop(1, '#7c3aed');   // Royal Violet base
+  } else {
+    grad.addColorStop(0, '#6ee7b7');   // Bright Mint top
+    grad.addColorStop(0.5, '#22c55e'); // Vibrant Emerald center
+    grad.addColorStop(1, '#16a34a');   // Rich Forest green base
+  }
+  ctx.fillStyle = grad;
   
+  const radius = BAR_WIDTH / 2;
+
   // Draw rounded equalizer bars
   for (let i = 0; i < HALF_BARS; i++) {
-    const h = Math.max(barHeights[i] * 0.75, 2.5);
+    const h = Math.max(barHeights[i], 2.5);
     const offset = (i * (BAR_WIDTH + BAR_GAP)) + BAR_GAP / 2;
     const y = centerY - h / 2;
 
     if (ctx.roundRect) {
       ctx.beginPath();
-      ctx.roundRect(centerX + offset, y, BAR_WIDTH, h, 1);
-      ctx.roundRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h, 1);
+      ctx.roundRect(centerX + offset, y, BAR_WIDTH, h, radius);
+      ctx.roundRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h, radius);
       ctx.fill();
     } else {
       ctx.fillRect(centerX + offset, y, BAR_WIDTH, h);
