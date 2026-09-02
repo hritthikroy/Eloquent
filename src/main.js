@@ -979,10 +979,10 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 280;
-  const windowHeight = 50;
+  const windowWidth = 240;
+  const windowHeight = 44;
   const x = cursorPosition.x - (windowWidth / 2);
-  const y = cursorPosition.y - windowHeight - 20;
+  const y = cursorPosition.y - windowHeight - 16;
 
   const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
   const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
@@ -1487,9 +1487,9 @@ async function stopRecording() {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
 
-    // Hide overlay immediately on stop - no transcribing UI shown
+    // Trigger Magic Processing visual state with glowing spin while AI processes
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      hideOverlay();
+      overlayWindow.webContents.send('processing', currentMode);
     }
 
     console.log('🎤 Transcribing...');
@@ -1538,7 +1538,11 @@ async function stopRecording() {
       });
     }
 
-    // PERFORMANCE BOOST: Paste immediately - overlay is already closed
+    // Hide overlay with smooth fade now that processing is complete
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      hideOverlay();
+    }
+
     setTimeout(() => {
       pasteTextRobust(finalText);
     }, 50);
