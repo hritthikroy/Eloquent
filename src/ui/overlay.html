@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self' blob:;">
   <title>Recording</title>
   <style>
     * {
@@ -12,46 +12,34 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
       -webkit-app-region: drag;
       user-select: none;
       overflow: hidden;
-      background: transparent;
+      background: transparent !important;
+      width: 100%;
       height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      transform: translateZ(0);
-      backface-visibility: hidden;
-      will-change: transform;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      text-rendering: optimizeSpeed;
     }
 
-    /* ULTRA-FAST Pill-shaped overlay with hardware acceleration */
+    /* Pill-shaped overlay with clean rounded corners and no black background artifacts */
     .overlay {
       height: 40px;
       background: #1e293b;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
       display: inline-flex;
       align-items: center;
       padding: 0 16px;
-      gap: 10px;
+      gap: 12px;
       position: relative;
       overflow: hidden;
-      /* PERFORMANCE BOOST: Hardware acceleration and compositing */
-      transform: translateZ(0);
-      backface-visibility: hidden;
-      will-change: transform, opacity;
-      /* PERFORMANCE BOOST: Force GPU layer */
-      -webkit-transform: translateZ(0);
-      -webkit-backface-visibility: hidden;
-      /* PERFORMANCE BOOST: Optimize rendering */
-      contain: layout style paint;
     }
 
     /* Recording indicator - pulsing ring */
@@ -102,16 +90,19 @@
       white-space: nowrap;
     }
 
-    /* Waveform - compact inline */
+    /* Waveform - sleek modern equalizer */
     .waveform {
-      height: 20px;
-      width: 60px;
+      height: 24px;
+      width: 76px;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     #waveCanvas {
-      width: 100%;
-      height: 100%;
+      width: 76px;
+      height: 24px;
       display: block;
     }
 

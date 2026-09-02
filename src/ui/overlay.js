@@ -31,11 +31,11 @@ let analyser;
 let dataArray;
 let animationId;
 let startTime = Date.now();
-let canvasW = 60;
-let canvasH = 20;
+let canvasW = 76;
+let canvasH = 24;
 
-// PERFORMANCE BOOST: Pre-calculate constants
-const BAR_WIDTH = 2;
+// Professional Equalizer: 12 sleek rounded capsule bars (6 mirrored pairs)
+const BAR_WIDTH = 3;
 const BAR_GAP = 3;
 const HALF_BARS = 6;
 
@@ -57,146 +57,121 @@ function setupCanvas() {
 }
 
 // Smooth bar heights (6 bars, mirrored to make 12)
-let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
+let barHeights = new Float32Array(HALF_BARS).fill(3);
 
-// Initialize audio visualization - use IPC amplitude from main process
-// (getUserMedia fails because SoX already holds the mic)
 let ipcAmplitude = 0;
+let smoothAmplitude = 0;
 
+// Initialize real-time Web Audio analyser with microphone
 async function initAudio() {
-  // Try real mic capture first for best reactivity
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: false,
+        autoGainControl: true
+      }
     });
-    audioContext = new AudioContext({ latencyHint: 'interactive' });
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
     const source = audioContext.createMediaStreamSource(stream);
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 64;
-    analyser.smoothingTimeConstant = 0.85;
+    analyser.fftSize = 128; // 64 frequency bins
+    analyser.smoothingTimeConstant = 0.5; // Fast, snappy response to voice!
     source.connect(analyser);
     dataArray = new Uint8Array(analyser.frequencyBinCount);
-    console.log('✅ Real mic audio captured for visualizer');
+    console.log('✅ Real mic audio captured for visualizer! Bins:', analyser.frequencyBinCount);
     animate();
   } catch (err) {
-    console.log('⚠️ Mic unavailable for visualizer (SoX has it), using IPC amplitude fallback');
+    console.warn('⚠️ getUserMedia unavailable, using IPC amplitude fallback:', err);
     animateFromIPC();
   }
 }
 
-// Listen for amplitude data from main process
-let smoothAmplitude = 0;
+// Listen for amplitude data from main process as backup
 ipcRenderer.on('amplitude', (_, amp) => {
   ipcAmplitude = amp;
 });
 
-// Animate bars using IPC amplitude data from main process
-function animateFromIPC() {
-  let t = 0;
-  let frameCount = 0;
-  function loop() {
-    animationId = requestAnimationFrame(loop);
-    frameCount++;
-    
-    if (frameCount % 2 === 0) {
-      // Smooth amplitude: fast attack (0.5), slow decay (0.85) for natural voice feel
-      if (ipcAmplitude > smoothAmplitude) {
-        smoothAmplitude = smoothAmplitude * 0.5 + ipcAmplitude * 0.5; // Fast rise
-      } else {
-        smoothAmplitude = smoothAmplitude * 0.85 + ipcAmplitude * 0.15; // Slow decay
-      }
-      
-      for (let i = 0; i < 6; i++) {
-        const centerFactor = 1 - (i / 6) * 0.3;
-        // Per-bar random offset for organic lively movement
-        const waveOffset = Math.sin(t * 0.1 + i * 0.7) * 1.5 + Math.sin(t * 0.17 + i * 1.3) * 1;
-        const barAmplitude = smoothAmplitude + (Math.random() - 0.5) * smoothAmplitude * 0.3;
-        const target = (barAmplitude * 18 + waveOffset + 2) * centerFactor;
-        barHeights[i] = barHeights[i] * 0.55 + Math.max(target, 2) * 0.45;
-      }
-      drawBars();
-      t++;
-    }
-    
-    if (frameCount % 30 === 0) {
-      updateTimer();
-    }
-  }
-  loop();
-}
-
-// ULTRA-FAST Real audio animation with optimizations
+// Professional Voice-Reactive Animation (Web Audio FFT)
 let frameCount = 0;
 function animate() {
   animationId = requestAnimationFrame(animate);
-  
-  // PERFORMANCE BOOST: Only update every other frame for smoother performance
   frameCount++;
-  if (frameCount % 2 !== 0) return;
-  
+
   analyser.getByteFrequencyData(dataArray);
 
-  // Map frequency data to 6 bars (center has highest energy)
-  for (let i = 0; i < 6; i++) {
-    const idx = Math.floor((i / 6) * dataArray.length);
-    const target = (dataArray[idx] / 255) * 16 + 2;
-    barHeights[i] = barHeights[i] * 0.7 + target * 0.3;
+  // Compute average energy in human vocal speech frequencies (bins 1 to 16, ~80Hz - 6000Hz)
+  let voiceEnergySum = 0;
+  const numVoiceBins = 16;
+  for (let b = 1; b <= numVoiceBins; b++) {
+    voiceEnergySum += dataArray[b] || 0;
+  }
+  const avgVoiceEnergy = voiceEnergySum / (numVoiceBins * 255); // 0.0 to 1.0
+  const isSpeaking = avgVoiceEnergy > 0.05;
+
+  // Map 6 bars (mirrored to 12) across vocal speech spectrum
+  for (let i = 0; i < HALF_BARS; i++) {
+    // i = 0 is center, i = 5 is outer edge
+    // Center bars get powerful low-mid frequencies (vowels)
+    // Outer bars get upper mid/high frequencies (consonants)
+    const binIdx = Math.min(1 + Math.floor(i * 1.6), dataArray.length - 1);
+    const binVal = (dataArray[binIdx] || 0) / 255;
+    
+    if (isSpeaking) {
+      // Dynamic jumping proportional to vocal intensity
+      const vocalTarget = (binVal * 0.7 + avgVoiceEnergy * 0.3) * (canvasH - 4);
+      const target = Math.max(3, vocalTarget + 2);
+      // Fast attack for snappy jumps, smooth fall
+      if (target > barHeights[i]) {
+        barHeights[i] = barHeights[i] * 0.3 + target * 0.7; // Fast jump up!
+      } else {
+        barHeights[i] = barHeights[i] * 0.78 + target * 0.22; // Smooth drop
+      }
+    } else {
+      // Subtle elegant breathing pulse when not speaking so it feels alive
+      const idleWave = Math.sin(frameCount * 0.08 + i * 0.6) * 1.5 + 3.5;
+      barHeights[i] = barHeights[i] * 0.82 + idleWave * 0.18;
+    }
   }
 
   drawBars();
-  
-  // PERFORMANCE BOOST: Update timer every 30 frames (~2 times per second is enough)
+
   if (frameCount % 30 === 0) {
     updateTimer();
   }
 }
 
-// ULTRA-FAST Fake animation fallback with optimizations
-function animateFake() {
-  let t = 0;
-  let frameCount = 0;
+// Fallback animation using Node IPC amplitude
+function animateFromIPC() {
   function loop() {
     animationId = requestAnimationFrame(loop);
     frameCount++;
-    
-    // PERFORMANCE BOOST: Update bars every 3rd frame
-    if (frameCount % 3 === 0) {
-      for (let i = 0; i < 6; i++) {
-        const centerFactor = 1 - (i / 6) * 0.4;
-        const target = (Math.sin(t * 0.06 + i * 0.5) * 6 + 10) * centerFactor;
-        barHeights[i] = barHeights[i] * 0.8 + target * 0.2;
-      }
-      drawBars();
-      t++;
-    }
-    
-    // PERFORMANCE BOOST: Update timer every 60 frames
-    if (frameCount % 60 === 0) {
-      updateTimer();
-    }
-  }
-  loop();
-}
 
-// Quick popup animation - fast and energetic
-function animateQuickPopup() {
-  let t = 0;
-  let frameCount = 0;
-  function loop() {
-    animationId = requestAnimationFrame(loop);
-    frameCount++;
-    
-    // PERFORMANCE: Update every other frame
-    if (frameCount % 2 === 0) {
-      for (let i = 0; i < 6; i++) {
-        const centerFactor = 1 - (i / 6) * 0.3;
-        const target = (Math.sin(t * 0.15 + i * 0.8) * 8 + 12) * centerFactor;
-        barHeights[i] = barHeights[i] * 0.6 + target * 0.4;
-      }
-      drawBars();
-      t++;
+    if (ipcAmplitude > smoothAmplitude) {
+      smoothAmplitude = smoothAmplitude * 0.35 + ipcAmplitude * 0.65; // Fast attack
+    } else {
+      smoothAmplitude = smoothAmplitude * 0.82 + ipcAmplitude * 0.18; // Smooth decay
     }
-    
+
+    const isSpeaking = smoothAmplitude > 0.08;
+
+    for (let i = 0; i < HALF_BARS; i++) {
+      const centerFactor = 1 - (i / HALF_BARS) * 0.35;
+      if (isSpeaking) {
+        const harmonic = Math.sin(frameCount * 0.2 + i * 0.9) * 0.35 + 0.65;
+        const target = Math.max(3, (smoothAmplitude * (canvasH - 4) * harmonic + 2) * centerFactor);
+        barHeights[i] = barHeights[i] * 0.35 + target * 0.65;
+      } else {
+        const idleWave = Math.sin(frameCount * 0.08 + i * 0.6) * 1.5 + 3.5;
+        barHeights[i] = barHeights[i] * 0.82 + idleWave * 0.18;
+      }
+    }
+
+    drawBars();
+
     if (frameCount % 30 === 0) {
       updateTimer();
     }
@@ -204,13 +179,10 @@ function animateQuickPopup() {
   loop();
 }
 
-// ULTRA-FAST Draw mirrored bars with optimizations
+// Draw mirrored rounded capsule equalizer bars
 function drawBars() {
-  if (!ctx || !canvas) {
-    console.error('Cannot draw bars - canvas not ready');
-    return;
-  }
-  
+  if (!ctx || !canvas) return;
+
   ctx.clearRect(0, 0, canvasW, canvasH);
 
   const centerX = canvasW / 2;
@@ -218,17 +190,33 @@ function drawBars() {
 
   const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
   ctx.fillStyle = color;
-  
-  // PERFORMANCE BOOST: Batch all rectangles
-  for (let i = 0; i < HALF_BARS; i++) {
-    const h = Math.max(barHeights[i] * 0.6, 2);
-    const offset = (i * (BAR_WIDTH + BAR_GAP)) + BAR_GAP / 2;
-    const y = centerY - h / 2;
 
-    // Right side bar
-    ctx.fillRect(centerX + offset, y, BAR_WIDTH, h);
-    // Left side bar (mirrored)
-    ctx.fillRect(centerX - offset - BAR_WIDTH, y, BAR_WIDTH, h);
+  const radius = BAR_WIDTH / 2;
+
+  for (let i = 0; i < HALF_BARS; i++) {
+    const h = Math.max(3, Math.min(barHeights[i], canvasH - 2));
+    const offset = (i * (BAR_WIDTH + BAR_GAP)) + BAR_GAP / 2;
+    const y = Math.round(centerY - h / 2);
+
+    // Right side bar (rounded capsule)
+    const rightX = Math.round(centerX + offset);
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(rightX, y, BAR_WIDTH, h, radius);
+    } else {
+      ctx.rect(rightX, y, BAR_WIDTH, h);
+    }
+    ctx.fill();
+
+    // Left side bar (mirrored rounded capsule)
+    const leftX = Math.round(centerX - offset - BAR_WIDTH);
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(leftX, y, BAR_WIDTH, h, radius);
+    } else {
+      ctx.rect(leftX, y, BAR_WIDTH, h);
+    }
+    ctx.fill();
   }
 }
 

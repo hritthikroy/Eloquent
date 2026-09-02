@@ -6,10 +6,10 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 // Load environment variables
 require('dotenv').config();
 
-let app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell;
+let app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell, session;
 
 try {
-  ({ app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell } = require('electron'));
+  ({ app, BrowserWindow, globalShortcut, ipcMain, clipboard, Tray, Menu, nativeImage, systemPreferences, dialog, Notification, screen, shell, session } = require('electron'));
 } catch (e) {
   // During build process, electron might not be available
   console.log('Electron not available during build process');
@@ -443,6 +443,18 @@ process.on('unhandledRejection', (reason, promise) => {
 app.whenReady().then(async () => {
   fastStartup.milestone('App ready');
   console.log('🚀 App is ready, starting ULTRA-FAST initialization...');
+
+  // Grant microphone media access to all renderers (overlay visualizer)
+  if (session && session.defaultSession) {
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+      if (permission === 'media') return true;
+      return true;
+    });
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      if (permission === 'media') return callback(true);
+      callback(true);
+    });
+  }
 
   // CRITICAL: Process pending protocol URL from first instance launch
   if (global.pendingProtocolUrl) {
@@ -990,8 +1002,8 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 280;
-  const windowHeight = 50;
+  const windowWidth = 300;
+  const windowHeight = 54;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 20;
 
@@ -1044,6 +1056,10 @@ function initOverlayWindow() {
 
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setAlwaysOnTop(true, 'floating', 1);
+
+  overlayWindow.webContents.on('console-message', (event, level, message) => {
+    console.log('🖥️ [Overlay Console]:', message);
+  });
 
   overlayWindow.loadFile('src/ui/overlay.html');
 
