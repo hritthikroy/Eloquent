@@ -177,7 +177,20 @@ class AudioRecorder {
     });
 
     this.recordingProcess.stderr.on('data', (data) => {
-      console.log('📊 Sox stderr:', data.toString());
+      const str = data.toString();
+      console.log('📊 Sox stderr:', str);
+      
+      // Parse SoX VU meter for real voice amplitude: [     =|=     ] or [    -|-    ]
+      const vuMatch = str.match(/\[([^\]]*)\|([^\]]*)\]/);
+      if (vuMatch && this.onAmplitude) {
+        const leftVU = vuMatch[1];
+        const rightVU = vuMatch[2];
+        // Count signal characters (=, -, #) — more = louder
+        const signalChars = (leftVU + rightVU).replace(/[^=\-#]/g, '').length;
+        // Normalize: max ~12 signal chars in the VU display
+        const amplitude = Math.min(signalChars / 10, 1.0);
+        this.onAmplitude(amplitude);
+      }
     });
 
     this.recordingProcess.on('error', (err) => {

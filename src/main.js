@@ -1553,23 +1553,14 @@ function startRecording() {
       recordingProcess = audioRecorder.recordingProcess;
       startLiveStreaming(audioFile);
       
-      // Simulate amplitude for overlay (visual feedback)
-      let amplitudeInterval = setInterval(() => {
+      // Wire real voice amplitude from SoX VU meter to overlay
+      audioRecorder.onAmplitude = (amplitude) => {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          const baseAmplitude = Math.random() * 0.3 + 0.1;
-          const voiceBoost = Math.random() > 0.7 ? Math.random() * 0.4 : 0;
-          const amplitude = Math.min(baseAmplitude + voiceBoost, 1.0);
-          const hasVoiceActivity = amplitude > 0.25;
-          
+          const hasVoiceActivity = amplitude > 0.15;
           overlayWindow.webContents.send('amplitude', amplitude);
           overlayWindow.webContents.send('voice-activity', hasVoiceActivity);
-        } else {
-          clearInterval(amplitudeInterval);
         }
-      }, 50);
-      
-      // Store interval for cleanup
-      audioRecorder.amplitudeInterval = amplitudeInterval;
+      };
     })
     .catch((error) => {
       console.error('❌ Failed to start recording:', error);

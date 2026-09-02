@@ -59,8 +59,12 @@ function setupCanvas() {
 // Smooth bar heights (6 bars, mirrored to make 12)
 let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
 
-// Initialize audio
+// Initialize audio visualization - use IPC amplitude from main process
+// (getUserMedia fails because SoX already holds the mic)
+let ipcAmplitude = 0;
+
 async function initAudio() {
+  // Try real mic capture first for best reactivity
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
@@ -72,11 +76,44 @@ async function initAudio() {
     analyser.smoothingTimeConstant = 0.85;
     source.connect(analyser);
     dataArray = new Uint8Array(analyser.frequencyBinCount);
+    console.log('✅ Real mic audio captured for visualizer');
     animate();
   } catch (err) {
-    console.error('Mic error:', err);
-    animateFake();
+    console.log('⚠️ Mic unavailable for visualizer (SoX has it), using IPC amplitude fallback');
+    animateFromIPC();
   }
+}
+
+// Listen for amplitude data from main process
+ipcRenderer.on('amplitude', (_, amp) => {
+  ipcAmplitude = amp;
+});
+
+// Animate bars using IPC amplitude data from main process
+function animateFromIPC() {
+  let t = 0;
+  let frameCount = 0;
+  function loop() {
+    animationId = requestAnimationFrame(loop);
+    frameCount++;
+    
+    if (frameCount % 2 === 0) {
+      for (let i = 0; i < 6; i++) {
+        const centerFactor = 1 - (i / 6) * 0.3;
+        // Mix IPC amplitude with slight wave motion for organic look
+        const waveOffset = Math.sin(t * 0.08 + i * 0.6) * 2;
+        const target = (ipcAmplitude * 16 + waveOffset + 2) * centerFactor;
+        barHeights[i] = barHeights[i] * 0.6 + Math.max(target, 2) * 0.4;
+      }
+      drawBars();
+      t++;
+    }
+    
+    if (frameCount % 30 === 0) {
+      updateTimer();
+    }
+  }
+  loop();
 }
 
 // ULTRA-FAST Real audio animation with optimizations
