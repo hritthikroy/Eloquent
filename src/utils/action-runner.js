@@ -29,7 +29,7 @@ class OfficeActionRunner {
     if (lower.includes("go to sleep") || lower.includes("stand down") || lower.includes("shut down suit") || lower.includes("goodbye ava") || lower.includes("bye ava") || lower.includes("exit suit")) {
       return {
         handled: true,
-        speech: "Standing down and entering standby mode, Boss. I'm right here whenever you need me.",
+        speech: "Standing down and entering standby mode. I'm right here whenever you need me.",
         dismissSession: true
       };
     }
@@ -134,35 +134,35 @@ class OfficeActionRunner {
       try {
         exec('osascript -e \'tell application "Spotify" to play\' 2>/dev/null || open -a Spotify || open "https://open.spotify.com"');
       } catch (e) {}
-      return { handled: true, speech: "Starting music on Spotify now, Boss." };
+      return { handled: true, speech: "Starting music on Spotify now." };
     }
 
     if (lower.includes("pause music") || lower.includes("stop music") || lower.includes("pause song") || lower.includes("stop song") || lower.includes("pause track")) {
       try {
         exec('osascript -e \'tell application "Spotify" to pause\' 2>/dev/null || osascript -e \'tell application "Music" to pause\' 2>/dev/null');
       } catch (e) {}
-      return { handled: true, speech: "Music paused, Boss." };
+      return { handled: true, speech: "Music paused." };
     }
 
     if (lower.includes("resume music") || lower.includes("unpause music") || lower.includes("continue music")) {
       try {
         exec('osascript -e \'tell application "Spotify" to play\' 2>/dev/null || osascript -e \'tell application "Music" to play\' 2>/dev/null');
       } catch (e) {}
-      return { handled: true, speech: "Resuming music playback, Boss." };
+      return { handled: true, speech: "Resuming music playback." };
     }
 
     if (lower.includes("next song") || lower.includes("next track") || lower.includes("skip song") || lower.includes("skip track")) {
       try {
         exec('osascript -e \'tell application "Spotify" to next track\' 2>/dev/null || osascript -e \'tell application "Music" to next track\' 2>/dev/null');
       } catch (e) {}
-      return { handled: true, speech: "Skipping to next track, Boss." };
+      return { handled: true, speech: "Skipping to the next track." };
     }
 
     if (lower.includes("previous song") || lower.includes("previous track")) {
       try {
         exec('osascript -e \'tell application "Spotify" to previous track\' 2>/dev/null || osascript -e \'tell application "Music" to previous track\' 2>/dev/null');
       } catch (e) {}
-      return { handled: true, speech: "Playing previous track, Boss." };
+      return { handled: true, speech: "Playing previous track." };
     }
 
     // --- GAMING & ENTERTAINMENT ---
@@ -170,14 +170,14 @@ class OfficeActionRunner {
       try {
         exec('open -a Steam 2>/dev/null || open "https://poki.com"');
       } catch (e) {}
-      return { handled: true, speech: "Opening gaming hub now, Boss." };
+      return { handled: true, speech: "Opening gaming hub now." };
     }
 
     // --- SCREEN & VISION STATUS ---
     if (lower.includes("see our screen") || lower.includes("see my screen") || lower.includes("seeing our screen") || lower.includes("seeing my screen") || lower.includes("look at our screen") || lower.includes("look at my screen") || lower.includes("can you see the screen") || lower.includes("can you see my screen")) {
       return {
         handled: true,
-        speech: "I don't have direct optical vision on your display yet Boss, but I'm monitoring all your system processes, active apps, and audio feeds."
+        speech: "I don't have direct optical vision on your display yet, but I'm tracking all your active processes, apps, and audio feeds."
       };
     }
 
@@ -186,85 +186,85 @@ class OfficeActionRunner {
       try {
         exec('screencapture -i ~/Desktop/Screenshot_$(date +%s).png');
       } catch (e) {}
-      return { handled: true, speech: "Screenshot crosshairs active on your display, Boss." };
+      return { handled: true, speech: "Screenshot crosshairs ready on your display." };
     }
 
     if (lower.includes("dark mode") || lower.includes("light mode") || lower.includes("toggle appearance")) {
       try {
         exec("osascript -e 'tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode'");
       } catch (e) {}
-      return { handled: true, speech: "Toggled system appearance mode, Boss." };
+      return { handled: true, speech: "Toggled system appearance mode." };
     }
 
     if (lower.includes("open browser") || lower.includes("launch browser") || lower.includes("open chrome")) {
       try { exec('open -a "Google Chrome" 2>/dev/null || open -a Safari'); } catch (e) {}
-      return { handled: true, speech: "Opening web browser now, Boss." };
+      return { handled: true, speech: "Opening web browser now." };
     }
 
     if (lower.includes("open calculator") || lower.includes("launch calculator")) {
       try { exec('open -a Calculator'); } catch (e) {}
-      return { handled: true, speech: "Opening Calculator now, Boss." };
+      return { handled: true, speech: "Opening Calculator now." };
     }
 
     if (lower.includes("open calendar") || lower.includes("launch calendar")) {
       try { exec('open -a Calendar'); } catch (e) {}
-      return { handled: true, speech: "Opening Calendar now, Boss." };
+      return { handled: true, speech: "Opening Calendar now." };
     }
 
     if ((lower.includes("downloads") || lower.includes("downloads folder")) && (lower.includes("open") || lower.includes("show"))) {
       try { exec('open ~/Downloads'); } catch (e) {}
-      return { handled: true, speech: "Opening Downloads folder now, Boss." };
+      return { handled: true, speech: "Opening Downloads folder now." };
     }
 
     // --- WEB & APP LAUNCHER (Ava executes instantly) ---
     if (lower.includes("youtube") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch") || lower.includes("play"))) {
       try { exec('open "https://www.youtube.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening YouTube now, Boss." };
+      return { handled: true, speech: "Opening YouTube now." };
     }
 
     if (lower.includes("netflix") && (lower.includes("open") || lower.includes("turn on") || lower.includes("launch"))) {
       try { exec('open "https://www.netflix.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening Netflix now, Boss." };
+      return { handled: true, speech: "Opening Netflix now." };
     }
 
     if ((lower.includes("chatgpt") || lower.includes("chat gpt")) && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://chatgpt.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening ChatGPT now, Boss." };
+      return { handled: true, speech: "Opening ChatGPT now." };
     }
 
     if ((lower.includes("twitter") || lower.includes("open x ") || lower.includes("launch x")) && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://x.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening X now, Boss." };
+      return { handled: true, speech: "Opening X now." };
     }
 
     if ((lower.includes("gmail") || lower.includes("open mail") || lower.includes("launch mail")) && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://mail.google.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening Gmail now, Boss." };
+      return { handled: true, speech: "Opening Gmail now." };
     }
 
     if (lower.includes("whatsapp") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open -a WhatsApp || open "https://web.whatsapp.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening WhatsApp now, Boss." };
+      return { handled: true, speech: "Opening WhatsApp now." };
     }
 
     if (lower.includes("instagram") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://www.instagram.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening Instagram now, Boss." };
+      return { handled: true, speech: "Opening Instagram now." };
     }
 
     if (lower.includes("notion") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open -a Notion || open "https://www.notion.so"'); } catch (e) {}
-      return { handled: true, speech: "Opening Notion now, Boss." };
+      return { handled: true, speech: "Opening Notion now." };
     }
 
     if (lower.includes("figma") && (lower.includes("open") || lower.includes("launch") || lower.includes("turn on"))) {
       try { exec('open "https://www.figma.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening Figma now, Boss." };
+      return { handled: true, speech: "Opening Figma now." };
     }
 
     if (lower.includes("google maps") || (lower.includes("maps") && lower.includes("open"))) {
       try { exec('open "https://maps.google.com"'); } catch (e) {}
-      return { handled: true, speech: "Opening Google Maps now, Boss." };
+      return { handled: true, speech: "Opening Google Maps now." };
     }
 
     if (lower.includes("search google for") || lower.includes("search for") || lower.includes("google search")) {
@@ -319,7 +319,7 @@ class OfficeActionRunner {
     }
 
     if (lower.includes("mute volume") || lower.includes("mute audio")) {
-      return this.setVolume(0, "Muted the system audio for you, Boss.");
+      return this.setVolume(0, "Muted the system audio.");
     }
 
     if (lower.includes("volume to max") || lower.includes("full volume")) {
@@ -329,7 +329,7 @@ class OfficeActionRunner {
     const volMatch = lower.match(/volume (?:to )?(\d+)/i);
     if (volMatch && volMatch[1]) {
       const level = Math.min(100, Math.max(0, parseInt(volMatch[1], 10)));
-      return this.setVolume(level, `Volume adjusted to ${level} percent, Boss.`);
+      return this.setVolume(level, `Volume adjusted to ${level} percent.`);
     }
 
     // Open common apps
@@ -374,7 +374,7 @@ class OfficeActionRunner {
           agent: "Ava",
           role: "Executive Director & Team Lead",
           voice: "en-US-AvaNeural",
-          speech: "Alright team, remote office standup is in session! Welcome to the meeting, Boss. Andrew, let's start with engineering. What's our technical status?"
+          speech: "Alright team, remote office standup is in session! Welcome to the meeting, Hritthik. Andrew, let's start with engineering. What's our technical status?"
         },
         {
           agent: "Andrew",
@@ -398,7 +398,7 @@ class OfficeActionRunner {
           agent: "Ava",
           role: "Executive Director & Team Lead",
           voice: "en-US-AvaNeural",
-          speech: "Thanks team! The entire office is locked in and ready for your command, Boss. What should we tackle first?"
+          speech: "Thanks team! The entire office is locked in and ready whenever you want to dive in, Hritthik. What should we tackle first?"
         }
       ]
     };
@@ -422,10 +422,10 @@ class OfficeActionRunner {
 
       return {
         handled: true,
-        speech: `All suit systems are green, Boss. Power is at ${battPct} percent ${battStatus}. Memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} active CPU cores. I am standing by for your command.`
+        speech: `All systems are green, Hritthik. Power is at ${battPct} percent ${battStatus}. Memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} active CPU cores. Everything is running smoothly.`
       };
     } catch (e) {
-      return { handled: true, speech: "All suit systems are online and operational, Boss." };
+      return { handled: true, speech: "All systems are online and operational, Hritthik." };
     }
   }
 
@@ -434,7 +434,7 @@ class OfficeActionRunner {
       exec("pmset displaysleepnow");
       return {
         handled: true,
-        speech: "Securing your workstation and putting the screen to sleep now, Boss."
+        speech: "Securing your workstation and putting the screen to sleep now."
       };
     } catch (e) {
       return { handled: true, speech: "Securing your screen now." };
@@ -448,10 +448,10 @@ class OfficeActionRunner {
       execSync(`osascript -e "set volume output volume ${target}"`, { timeout: 2000 });
       return {
         handled: true,
-        speech: `Volume set to ${target} percent, Boss.`
+        speech: `Volume set to ${target} percent.`
       };
     } catch (e) {
-      return { handled: true, speech: "Volume adjusted, Boss." };
+      return { handled: true, speech: "Volume adjusted." };
     }
   }
 
@@ -525,7 +525,7 @@ class OfficeActionRunner {
       exec(`open -a "Visual Studio Code" "${this.projectDir}"`);
       return {
         handled: true,
-        speech: "Opening Visual Studio Code with the project now, Boss."
+        speech: "Opening Visual Studio Code with the project now."
       };
     } catch (e) {
       return { handled: true, speech: "Launching your code editor now." };
@@ -624,7 +624,7 @@ class OfficeActionRunner {
       }
       return {
         handled: true,
-        speech: `Opening ${appName} for you now, Boss.`
+        speech: `Opening ${appName} now.`
       };
     } catch (e) {
       return { handled: true, speech: `Opening ${appName} now.` };
@@ -640,7 +640,7 @@ class OfficeActionRunner {
       execSync(`osascript -e 'tell application "Reminders" to make new reminder with properties {name:"${cleanTask}"}'`, { timeout: 3000 });
       return {
         handled: true,
-        speech: `I've added "${task}" to your Apple Reminders list, Boss.`
+        speech: `Added "${task}" to your Apple Reminders list.`
       };
     } catch (e) {
       return {
@@ -657,7 +657,7 @@ class OfficeActionRunner {
       execSync(`osascript -e 'tell application "Notes" to make new note with properties {name:"Voice Note (${timestamp})", body:"${cleanContent}"}'`, { timeout: 3000 });
       return {
         handled: true,
-        speech: `Note captured in your Apple Notes app, Boss.`
+        speech: "Note captured in your Apple Notes app."
       };
     } catch (e) {
       return {
@@ -811,7 +811,7 @@ class OfficeActionRunner {
     try {
       const clip = execSync("pbpaste", { timeout: 2000 }).toString().trim();
       if (!clip) {
-        return { handled: true, speech: "Your clipboard is currently empty, Boss." };
+        return { handled: true, speech: "Your clipboard is currently empty." };
       }
       const preview = clip.slice(0, 160).replace(/[\r\n]+/g, " ");
       return {
@@ -830,7 +830,7 @@ class OfficeActionRunner {
       cp.stdin.end();
       return {
         handled: true,
-        speech: `I have copied that to your clipboard, Boss.`
+        speech: "Copied that to your clipboard."
       };
     } catch (e) {
       return { handled: true, speech: "Unable to copy to clipboard." };
