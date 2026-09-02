@@ -189,13 +189,13 @@ class AudioRecorder {
         const signalChars = rawBars.replace(/[\s]/g, '');
         let energy = 0;
         for (const ch of signalChars) {
-          if (ch === '-' || ch === ':') energy += 1;
-          else if (ch === '=') energy += 2;
-          else if (ch === '#' || ch === '!') energy += 3;
-          else energy += 1;
+          if (ch === '-' || ch === ':') energy += 0.5; // Ambient floor / noise
+          else if (ch === '=') energy += 2.0;          // Real human vocal signal
+          else if (ch === '#' || ch === '!') energy += 3.0; // Vocal peaks
+          else energy += 1.0;
         }
-        // If there is ANY signal activity inside VU meter, guarantee minimum 0.08 amplitude
-        const amplitude = signalChars.length > 0 ? Math.max(0.08, Math.min(energy / 12, 1.0)) : 0;
+        // Accurate amplitude: 0.0 in room silence, 0.02-0.06 in ambient noise, 0.20-1.0 in real voice
+        const amplitude = Math.min(energy / 14, 1.0);
         this.onAmplitude(amplitude);
       }
     });

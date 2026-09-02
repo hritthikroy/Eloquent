@@ -1775,31 +1775,34 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude >= 0.04) {
+          const SPEECH_THRESHOLD = 0.11; // Distinguishes real voice from background noise
+          const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
+
+          if (isSpeechFrame) {
             if (!jarvisSpeechDetected) {
               jarvisSpeechStartTime = Date.now();
             }
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
             jarvisSpeechFrames++;
-          } else if (jarvisSpeechDetected) {
+          }
+
+          if (jarvisSpeechDetected) {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
-            const speechDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime + 130;
+            const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // Ultra-Fast Zero-Lag Natural Silence Detection:
-            // 1. Natural pause: 380ms silence after >= 100ms speech (ultra-fast human conversational cadence)
-            // 2. Quick breath after longer speech: 280ms silence after >= 1800ms speech
-            // 3. Maximum speech cap: 200ms silence after >= 5000ms speech
-            const isNaturalPause = (silenceMs >= 380 && speechDurationMs >= 100);
-            const isQuickBreath = (speechDurationMs >= 1800 && silenceMs >= 280);
-            const isLongSpeechCap = (speechDurationMs >= 5000 && silenceMs >= 200);
+            // 1. Natural Pause: 350ms silence after >= 100ms real speech
+            const isNaturalPause = !isSpeechFrame && (silenceMs >= 350) && (speechDurationMs >= 100);
+            // 2. Hard Speech Cap: 4.5s total elapsed speech (guarantees zero hang even with room noise)
+            const isMaxSpeechCap = speechDurationMs >= 4500;
 
-            if (isNaturalPause || isQuickBreath || isLongSpeechCap) {
-              console.log(`🗣️ Instant natural pause detected (${speechDurationMs}ms speech, ${silenceMs}ms silence). Auto-submitting to Tuk Tuk...`);
+            if (isNaturalPause || isMaxSpeechCap) {
+              const reason = isMaxSpeechCap ? "4.5s max speech cap reached" : `${silenceMs}ms natural pause`;
+              console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${speechDurationMs}ms speech)...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
-            } else if (silenceMs > 1500 && jarvisSpeechFrames < 2) {
-              // Isolated solitary blip with prolonged silence (>1.5s) — reset to listen cleanly
+            } else if (!isSpeechFrame && silenceMs > 1200 && jarvisSpeechFrames < 2) {
+              // Isolated solitary noise blip with prolonged silence (>1.2s) — reset to listen cleanly
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;
