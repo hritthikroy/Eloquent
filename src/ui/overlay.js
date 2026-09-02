@@ -226,6 +226,13 @@ ipcRenderer.on('set-mode', (_, m) => {
     }
   }
   
+  // Reset subtitles
+  const subtitleBox = document.getElementById('jarvisSubtitles');
+  if (subtitleBox) {
+    subtitleBox.textContent = '';
+    subtitleBox.style.display = 'none';
+  }
+
   // Ensure timer is visible and initialized
   updateTimer();
 });
@@ -234,17 +241,43 @@ ipcRenderer.on('set-mode', (_, m) => {
 ipcRenderer.on('jarvis-thinking', () => {
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = 'Thinking...';
+  const subtitleBox = document.getElementById('jarvisSubtitles');
+  if (subtitleBox) {
+    subtitleBox.textContent = 'Processing request...';
+    subtitleBox.style.display = 'block';
+  }
 });
 
-ipcRenderer.on('jarvis-speaking', () => {
+ipcRenderer.on('jarvis-speaking', (_, text) => {
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = 'Speaking...';
+  const subtitleBox = document.getElementById('jarvisSubtitles');
+  if (subtitleBox && text) {
+    subtitleBox.textContent = text;
+    subtitleBox.style.display = 'block';
+  }
+});
+
+ipcRenderer.on('jarvis-listening', () => {
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) recLabel.textContent = 'Jarvis';
+  const subtitleBox = document.getElementById('jarvisSubtitles');
+  if (subtitleBox) {
+    subtitleBox.textContent = '';
+    subtitleBox.style.display = 'none';
+  }
 });
 
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   console.log('🎙️ Recording started event received:', recordingStartTime);
   startTime = recordingStartTime;
+
+  const subtitleBox = document.getElementById('jarvisSubtitles');
+  if (subtitleBox) {
+    subtitleBox.textContent = '';
+    subtitleBox.style.display = 'none';
+  }
 
   // 1. Remove fade-out and error classes so overlay is pristine and visible
   if (overlay) {

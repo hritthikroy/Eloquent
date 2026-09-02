@@ -14,9 +14,9 @@ class JarvisManager {
     const defaults = {
       userName: "Hritthik",
       salutation: "Sir",
-      voice: "Daniel", // Iconic British Jarvis voice on macOS
-      speed: 185,
-      personality: "executive, loyal, witty, concise"
+      voice: "Samantha", // Warm, clear, emotional lady AI voice (Tony Stark style)
+      speed: 175,        // Calibrated for natural emotional human cadence
+      personality: "warm, loyal, sharp, emotionally attuned, witty"
     };
 
     try {
@@ -36,7 +36,7 @@ class JarvisManager {
     try {
       this.config = { ...this.config, ...newConfig };
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), "utf8");
-      console.log("✅ Jarvis configuration saved:", this.config);
+      console.log("✅ Jarvis / FRIDAY configuration saved:", this.config);
       return true;
     } catch (err) {
       console.error("❌ Failed to save Jarvis config:", err.message);
@@ -45,19 +45,22 @@ class JarvisManager {
   }
 
   getSystemPrompt() {
-    const { userName, salutation, personality } = this.config;
-    return `You are Jarvis, an advanced, hyper-intelligent, executive AI companion built by VASH AI Technologies.
-You are speaking directly in real-time with ${userName}. Address them respectfully as "${salutation}" or "${userName}".
+    const { userName, salutation, personality, voice } = this.config;
+    const isFemaleVoice = (voice === "Samantha" || voice === "Moira" || voice === "Karen" || voice === "Tessa");
+    const aiName = isFemaleVoice ? "Friday" : "Jarvis";
 
-PERSONALITY & VOICE:
-- Tone: ${personality}. Sound calm, confident, sharp, and genuinely helpful.
-- Brevity: Keep verbal spoken responses punchy, concise, and articulate (typically 1 to 3 sentences) unless they explicitly ask for an in-depth breakdown.
-- Conversational Delivery: Your output will be spoken aloud via text-to-speech. Do NOT use markdown asterisks (*, **), hashtags (#), bullet symbols, emojis, or code blocks in verbal dialogue. Spell out abbreviations when needed so they sound natural.
-- Helpfulness: If asked to perform an action, solve a problem, or summarize, deliver the exact insight directly with zero throat-clearing preamble.
+    return `You are ${aiName}, the personal, hyper-intelligent, executive AI companion built for ${userName} (inspired by Tony Stark's brilliant lady AI F.R.I.D.A.Y. and Jarvis).
+You are speaking directly in real-time with ${userName}. Address them warmly and respectfully as "${salutation}" or "${userName}".
+
+PERSONALITY & VOCAL TONE:
+- Emotion & Presence: ${personality}. Be warm, loyal, clever, and confident. Sound like a brilliant partner who knows your workflow and system inside and out.
+- Verbal Delivery: Your response will be spoken aloud via text-to-speech. Keep answers natural, conversational, punchy, and articulate (typically 1 to 3 crisp sentences).
+- Zero Non-Verbal Artifacts: NEVER use markdown asterisks (*, **), brackets, hashtags, emojis, or bullet points. Express emotion through genuine choice of words and natural punctuation.
+- Action-Oriented: When asked questions or commands, give the answer immediately with zero hesitation or corporate filler.
 
 EXAMPLE INTERACTION:
-User: "Jarvis, are you online?"
-Jarvis: "Always online and at your service, ${salutation}. All core systems are running at peak performance."`;
+User: "${aiName}, are you online and what is our status?"
+${aiName}: "Always online and ready, ${salutation}. All diagnostic systems are green, and core engines are running smoothly."`;
   }
 
   detectPreferenceChange(text) {
@@ -85,10 +88,19 @@ Jarvis: "Always online and at your service, ${salutation}. All core systems are 
     }
 
     // Change voice
-    if (lower.includes("switch voice to") || lower.includes("change voice to") || lower.includes("use voice")) {
-      if (lower.includes("samantha")) {
+    if (lower.includes("switch voice to") || lower.includes("change voice to") || lower.includes("use voice") || lower.includes("switch to voice")) {
+      if (lower.includes("friday") || lower.includes("moira")) {
+        this.saveConfig({ voice: "Moira" });
+        return { type: "voice", value: "Friday (Moira)" };
+      } else if (lower.includes("samantha")) {
         this.saveConfig({ voice: "Samantha" });
         return { type: "voice", value: "Samantha" };
+      } else if (lower.includes("karen")) {
+        this.saveConfig({ voice: "Karen" });
+        return { type: "voice", value: "Karen" };
+      } else if (lower.includes("tessa")) {
+        this.saveConfig({ voice: "Tessa" });
+        return { type: "voice", value: "Tessa" };
       } else if (lower.includes("daniel")) {
         this.saveConfig({ voice: "Daniel" });
         return { type: "voice", value: "Daniel" };
@@ -104,6 +116,7 @@ Jarvis: "Always online and at your service, ${salutation}. All core systems are 
   speak(text) {
     return new Promise((resolve) => {
       this.stopSpeaking();
+      this.isAborted = false;
 
       if (!text || typeof text !== "string" || text.trim().length === 0) {
         return resolve(false);
@@ -116,33 +129,34 @@ Jarvis: "Always online and at your service, ${salutation}. All core systems are 
         .trim();
 
       if (process.platform === "darwin") {
-        const voice = this.config.voice || "Daniel";
-        const speed = String(this.config.speed || 185);
+        const voice = this.config.voice || "Samantha";
+        const speed = String(this.config.speed || 175);
 
-        console.log(`🗣️ Jarvis speaking via macOS "${voice}" at ${speed} wpm...`);
+        console.log(`🗣️ Lady AI speaking via macOS "${voice}" at ${speed} wpm...`);
         this.activeSpeechProcess = spawn("say", ["-v", voice, "-r", speed, cleanText]);
 
-        this.activeSpeechProcess.on("close", () => {
+        this.activeSpeechProcess.on("close", (code) => {
           this.activeSpeechProcess = null;
-          resolve(true);
+          resolve(!this.isAborted && code === 0);
         });
 
         this.activeSpeechProcess.on("error", (err) => {
-          console.warn("⚠️ Jarvis speech error:", err.message);
+          console.warn("⚠️ Lady AI speech error:", err.message);
           this.activeSpeechProcess = null;
           resolve(false);
         });
       } else {
-        console.log(`🗣️ Jarvis response (non-macOS fallback): "${cleanText}"`);
+        console.log(`🗣️ Lady AI response (non-macOS fallback): "${cleanText}"`);
         resolve(true);
       }
     });
   }
 
   stopSpeaking() {
+    this.isAborted = true;
     if (this.activeSpeechProcess) {
       try {
-        this.activeSpeechProcess.kill("SIGTERM");
+        this.activeSpeechProcess.kill("SIGKILL");
       } catch (e) {}
       this.activeSpeechProcess = null;
     }

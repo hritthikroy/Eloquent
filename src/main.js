@@ -202,6 +202,7 @@ let isCreatingOverlay = false;
 let overlayCreationLock = false;
 let lastOverlayCreationTime = 0;
 let recordingStartTime = 0;
+let isJarvisLoopActive = false;
 
 // Get active API key based on usage
 function getActiveAPIKey() {
@@ -872,10 +873,13 @@ function createTray() {
           }))
         },
         {
-          label: '🗣️ Voice (TTS)',
+          label: '🗣️ Voice Persona',
           submenu: [
-            { id: 'Daniel', name: 'Daniel (British Jarvis)' },
-            { id: 'Samantha', name: 'Samantha (US Female)' },
+            { id: 'Samantha', name: 'Samantha (Warm & Emotional Lady AI - Default)' },
+            { id: 'Moira', name: "F.R.I.D.A.Y. [Moira] (Tony Stark's Irish Lady AI)" },
+            { id: 'Karen', name: "Karen (Tony Stark's Suit Lady AI)" },
+            { id: 'Tessa', name: 'Tessa (Executive Lady AI)' },
+            { id: 'Daniel', name: 'Daniel (Classic British Jarvis)' },
             { id: 'Aman', name: 'Aman (Indian English)' }
           ].map(v => ({
             label: v.name,
@@ -988,6 +992,9 @@ function handleShortcut(action, mode = 'standard') {
   }, SHORTCUT_DEBOUNCE);
   
   if (action === 'start') {
+    if (mode === 'jarvis') {
+      isJarvisLoopActive = true;
+    }
     if (isRecording) {
       console.log('🛑 Shortcut pressed while recording - toggling stop');
       stopRecording();
@@ -995,8 +1002,11 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
+    console.log('🛑 ESC pressed - completely stopping and silencing Jarvis');
+    isJarvisLoopActive = false;
     jarvisManager.stopSpeaking();
     stopRecording();
+    hideOverlay();
   }
 }
 
@@ -1073,13 +1083,13 @@ function registerShortcuts() {
 
 
 // Calculate cursor position for overlay placement
-function getCursorTargetPosition() {
+function getCursorTargetPosition(mode = 'standard') {
   const cursorPosition = screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 280;
-  const windowHeight = 50;
+  const windowWidth = mode === 'jarvis' ? 380 : 280;
+  const windowHeight = mode === 'jarvis' ? 120 : 50;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 20;
 
@@ -1170,7 +1180,7 @@ function showOverlayUltraFast(mode = 'standard') {
   }
 
   const win = initOverlayWindow();
-  const targetPos = getCursorTargetPosition();
+  const targetPos = getCursorTargetPosition(mode);
   win.setBounds(targetPos);
 
   const displayAndRecord = () => {
@@ -1783,13 +1793,15 @@ async function stopRecording() {
       finalText = jarvisReply;
 
       if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.webContents.send('jarvis-speaking');
+        overlayWindow.webContents.send('jarvis-speaking', jarvisReply);
       }
 
       playSound('success');
 
-      // Show notification with Jarvis response
-      showNotification(`🤖 Jarvis (${jarvisManager.config.salutation})`, jarvisReply);
+      // Show notification with Jarvis/Friday response
+      const isLadyVoice = ['Samantha', 'Moira', 'Karen', 'Tessa'].includes(jarvisManager.config.voice);
+      const aiTitle = isLadyVoice ? 'Friday' : 'Jarvis';
+      showNotification(`🤖 ${aiTitle} (${jarvisManager.config.salutation})`, jarvisReply);
 
       // Save to history
       saveToHistory({
@@ -1801,11 +1813,27 @@ async function stopRecording() {
         duration: recordingDuration
       });
 
-      // Speak Jarvis response aloud with configured custom voice
-      await jarvisManager.speak(jarvisReply);
+      // Speak response aloud with configured custom voice
+      const speechSuccess = await jarvisManager.speak(jarvisReply);
 
-      // Smoothly hide overlay after speaking
-      hideOverlay();
+      // If user aborted during speech with ESC
+      if (!isJarvisLoopActive) {
+        hideOverlay();
+        return;
+      }
+
+      // Real-time hands-free turn taking loop
+      if (speechSuccess && isJarvisLoopActive) {
+        console.log('🎙️ Re-arming mic for real-time conversational follow-up...');
+        setTimeout(() => {
+          if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
+          overlayWindow.webContents.send('jarvis-listening');
+          overlayWindow.webContents.send('recording-started', Date.now());
+          startRecording();
+        }, 600);
+      } else {
+        hideOverlay();
+      }
       return;
     } else if (currentMode === 'rewrite') {
       console.log('🤖 AI rewriting...');

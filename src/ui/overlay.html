@@ -213,23 +213,59 @@
       width: 40px;
       height: 16px;
     }
+
+    .overlay-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .jarvis-subtitles {
+      display: none;
+      font-size: 13px;
+      line-height: 1.45;
+      font-weight: 500;
+      color: #f8fafc;
+      padding: 8px 14px;
+      background: rgba(15, 23, 42, 0.92);
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.2);
+      backdrop-filter: blur(20px);
+      max-width: 350px;
+      margin-top: 6px;
+      text-align: center;
+      pointer-events: none;
+      word-wrap: break-word;
+      animation: subtitlePop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes subtitlePop {
+      0% { opacity: 0; transform: translateY(-4px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
   </style>
 </head>
 
 <body>
-  <div class="overlay" id="overlay">
-    <div class="rec-indicator">
-      <div class="rec-ring"></div>
-      <div class="rec-dot"></div>
+  <div class="overlay-container">
+    <div class="overlay" id="overlay">
+      <div class="rec-indicator">
+        <div class="rec-ring"></div>
+        <div class="rec-dot"></div>
+      </div>
+
+      <span class="rec-label">Recording</span>
+
+      <div class="waveform">
+        <canvas id="waveCanvas"></canvas>
+      </div>
+
+      <div class="timer" id="timer">0:00</div>
     </div>
 
-    <span class="rec-label">Recording</span>
-
-    <div class="waveform">
-      <canvas id="waveCanvas"></canvas>
-    </div>
-
-    <div class="timer" id="timer">0:00</div>
+    <div class="jarvis-subtitles" id="jarvisSubtitles"></div>
   </div>
 
   <script src="overlay.js"></script>
