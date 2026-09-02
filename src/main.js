@@ -1428,8 +1428,12 @@ function replaceLiveWordsWithFinal(wordCount, finalText) {
   }
 }
 
+let previewRateLimitedUntil = 0;
+
 async function transcribePreview(snapshotPath) {
   try {
+    if (Date.now() < previewRateLimitedUntil) return '';
+
     const FormData = require('form-data');
     const form = new FormData();
     form.append('file', fs.createReadStream(snapshotPath), {
@@ -1456,7 +1460,8 @@ async function transcribePreview(snapshotPath) {
     );
 
     if (res.status === 429) {
-      console.warn('⚠️ Preview rate limited (429), pausing chunk');
+      console.warn('⚠️ Preview rate limited (429), backing off preview for 15s to preserve quota for final text');
+      previewRateLimitedUntil = Date.now() + 15000;
       return '';
     }
 
@@ -1472,14 +1477,14 @@ function startLiveStreaming(filePath) {
   totalLiveWordsTyped = 0;
   lastProcessedAudioSize = 0;
 
-  // Stream live words directly into active window text field in real-time
+  // Stream live words safely under Groq 20 RPM limit (every 3.5s)
   liveStreamingInterval = setInterval(async () => {
-    if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
+    if (!isRecording || isStreamingChunk || Date.now() < previewRateLimitedUntil || !fs.existsSync(filePath)) return;
 
     try {
       const stats = await fsPromises.stat(filePath);
-      // Wait for at least ~0.8s of audio and 16KB of new speech before querying
-      if (stats.size < 24000 || (stats.size - lastProcessedAudioSize < 16000)) return;
+      // Wait for at least ~1.5s of audio and 32KB of new speech before querying
+      if (stats.size < 32000 || (stats.size - lastProcessedAudioSize < 24000)) return;
 
       isStreamingChunk = true;
       lastProcessedAudioSize = stats.size;
@@ -1521,7 +1526,7 @@ function startLiveStreaming(filePath) {
     } finally {
       isStreamingChunk = false;
     }
-  }, 1600);
+  }, 3500);
 }
 
 function stopLiveStreaming() {
