@@ -136,6 +136,12 @@ let isAuthenticated = false;
 let processingOAuth = false; // Flag to prevent duplicate OAuth processing
 let lastProcessedOAuthUrl = null; // Track last processed URL
 let lastInterruptedUtterance = null; // Track interrupted AI speech for full-duplex overlap handling
+let jarvisSpeechDetected = false;
+let jarvisLastSpeechTime = 0;
+let jarvisSpeechStartTime = 0;
+let jarvisSpeechFrames = 0;
+let jarvisAutoStopTriggered = false;
+let jarvisVadHeartbeat = null;
 
 // Helper function to find sox/rec binary
 function getRecordingBinary() {
@@ -1745,11 +1751,42 @@ function startRecording() {
   performanceMonitor.measureRecordingLatency();
   
   // VAD state for automatic hands-free turn taking in Jarvis mode
-  let jarvisSpeechDetected = false;
-  let jarvisLastSpeechTime = 0;
-  let jarvisSpeechStartTime = 0;   // When continuous speech first began (for duration gate)
-  let jarvisSpeechFrames = 0;      // Confirmed audio frames above threshold
-  let jarvisAutoStopTriggered = false;
+  jarvisSpeechDetected = false;
+  jarvisLastSpeechTime = 0;
+  jarvisSpeechStartTime = 0;   // When continuous speech first began (for duration gate)
+  jarvisSpeechFrames = 0;      // Confirmed audio frames above threshold
+  jarvisAutoStopTriggered = false;
+  if (jarvisVadHeartbeat) {
+    clearInterval(jarvisVadHeartbeat);
+    jarvisVadHeartbeat = null;
+  }
+
+  // Independent 60ms VAD Heartbeat: Checks silence continuously regardless of SoX stderr buffering
+  if (currentMode === 'jarvis') {
+    jarvisVadHeartbeat = setInterval(() => {
+      if (!isRecording || currentMode !== 'jarvis' || jarvisAutoStopTriggered) {
+        if (jarvisVadHeartbeat) {
+          clearInterval(jarvisVadHeartbeat);
+          jarvisVadHeartbeat = null;
+        }
+        return;
+      }
+      if (jarvisSpeechDetected) {
+        const silenceMs = Date.now() - jarvisLastSpeechTime;
+        const speechDurationMs = Date.now() - jarvisSpeechStartTime;
+        // 320ms natural silence after >= 120ms real voice = immediate auto-submit!
+        if (silenceMs >= 320 && speechDurationMs >= 120) {
+          console.log(`🗣️ VAD Heartbeat: Natural pause detected (${silenceMs}ms silence after ${speechDurationMs}ms speech) - auto-submitting!`);
+          jarvisAutoStopTriggered = true;
+          if (jarvisVadHeartbeat) {
+            clearInterval(jarvisVadHeartbeat);
+            jarvisVadHeartbeat = null;
+          }
+          stopRecording();
+        }
+      }
+    }, 60);
+  }
 
   // Use cross-platform audio recorder
   audioRecorder.startRecording(audioFile)
@@ -1851,6 +1888,11 @@ async function stopRecording() {
   if (maxRecordingTimeout) {
     clearTimeout(maxRecordingTimeout);
     maxRecordingTimeout = null;
+  }
+
+  if (jarvisVadHeartbeat) {
+    clearInterval(jarvisVadHeartbeat);
+    jarvisVadHeartbeat = null;
   }
 
   if (isProcessing || (!isRecording && !recordingProcess)) {

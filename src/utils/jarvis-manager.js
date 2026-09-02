@@ -642,6 +642,8 @@ If the user revealed a personal habit, project update, emotional state, interest
             // 75ms speaker decay — crisp fade before mic opens
             setTimeout(() => {
               this.isSpeaking = false;
+              this.currentUtterance = null;
+              this.interruptedUtterance = null;
               this.activeSpeechProcess = null;
               try { fs.unlinkSync(tempAudioPath); } catch (e) {}
               resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
@@ -732,6 +734,8 @@ If the user revealed a personal habit, project update, emotional state, interest
         this.activeSpeechProcess.on("close", (code) => {
           setTimeout(() => {
             this.isSpeaking = false;
+            this.currentUtterance = null;
+            this.interruptedUtterance = null;
             this.activeSpeechProcess = null;
             try {
               if (fs.existsSync(tempVocalPath)) fs.unlinkSync(tempVocalPath);
