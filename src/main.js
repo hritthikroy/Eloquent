@@ -1719,7 +1719,9 @@ function startRecording() {
   }
   maxRecordingTimeout = setTimeout(() => {
     console.log('⏱️ Maximum recording duration reached (10 minutes). Auto-stopping...');
-    showNotification('⏱️ 10-Minute Limit Reached', 'Recording stopped automatically to keep dictation fast and within limits.');
+    if (currentMode !== 'jarvis') {
+      showNotification('⏱️ 10-Minute Limit Reached', 'Recording stopped automatically to keep dictation fast and within limits.');
+    }
     stopRecording();
   }, MAX_RECORDING_DURATION_MS);
 
