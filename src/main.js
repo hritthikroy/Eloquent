@@ -1468,16 +1468,29 @@ function startLiveStreaming(filePath) {
         const cleanPreview = previewText.trim();
         const newWords = cleanPreview.split(/\s+/);
         
-        // ONLY type new words that have not been typed yet!
+        // ONLY type new words if they share the same prefix as what we already typed
+        // This prevents Whisper's cumulative re-transcription from diverging and typing hallucinated content
         if (newWords.length > liveWordsTyped.length) {
-          const additionalWords = newWords.slice(liveWordsTyped.length);
-          const textToType = (liveWordsTyped.length === 0 ? '' : ' ') + additionalWords.join(' ');
+          // Verify prefix consistency — the new transcription must match what we already typed
+          let prefixMatches = true;
+          for (let i = 0; i < liveWordsTyped.length; i++) {
+            if (newWords[i].toLowerCase() !== liveWordsTyped[i].toLowerCase()) {
+              prefixMatches = false;
+              console.log(`⚠️ Live preview diverged at word ${i}: "${liveWordsTyped[i]}" vs "${newWords[i]}" — skipping`);
+              break;
+            }
+          }
           
-          totalLiveCharsTyped += textToType.length;
-          liveWordsTyped = newWords;
-          
-          console.log(`✍️ Real-time typing at cursor: "${textToType}"`);
-          typeLiveTextAtCursor(textToType);
+          if (prefixMatches) {
+            const additionalWords = newWords.slice(liveWordsTyped.length);
+            const textToType = (liveWordsTyped.length === 0 ? '' : ' ') + additionalWords.join(' ');
+            
+            totalLiveCharsTyped += textToType.length;
+            liveWordsTyped = newWords;
+            
+            console.log(`✍️ Real-time typing at cursor: "${textToType}"`);
+            typeLiveTextAtCursor(textToType);
+          }
         }
       }
       fs.unlink(snapshotPath, () => {});
@@ -2051,15 +2064,24 @@ function postProcessTranscription(text) {
 async function applyGrammarFixes(text) {
   const startTime = Date.now();
   
-  const grammarPrompt = `You are an elite grammar, punctuation, and voice-to-text contextual correction AI.
-Your job is to understand what the speaker actually said, fix transcription mishearings, and output grammatically perfect, natural text.
+  const grammarPrompt = `You are a grammar and punctuation correction assistant for voice-to-text output.
 
-CRITICAL RULES:
-1. DEEP CONTEXT RECOVERY: Deduce and fix words misheard by speech recognition based on context (e.g., "car inside" → "cursor inside", "light detection" → "live dictation", "chac kevery" → "check every", "under stend" → "understanding", "noice" → "noise", "ultar" → "ultra").
-2. REMOVE REPETITIONS & STUTTER: Remove verbal loops, repeated greetings, and false starts (e.g., "hello hello hello", "please please").
-3. FIX ALL GRAMMAR & TYPOS: Subject-verb agreement, tense consistency, spelling, and proper punctuation (periods, commas, question marks).
-4. PRESERVE INTENT & EMOTION: Detect the speaker's emotional tone (questions, commands, urgency, emphasis) and reflect it faithfully with expressive punctuation (?, !). If the speech is an AI prompt or instructions, ensure it reads like an authoritative, clear prompt.
-5. CLEAN OUTPUT ONLY: Return ONLY the final corrected text. No explanations or quotes.`;
+YOUR ONLY JOB: Fix grammar, punctuation, capitalization, and remove stutters/repetitions.
+
+ABSOLUTE RULES:
+1. NEVER change the speaker's words. Keep their exact vocabulary and phrasing. Do NOT rephrase, restructure, or rewrite sentences.
+2. NEVER add words the speaker did not say. NEVER remove words unless they are exact duplicates (stutter).
+3. Fix spelling errors ONLY when clearly misspelled (e.g., "teh" → "the"). Do NOT change correctly spelled words to different words.
+4. Add proper punctuation: periods at sentence ends, commas for pauses, question marks for questions, exclamation marks for emphasis.
+5. Fix capitalization: capitalize first word of sentences, proper nouns, and "I".
+6. Remove exact consecutive word repetitions (e.g., "fidelity fidelity" → "fidelity", "my my" → "my").
+7. Preserve the speaker's tone: keep questions as questions, keep commands as commands.
+8. Return ONLY the corrected text. No explanations, no quotes.
+
+EXAMPLE:
+Input: "Hello how are you are you listening to my my full talk and watch it in detail every symbol accurately and it cleanly with full emotional fidelity fidelity"
+Output: "Hello, how are you? Are you listening to my full talk and watch it in detail, every symbol accurately and it cleanly with full emotional fidelity?"`;
+
 
   try {
     const { content, model, usage } = await callGroqChatCompletion([
