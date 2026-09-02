@@ -1521,11 +1521,35 @@ function isWhisperHallucination(text) {
   const clean = text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').trim();
   if (clean.length < 3) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
+
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
   const trimmed = text.trim();
   if (/^\[.+\]$/.test(trimmed) || /^\(.+\)$/.test(trimmed) || /^\*.+\*$/.test(trimmed)) return true;
+
   // Subtitles / video metadata phantom text
   if (clean.startsWith('subtitles by') || clean.includes('amaraorg') || clean.includes('closed caption')) return true;
+
+  // Detect consecutive word repetition loops (e.g. "please, please, please", "you you you", "so so so")
+  if (/\b(\w+)(?:[,\s]+\1){2,}\b/i.test(text)) {
+    return true;
+  }
+
+  // Detect consecutive 2-word phrase repetition loops (e.g. "thank you thank you thank you")
+  if (/\b(\w+\s+\w+)(?:[,\s]+\1){2,}\b/i.test(text)) {
+    return true;
+  }
+
+  // Detect Whisper hallucinated outros/sign-offs on low-noise audio
+  if (clean.includes('if you have any questions') ||
+      clean.includes('questions please') ||
+      clean.includes('thanks for listening') ||
+      clean.includes('thank you for listening') ||
+      clean.includes('see you in the next') ||
+      clean.includes('see you next time') ||
+      clean.includes('share and subscribe')) {
+    return true;
+  }
+
   return false;
 }
 
@@ -1712,6 +1736,7 @@ function startRecording() {
   let jarvisSpeechDetected = false;
   let jarvisLastSpeechTime = 0;
   let jarvisSpeechStartTime = 0;   // When continuous speech first began (for duration gate)
+  let jarvisSpeechFrames = 0;      // Confirmed audio frames above threshold
   let jarvisAutoStopTriggered = false;
 
   // Use cross-platform audio recorder
@@ -1739,25 +1764,27 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude > 0.10) {
+          if (amplitude > 0.12) {
             if (!jarvisSpeechDetected) {
               jarvisSpeechStartTime = Date.now(); // Mark when speech began
             }
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
-          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 700)) {
+            jarvisSpeechFrames++;
+          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 750)) {
             const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
-            if (confirmedSpeechMs >= 300) {
-              // Real speech confirmed (≥300ms sustained) — submit to agent
-              console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech. Auto-submitting...`);
+            if (confirmedSpeechMs >= 400 && jarvisSpeechFrames >= 3) {
+              // Real speech confirmed (≥400ms sustained across ≥3 frames) — submit to agent
+              console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech (${jarvisSpeechFrames} frames). Auto-submitting...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
             } else {
-              // Noise blip — reset and keep listening
-              console.log(`🔇 Ignoring ${confirmedSpeechMs}ms noise blip — waiting for real speech...`);
+              // Noise blip or room click — reset and keep listening
+              console.log(`🔇 Ignoring ${confirmedSpeechMs}ms noise blip (${jarvisSpeechFrames} frames) — waiting for real speech...`);
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;
+              jarvisSpeechFrames = 0;
             }
           }
         }
@@ -2137,14 +2164,12 @@ async function transcribe(filePath) {
     contentType: 'audio/wav'
   });
   
-  // Whisper Large V3 Turbo transcription
+  // Whisper Large V3 Turbo transcription - Always Pure Professional English
   form.append('model', 'whisper-large-v3-turbo');
-  if (currentMode !== 'jarvis') {
-    form.append('language', 'en'); // Force English for standard dictation
-  }
+  form.append('language', 'en'); // Force English for all modes (Jarvis & Dictation)
   form.append('response_format', 'json');
   form.append('temperature', '0');
-  form.append('prompt', 'Professional voice dictation and conversational dialogue in English, Bengali (Bangla), and Hindi with natural capitalization and punctuation.');
+  form.append('prompt', 'Crisp, articulate professional English voice dictation and conversational dialogue with clean punctuation, periods, and capitalization.');
   
   // High accuracy transcription
   try {
