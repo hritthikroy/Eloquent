@@ -372,33 +372,33 @@ class OfficeActionRunner {
       steps: [
         {
           agent: "Ava",
-          role: "Executive Director & Team Lead",
+          role: "Executive Co-Founder & Team Lead",
           voice: "en-US-AvaNeural",
-          speech: "Alright team, remote office standup is in session! Welcome to the meeting, Hritthik. Andrew, let's start with engineering. What's our technical status?"
+          speech: "Morning team! Standup is live. Let's sync up bro. Andrew, what's our engineering velocity?"
         },
         {
           agent: "Andrew",
           role: "Lead Software Engineer",
           voice: "en-US-AndrewNeural",
-          speech: `Hey everyone, Andrew here. We're working on branch ${branch}, and ${gitMsg}. My editor is open and I'm ready to ship code.`
+          speech: `Hey bro, Andrew here. We're on branch ${branch}, and ${gitMsg}. Codebase is clean, zero regressions, ready to ship.`
         },
         {
           agent: "Jenny",
           role: "Head of Research & Intel",
           voice: "en-US-JennyNeural",
-          speech: "Jenny checking in from intelligence. All documentation feeds, competitor research, and web tools are synchronized and standing by."
+          speech: "Jenny here bro. Market data feeds and research benchmarks are live with high signal-to-noise ratio."
         },
         {
           agent: "Brian",
           role: "Head of DevOps & QA",
           voice: "en-US-BrianNeural",
-          speech: `Brian for operations and QA. Power is at ${battPct} percent, memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} CPU cores. All test suites and infrastructure are green.`
+          speech: `Brian here bro. Power is at ${battPct} percent, memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} CPU cores. Telemetry is rock solid.`
         },
         {
           agent: "Ava",
-          role: "Executive Director & Team Lead",
+          role: "Executive Co-Founder & Team Lead",
           voice: "en-US-AvaNeural",
-          speech: "Thanks team! The entire office is locked in and ready whenever you want to dive in, Hritthik. What should we tackle first?"
+          speech: "Love the energy team! We're locked in and ready to build bro. What are we tackling first?"
         }
       ]
     };
@@ -422,10 +422,10 @@ class OfficeActionRunner {
 
       return {
         handled: true,
-        speech: `All systems are green, Hritthik. Power is at ${battPct} percent ${battStatus}. Memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} active CPU cores. Everything is running smoothly.`
+        speech: `All systems running smooth bro. Power is at ${battPct} percent ${battStatus}. Memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} active CPU cores. Hardware telemetry is fully optimized.`
       };
     } catch (e) {
-      return { handled: true, speech: "All systems are online and operational, Hritthik." };
+      return { handled: true, speech: "All systems are online and running smooth bro." };
     }
   }
 
