@@ -285,13 +285,24 @@ function trackAPIUsage(duration) {
   }
 }
 
+let persistentStore = null;
+function getStore() {
+  if (!persistentStore) {
+    try {
+      const Store = require('electron-store');
+      persistentStore = new Store();
+    } catch (e) {
+      console.warn('⚠️ Store initialization warning:', e.message);
+    }
+  }
+  return persistentStore;
+}
+
 // Report usage to backend for authenticated users
 async function reportUsageToBackend(durationSeconds, mode, language) {
   try {
-    // Get auth token from store
-    const Store = require('electron-store');
-    const store = new Store();
-    const token = store.get('authToken');
+    const store = getStore();
+    const token = store ? store.get('authToken') : null;
     
     if (!token) {
       console.log('📊 No auth token, skipping backend usage report');
@@ -1360,28 +1371,32 @@ let totalLiveCharsTyped = 0;
 function typeLiveTextAtCursor(text) {
   if (!text || process.platform !== 'darwin') return;
   const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  exec(`osascript -e 'tell application "System Events" to keystroke "${escaped}"'`, (err) => {
-    if (err) console.log('Live typing error:', err.message);
+  // Use spawn directly without shell wrapper to avoid single-quote parsing bugs with words like I'm, don't, it's
+  const child = spawn('osascript', ['-e', `tell application "System Events" to keystroke "${escaped}"`]);
+  child.on('error', (err) => {
+    console.log('Live typing error:', err.message);
   });
 }
 
 function replaceLiveDraftWithFinal(charCount, finalText) {
   clipboard.writeText(finalText);
   if (process.platform === 'darwin' && charCount > 0) {
-    const script = `
-      tell application "System Events"
-        repeat ${charCount} times
-          key code 51
-        end repeat
-        keystroke "v" using command down
-      end tell
-    `;
-    exec(`osascript -e '${script}'`, (err) => {
-      if (err) {
-        console.log('Draft replacement error, falling back to robust paste:', err.message);
-        pasteTextRobust(finalText);
-      } else {
+    const script = `tell application "System Events"
+      repeat ${charCount} times
+        key code 51
+      end repeat
+      keystroke "v" using command down
+    end tell`;
+    const child = spawn('osascript', ['-e', script]);
+    child.on('error', (err) => {
+      console.log('Draft replacement error, falling back to robust paste:', err.message);
+      pasteTextRobust(finalText);
+    });
+    child.on('close', (code) => {
+      if (code === 0) {
         console.log('✅ Live draft replaced with AI polished text');
+      } else {
+        pasteTextRobust(finalText);
       }
     });
   } else {
@@ -1401,7 +1416,6 @@ async function transcribePreview(snapshotPath) {
     form.append('language', 'en');
     form.append('response_format', 'json');
     form.append('temperature', '0');
-    form.append('prompt', 'Hello, this is voice dictation for software code, notes, cursor, text fields, AI prompts, and rewrite commands.');
 
     const res = await axios.post(
       'https://api.groq.com/openai/v1/audio/transcriptions',
@@ -1427,20 +1441,25 @@ async function transcribePreview(snapshotPath) {
   }
 }
 
+let lastProcessedAudioSize = 0;
+
 function startLiveStreaming(filePath) {
   stopLiveStreaming();
   liveWordsTyped = [];
   totalLiveCharsTyped = 0;
+  lastProcessedAudioSize = 0;
 
-  // Stream live words to cursor every ~2.2s (smooth cadence, stays well within 20 RPM limit)
+  // Stream live words to cursor cleanly without hitting 20 RPM limit
   liveStreamingInterval = setInterval(async () => {
     if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
 
     try {
       const stats = await fsPromises.stat(filePath);
-      if (stats.size < 28000) return; // Wait for ~0.9s of audio
+      // Wait for at least ~1s of initial speech, and at least 32KB of new speech before querying
+      if (stats.size < 32000 || (stats.size - lastProcessedAudioSize < 24000)) return;
 
       isStreamingChunk = true;
+      lastProcessedAudioSize = stats.size;
       const snapshotPath = `${filePath}.snap.wav`;
       await fsPromises.copyFile(filePath, snapshotPath);
 
@@ -1467,7 +1486,7 @@ function startLiveStreaming(filePath) {
     } finally {
       isStreamingChunk = false;
     }
-  }, 2200);
+  }, 2800);
 }
 
 function stopLiveStreaming() {
@@ -1643,7 +1662,7 @@ async function stopRecording() {
     // Play success chime now that text is ready
     playSound('success');
 
-    console.log(`✅ Final text: "${finalText.substring(0, 100)}..."`);
+    console.log(`✅ Final text: "${finalText.substring(0, 100)}${finalText.length > 100 ? '...' : ''}"`);
 
     // Save to history
     const historyEntry = {
@@ -1760,9 +1779,7 @@ async function transcribe(filePath) {
   form.append('response_format', 'json');
   form.append('temperature', '0'); // Zero temperature for English = most accurate
   
-  // Natural context prompt: guides acoustic recognition for technical words without hallucinating
-  form.append('prompt', 'Hello, this is voice dictation for software code, notes, cursor, text fields, AI prompts, and rewrite commands.');
-
+  // High accuracy transcription
   try {
     let response;
     try {
@@ -1798,7 +1815,6 @@ async function transcribe(filePath) {
       retryForm.append('language', 'en');
       retryForm.append('response_format', 'json');
       retryForm.append('temperature', '0');
-      retryForm.append('prompt', 'Hello, this is voice dictation for software code, notes, cursor, text fields, AI prompts, and rewrite commands.');
 
       try {
         response = await axios.post(
