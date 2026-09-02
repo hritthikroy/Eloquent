@@ -1764,23 +1764,23 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          if (amplitude > 0.12) {
+          if (amplitude >= 0.06) {
             if (!jarvisSpeechDetected) {
-              jarvisSpeechStartTime = Date.now(); // Mark when speech began
+              jarvisSpeechStartTime = Date.now();
             }
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
             jarvisSpeechFrames++;
-          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 750)) {
-            const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
-            if (confirmedSpeechMs >= 400 && jarvisSpeechFrames >= 3) {
-              // Real speech confirmed (≥400ms sustained across ≥3 frames) — submit to agent
+          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 650)) {
+            // Natural silence detected after speech!
+            // Any speech with >= 2 frames or sustained >= 150ms is real speech — submit immediately!
+            if (jarvisSpeechFrames >= 2 || (jarvisSpeechFrames >= 1 && (Date.now() - jarvisSpeechStartTime >= 150))) {
+              const confirmedSpeechMs = jarvisLastSpeechTime - jarvisSpeechStartTime + 130;
               console.log(`🗣️ Natural pause detected after ${confirmedSpeechMs}ms speech (${jarvisSpeechFrames} frames). Auto-submitting...`);
               jarvisAutoStopTriggered = true;
               stopRecording();
-            } else {
-              // Noise blip or room click — reset and keep listening
-              console.log(`🔇 Ignoring ${confirmedSpeechMs}ms noise blip (${jarvisSpeechFrames} frames) — waiting for real speech...`);
+            } else if (Date.now() - jarvisLastSpeechTime > 1200) {
+              // Isolated solitary blip with prolonged silence (>1.2s) — reset to listen cleanly
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;
