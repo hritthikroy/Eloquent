@@ -1999,7 +1999,7 @@ async function stopRecording() {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
         }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
-        const actionResult = await actionRunner.handleAction(originalText, activeAgent);
+        const actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager);
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
             console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
@@ -2055,6 +2055,14 @@ async function stopRecording() {
         timestamp: new Date().toISOString(),
         duration: recordingDuration
       });
+
+      // Autonomous Self-Updating & Continuous Learning Memory (Team Shared Brain)
+      jarvisManager.learnFromInteraction(originalText, jarvisReply, activeAgent.name, actionResult);
+      if (originalText && originalText.split(' ').length >= 5) {
+        setTimeout(() => {
+          jarvisManager.consolidateDeepMemory(originalText, jarvisReply, callGroqChatCompletion).catch(() => {});
+        }, 150);
+      }
 
       // Mark processing finished so next turn is accepted cleanly
       isProcessing = false;

@@ -8,9 +8,20 @@ class OfficeActionRunner {
     this.projectDir = path.resolve(__dirname, "../..");
   }
 
-  async handleAction(speechText, activeAgent) {
+  async handleAction(speechText, activeAgent, jarvisManager = null) {
     if (!speechText || typeof speechText !== "string") return { handled: false };
     const lower = speechText.toLowerCase().trim();
+
+    // -------------------------------------------------------------
+    // LIVING MEMORY & SELF-LEARNED INSIGHTS (Self-Updating Brain)
+    // -------------------------------------------------------------
+    if (lower.includes("what have you learned") || lower.includes("what do you remember") || lower.includes("check memory") || lower.includes("what's in your memory") || lower.includes("do you remember me") || lower.includes("what do you know about me")) {
+      const summary = jarvisManager ? jarvisManager.getMemorySummary() : "I've learned so much about you, Hritthik. I know you're building Eloquent, you prefer warm brotherly and companion conversation, and you love acoustic serenades in pure Sur, Taal, and Laya.";
+      return {
+        handled: true,
+        speech: summary
+      };
+    }
 
     // -------------------------------------------------------------
     // REMOTE OFFICE ZOOM MEETING & TEAM STANDUP
