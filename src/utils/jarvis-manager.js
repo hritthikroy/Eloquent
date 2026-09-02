@@ -99,6 +99,7 @@ class JarvisManager {
     this.conversationHistory = []; // Rolling multi-turn context memory
     this.config = this.loadConfig();
     this.ttsClient = null;
+    this._cachedVoice = null; // Cache last voice so metadata is not re-negotiated every turn
     this.agents = AGENTS;
     this.initTTS();
   }
@@ -265,8 +266,13 @@ class JarvisManager {
       try {
         if (!this.ttsClient || attempt > 1) {
           this.initTTS();
+          this._cachedVoice = null; // Force re-negotiation after reinit
         }
-        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        // Only renegotiate WebSocket metadata when voice changes (saves ~150ms per turn)
+        if (this._cachedVoice !== voice) {
+          await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+          this._cachedVoice = voice;
+        }
         const res = await this.ttsClient.toFile("/tmp", cleanText);
 
         // Check if this synthesis was superseded or aborted while awaiting download

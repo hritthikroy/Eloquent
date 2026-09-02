@@ -835,7 +835,6 @@ function createTray() {
     {
       label: '⚡ Talk to Ava (Alt+J)',
       click: () => {
-        playSound('start');
         showOverlayUltraFast('jarvis');
       }
     },
@@ -1502,8 +1501,18 @@ let lastProcessedAudioSize = 0;
 
 // Known Whisper silence hallucinations to ignore
 const SILENCE_HALLUCINATIONS = [
+  // Generic Whisper false positives
   'thank you', 'thank you.', 'thank you very much', 'thank you very much.',
-  'thanks for watching', 'thanks for watching.', 'subtitles by', 'bye', 'bye.', 'you', 'you.'
+  'thanks for watching', 'thanks for watching.', 'subtitles by', 'bye', 'bye.',
+  'you', 'you.', 'ah', 'ah.', 'ah, well.', 'ah well', 'hmm', 'hmm.',
+  'uh', 'uh.', 'um', 'um.', 'uh huh', 'uh huh.', 'mm', 'mm.',
+  'mm-hmm', 'mm-hmm.', 'oh', 'oh.', 'okay', 'okay.', 'ok', 'ok.',
+  'alright', 'alright.', 'right', 'right.', 'yeah', 'yeah.',
+  'yes', 'yes.', 'no', 'no.', 'sure', 'sure.',
+  // Whisper self-loop artifacts
+  'this video was made possible by', 'watch till the end',
+  'don\'t forget to subscribe', 'like and subscribe',
+  'visit our website', 'for more information',
 ];
 
 function typeLiveTextAtCursor(text) {
@@ -1680,7 +1689,9 @@ function startRecording() {
     overlayWindow.webContents.send('recording-started', recordingStartTime);
   }
 
-  playSound('start');
+  if (currentMode !== 'jarvis') {
+    playSound('start');
+  }
   performanceMonitor.measureRecordingLatency();
   
   // VAD state for automatic hands-free turn taking in Jarvis mode
@@ -1716,8 +1727,8 @@ function startRecording() {
           if (amplitude > 0.12) {
             jarvisSpeechDetected = true;
             jarvisLastSpeechTime = Date.now();
-          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 800)) {
-            console.log('🗣️ Natural pause in speech detected (800ms silence). Auto-submitting to agent...');
+          } else if (jarvisSpeechDetected && (Date.now() - jarvisLastSpeechTime > 700)) {
+            console.log('🗣️ Natural pause in speech detected (700ms silence). Auto-submitting to agent...');
             jarvisAutoStopTriggered = true;
             stopRecording();
           }
@@ -1848,6 +1859,19 @@ async function stopRecording() {
     }
 
     if (currentMode === 'jarvis') {
+      // Silently discard Whisper hallucinations — don't waste an AI call on phantom speech
+      const transcriptLower = originalText.toLowerCase().trim().replace(/[.,?!]/g, '');
+      if (SILENCE_HALLUCINATIONS.includes(transcriptLower) || originalText.trim().length < 3) {
+        console.log(`🔇 Jarvis: discarding Whisper hallucination "${originalText}" — re-arming mic...`);
+        isProcessing = false;
+        if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-listening');
+          overlayWindow.webContents.send('recording-started', Date.now());
+          startRecording();
+        }
+        return;
+      }
+
       console.log('🤖 Jarvis conversational mode: generating intelligent response...');
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('jarvis-thinking');
@@ -1943,7 +1967,7 @@ async function stopRecording() {
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
-        }, 350);
+        }, 150);
       } else {
         hideOverlay();
       }
@@ -2295,9 +2319,9 @@ async function askJarvis(userSpeech, activeAgent = null) {
     ];
 
     const { content, usage, model } = await callGroqChatCompletion(messages, {
-      temperature: 0.6,
-      max_tokens: 250,
-      timeout: 15000
+      temperature: 0.4,
+      max_tokens: 80,
+      timeout: 10000
     });
 
     const reply = content.trim();
