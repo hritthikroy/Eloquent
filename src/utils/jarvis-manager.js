@@ -1,7 +1,7 @@
 // Jarvis Manager - Personalized Voice AI Engine & Neural Speech Synthesizer
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
 const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
 
 const AGENTS = {
@@ -54,6 +54,7 @@ class JarvisManager {
     this.activeSpeechProcess = null;
     this.isSpeaking = false;
     this.isAborted = false;
+    this.currentSpeechId = 0;
     this.conversationHistory = []; // Rolling multi-turn context memory
     this.config = this.loadConfig();
     this.ttsClient = null;
@@ -192,7 +193,11 @@ class JarvisManager {
   }
 
   async speak(text, customVoice = null) {
+    // 1. Immediately silence any active speech or orphaned audio processes
     this.stopSpeaking();
+
+    // 2. Mint unique generation token to invalidate any async race conditions
+    const speechId = ++this.currentSpeechId;
     this.isAborted = false;
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -206,7 +211,7 @@ class JarvisManager {
       .trim();
 
     const voice = customVoice || this.config.voice || "en-US-AvaNeural";
-    console.log(`🗣️ Synthesizing human neural voice "${voice}"...`);
+    console.log(`🗣️ Synthesizing human neural voice "${voice}" (Job #${speechId})...`);
 
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
 
@@ -218,7 +223,9 @@ class JarvisManager {
       await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
       const res = await this.ttsClient.toFile("/tmp", cleanText);
 
-      if (this.isAborted) {
+      // Check if this synthesis was superseded or aborted while awaiting download
+      if (this.currentSpeechId !== speechId || this.isAborted) {
+        console.log(`⏹️ Discarding superseded voice output #${speechId}`);
         try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
         return false;
       }
@@ -226,8 +233,18 @@ class JarvisManager {
       // Rename to unique temp file
       fs.renameSync(res.audioFilePath, tempAudioPath);
 
+      // Ensure no stray afplay audio is playing before starting
+      try {
+        execSync("killall afplay say 2>/dev/null || true");
+      } catch (e) {}
+
       // Play natively through CoreAudio via afplay
       return new Promise((resolve) => {
+        if (this.currentSpeechId !== speechId || this.isAborted) {
+          try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+          return resolve(false);
+        }
+
         this.isSpeaking = true;
         this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
 
@@ -235,7 +252,7 @@ class JarvisManager {
           this.isSpeaking = false;
           this.activeSpeechProcess = null;
           try { fs.unlinkSync(tempAudioPath); } catch (e) {}
-          resolve(!this.isAborted && code === 0);
+          resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
         });
 
         this.activeSpeechProcess.on("error", (err) => {
@@ -248,16 +265,17 @@ class JarvisManager {
       });
     } catch (neuralErr) {
       console.warn("⚠️ Neural TTS fallback to macOS native speech:", neuralErr.message);
-      // Fallback to macOS say if offline
+      if (this.currentSpeechId !== speechId || this.isAborted) return false;
+
       return new Promise((resolve) => {
-        if (this.isAborted) return resolve(false);
+        if (this.isAborted || this.currentSpeechId !== speechId) return resolve(false);
         this.isSpeaking = true;
         this.activeSpeechProcess = spawn("say", ["-v", "Samantha", "-r", "185", cleanText]);
 
         this.activeSpeechProcess.on("close", (code) => {
           this.isSpeaking = false;
           this.activeSpeechProcess = null;
-          resolve(!this.isAborted && code === 0);
+          resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
         });
 
         this.activeSpeechProcess.on("error", () => {
@@ -272,12 +290,17 @@ class JarvisManager {
   stopSpeaking() {
     this.isAborted = true;
     this.isSpeaking = false;
+    this.currentSpeechId++; // Invalidate all pending async speech jobs
     if (this.activeSpeechProcess) {
       try {
         this.activeSpeechProcess.kill("SIGKILL");
       } catch (e) {}
       this.activeSpeechProcess = null;
     }
+    // Force kill any stray audio playback on macOS
+    try {
+      execSync("killall afplay say 2>/dev/null || true");
+    } catch (e) {}
   }
 }
 

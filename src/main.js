@@ -1701,10 +1701,14 @@ function startRecording() {
       
       // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
-        // Live Barge-In: if user speaks while AI is speaking, immediately cut off speech to listen
-        if (currentMode === 'jarvis' && jarvisManager.isSpeaking && amplitude > 0.20) {
-          console.log('⚡ Barge-in detected: User speaking mid-sentence. Halting AI speech immediately.');
-          jarvisManager.stopSpeaking();
+        // While AI is speaking: ignore speaker bleed so AI voice never triggers a second overlapping speech!
+        if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
+          // Allow deliberate loud user barge-in to stop speech
+          if (amplitude > 0.32) {
+            console.log('⚡ Deliberate user barge-in detected! Halting AI speech immediately.');
+            jarvisManager.stopSpeaking();
+          }
+          return; // Strictly ignore speaker bleed during AI speech
         }
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
@@ -1859,8 +1863,6 @@ async function stopRecording() {
         overlayWindow.webContents.send('jarvis-speaking');
       }
 
-      playSound('success');
-
       // Show notification with specialist agent name and role
       showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
 
@@ -1877,6 +1879,9 @@ async function stopRecording() {
 
       // Speak response aloud with the specialist agent's dedicated real-human voice!
       const speechSuccess = await jarvisManager.speak(jarvisReply, activeAgent.voice);
+
+      // Mark processing finished so next turn is accepted cleanly
+      isProcessing = false;
 
       // If user aborted during speech with ESC
       if (!isJarvisLoopActive) {
