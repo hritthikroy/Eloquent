@@ -1002,10 +1002,10 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 260;
-  const windowHeight = 44;
+  const windowWidth = 300;
+  const windowHeight = 54;
   const x = cursorPosition.x - (windowWidth / 2);
-  const y = cursorPosition.y - windowHeight - 15;
+  const y = cursorPosition.y - windowHeight - 20;
 
   const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
   const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
@@ -1620,15 +1620,18 @@ async function stopRecording() {
 
   // Calculate recording duration
   const recordingDuration = recordingStartTime ? Date.now() - recordingStartTime : 0;
+  const sessionAudioFile = audioFile;
+  let targetAudioFile = sessionAudioFile;
 
   // Stop recording process using cross-platform recorder
+  let stoppedFile = null;
   try {
     if (audioRecorder.amplitudeInterval) {
       clearInterval(audioRecorder.amplitudeInterval);
       audioRecorder.amplitudeInterval = null;
     }
     
-    const stoppedFile = await audioRecorder.stopRecording();
+    stoppedFile = await audioRecorder.stopRecording();
     recordingProcess = null;
     
     // Small delay to ensure file is written
@@ -1640,15 +1643,16 @@ async function stopRecording() {
 
   try {
     // Validate audio file
-    if (!audioFile) {
+    targetAudioFile = sessionAudioFile || stoppedFile || audioFile;
+    if (!targetAudioFile) {
       throw new Error('No audio file path - recording may have been cancelled');
     }
     
-    if (!fs.existsSync(audioFile)) {
+    if (!fs.existsSync(targetAudioFile)) {
       throw new Error('Audio file not created. Please install sox: brew install sox');
     }
 
-    const stats = fs.statSync(audioFile);
+    const stats = fs.statSync(targetAudioFile);
     console.log(`📊 Audio file: ${Math.round(stats.size/1000)}KB`);
     
     if (stats.size < 5000) {
@@ -1665,7 +1669,7 @@ async function stopRecording() {
     if (!apiKey || apiKey.trim() === '') {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
-    originalText = await transcribe(audioFile);
+    originalText = await transcribe(targetAudioFile);
     
     // Notify overlay that AI is polishing the grammar
     if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1763,8 +1767,10 @@ async function stopRecording() {
   } finally {
     // Cleanup
     isProcessing = false;
-    const fileToCleanup = audioFile; // Store reference before nulling
-    audioFile = null;
+    const fileToCleanup = targetAudioFile || sessionAudioFile;
+    if (audioFile === fileToCleanup) {
+      audioFile = null;
+    }
     
     // Clean up audio file safely
     if (fileToCleanup && fs.existsSync(fileToCleanup)) {

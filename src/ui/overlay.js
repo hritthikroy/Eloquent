@@ -241,7 +241,7 @@ function updateTimer() {
 ipcRenderer.on('set-mode', (_, m) => {
   mode = m;
   if (overlay) {
-    overlay.classList.remove('fade-out');
+    overlay.classList.remove('fade-out', 'error');
     overlay.classList.toggle('rewrite', m === 'rewrite');
   }
   
@@ -264,9 +264,15 @@ ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   console.log('🎙️ Recording started event received:', recordingStartTime);
   startTime = recordingStartTime;
 
-  // 1. Remove fade-out class so overlay becomes visible immediately
+  // 1. Remove fade-out and error classes so overlay is pristine and visible
   if (overlay) {
-    overlay.classList.remove('fade-out');
+    overlay.classList.remove('fade-out', 'error');
+  }
+
+  // Restore label
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) {
+    recLabel.textContent = (mode === 'rewrite') ? 'AI Rewriter' : 'Recording';
   }
 
   // 2. Reset equalizer bars and canvas
@@ -328,22 +334,15 @@ ipcRenderer.on('error', (_, errorMsg) => {
   if (animationId) cancelAnimationFrame(animationId);
   if (window.timerInterval) clearInterval(window.timerInterval);
   
-  // Add error class to overlay for styling
-  overlay.classList.add('error');
-  
-  // Update overlay to show error state
-  const recLabel = document.querySelector('.rec-label');
-  if (recLabel) {
-    recLabel.textContent = 'Error';
+  // Show error message in timer area without distorting pill dimensions
+  const displayMsg = errorMsg ? (errorMsg.length > 20 ? errorMsg.substring(0, 20) + '...' : errorMsg) : 'Error';
+  if (timer) {
+    timer.textContent = displayMsg;
+    timer.title = errorMsg || 'Error';
   }
   
-  // Show error message in timer area (truncate if too long)
-  const displayMsg = errorMsg ? (errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg) : 'Unknown error';
-  timer.textContent = displayMsg;
-  timer.title = errorMsg || 'Error'; // Full message on hover
-  
   // Clear waveform
-  ctx.clearRect(0, 0, canvasW, canvasH);
+  if (ctx) ctx.clearRect(0, 0, canvasW, canvasH);
 });
 
 // Listen for close-with-animation from main process
