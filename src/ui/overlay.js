@@ -170,7 +170,9 @@ function drawBars() {
   const centerX = canvasW / 2;
   const centerY = canvasH / 2;
 
-  const color = mode === 'rewrite' ? '#a855f7' : '#22c55e';
+  let color = '#22c55e';
+  if (mode === 'rewrite') color = '#a855f7';
+  else if (mode === 'jarvis') color = '#38bdf8';
   ctx.fillStyle = color;
   
   // PERFORMANCE BOOST: Batch all rectangles
@@ -209,6 +211,7 @@ ipcRenderer.on('set-mode', (_, m) => {
   if (overlay) {
     overlay.classList.remove('fade-out', 'error');
     overlay.classList.toggle('rewrite', m === 'rewrite');
+    overlay.classList.toggle('jarvis', m === 'jarvis');
   }
   
   // Update label based on mode
@@ -216,6 +219,8 @@ ipcRenderer.on('set-mode', (_, m) => {
   if (recLabel) {
     if (m === 'rewrite') {
       recLabel.textContent = 'AI Rewriter';
+    } else if (m === 'jarvis') {
+      recLabel.textContent = 'Jarvis';
     } else {
       recLabel.textContent = 'Recording';
     }
@@ -223,6 +228,17 @@ ipcRenderer.on('set-mode', (_, m) => {
   
   // Ensure timer is visible and initialized
   updateTimer();
+});
+
+// Jarvis state listeners
+ipcRenderer.on('jarvis-thinking', () => {
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) recLabel.textContent = 'Thinking...';
+});
+
+ipcRenderer.on('jarvis-speaking', () => {
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) recLabel.textContent = 'Speaking...';
 });
 
 // Listen for recording start time from main process
@@ -238,7 +254,13 @@ ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   // Restore label
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) {
-    recLabel.textContent = (mode === 'rewrite') ? 'AI Rewriter' : 'Recording';
+    if (mode === 'rewrite') {
+      recLabel.textContent = 'AI Rewriter';
+    } else if (mode === 'jarvis') {
+      recLabel.textContent = 'Jarvis';
+    } else {
+      recLabel.textContent = 'Recording';
+    }
   }
 
   // 2. Reset equalizer bars and canvas

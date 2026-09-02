@@ -39,6 +39,7 @@ const AudioRecorder = require('./utils/audio-recorder');
 const PasteHelper = require('./utils/paste-helper');
 const SoundPlayer = require('./utils/sound-player');
 const { perfOptimizer } = require('./utils/performance-optimizer');
+const JarvisManager = require('./utils/jarvis-manager');
 
 // Initialize fast startup optimizer
 const fastStartup = new FastStartup();
@@ -47,6 +48,7 @@ const fastStartup = new FastStartup();
 const audioRecorder = new AudioRecorder();
 const pasteHelper = new PasteHelper();
 const soundPlayer = new SoundPlayer();
+const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
 
 // Exit early if electron is not available (during build)
 if (!app) {
@@ -613,6 +615,27 @@ app.whenReady().then(async () => {
 
 });
 
+function promptChangeJarvisName() {
+  if (process.platform === 'darwin') {
+    const script = `tell application "System Events"
+      display dialog "Enter your custom name for Jarvis:" default answer "${jarvisManager.config.userName}" with title "Jarvis Identity Preferences" buttons {"Cancel", "Save"} default button "Save"
+      set userEntered to text returned of result
+      return userEntered
+    end tell`;
+    const child = spawn('osascript', ['-e', script]);
+    let output = '';
+    child.stdout.on('data', (d) => { output += d.toString(); });
+    child.on('close', (code) => {
+      if (code === 0 && output.trim()) {
+        const newName = output.trim();
+        jarvisManager.saveConfig({ userName: newName });
+        jarvisManager.speak(`Pleasure to meet you, ${newName}. Records updated.`);
+        createTray();
+      }
+    });
+  }
+}
+
 function createTray() {
   // Prevent unnecessary tray recreations
   const currentAuthStatus = isAuthenticated;
@@ -808,6 +831,13 @@ function createTray() {
   // Recording actions
   menuTemplate.push(
     {
+      label: '⚡ Talk to Jarvis (Alt+J)',
+      click: () => {
+        playSound('start');
+        showOverlayUltraFast('jarvis');
+      }
+    },
+    {
       label: 'Start AI Rewrite (Alt+Shift+Space)',
       click: () => {
         playSound('start');
@@ -820,6 +850,45 @@ function createTray() {
         playSound('start');
         showOverlayUltraFast('standard');
       }
+    },
+    {
+      label: '🤖 Jarvis Preferences',
+      submenu: [
+        {
+          label: `👤 Custom Name: ${jarvisManager.config.userName}`,
+          click: () => promptChangeJarvisName()
+        },
+        {
+          label: '🎩 Salutation',
+          submenu: ['Sir', 'Boss', 'Captain', 'Chief', 'Hritthik'].map(sal => ({
+            label: sal,
+            type: 'radio',
+            checked: jarvisManager.config.salutation === sal,
+            click: () => {
+              jarvisManager.saveConfig({ salutation: sal });
+              jarvisManager.speak(`Salutation updated to ${sal}.`);
+              createTray();
+            }
+          }))
+        },
+        {
+          label: '🗣️ Voice (TTS)',
+          submenu: [
+            { id: 'Daniel', name: 'Daniel (British Jarvis)' },
+            { id: 'Samantha', name: 'Samantha (US Female)' },
+            { id: 'Aman', name: 'Aman (Indian English)' }
+          ].map(v => ({
+            label: v.name,
+            type: 'radio',
+            checked: jarvisManager.config.voice === v.id,
+            click: () => {
+              jarvisManager.saveConfig({ voice: v.id });
+              jarvisManager.speak(`Voice configured to ${v.id}. At your command, ${jarvisManager.config.salutation}.`);
+              createTray();
+            }
+          }))
+        }
+      ]
     }
   );
 
@@ -926,6 +995,7 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
+    jarvisManager.stopSpeaking();
     stopRecording();
   }
 }
@@ -936,6 +1006,11 @@ function registerShortcuts() {
   
   console.log('🔧 Registering keyboard shortcuts...');
   
+  // Jarvis Power Talk shortcut
+  const jarvisRegistered = globalShortcut.register('Alt+J', () => {
+    handleShortcut('start', 'jarvis');
+  });
+
   // ULTRA-FAST shortcut registration - optimized for instant response
   const rewriteRegistered = globalShortcut.register('Alt+Shift+Space', () => {
     handleShortcut('start', 'rewrite');
@@ -985,6 +1060,7 @@ function registerShortcuts() {
   });
 
   console.log('✅ Shortcuts registered:');
+  console.log(`   Alt+J (Jarvis Power Talk): ${jarvisRegistered ? 'OK' : 'FAILED'}`);
   console.log(`   Alt+Shift+Space (AI Rewrite): ${rewriteRegistered ? 'OK' : 'FAILED'}`);
   console.log(`   Alt+Space (Standard): ${standardRegistered ? 'OK' : 'FAILED'}`);
   console.log(`   ESC (Stop): ${escRegistered ? 'OK' : 'FAILED'}`);
@@ -1479,7 +1555,7 @@ function startLiveStreaming(filePath) {
 
   // Stream live words safely under Groq 20 RPM limit (every 3.5s)
   liveStreamingInterval = setInterval(async () => {
-    if (!isRecording || isStreamingChunk || Date.now() < previewRateLimitedUntil || !fs.existsSync(filePath)) return;
+    if (!isRecording || currentMode === 'jarvis' || isStreamingChunk || Date.now() < previewRateLimitedUntil || !fs.existsSync(filePath)) return;
 
     try {
       const stats = await fsPromises.stat(filePath);
@@ -1619,8 +1695,8 @@ async function stopRecording() {
   console.log('🛑 Stopping recording...');
   stopLiveStreaming();
 
-  // Instantly hide overlay - no transcribing UI or animation lingering
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
+  // Instantly hide overlay for standard/rewrite - keep open for Jarvis to show status
+  if (currentMode !== 'jarvis' && overlayWindow && !overlayWindow.isDestroyed()) {
     hideOverlay();
   }
 
@@ -1682,7 +1758,56 @@ async function stopRecording() {
       overlayWindow.webContents.send('live-polishing');
     }
 
-    if (currentMode === 'rewrite') {
+    if (currentMode === 'jarvis') {
+      console.log('🤖 Jarvis conversational mode: generating intelligent response...');
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('jarvis-thinking');
+      }
+
+      // Check for voice preference change (e.g. "call me Hritthik", "switch voice to Samantha")
+      const prefChange = jarvisManager.detectPreferenceChange(originalText);
+      let jarvisReply = '';
+
+      if (prefChange) {
+        if (prefChange.type === 'name') {
+          jarvisReply = `Understood. I will address you as ${prefChange.value} from now on.`;
+        } else if (prefChange.type === 'salutation') {
+          jarvisReply = `Understood. I will address you as ${prefChange.value}.`;
+        } else if (prefChange.type === 'voice') {
+          jarvisReply = `Voice switched to ${prefChange.value}. How does this sound, ${jarvisManager.config.salutation}?`;
+        }
+      } else {
+        jarvisReply = await askJarvis(originalText);
+      }
+
+      finalText = jarvisReply;
+
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('jarvis-speaking');
+      }
+
+      playSound('success');
+
+      // Show notification with Jarvis response
+      showNotification(`🤖 Jarvis (${jarvisManager.config.salutation})`, jarvisReply);
+
+      // Save to history
+      saveToHistory({
+        id: Date.now(),
+        text: jarvisReply,
+        originalText: originalText,
+        mode: 'jarvis',
+        timestamp: new Date().toISOString(),
+        duration: recordingDuration
+      });
+
+      // Speak Jarvis response aloud with configured custom voice
+      await jarvisManager.speak(jarvisReply);
+
+      // Smoothly hide overlay after speaking
+      hideOverlay();
+      return;
+    } else if (currentMode === 'rewrite') {
       console.log('🤖 AI rewriting...');
       finalText = await rewrite(originalText);
     } else {
@@ -2008,6 +2133,34 @@ async function rewrite(text) {
     console.error('❌ AI rewrite failed:', error.message);
     logApiRequest('ai-rewrite', 'error', rewriteTime, null, error.message);
     throw error;
+  }
+}
+
+// Conversational Jarvis Executive AI Brain
+async function askJarvis(userSpeech) {
+  const startTime = Date.now();
+  const systemPrompt = jarvisManager.getSystemPrompt();
+
+  try {
+    console.log('🧠 Querying Jarvis conversational brain...');
+    const { content, usage, model } = await callGroqChatCompletion([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userSpeech }
+    ], {
+      temperature: 0.5,
+      max_tokens: 350,
+      timeout: 15000
+    });
+
+    const elapsed = Date.now() - startTime;
+    console.log(`⚡ Jarvis responded in ${elapsed}ms using ${model}`);
+    logApiRequest('jarvis-talk', 'success', elapsed, usage?.total_tokens);
+
+    return content.trim();
+  } catch (error) {
+    console.error('❌ Jarvis AI query failed:', error.message);
+    logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
+    return `At your service, ${jarvisManager.config.salutation}. I heard your request clearly, but experienced a brief network timeout.`;
   }
 }
 
