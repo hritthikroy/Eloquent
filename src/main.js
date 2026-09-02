@@ -1933,6 +1933,7 @@ async function stopRecording() {
 
       // Check for voice preference change (e.g. "call me Hritthik", "address me as Boss")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
+      const delegation = jarvisManager.evaluateTaskAssignment(originalText);
       let jarvisReply = '';
       let activeAgent = jarvisManager.agents.ava;
       let standupAlreadySpoken = false;
@@ -1943,6 +1944,42 @@ async function stopRecording() {
         } else if (prefChange.type === 'salutation') {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
         }
+      } else if (delegation) {
+        console.log(`🤝 Intelligent Task Assignment: Ava delegating to ${delegation.assignedAgent.name} (${delegation.assignedAgent.role})`);
+
+        // 1. Ava assigns the task out loud
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('set-agent-name', delegation.lead.name);
+          overlayWindow.webContents.send('jarvis-speaking');
+        }
+        showNotification(`🤖 ${delegation.lead.name} (${delegation.lead.role})`, delegation.handoffLine);
+        await jarvisManager.speak(delegation.handoffLine, delegation.lead.voice);
+        await new Promise(r => setTimeout(r, 250));
+
+        // 2. Assigned specialist agent automatically answers intelligently
+        activeAgent = delegation.assignedAgent;
+        console.log(`🎯 Assigned Specialist Auto-Answering: ${activeAgent.name} (${activeAgent.role})`);
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('set-agent-name', activeAgent.name);
+          overlayWindow.webContents.send('jarvis-thinking');
+        }
+
+        // Check if specialist executes an automated system action
+        const actionResult = await actionRunner.handleAction(originalText, activeAgent);
+        if (actionResult && actionResult.handled) {
+          console.log(`⚡ Specialist Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
+          jarvisReply = actionResult.speech;
+        } else {
+          // Specialist answers intelligently with domain expertise
+          jarvisReply = await askJarvis(originalText, activeAgent);
+        }
+
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-speaking');
+        }
+        showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
+        await jarvisManager.speak(jarvisReply, activeAgent.voice);
+        standupAlreadySpoken = true;
       } else {
         // Detect which of the 4 specialized agents should respond
         activeAgent = jarvisManager.detectActiveAgent(originalText);

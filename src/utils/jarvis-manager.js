@@ -227,6 +227,82 @@ class JarvisManager {
     return AGENTS.ava;
   }
 
+  evaluateTaskAssignment(text) {
+    if (!text || typeof text !== "string") return null;
+    const lower = text.toLowerCase().trim();
+
+    // Check if the user is asking to assign, delegate, or asking who is capable
+    const isExplicitAssign = lower.includes("assign") || lower.includes("delegate") ||
+      lower.includes("who is capable") || lower.includes("who can") || lower.includes("who should") ||
+      lower.includes("give this task") || lower.includes("hand this to") || lower.includes("pass this to") ||
+      lower.includes("have andrew") || lower.includes("have jenny") || lower.includes("have brian") ||
+      lower.includes("tell andrew") || lower.includes("tell jenny") || lower.includes("tell brian") ||
+      lower.includes("ask andrew") || lower.includes("ask jenny") || lower.includes("ask brian");
+
+    const addressesAvaOrTeam = lower.includes("ava") || lower.includes("team") || lower.includes("everyone") ||
+      lower.includes("somebody") || lower.includes("someone") || lower.startsWith("can you") || lower.startsWith("we need");
+
+    // If directly addressing Andrew/Jenny/Brian without asking Ava to assign, let them answer directly
+    if ((lower.startsWith("andrew") || lower.startsWith("hey andrew")) && !isExplicitAssign) return null;
+    if ((lower.startsWith("jenny") || lower.startsWith("hey jenny")) && !isExplicitAssign) return null;
+    if ((lower.startsWith("brian") || lower.startsWith("hey brian")) && !isExplicitAssign) return null;
+
+    // Check domain capability:
+    // 1. Engineering / Code / Architecture -> Andrew
+    const isCode = lower.includes("code") || lower.includes("function") || lower.includes("bug") ||
+      lower.includes("refactor") || lower.includes("architecture") || lower.includes("script") ||
+      lower.includes("wireframe") || lower.includes("api") || lower.includes("database") ||
+      lower.includes("backend") || lower.includes("frontend") || lower.includes("git") ||
+      lower.includes("commit") || lower.includes("deploy") || lower.includes("build") ||
+      lower.includes("develop") || lower.includes("feature") || lower.includes("software") ||
+      lower.includes("program") || lower.includes("debug") || lower.includes("pull request") ||
+      lower.includes("branch") || lower.includes("syntax") || lower.includes("npm") ||
+      lower.includes("package") || lower.includes("vscode") || lower.includes("electron") ||
+      lower.includes("react") || lower.includes("node") || lower.includes("andrew");
+
+    // 2. Research / Intelligence / Search -> Jenny
+    const isResearch = lower.includes("research") || lower.includes("analyze") || lower.includes("analysis") ||
+      lower.includes("competitor") || lower.includes("market") || lower.includes("document") ||
+      lower.includes("summary") || lower.includes("find out") || lower.includes("look up") ||
+      lower.includes("study") || lower.includes("wikipedia") || lower.includes("search") ||
+      lower.includes("data on") || lower.includes("facts") || lower.includes("information on") ||
+      lower.includes("latest news") || lower.includes("jenny");
+
+    // 3. DevOps / QA / System / Infrastructure -> Brian
+    const isDevOps = lower.includes("system status") || lower.includes("telemetry") ||
+      lower.includes("cpu") || lower.includes("memory") || lower.includes("ram") ||
+      lower.includes("qa") || lower.includes("test suite") || lower.includes("diagnostics") ||
+      lower.includes("uptime") || lower.includes("server") || lower.includes("health") ||
+      lower.includes("infrastructure") || lower.includes("battery") || lower.includes("brian");
+
+    let targetAgent = null;
+    let handoffLine = "";
+
+    if (isCode) {
+      targetAgent = AGENTS.andrew;
+      handoffLine = "Understood, Boss. Andrew is our Lead Software Engineer for this. Andrew, take the lead.";
+    } else if (isResearch) {
+      targetAgent = AGENTS.jenny;
+      handoffLine = "Right away, Boss. Jenny handles our intelligence and research. Jenny, pull the data on this.";
+    } else if (isDevOps) {
+      targetAgent = AGENTS.brian;
+      handoffLine = "On it, Boss. Brian is our Head of DevOps and QA. Brian, inspect the systems and report.";
+    }
+
+    if (!targetAgent) return null;
+
+    if (isExplicitAssign || (addressesAvaOrTeam && (isCode || isResearch || isDevOps))) {
+      return {
+        delegated: true,
+        lead: AGENTS.ava,
+        assignedAgent: targetAgent,
+        handoffLine
+      };
+    }
+
+    return null;
+  }
+
   getSystemPrompt(agent = null) {
     const { userName, salutation } = this.config;
     const activeAgent = agent || AGENTS.ava;
