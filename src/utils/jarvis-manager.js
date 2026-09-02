@@ -650,11 +650,10 @@ If the user revealed a personal habit, project update, emotional state, interest
     this.isAborted = false;
 
     const voice = customVoice || this.config.voice || "en-US-AvaNeural";
-    console.log(`🎵 Synthesizing Tuk Tuk singing serenade with Sur, Taal, and Laya (Job #${speechId})...`);
+    console.log(`🎵 Synthesizing pure vocal Sur serenade for Tuk Tuk (Job #${speechId})...`);
 
     const tempVocalPath = `/tmp/eloquent_vocal_${Date.now()}.mp3`;
-    const tempBackingPath = `/tmp/eloquent_backing_${Date.now()}.wav`;
-    const tempMixedPath = `/tmp/eloquent_song_${Date.now()}.wav`;
+    const tempSurVocalPath = `/tmp/eloquent_sur_${Date.now()}.wav`;
 
     try {
       if (!this.ttsClient) {
@@ -665,48 +664,36 @@ If the user revealed a personal habit, project update, emotional state, interest
         this._cachedVoice = voice;
       }
 
-      // 1. Synthesize vocal melody
+      // 1. Synthesize neural vocal lyrics
       const cleanSong = songText.replace(/[*#_`~[\]()]/g, "").trim();
       const res = await this.ttsClient.toFile("/tmp", cleanSong);
       fs.renameSync(res.audioFilePath, tempVocalPath);
 
-      // 2. Measure vocal duration using soxi
-      let vocalDuration = 12;
+      // 2. Infuse her voice directly with pure SUR, TAAL & LAYA (Zero guitar - 100% vocal melody)
+      // - pitch +30: Melodic pitch lift for singing brightness
+      // - tremolo 5.5 14: Natural human vocal vibrato at 5.5Hz (Sur & Laya modulation)
+      // - chorus 0.7 0.9 40 0.4 0.25 1.5 -s: Studio vocal harmonic doubling
+      // - reverb 65 60 85 85 0 0: Lush acoustic hall resonance
+      // - norm -1: Clean studio master normalization
+      const surCmd = `sox "${tempVocalPath}" "${tempSurVocalPath}" pitch +30 tremolo 5.5 14 chorus 0.7 0.9 40 0.4 0.25 1.5 -s reverb 65 60 85 85 0 0 norm -1`;
       try {
-        const durStr = execSync(`soxi -D "${tempVocalPath}" 2>/dev/null`).toString().trim();
-        vocalDuration = Math.max(4, Math.ceil(parseFloat(durStr)) + 1);
-      } catch (e) {}
-
-      // 3. Generate acoustic string accompaniment matching Sur, Taal, and Laya
-      // Sur: C Major -> Am -> F -> G progression (C4, E4, G4, C5, A3, F3, etc.)
-      // Taal: 4/4 meter (0.5s per quarter note)
-      // Laya: 120 BPM tempo with studio acoustic reverb
-      const beat = 0.5;
-      const repeats = Math.ceil(vocalDuration / 8);
-      const chordSeq = [];
-      for (let r = 0; r < repeats; r++) {
-        chordSeq.push(`synth ${beat} pluck C4 : synth ${beat} pluck E4 : synth ${beat} pluck G4 : synth ${beat} pluck C5`);
-        chordSeq.push(`synth ${beat} pluck A3 : synth ${beat} pluck C4 : synth ${beat} pluck E4 : synth ${beat} pluck A4`);
-        chordSeq.push(`synth ${beat} pluck F3 : synth ${beat} pluck A3 : synth ${beat} pluck C4 : synth ${beat} pluck F4`);
-        chordSeq.push(`synth ${beat} pluck G3 : synth ${beat} pluck B3 : synth ${beat} pluck D4 : synth ${beat} pluck G4`);
+        execSync(surCmd, { timeout: 3000 });
+      } catch (e) {
+        // Fallback to direct vocal if SoX fails
+        fs.copyFileSync(tempVocalPath, tempSurVocalPath);
       }
-      const synthCmd = `sox -n -r 24000 "${tempBackingPath}" ${chordSeq.join(" : ")} reverb 50 50 80 norm -6`;
-      execSync(synthCmd, { timeout: 4000 });
 
-      // 4. Mix Ava's vocal with the acoustic backing track
-      execSync(`sox -m -v 1.0 "${tempVocalPath}" -v 0.35 "${tempBackingPath}" "${tempMixedPath}" norm -1`, { timeout: 4000 });
-
-      // 5. Play master mixed acoustic serenade through CoreAudio afplay
+      // 3. Play master melodic vocal serenade through CoreAudio afplay
       try { execSync("killall afplay 2>/dev/null || true"); } catch (e) {}
 
       return new Promise((resolve) => {
         if (this.currentSpeechId !== speechId || this.isAborted) {
-          try { fs.unlinkSync(tempVocalPath); fs.unlinkSync(tempBackingPath); fs.unlinkSync(tempMixedPath); } catch (e) {}
+          try { fs.unlinkSync(tempVocalPath); fs.unlinkSync(tempSurVocalPath); } catch (e) {}
           return resolve(false);
         }
 
         this.isSpeaking = true;
-        this.activeSpeechProcess = spawn("afplay", [tempMixedPath]);
+        this.activeSpeechProcess = spawn("afplay", [tempSurVocalPath]);
 
         this.activeSpeechProcess.on("close", (code) => {
           setTimeout(() => {
@@ -714,11 +701,10 @@ If the user revealed a personal habit, project update, emotional state, interest
             this.activeSpeechProcess = null;
             try {
               if (fs.existsSync(tempVocalPath)) fs.unlinkSync(tempVocalPath);
-              if (fs.existsSync(tempBackingPath)) fs.unlinkSync(tempBackingPath);
-              if (fs.existsSync(tempMixedPath)) fs.unlinkSync(tempMixedPath);
+              if (fs.existsSync(tempSurVocalPath)) fs.unlinkSync(tempSurVocalPath);
             } catch (e) {}
             resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
-          }, 200);
+          }, 80);
         });
 
         this.activeSpeechProcess.on("error", () => {
@@ -726,14 +712,14 @@ If the user revealed a personal habit, project update, emotional state, interest
           this.activeSpeechProcess = null;
           try {
             if (fs.existsSync(tempVocalPath)) fs.unlinkSync(tempVocalPath);
-            if (fs.existsSync(tempBackingPath)) fs.unlinkSync(tempBackingPath);
-            if (fs.existsSync(tempMixedPath)) fs.unlinkSync(tempMixedPath);
+            if (fs.existsSync(tempSurVocalPath)) fs.unlinkSync(tempSurVocalPath);
           } catch (e) {}
           resolve(false);
         });
       });
     } catch (err) {
       console.warn("⚠️ Singing synthesis fallback to spoken mode:", err.message);
+      this.isSpeaking = false;
       return this.speak(songText, voice);
     }
   }
