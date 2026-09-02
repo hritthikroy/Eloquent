@@ -1,12 +1,15 @@
 const { ipcRenderer } = require('electron');
 
 // Wait for DOM to be fully loaded before accessing elements
-let canvas, ctx, timer, overlay;
+let canvas, ctx, timer, overlay, liveCard, liveText, liveBadge;
 
 function initializeElements() {
   canvas = document.getElementById('waveCanvas');
   timer = document.getElementById('timer');
   overlay = document.getElementById('overlay');
+  liveCard = document.getElementById('liveCard');
+  liveText = document.getElementById('liveText');
+  liveBadge = document.getElementById('liveBadge');
   
   if (!canvas) {
     console.error('Canvas element not found!');
@@ -20,7 +23,7 @@ function initializeElements() {
     return false;
   }
   
-  console.log('✅ Elements initialized:', { canvas: !!canvas, ctx: !!ctx, timer: !!timer, overlay: !!overlay });
+  console.log('✅ Elements initialized:', { canvas: !!canvas, ctx: !!ctx, timer: !!timer, overlay: !!overlay, liveCard: !!liveCard });
   return true;
 }
 
@@ -261,15 +264,48 @@ ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   console.log('🎙️ Recording started event received:', recordingStartTime);
   startTime = recordingStartTime;
   updateTimer(); // Update immediately
+
+  // Reset live-card state
+  if (liveCard) {
+    liveCard.classList.remove('visible');
+  }
+  if (liveText) {
+    liveText.textContent = '';
+    liveText.classList.remove('polishing');
+  }
   
   // Start timer updates every second
   if (window.timerInterval) clearInterval(window.timerInterval);
   window.timerInterval = setInterval(() => {
     updateTimer();
-    console.log('⏱️ Timer updated');
   }, 1000);
-  
-  console.log('✅ Timer interval started');
+});
+
+// Live Real-Time Text Rendering & Fixing (Like Grammarly)
+ipcRenderer.on('live-preview', (_, text) => {
+  if (liveCard && liveText && text && text.trim().length > 0) {
+    liveText.textContent = text.trim();
+    liveText.classList.remove('polishing');
+    if (liveBadge) liveBadge.textContent = mode === 'rewrite' ? '✨ AI Rewriter Live' : '✨ Real-time Voice';
+    liveCard.classList.add('visible');
+  }
+});
+
+// Polishing state when user finishes recording
+ipcRenderer.on('live-polishing', () => {
+  if (liveCard && liveText) {
+    if (liveBadge) liveBadge.textContent = '⚡ Polishing Grammar...';
+    liveText.classList.add('polishing');
+  }
+});
+
+// Final clean text completed
+ipcRenderer.on('live-done', (_, finalText) => {
+  if (liveCard && liveText && finalText) {
+    if (liveBadge) liveBadge.textContent = '✅ Final Clean Text';
+    liveText.textContent = finalText.trim();
+    liveText.classList.remove('polishing');
+  }
 });
 
 // Quick popup mode

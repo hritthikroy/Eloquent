@@ -1002,10 +1002,10 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 300;
-  const windowHeight = 54;
+  const windowWidth = 340;
+  const windowHeight = 130;
   const x = cursorPosition.x - (windowWidth / 2);
-  const y = cursorPosition.y - windowHeight - 20;
+  const y = cursorPosition.y - windowHeight - 15;
 
   const finalX = Math.max(screenBounds.x, Math.min(x, screenBounds.x + screenBounds.width - windowWidth));
   const finalY = Math.max(screenBounds.y, Math.min(y, screenBounds.y + screenBounds.height - windowHeight));
@@ -1377,48 +1377,12 @@ function createUserManagement() {
 }
 
 // =========================================================================
-// REAL-TIME LIVE DICTATION DIRECTLY AT CURSOR (NO DUPLICATES)
+// =========================================================================
+// REAL-TIME LIVE TEXT RENDERING & FIXING (LIKE GRAMMARLY - ZERO BACKSPACES)
 // =========================================================================
 let liveStreamingInterval = null;
 let isStreamingChunk = false;
-let liveWordsTyped = [];
-let totalLiveCharsTyped = 0;
-
-function typeLiveTextAtCursor(text) {
-  if (!text || process.platform !== 'darwin') return;
-  const escaped = text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  // Use spawn directly without shell wrapper to avoid single-quote parsing bugs with words like I'm, don't, it's
-  const child = spawn('osascript', ['-e', `tell application "System Events" to keystroke "${escaped}"`]);
-  child.on('error', (err) => {
-    console.log('Live typing error:', err.message);
-  });
-}
-
-function replaceLiveDraftWithFinal(charCount, finalText) {
-  clipboard.writeText(finalText);
-  if (process.platform === 'darwin' && charCount > 0) {
-    const script = `tell application "System Events"
-      repeat ${charCount} times
-        key code 51
-      end repeat
-      keystroke "v" using command down
-    end tell`;
-    const child = spawn('osascript', ['-e', script]);
-    child.on('error', (err) => {
-      console.log('Draft replacement error, falling back to robust paste:', err.message);
-      pasteTextRobust(finalText);
-    });
-    child.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ Live draft replaced with AI polished text');
-      } else {
-        pasteTextRobust(finalText);
-      }
-    });
-  } else {
-    pasteTextRobust(finalText);
-  }
-}
+let lastProcessedAudioSize = 0;
 
 async function transcribePreview(snapshotPath) {
   try {
@@ -1457,22 +1421,18 @@ async function transcribePreview(snapshotPath) {
   }
 }
 
-let lastProcessedAudioSize = 0;
-
 function startLiveStreaming(filePath) {
   stopLiveStreaming();
-  liveWordsTyped = [];
-  totalLiveCharsTyped = 0;
   lastProcessedAudioSize = 0;
 
-  // Stream live words to cursor cleanly without hitting 20 RPM limit
+  // Stream live words to floating overlay card in real-time (like Grammarly)
   liveStreamingInterval = setInterval(async () => {
     if (!isRecording || isStreamingChunk || !fs.existsSync(filePath)) return;
 
     try {
       const stats = await fsPromises.stat(filePath);
-      // Wait for at least ~1s of initial speech, and at least 32KB of new speech before querying
-      if (stats.size < 32000 || (stats.size - lastProcessedAudioSize < 24000)) return;
+      // Wait for at least ~0.8s of audio and 16KB of new speech before querying
+      if (stats.size < 24000 || (stats.size - lastProcessedAudioSize < 16000)) return;
 
       isStreamingChunk = true;
       lastProcessedAudioSize = stats.size;
@@ -1482,33 +1442,11 @@ function startLiveStreaming(filePath) {
       const previewText = await transcribePreview(snapshotPath);
       if (previewText && previewText.trim().length > 0 && isRecording) {
         const cleanPreview = previewText.trim();
-        const newWords = cleanPreview.split(/\s+/);
+        console.log(`🎙️ Real-time live speech: "${cleanPreview}"`);
         
-        // ONLY type new words if they share the same prefix as what we already typed
-        // This prevents Whisper's cumulative re-transcription from diverging and typing hallucinated content
-        if (newWords.length > liveWordsTyped.length) {
-          // Verify prefix consistency — the new transcription must match what we already typed
-          // Strip punctuation so "Hello." vs "Hello," doesn't count as divergence
-          let prefixMatches = true;
-          const stripPunct = (w) => w.toLowerCase().replace(/[^a-z0-9']/g, '');
-          for (let i = 0; i < liveWordsTyped.length; i++) {
-            if (stripPunct(newWords[i]) !== stripPunct(liveWordsTyped[i])) {
-              prefixMatches = false;
-              console.log(`⚠️ Live preview diverged at word ${i}: "${liveWordsTyped[i]}" vs "${newWords[i]}" — skipping`);
-              break;
-            }
-          }
-          
-          if (prefixMatches) {
-            const additionalWords = newWords.slice(liveWordsTyped.length);
-            const textToType = (liveWordsTyped.length === 0 ? '' : ' ') + additionalWords.join(' ');
-            
-            totalLiveCharsTyped += textToType.length;
-            liveWordsTyped = newWords;
-            
-            console.log(`✍️ Real-time typing at cursor: "${textToType}"`);
-            typeLiveTextAtCursor(textToType);
-          }
+        // Render real-time speech and fixing in floating UI card (like Grammarly)
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('live-preview', cleanPreview);
         }
       }
       fs.unlink(snapshotPath, () => {});
@@ -1517,7 +1455,7 @@ function startLiveStreaming(filePath) {
     } finally {
       isStreamingChunk = false;
     }
-  }, 2800);
+  }, 1600);
 }
 
 function stopLiveStreaming() {
@@ -1664,6 +1602,11 @@ async function stopRecording() {
     }
     originalText = await transcribe(audioFile);
     
+    // Notify overlay that AI is polishing the grammar
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('live-polishing');
+    }
+
     if (currentMode === 'rewrite') {
       console.log('🤖 AI rewriting...');
       finalText = await rewrite(originalText);
@@ -1679,6 +1622,11 @@ async function stopRecording() {
 
     if (!finalText || finalText.trim().length === 0) {
       throw new Error('No speech detected. Please try again.');
+    }
+
+    // Notify overlay of completed text
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.webContents.send('live-done', finalText);
     }
 
     // Play success chime now that text is ready
@@ -1707,19 +1655,10 @@ async function stopRecording() {
       });
     }
 
-    // If live text was written at cursor, replace draft with polished sentence
-    const liveCharsToReplace = totalLiveCharsTyped;
-    totalLiveCharsTyped = 0;
-    liveWordsTyped = [];
-
-    if (liveCharsToReplace > 0 && process.platform === 'darwin') {
-      console.log(`✨ Replacing live draft (${liveCharsToReplace} chars) with polished final text...`);
-      replaceLiveDraftWithFinal(liveCharsToReplace, finalText);
-    } else {
-      setTimeout(() => {
-        pasteTextRobust(finalText);
-      }, 50);
-    }
+    // Clean atomic paste directly at cursor (ZERO BACKSPACES - Like Grammarly)
+    setTimeout(() => {
+      pasteTextRobust(finalText);
+    }, 60);
 
     // Track API usage locally
     if (apiKey && apiKey.trim() !== '') {
