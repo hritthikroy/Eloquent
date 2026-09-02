@@ -1803,6 +1803,16 @@ async function stopRecording() {
     console.log(`📊 Audio file: ${Math.round(stats.size/1000)}KB`);
     
     if (stats.size < 5000) {
+      if (currentMode === 'jarvis') {
+        console.log('🎙️ Tony Stark Suit Mode: Ambient silence in room - keeping mic active 24/7...');
+        isProcessing = false;
+        if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-listening');
+          overlayWindow.webContents.send('recording-started', Date.now());
+          startRecording();
+        }
+        return;
+      }
       throw new Error('Recording too short. Please speak for at least 1 second.');
     }
 
@@ -1816,7 +1826,21 @@ async function stopRecording() {
     if (!apiKey || apiKey.trim() === '') {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
     }
-    originalText = await transcribe(targetAudioFile);
+    try {
+      originalText = await transcribe(targetAudioFile);
+    } catch (txErr) {
+      if (currentMode === 'jarvis') {
+        console.log('🎙️ Tony Stark Suit Mode: No distinct speech detected - keeping 24/7 mic armed...');
+        isProcessing = false;
+        if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-listening');
+          overlayWindow.webContents.send('recording-started', Date.now());
+          startRecording();
+        }
+        return;
+      }
+      throw txErr;
+    }
     
     // Notify overlay that AI is polishing the grammar
     if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1847,11 +1871,14 @@ async function stopRecording() {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
         }
-        // 1. Check if an Autonomous Office Action should be executed directly on macOS
+        // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
         const actionResult = actionRunner.handleAction(originalText, activeAgent);
         if (actionResult && actionResult.handled) {
           console.log(`⚡ Office Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
           jarvisReply = actionResult.speech;
+          if (actionResult.dismissSession) {
+            isJarvisLoopActive = false;
+          }
         } else {
           jarvisReply = await askJarvis(originalText, activeAgent);
         }
@@ -1889,15 +1916,15 @@ async function stopRecording() {
         return;
       }
 
-      // Real-time hands-free turn taking loop
-      if (speechSuccess && isJarvisLoopActive) {
-        console.log('🎙️ Re-arming mic for real-time conversational follow-up...');
+      // Real-time hands-free turn taking loop - Tony Stark Suit 24/7 Mode
+      if (isJarvisLoopActive) {
+        console.log('🎙️ Tony Stark Suit Mode: Re-arming mic for continuous 24/7 ambient dialogue...');
         setTimeout(() => {
           if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
-        }, 400);
+        }, 350);
       } else {
         hideOverlay();
       }

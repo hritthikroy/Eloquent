@@ -13,6 +13,21 @@ class OfficeActionRunner {
     const lower = speechText.toLowerCase().trim();
 
     // -------------------------------------------------------------
+    // TONY STARK SUIT: ALL SYSTEMS DIAGNOSTIC & STAND DOWN
+    // -------------------------------------------------------------
+    if (lower.includes("suit status") || lower.includes("all systems check") || lower.includes("systems check") || lower.includes("suit diagnostics") || lower.includes("suit report")) {
+      return this.getSuitStatus();
+    }
+
+    if (lower.includes("go to sleep") || lower.includes("stand down") || lower.includes("shut down suit") || lower.includes("goodbye ava") || lower.includes("bye ava") || lower.includes("exit suit")) {
+      return {
+        handled: true,
+        speech: "Standing down and entering standby mode, Boss. I'm right here whenever you need me.",
+        dismissSession: true
+      };
+    }
+
+    // -------------------------------------------------------------
     // BRIAN (System QA, Health, Battery, Diagnostics)
     // -------------------------------------------------------------
     if (lower.includes("battery")) {
@@ -25,6 +40,10 @@ class OfficeActionRunner {
 
     if (lower.includes("clean cache") || lower.includes("clear cache") || lower.includes("clean disk") || lower.includes("clear temporary")) {
       return this.cleanCache();
+    }
+
+    if (lower.includes("lock screen") || lower.includes("lock computer") || lower.includes("lock suit") || lower.includes("lock my screen")) {
+      return this.lockScreen();
     }
 
     // -------------------------------------------------------------
@@ -47,8 +66,28 @@ class OfficeActionRunner {
     }
 
     // -------------------------------------------------------------
-    // JENNY (Research & Intelligence: Web Search, GitHub, Docs)
+    // JENNY (Research & Intelligence: Web Search, GitHub, Sites)
     // -------------------------------------------------------------
+    if (lower.includes("open youtube")) {
+      try { exec('open "https://www.youtube.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening YouTube now, Boss." };
+    }
+
+    if (lower.includes("open chatgpt") || lower.includes("open chat gpt")) {
+      try { exec('open "https://chatgpt.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening ChatGPT now, Boss." };
+    }
+
+    if (lower.includes("open twitter") || lower.includes("open x")) {
+      try { exec('open "https://x.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening X now, Boss." };
+    }
+
+    if (lower.includes("open gmail") || lower.includes("open mail")) {
+      try { exec('open "https://mail.google.com"'); } catch (e) {}
+      return { handled: true, speech: "Opening Gmail now, Boss." };
+    }
+
     if (lower.includes("search google for") || lower.includes("search for") || lower.includes("google ")) {
       const match = speechText.match(/(?:search google for|search for|google)\s+(.+)/i);
       if (match && match[1]) {
@@ -65,6 +104,14 @@ class OfficeActionRunner {
     // -------------------------------------------------------------
     if (lower.includes("what time") || lower.includes("current time") || lower.includes("what is the time") || lower.includes("what date")) {
       return this.getTimeReport();
+    }
+
+    if (lower.includes("volume up") || lower.includes("turn it up") || lower.includes("louder")) {
+      return this.adjustVolume(15);
+    }
+
+    if (lower.includes("volume down") || lower.includes("turn it down") || lower.includes("quieter")) {
+      return this.adjustVolume(-15);
     }
 
     if (lower.includes("mute volume") || lower.includes("mute audio")) {
@@ -91,6 +138,57 @@ class OfficeActionRunner {
     }
 
     return { handled: false };
+  }
+
+  getSuitStatus() {
+    try {
+      let battPct = "100";
+      let battStatus = "AC power";
+      try {
+        const out = execSync("pmset -g batt", { timeout: 2000 }).toString();
+        const m = out.match(/(\d+)%/);
+        if (m) battPct = m[1];
+        battStatus = out.includes("charging") || out.includes("AC") ? "plugged into AC power" : "on battery power";
+      } catch (e) {}
+
+      const freeGB = (os.freemem() / (1024 ** 3)).toFixed(1);
+      const totalGB = (os.totalmem() / (1024 ** 3)).toFixed(1);
+      const usedGB = (totalGB - freeGB).toFixed(1);
+      const cpuCount = os.cpus().length;
+
+      return {
+        handled: true,
+        speech: `All suit systems are green, Boss. Power is at ${battPct} percent ${battStatus}. Memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} active CPU cores. I am standing by for your command.`
+      };
+    } catch (e) {
+      return { handled: true, speech: "All suit systems are online and operational, Boss." };
+    }
+  }
+
+  lockScreen() {
+    try {
+      exec("pmset displaysleepnow");
+      return {
+        handled: true,
+        speech: "Securing your workstation and putting the screen to sleep now, Boss."
+      };
+    } catch (e) {
+      return { handled: true, speech: "Securing your screen now." };
+    }
+  }
+
+  adjustVolume(delta) {
+    try {
+      const current = parseInt(execSync('osascript -e "output volume of (get volume settings)"', { timeout: 2000 }).toString().trim(), 10) || 50;
+      const target = Math.min(100, Math.max(0, current + delta));
+      execSync(`osascript -e "set volume output volume ${target}"`, { timeout: 2000 });
+      return {
+        handled: true,
+        speech: `Volume set to ${target} percent, Boss.`
+      };
+    } catch (e) {
+      return { handled: true, speech: "Volume adjusted, Boss." };
+    }
   }
 
   getBatteryReport() {
