@@ -220,7 +220,7 @@ ipcRenderer.on('set-mode', (_, m) => {
     if (m === 'rewrite') {
       recLabel.textContent = 'AI Rewriter';
     } else if (m === 'jarvis') {
-      recLabel.textContent = 'Jarvis';
+      recLabel.textContent = 'Ava';
     } else {
       recLabel.textContent = 'Recording';
     }
@@ -230,7 +230,7 @@ ipcRenderer.on('set-mode', (_, m) => {
   updateTimer();
 });
 
-// Jarvis state listeners
+// Jarvis / Ava state listeners
 ipcRenderer.on('jarvis-thinking', () => {
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = 'Thinking...';
@@ -243,7 +243,7 @@ ipcRenderer.on('jarvis-speaking', () => {
 
 ipcRenderer.on('jarvis-listening', () => {
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = 'Jarvis';
+  if (recLabel) recLabel.textContent = 'Ava';
 });
 
 // Listen for recording start time from main process

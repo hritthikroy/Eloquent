@@ -832,7 +832,7 @@ function createTray() {
   // Recording actions
   menuTemplate.push(
     {
-      label: '⚡ Talk to Jarvis (Alt+J)',
+      label: '⚡ Talk to Ava (Alt+J)',
       click: () => {
         playSound('start');
         showOverlayUltraFast('jarvis');
@@ -853,7 +853,7 @@ function createTray() {
       }
     },
     {
-      label: '🤖 Jarvis Preferences',
+      label: '🤖 Ava Preferences',
       submenu: [
         {
           label: `👤 Custom Name: ${jarvisManager.config.userName}`,
@@ -861,29 +861,13 @@ function createTray() {
         },
         {
           label: '🎩 Salutation',
-          submenu: ['Sir', 'Boss', 'Captain', 'Chief', 'Hritthik'].map(sal => ({
+          submenu: ['Boss', 'Hritthik', 'Sir', 'Captain', 'Chief'].map(sal => ({
             label: sal,
             type: 'radio',
             checked: jarvisManager.config.salutation === sal,
             click: () => {
               jarvisManager.saveConfig({ salutation: sal });
-              jarvisManager.speak(`Salutation updated to ${sal}.`);
-              createTray();
-            }
-          }))
-        },
-        {
-          label: '🗣️ Human Voice Persona',
-          submenu: [
-            { id: 'en-US-AvaNeural', name: 'Ava (Warm, Empathetic Human - Default)' },
-            { id: 'en-GB-BrianNeural', name: 'Brian (British Jarvis - Authentic)' }
-          ].map(v => ({
-            label: v.name,
-            type: 'radio',
-            checked: jarvisManager.config.voice === v.id,
-            click: () => {
-              jarvisManager.saveConfig({ voice: v.id });
-              jarvisManager.speak(`Voice updated. I am right here with you, ${jarvisManager.config.salutation}.`);
+              jarvisManager.speak(`Salutation updated to ${sal}. I'm right here with you.`);
               createTray();
             }
           }))
@@ -1789,11 +1773,9 @@ async function stopRecording() {
 
       if (prefChange) {
         if (prefChange.type === 'name') {
-          jarvisReply = `Understood. I will address you as ${prefChange.value} from now on.`;
+          jarvisReply = `Understood. I will call you ${prefChange.value} from now on.`;
         } else if (prefChange.type === 'salutation') {
-          jarvisReply = `Understood. I will address you as ${prefChange.value}.`;
-        } else if (prefChange.type === 'voice') {
-          jarvisReply = `Voice switched to ${prefChange.value}. How does this sound, ${jarvisManager.config.salutation}?`;
+          jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
         }
       } else {
         jarvisReply = await askJarvis(originalText);
@@ -1807,8 +1789,8 @@ async function stopRecording() {
 
       playSound('success');
 
-      // Show notification with Jarvis response
-      showNotification(`🤖 Jarvis (${jarvisManager.config.salutation})`, jarvisReply);
+      // Show notification with Ava response
+      showNotification(`🤖 Ava (${jarvisManager.config.salutation})`, jarvisReply);
 
       // Save to history
       saveToHistory({
