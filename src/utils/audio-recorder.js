@@ -162,54 +162,40 @@ class AudioRecorder {
     
     console.log(`🎤 Using recording binary: ${recBinary}`);
 
-    // Record without filters — SoX is running at 48kHz (macOS CoreAudio ignores 16kHz request)
-    // Filters tuned for 16kHz would destroy voice signal at 48kHz. Whisper handles noise natively.
-    // Use 'stat -freq' effect to emit RMS/peak stats per chunk for reliable VAD amplitude.
+    // Clean recording — no filters (Whisper is noise-robust; filters at 48kHz cause problems)
     this.recordingProcess = spawn(recBinary, [
-      '-r', '16000',        // Requested; SoX may use 48000 — both work fine for Whisper
-      '-c', '1',            // Mono
-      '-b', '16',           // 16-bit depth
+      '-r', '16000',   // Requested; CoreAudio may use 48000 — Whisper handles both
+      '-c', '1',       // Mono
+      '-b', '16',      // 16-bit
       '-t', 'wav',
-      outputPath,
-      'stat', '-freq'       // Emit per-chunk RMS stats to stderr — reliable amplitude source
+      outputPath
     ]);
 
-    // Log output for debugging
-    this.recordingProcess.stdout.on('data', (data) => {
-      console.log('📊 Sox stdout:', data.toString());
-    });
+    this.recordingProcess.stdout.on('data', () => {}); // WAV data goes to file, ignore stdout
 
     this.recordingProcess.stderr.on('data', (data) => {
       const str = data.toString();
-      // Only log non-stat lines (suppress noisy per-sample stat output)
-      if (!str.startsWith('Samples') && !str.startsWith('Length') && !str.startsWith('Scaled') &&
-          !str.startsWith('Maximum') && !str.startsWith('Minimum') && !str.startsWith('Midline') &&
-          !str.startsWith('Mean') && !str.startsWith('RMS') && !str.startsWith('Rough') &&
-          !str.startsWith('Volume') && !str.startsWith('Flat') && !str.startsWith('Pk') &&
-          !str.startsWith('Crest') && !str.startsWith('Bit-depth')) {
-        console.log('📊 Sox stderr:', str);
+      // Log useful lines only — suppress per-frame VU meter spam
+      if (str.includes('WARN') || str.includes('ERROR') || str.includes('Input File') ||
+          str.includes('Sample Rate') || str.includes('Channels') || str.includes('Aborted')) {
+        console.log('📊 Sox stderr:', str.trim());
       }
 
-      // --- PRIMARY: Parse RMS amplitude from stat output ---
-      // stat outputs: "RMS amplitude:      0.003456"
-      const rmsMatch = str.match(/RMS amplitude:\s+([\d.]+)/i);
-      if (rmsMatch && this.onAmplitude) {
-        const rmsRaw = parseFloat(rmsMatch[1]);
-        // RMS range 0.0–1.0 (16-bit normalized). Typical voice is 0.02–0.2
-        // Scale up 5x so normal speech reads 0.1–1.0 for VAD
-        const amplitude = Math.min(rmsRaw * 5, 1.0);
-        this.onAmplitude(amplitude);
-        return;
-      }
-
-      // --- FALLBACK: VU bar character counting (when stat not available) ---
+      // Parse VU meter bar for amplitude: e.g. [    ==|==    ] or [   -==|==-   ]
+      // This fires every ~130ms per SoX chunk — reliable heartbeat for VAD
       const vuMatch = str.match(/\[([^\]]*)\|([^\]]*)\]/);
       if (vuMatch && this.onAmplitude) {
-        const leftVU = vuMatch[1];
-        const rightVU = vuMatch[2];
-        // Count signal characters: each = ≈ 1/14 of full scale (14 chars total at 48kHz)
-        const signalChars = (leftVU + rightVU).replace(/[^=\-#]/g, '').length;
-        const amplitude = Math.min(signalChars / 8, 1.0);
+        const bars = (vuMatch[1] + vuMatch[2]).replace(/[^=#\-]/g, '');
+        // bars contains signal chars: '-' = low, '=' = mid, '#' = clip
+        // '-' counts 1pt, '=' counts 2pts, '#' counts 3pts — weighted by loudness
+        let energy = 0;
+        for (const ch of bars) {
+          if (ch === '-') energy += 1;
+          else if (ch === '=') energy += 2;
+          else if (ch === '#') energy += 3;
+        }
+        // Max possible energy: 14 chars × 2pts = 28 at full scale. Normalize to 0–1.
+        const amplitude = Math.min(energy / 14, 1.0);
         this.onAmplitude(amplitude);
       }
     });
