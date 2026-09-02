@@ -875,12 +875,15 @@ function createTray() {
         {
           label: '🗣️ Voice Persona',
           submenu: [
-            { id: 'Samantha', name: 'Samantha (Warm & Emotional Lady AI - Default)' },
-            { id: 'Moira', name: "F.R.I.D.A.Y. [Moira] (Tony Stark's Irish Lady AI)" },
+            { id: 'Tara', name: 'Tara (Superhuman Indian English - Default)' },
+            { id: 'Piya', name: 'Piya (Bangla / Banglish Lady AI)' },
+            { id: 'Lekha', name: 'Lekha (Hindi / Hinglish Lady AI)' },
+            { id: 'Rishi', name: 'Rishi (Indian Tactical Commander)' },
+            { id: 'Samantha', name: 'Samantha (Cinematic Hollywood AI)' },
+            { id: 'Moira', name: "F.R.I.D.A.Y. [Moira] (Avengers Irish AI)" },
             { id: 'Karen', name: "Karen (Tony Stark's Suit Lady AI)" },
-            { id: 'Tessa', name: 'Tessa (Executive Lady AI)' },
             { id: 'Daniel', name: 'Daniel (Classic British Jarvis)' },
-            { id: 'Aman', name: 'Aman (Indian English)' }
+            { id: 'Aman', name: 'Aman (Indian English Male)' }
           ].map(v => ({
             label: v.name,
             type: 'radio',
