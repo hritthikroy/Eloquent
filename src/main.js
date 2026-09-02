@@ -1220,7 +1220,6 @@ function showOverlayUltraFast(mode = 'standard') {
 
   const displayAndRecord = () => {
     win.webContents.send('set-mode', mode);
-    win.webContents.send('recording-started', Date.now());
     win.showInactive(); // Shows instantly without stealing active window focus
     startRecording();
     isCreatingOverlay = false;
@@ -1235,7 +1234,7 @@ function showOverlayUltraFast(mode = 'standard') {
 
 // Hide overlay with smooth fade-out (preserves window in memory)
 function hideOverlay() {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
+  if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
     overlayWindow.webContents.send('close-with-animation');
     setTimeout(() => {
       if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1771,7 +1770,11 @@ function startRecording() {
         }
         return;
       }
-      if (jarvisSpeechDetected) {
+      // CRITICAL: Suspend silence auto-stop while AI is actively speaking aloud!
+      if (jarvisManager.isSpeaking) {
+        return;
+      }
+      if (jarvisSpeechDetected && jarvisSpeechFrames >= 2) {
         const silenceMs = Date.now() - jarvisLastSpeechTime;
         const speechDurationMs = Date.now() - jarvisSpeechStartTime;
         // 320ms natural silence after >= 120ms real voice = immediate auto-submit!
@@ -1895,7 +1898,11 @@ async function stopRecording() {
     jarvisVadHeartbeat = null;
   }
 
-  if (isProcessing || (!isRecording && !recordingProcess)) {
+  if (isProcessing) {
+    return;
+  }
+
+  if (!isRecording && !recordingProcess) {
     isStopRecordingLock = false;
     return;
   }
