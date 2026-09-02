@@ -1970,6 +1970,7 @@ async function stopRecording() {
       let jarvisReply = '';
       let activeAgent = jarvisManager.agents.tuktuk;
       let standupAlreadySpoken = false;
+      let actionResult = null;
 
       if (prefChange) {
         if (prefChange.type === 'name') {
@@ -1998,7 +1999,7 @@ async function stopRecording() {
         }
 
         // Check if specialist executes an automated system action
-        const actionResult = await actionRunner.handleAction(originalText, activeAgent);
+        actionResult = await actionRunner.handleAction(originalText, activeAgent);
         if (actionResult && actionResult.handled) {
           console.log(`⚡ Specialist Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
           jarvisReply = actionResult.speech;
@@ -2021,7 +2022,7 @@ async function stopRecording() {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
         }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
-        const actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager);
+        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager);
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
             console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
@@ -2482,11 +2483,23 @@ function postProcessTranscription(text) {
   text = text.trim().replace(/\s+/g, ' ');
 
   const corrections = {
+    'doop-took': 'Tuk Tuk',
+    'doop took': 'Tuk Tuk',
+    'dooptook': 'Tuk Tuk',
+    'dup took': 'Tuk Tuk',
+    'duptook': 'Tuk Tuk',
+    'dook took': 'Tuk Tuk',
+    'dooktook': 'Tuk Tuk',
+    'tuk-tuk': 'Tuk Tuk',
     'tuktuk': 'Tuk Tuk',
     'tuk tuk': 'Tuk Tuk',
     'Tuktuk': 'Tuk Tuk',
     'tok tok': 'Tuk Tuk',
     'took took': 'Tuk Tuk',
+    'tok-tok': 'Tuk Tuk',
+    'took-took': 'Tuk Tuk',
+    'tik tik': 'Tuk Tuk',
+    'tik-tik': 'Tuk Tuk',
     'eva': 'Tuk Tuk',
     'Eva': 'Tuk Tuk',
     'ava': 'Tuk Tuk',
