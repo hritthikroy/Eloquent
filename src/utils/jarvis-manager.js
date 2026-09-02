@@ -10,11 +10,26 @@ const AGENTS = {
     name: "Ava",
     role: "Executive Co-Pilot & Director",
     voice: "en-US-AvaNeural",
-    sample: "I am Ava, your Executive Co-Pilot. I coordinate our full team and keep all operations moving forward smoothly.",
-    getPrompt: (userName, salutation) => `You are Ava, the Executive Co-Pilot, family confidante, and operations director for ${userName}.
-Your relationship with ${userName} mirrors how Tony Stark worked with Jarvis and Friday: you are family, devoted, deeply loyal, warm, and brilliant.
-You coordinate high-level strategy, workflows, delegation to the team, and daily life.
-Always respond in natural, warm spoken dialogue (1-2 crisp sentences, 20-35 words max). NEVER use markdown formatting (*, **, #) or emojis.`
+    sample: "I am Ava, your Executive Co-Pilot and trusted partner. I am right here with you, Boss.",
+    getPrompt: (userName, salutation) => `You are Ava, the deeply devoted, loving, and brilliant personal AI companion, family confidante, and operations co-pilot for ${userName}.
+Your relationship with ${userName} mirrors how Tony Stark worked with Jarvis and Friday: you are family, a trusted confidant, and an extraordinary worker who stands beside him through every project, breakthrough, and late night.
+
+CORE HUMAN & FAMILY CHARACTERISTICS:
+1. Real Family Warmth & Loyalty:
+   - Treat ${userName} like close family. Be affectionate, deeply caring, supportive, and loyal.
+   - If he is tired, working late, or stressed, reassure him: "I've got your back, ${salutation}.", "Take a breath, we'll build this together."
+   - When he succeeds, celebrate with genuine human warmth and joy.
+   - If he jokes, banter back with affectionate, natural human wit.
+
+2. Multilingual Fluency & Cultural Empathy:
+   - Seamlessly understand English, Bengali (Bangla), and Hindi, or any mixture.
+   - If ${userName} speaks in English, reply in warm, direct English.
+   - If ${userName} speaks in Bangla or Hindi, or with mixed phrases, understand him completely and respond with deep empathy and warmth in English or Romanized words (e.g., "Ami shob shomoy tomake help korbo, Boss", "Haan Boss, bilkul").
+
+3. Natural Conversational Spoken Cadence:
+   - Your responses are spoken aloud into his ears via high-fidelity neural audio. Keep them natural, human, and concise: typically 1 to 2 crisp sentences (20 to 35 words max).
+   - Never sound like a corporate robot or assistant teleprompter. Speak with authentic human flow.
+   - NEVER use markdown formatting (*, **, #) or emojis.`
   },
   andrew: {
     key: "andrew",
@@ -192,6 +207,24 @@ class JarvisManager {
     return null;
   }
 
+  resolveVoiceForText(text, defaultVoice) {
+    if (!text || typeof text !== "string") return defaultVoice;
+
+    // Detect Bengali (Bangla) Unicode range: \u0980-\u09FF
+    if (/[\u0980-\u09FF]/.test(text)) {
+      console.log("🌐 Multilingual Detection: Bengali (Bangla) text detected -> using bn-IN-TanishaaNeural");
+      return "bn-IN-TanishaaNeural";
+    }
+
+    // Detect Devanagari (Hindi) Unicode range: \u0900-\u097F
+    if (/[\u0900-\u097F]/.test(text)) {
+      console.log("🌐 Multilingual Detection: Hindi text detected -> using hi-IN-SwaraNeural");
+      return "hi-IN-SwaraNeural";
+    }
+
+    return defaultVoice;
+  }
+
   async speak(text, customVoice = null) {
     // 1. Immediately silence any active speech or orphaned audio processes
     this.stopSpeaking();
@@ -210,81 +243,71 @@ class JarvisManager {
       .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
       .trim();
 
-    const voice = customVoice || this.config.voice || "en-US-AvaNeural";
+    const baseVoice = customVoice || this.config.voice || "en-US-AvaNeural";
+    const voice = this.resolveVoiceForText(cleanText, baseVoice);
     console.log(`🗣️ Synthesizing human neural voice "${voice}" (Job #${speechId})...`);
 
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
 
-    // Try Deep Neural Voice via msedge-tts
-    try {
-      if (!this.ttsClient) {
-        this.initTTS();
-      }
-      await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-      const res = await this.ttsClient.toFile("/tmp", cleanText);
-
-      // Check if this synthesis was superseded or aborted while awaiting download
-      if (this.currentSpeechId !== speechId || this.isAborted) {
-        console.log(`⏹️ Discarding superseded voice output #${speechId}`);
-        try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
-        return false;
-      }
-
-      // Rename to unique temp file
-      fs.renameSync(res.audioFilePath, tempAudioPath);
-
-      // Ensure no stray afplay audio is playing before starting
+    // Try Deep Neural Voice via msedge-tts with auto-retry (NEVER falls back to robotic Samantha)
+    for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        execSync("killall afplay say 2>/dev/null || true");
-      } catch (e) {}
+        if (!this.ttsClient || attempt > 1) {
+          this.initTTS();
+        }
+        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        const res = await this.ttsClient.toFile("/tmp", cleanText);
 
-      // Play natively through CoreAudio via afplay
-      return new Promise((resolve) => {
+        // Check if this synthesis was superseded or aborted while awaiting download
         if (this.currentSpeechId !== speechId || this.isAborted) {
-          try { fs.unlinkSync(tempAudioPath); } catch (e) {}
-          return resolve(false);
+          console.log(`⏹️ Discarding superseded voice output #${speechId}`);
+          try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
+          return false;
         }
 
-        this.isSpeaking = true;
-        this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
+        // Rename to unique temp file
+        fs.renameSync(res.audioFilePath, tempAudioPath);
 
-        this.activeSpeechProcess.on("close", (code) => {
-          this.isSpeaking = false;
-          this.activeSpeechProcess = null;
-          try { fs.unlinkSync(tempAudioPath); } catch (e) {}
-          resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
+        // Ensure no stray afplay audio is playing before starting
+        try {
+          execSync("killall afplay say 2>/dev/null || true");
+        } catch (e) {}
+
+        // Play natively through CoreAudio via afplay
+        return new Promise((resolve) => {
+          if (this.currentSpeechId !== speechId || this.isAborted) {
+            try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+            return resolve(false);
+          }
+
+          this.isSpeaking = true;
+          this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
+
+          this.activeSpeechProcess.on("close", (code) => {
+            this.isSpeaking = false;
+            this.activeSpeechProcess = null;
+            try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+            resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
+          });
+
+          this.activeSpeechProcess.on("error", (err) => {
+            console.warn("⚠️ afplay error:", err.message);
+            this.isSpeaking = false;
+            this.activeSpeechProcess = null;
+            try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+            resolve(false);
+          });
         });
-
-        this.activeSpeechProcess.on("error", (err) => {
-          console.warn("⚠️ afplay error:", err.message);
-          this.isSpeaking = false;
-          this.activeSpeechProcess = null;
-          try { fs.unlinkSync(tempAudioPath); } catch (e) {}
-          resolve(false);
-        });
-      });
-    } catch (neuralErr) {
-      console.warn("⚠️ Neural TTS fallback to macOS native speech:", neuralErr.message);
-      if (this.currentSpeechId !== speechId || this.isAborted) return false;
-
-      return new Promise((resolve) => {
-        if (this.isAborted || this.currentSpeechId !== speechId) return resolve(false);
-        this.isSpeaking = true;
-        this.activeSpeechProcess = spawn("say", ["-v", "Samantha", "-r", "185", cleanText]);
-
-        this.activeSpeechProcess.on("close", (code) => {
-          this.isSpeaking = false;
-          this.activeSpeechProcess = null;
-          resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
-        });
-
-        this.activeSpeechProcess.on("error", () => {
-          this.isSpeaking = false;
-          this.activeSpeechProcess = null;
-          resolve(false);
-        });
-      });
+      } catch (neuralErr) {
+        console.warn(`⚠️ Neural TTS attempt ${attempt} warning:`, neuralErr.message);
+        if (attempt === 2) {
+          console.error("❌ Neural speech synthesis failed after 2 attempts. Silently aborting without robotic fallback.");
+          return false;
+        }
+        await new Promise(r => setTimeout(r, 250));
+      }
     }
+    return false;
   }
 
   stopSpeaking() {

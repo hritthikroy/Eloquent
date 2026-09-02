@@ -2039,12 +2039,14 @@ async function transcribe(filePath) {
     contentType: 'audio/wav'
   });
   
-  // Optimized for English transcription with Whisper
+  // Whisper Large V3 Turbo transcription
   form.append('model', 'whisper-large-v3-turbo');
-  form.append('language', 'en'); // Force English for best accuracy
+  if (currentMode !== 'jarvis') {
+    form.append('language', 'en'); // Force English for standard dictation
+  }
   form.append('response_format', 'json');
-  form.append('temperature', '0'); // Zero temperature for English = most accurate
-  form.append('prompt', 'Professional voice dictation with zero background noise, crisp enunciation, accurate punctuation, commas, periods, and clean capitalization.');
+  form.append('temperature', '0');
+  form.append('prompt', 'Professional voice dictation and conversational dialogue in English, Bengali (Bangla), and Hindi with natural capitalization and punctuation.');
   
   // High accuracy transcription
   try {
