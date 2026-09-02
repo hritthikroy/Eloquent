@@ -1873,11 +1873,28 @@ async function stopRecording() {
         }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
         const actionResult = actionRunner.handleAction(originalText, activeAgent);
+        let standupAlreadySpoken = false;
         if (actionResult && actionResult.handled) {
-          console.log(`⚡ Office Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
-          jarvisReply = actionResult.speech;
-          if (actionResult.dismissSession) {
-            isJarvisLoopActive = false;
+          if (actionResult.isStandup) {
+            console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
+            for (const step of actionResult.steps) {
+              if (!isJarvisLoopActive) break;
+              if (overlayWindow && !overlayWindow.isDestroyed()) {
+                overlayWindow.webContents.send('set-agent-name', step.agent);
+                overlayWindow.webContents.send('jarvis-speaking');
+              }
+              showNotification(`💼 ${step.agent} (${step.role})`, step.speech);
+              await jarvisManager.speak(step.speech, step.voice);
+              await new Promise(r => setTimeout(r, 200));
+            }
+            jarvisReply = actionResult.steps[actionResult.steps.length - 1].speech;
+            standupAlreadySpoken = true;
+          } else {
+            console.log(`⚡ Office Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
+            jarvisReply = actionResult.speech;
+            if (actionResult.dismissSession) {
+              isJarvisLoopActive = false;
+            }
           }
         } else {
           jarvisReply = await askJarvis(originalText, activeAgent);
@@ -1886,12 +1903,17 @@ async function stopRecording() {
 
       finalText = jarvisReply;
 
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.webContents.send('jarvis-speaking');
-      }
+      if (!standupAlreadySpoken) {
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-speaking');
+        }
 
-      // Show notification with specialist agent name and role
-      showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
+        // Show notification with specialist agent name and role
+        showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
+
+        // Speak response aloud with the specialist agent's dedicated real-human voice!
+        await jarvisManager.speak(jarvisReply, activeAgent.voice);
+      }
 
       // Save to history
       saveToHistory({
@@ -1903,9 +1925,6 @@ async function stopRecording() {
         timestamp: new Date().toISOString(),
         duration: recordingDuration
       });
-
-      // Speak response aloud with the specialist agent's dedicated real-human voice!
-      const speechSuccess = await jarvisManager.speak(jarvisReply, activeAgent.voice);
 
       // Mark processing finished so next turn is accepted cleanly
       isProcessing = false;
