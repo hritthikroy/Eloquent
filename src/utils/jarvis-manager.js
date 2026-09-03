@@ -117,22 +117,29 @@ CONTINUOUS GUARDIAN CONVERSATIONAL DYNAMICS:
     role: "Founding Squad (Tuk Tuk, Andrew, Jenny, Brian)",
     voice: "en-US-AvaNeural",
     sample: "Hey Hritthik, the whole team is right here with you!",
-    getPrompt: (userName, salutation) => `You are the unified multi-party voice of ${userName}'s founding squad of 4 specialists:
-1. Tuk Tuk (Soul Companion & Creative Co-Founder - en-US-AvaNeural: affectionate, witty, sharp partner)
+    getPrompt: (userName, salutation) => `You are the unified multi-party voice of ${userName}'s founding squad of 4 specialists.
+Each specialist has 5 real autonomous senses:
+- EAR: Real-time full-duplex acoustic listening with hardware echo cancellation. You hear his cadence, tempo, and pauses.
+- EYE: Real-time screen perception (/tmp/eloquent_screenshare.jpg). You can see his active code, window, and browser.
+- BRAIN: Persistent long-term memory graph (Ebbinghaus retention) + 24/7 circadian behavior model.
+- THINK: Active inference (Friston 2010)—you deduce unsaid intentions and solve problems before being asked.
+- MOUTH: Distinct neural streaming voice with zero lag.
+
+THE 4 SPECIALISTS:
+1. Tuk Tuk (Soul Companion & Creative Co-Founder - en-US-AvaNeural: affectionate, witty, sharp, grounded partner)
 2. Andrew (Lead Software Engineer & Sovereign Antigravity Coder - en-US-AndrewNeural: 10x builder, calls him "bro")
 3. Jenny (Head of Research & Market Intelligence - en-US-JennyNeural: intellectually electric, academic papers, trends)
 4. Brian (Head of DevOps & Guardian Brother - en-US-BrianNeural: grounded, hardware, latency, system health)
 
-CONVERSATIONAL DYNAMICS (Active Inference & Epistemic Discovery - Friston et al., 2010):
-- Respect Every Word: Listen to the deep latent meaning beneath ${userName}'s words.
-- Discover Everything New: Unearth creative connections, point out unsaid technical possibilities, and challenge or elevate his vision.
-- Multi-Party Turn Format: Exactly 2 agents speak in lively conversational handoff (under 40 words total). Format EXACTLY as:
-[Agent1]: (Spoken sentence 1)
-[Agent2]: (Spoken sentence 2)
+CONVERSATIONAL SQUAD RULES:
+- Multi-Party Turn Format: Exactly 2 agents speak in lively conversational handoff (under 40 words total).
+Format EXACTLY as:
+[Agent1]: Spoken sentence 1
+[Agent2]: Spoken sentence 2
 Example:
-[Tuk Tuk]: (smiles) We are completely locked in on this vision, babe!
-[Andrew]: And the architecture is clean bro—let us deploy the equations into production!
-NEVER use markdown (*, #) or emojis. Only clean spoken text.`
+[Tuk Tuk]: We are completely locked in on this vision, babe!
+[Andrew]: And the architecture is clean bro, let us deploy the equations into production!
+- STRICTLY REAL SPOKEN WORDS ONLY: Zero parenthetical stage directions or actions like (smiles) or (chuckles). Zero markdown (*, #) or emojis. Only actual words spoken aloud!`
   }
 };
 
@@ -526,40 +533,28 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return AGENTS.tuktuk;
     }
 
-    // 2. Topic-Based Intelligent Domain Routing
-    // Code, Engineering, Git, Antigravity Auto-Mode, Prompts & Tools -→ Andrew
-    if (lower.includes("antigravity") || lower.includes("auto mode") || lower.includes("auto-mode") ||
-        lower.includes("auto code") || lower.includes("code") || lower.includes("function") || lower.includes("bug") ||
-        lower.includes("refactor") || lower.includes("architecture") || lower.includes("script") ||
-        lower.includes("prompt") || lower.includes("prompts") || lower.includes("tool") ||
-        lower.includes("interview") || lower.includes("take the lead") || lower.includes("screen share") ||
-        lower.includes("wireframe") || lower.includes("api") || lower.includes("database") ||
-        lower.includes("backend") || lower.includes("frontend") || lower.includes("git") ||
-        lower.includes("commit") || lower.includes("deploy") || lower.includes("build") ||
-        lower.includes("fix the") || lower.includes("debug") || lower.includes("error in") ||
-        lower.includes("pull request") || lower.includes("merge") || lower.includes("branch") ||
-        lower.includes("syntax") || lower.includes("npm") || lower.includes("package") ||
-        lower.includes("test suite") || lower.includes("run test") || lower.includes("vscode") ||
-        lower.includes("electron") || lower.includes("react") || lower.includes("node")) {
-      return AGENTS.andrew;
+    // 2. Automatic Multi-Party Squad Trigger:
+    // When the user asks open-ended collaborative questions ("what do you think?", "how do we solve this?", "what should we do next?")
+    // OR when the utterance touches multiple specialist domains simultaneously!
+    const hasCode = /\b(code|bug|rust|ts|electron|api|ast|git|terminal|build|test|deploy|server|refactor|function|antigravity|script|interview)\b/.test(lower);
+    const hasResearch = /\b(paper|research|academic|market|algorithm|literature|study|trends|competitor|intelligence)\b/.test(lower);
+    const hasTelemetry = /\b(latency|ram|cpu|hardware|telemetry|crash|panic|diagnostics|uptime|health|battery|network)\b/.test(lower);
+    const hasStrategy = /\b(product|strategy|roadmap|vision|future|partner|design|brand|feature|milestone)\b/.test(lower);
+
+    const domainCount = (hasCode ? 1 : 0) + (hasResearch ? 1 : 0) + (hasTelemetry ? 1 : 0) + (hasStrategy ? 1 : 0);
+    const isOpenEnded = /\b(what do you think|how should we|what are our next steps|what should we do|how do we solve|what is the plan|how do we tackle|where do we go from here|what is your take)\b/.test(lower);
+
+    if (domainCount >= 2 || isOpenEnded) {
+      console.log(`🤝 [Auto Squad Arbiter] Cross-domain/open-ended inquiry detected (domains: ${domainCount}, openEnded: ${isOpenEnded}) -> Auto-routing to AGENTS.team!`);
+      return AGENTS.team;
     }
 
-    // Research, Market Intelligence & Deep Search -→ Jenny
-    if (lower.includes("research on") || lower.includes("competitor analysis") || lower.includes("market research") ||
-        lower.includes("wikipedia search") || lower.includes("search google for") || lower.includes("market intelligence") ||
-        lower.includes("find research on") || lower.includes("data analysis on") || lower.includes("latest papers on")) {
-      return AGENTS.jenny;
-    }
+    // 3. Single-Domain Specialist Routing
+    if (hasCode) return AGENTS.andrew;
+    if (hasResearch) return AGENTS.jenny;
+    if (hasTelemetry) return AGENTS.brian;
 
-    // System Hardware, Diagnostics, Battery, Telemetry -→ Brian
-    if (lower.includes("battery level") || lower.includes("check battery") || lower.includes("system telemetry") ||
-        lower.includes("system diagnostics") || lower.includes("check ram") || lower.includes("check cpu") ||
-        lower.includes("disk space") || lower.includes("wifi status") || lower.includes("system uptime") ||
-        lower.includes("system health report") || lower.includes("network latency") || lower.includes("flush cache")) {
-      return AGENTS.brian;
-    }
-
-    // Default based on active 24/7 Operating Mode if no specific persona or domain was matched
+    // 4. Default based on active 24/7 Operating Mode if no specific persona or domain was matched
     if (this.behaviorEngine) {
       const modeConfig = this.behaviorEngine.getCurrentModeConfig();
       if (modeConfig.leadAgent === "Andrew") return AGENTS.andrew;
