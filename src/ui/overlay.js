@@ -63,7 +63,7 @@ let barHeights = new Float32Array(6).fill(2); // PERFORMANCE: Use typed array
 async function initAudio() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     });
     audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     if (audioContext.state === 'suspended') {

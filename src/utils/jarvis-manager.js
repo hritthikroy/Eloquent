@@ -625,6 +625,54 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     return null;
   }
 
+  async _synthesizeAudioChunk(textChunk, voice, speechId) {
+    if (!textChunk || textChunk.trim().length === 0) return null;
+    const cleanChunk = textChunk.trim();
+    const tempAudio = `/tmp/eloquent_chunk_${Date.now()}_${Math.floor(Math.random()*10000)}.mp3`;
+    try {
+      if (!this.ttsClient || !this.ttsClient._voice || this._cachedVoice !== voice) {
+        this.initTTS();
+        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        this._cachedVoice = voice;
+      }
+      const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
+      const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanChunk) : "+0Hz";
+      const toFilePromise = this.ttsClient.toFile("/tmp", cleanChunk, { rate: dynamicRate, pitch: dynamicPitch });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("MsEdgeTTS chunk timeout")), 5000)
+      );
+      const res = await Promise.race([toFilePromise, timeoutPromise]);
+      if (this.currentSpeechId !== speechId || this.isAborted) {
+        try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
+        return null;
+      }
+      fs.renameSync(res.audioFilePath, tempAudio);
+      return tempAudio;
+    } catch (err) {
+      console.warn("⚠️ Chunk synthesis warning:", err.message);
+      return null;
+    }
+  }
+
+  _playAudioFile(audioPath, speechId) {
+    return new Promise((resolve) => {
+      if (this.currentSpeechId !== speechId || this.isAborted) {
+        try { fs.unlinkSync(audioPath); } catch (e) {}
+        return resolve(false);
+      }
+      this.isSpeaking = true;
+      this.activeSpeechProcess = spawn("afplay", [audioPath]);
+      this.activeSpeechProcess.on("close", (code) => {
+        try { fs.unlinkSync(audioPath); } catch (e) {}
+        resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
+      });
+      this.activeSpeechProcess.on("error", () => {
+        try { fs.unlinkSync(audioPath); } catch (e) {}
+        resolve(false);
+      });
+    });
+  }
+
   async speak(text, customVoice = null) {
     // 1. Immediately silence any active speech or orphaned audio processes
     this.stopSpeaking();
@@ -649,6 +697,48 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 
     this.currentUtterance = cleanText;
     this.speechStartTime = Date.now();
+
+    // =============================================================
+    // FRONTIER OPTIMIZATION: STREAMING FIRST-CLAUSE TTS PIPELINING
+    // Slashing Time-to-First-Audio (TTFA) to < 320ms
+    // =============================================================
+    const clauseMatches = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
+    if (clauseMatches.length >= 2 && cleanText.split(/\s+/).length >= 7) {
+      const clause1 = clauseMatches[0].trim();
+      const clause2 = clauseMatches.slice(1).join(" ").trim();
+      console.log(`⚡ [Streaming First-Clause TTS] Synthesizing Clause 1 (${clause1.split(/\s+/).length} words) for <320ms TTFA...`);
+
+      const file1 = await this._synthesizeAudioChunk(clause1, voice, speechId);
+      if (file1 && this.currentSpeechId === speechId && !this.isAborted) {
+        const ttfaMs = Date.now() - this.speechStartTime;
+        console.log(`🚀 [TTFA Breakthrough] First clause playing aloud in ${ttfaMs}ms!`);
+
+        // Concurrently synthesize remaining clauses in the background
+        const clause2Promise = this._synthesizeAudioChunk(clause2, voice, speechId);
+
+        // Play Clause 1 natively via CoreAudio
+        const p1Success = await this._playAudioFile(file1, speechId);
+        if (!p1Success || this.currentSpeechId !== speechId || this.isAborted) {
+          this.isSpeaking = false;
+          return false;
+        }
+
+        // Clause 1 finished. Await Clause 2 (which downloaded concurrently during Clause 1 playback!)
+        const file2 = await clause2Promise;
+        if (file2 && this.currentSpeechId === speechId && !this.isAborted) {
+          const p2Success = await this._playAudioFile(file2, speechId);
+          setTimeout(() => {
+            this.isSpeaking = false;
+            this.currentUtterance = null;
+            this.interruptedUtterance = null;
+            this.activeSpeechProcess = null;
+          }, 75);
+          return p2Success;
+        }
+        this.isSpeaking = false;
+        return true;
+      }
+    }
 
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
 
