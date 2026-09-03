@@ -2491,11 +2491,12 @@ async function transcribe(filePath) {
 // Robust Groq Chat Completion with automatic model fallback
 async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
+    options.model,
+    'llama-3.1-8b-instant',
     CONFIG.aiModel,
     process.env.GROQ_MODEL,
-    'qwen/qwen3.8-27b',
-    'llama-3.1-70b-versatile',
-    'llama-3.1-8b-instant'
+    'llama-3.3-70b-versatile',
+    'qwen/qwen3.8-27b'
   ].filter(Boolean);
 
   const uniqueModels = [...new Set(candidateModels)];
@@ -2593,6 +2594,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : 0.65);
     const { content, usage, model } = await callGroqChatCompletion(messages, {
+      model: 'llama-3.1-8b-instant',
       temperature: dynamicTemperature,
       max_tokens: 160,
       timeout: 10000
