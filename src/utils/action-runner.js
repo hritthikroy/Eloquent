@@ -425,9 +425,11 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
     // JENNY (Research & Intelligence: Wikipedia, Internet, Web Search)
     // -------------------------------------------------------------
     if (lower.includes("wikipedia for ") || lower.includes("wikipedia ") || lower.includes("search wikipedia")) {
-      const match = speechText.match(/(?:wikipedia for|wikipedia|search wikipedia for|search wikipedia)\s+(.+)/i);
+      const match = speechText.match(/(?:wikipedia for|wikipedia summary for|wikipedia summary of|wikipedia|search wikipedia for|search wikipedia)\s+(.+)/i);
       if (match && match[1]) {
-        return await this.searchWikipedia(match[1].replace(/[.,?!]/g, "").trim());
+        let topic = match[1].replace(/^(?:the\s+)?(?:summary\s+for|summary\s+of|article\s+on|page\s+for)\s+/i, "");
+        topic = topic.replace(/[.,?!]/g, "").trim();
+        return await this.searchWikipedia(topic);
       }
     }
 
