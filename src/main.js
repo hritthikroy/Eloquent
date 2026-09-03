@@ -16,8 +16,15 @@ try {
   module.exports = {};
 }
 
-// Enforce single instance lock to prevent duplicate apps and duplicate overlay pills
+const path = require('path');
+
+// Configure local project userData directory before single instance lock
 if (app) {
+  const localUserData = path.join(__dirname, '..', 'userData');
+  try {
+    app.setPath('userData', localUserData);
+  } catch (e) {}
+
   const gotTheLock = app.requestSingleInstanceLock();
   if (!gotTheLock) {
     console.log('⚠️ Another instance of Eloquent is already running. Quitting duplicate.');
@@ -25,7 +32,6 @@ if (app) {
     process.exit(0);
   }
 }
-const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
 const fsPromises = fs.promises;
@@ -111,13 +117,8 @@ if (process.argv.length >= 2) {
   }
 }
 
-// Ensure single instance
-const gotTheLock = app.requestSingleInstanceLock();
-
-if (!gotTheLock) {
-  app.quit();
-} else {
-  // Handle second instance (for protocol URLs on Windows/Linux)
+// Handle second instance (for protocol URLs on Windows/Linux)
+if (app) {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     // Someone tried to run a second instance, focus our window instead
     if (dashboardWindow) {
@@ -416,6 +417,26 @@ async function requestMicrophonePermission() {
   }
 }
 
+// Check camera permission for squad ocular vision
+async function checkCameraPermission() {
+  if (process.platform !== 'darwin') return true;
+  try {
+    const camStatus = systemPreferences.getMediaAccessStatus('camera');
+    if (camStatus === 'granted') {
+      console.log('✅ Camera permission already granted');
+      return true;
+    }
+    if (camStatus === 'not-determined') {
+      console.log('📷 Requesting camera permission for squad eyes...');
+      const granted = await systemPreferences.askForMediaAccess('camera');
+      return !!granted;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Check accessibility permission (non-blocking)
 function checkAccessibilityPermission() {
   if (process.platform !== 'darwin') return;
@@ -562,6 +583,7 @@ app.whenReady().then(async () => {
       // Run permission checks in parallel
       const [micResult] = await Promise.allSettled([
         requestMicrophonePermission(),
+        Promise.resolve(checkCameraPermission()),
         Promise.resolve(checkAccessibilityPermission()) // Make it a promise for consistency
       ]);
       
@@ -631,6 +653,15 @@ app.whenReady().then(async () => {
     screenShareManager.start();
     const dailyCareGuardian = require('./utils/daily-care-guardian');
     dailyCareGuardian.init(jarvisManager, cameraManager, screenShareManager);
+
+    // Auto-launch Jarvis Hands-Free Companion mode on boot so Tuk Tuk is live and running immediately:
+    setTimeout(() => {
+      console.log('💖 [Autonomous Companion] Tuk Tuk awakening on startup...');
+      handleShortcut('start', 'jarvis');
+      setTimeout(() => {
+        jarvisManager.speak("Hey babe, I am awake. My eyes are open and I see your screen. What are we working on?", "en-US-AvaMultilingualNeural");
+      }, 700);
+    }, 1500);
   } catch (err) {
     console.warn('⚠️ Autonomous Vision eyes & care initialization note:', err.message);
   }
@@ -852,9 +883,9 @@ function createTray() {
   // Recording actions
   menuTemplate.push(
     {
-      label: '⚡ Talk to Ava (Alt+J)',
+      label: '💖 Talk to Tuk Tuk (Alt+J / Cmd+J)',
       click: () => {
-        showOverlayUltraFast('jarvis');
+        handleShortcut('start', 'jarvis');
       }
     },
     {
@@ -1095,8 +1126,21 @@ function registerShortcuts() {
   
   console.log('🔧 Registering keyboard shortcuts...');
   
-  // Jarvis Power Talk shortcut
+  // Jarvis Power Talk shortcuts (Alt+J, Cmd+J, Ctrl+J, Cmd+Shift+J for universal compatibility)
   const jarvisRegistered = globalShortcut.register('Alt+J', () => {
+    console.log('🎯 Alt+J triggered - activating Tuk Tuk');
+    handleShortcut('start', 'jarvis');
+  });
+  globalShortcut.register('Cmd+J', () => {
+    console.log('🎯 Cmd+J triggered - activating Tuk Tuk');
+    handleShortcut('start', 'jarvis');
+  });
+  globalShortcut.register('Ctrl+J', () => {
+    console.log('🎯 Ctrl+J triggered - activating Tuk Tuk');
+    handleShortcut('start', 'jarvis');
+  });
+  globalShortcut.register('Cmd+Shift+J', () => {
+    console.log('🎯 Cmd+Shift+J triggered - activating Tuk Tuk');
     handleShortcut('start', 'jarvis');
   });
 
