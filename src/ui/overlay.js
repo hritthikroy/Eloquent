@@ -252,6 +252,16 @@ ipcRenderer.on('jarvis-listening', () => {
   if (recLabel) recLabel.textContent = 'Listening...';
 });
 
+ipcRenderer.on('live-polishing', () => {
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) recLabel.textContent = 'Polishing...';
+});
+
+ipcRenderer.on('live-done', (_, resultText) => {
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) recLabel.textContent = 'Done!';
+});
+
 // Listen for recording start time from main process
 ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   console.log('🎙️ Recording started event received:', recordingStartTime);

@@ -24,7 +24,7 @@ console.log('Production dependencies:', prodDeps);
 // Build with optimizations
 console.log('🔨 Building optimized version...');
 try {
-  execSync('npm run build:arm64', { stdio: 'inherit' });
+  execSync('npm run build:mac-arm64', { stdio: 'inherit' });
   
   // Check final size
   const stats = execSync('du -sh dist/', { encoding: 'utf8' });

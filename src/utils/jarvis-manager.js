@@ -840,7 +840,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     const tempAudio = `/tmp/eloquent_chunk_${Date.now()}_${Math.floor(Math.random()*10000)}.mp3`;
     try {
       const client = new MsEdgeTTS();
-      await client.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+      await client.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
       const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
       const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanChunk) : "+0Hz";
       const toFilePromise = client.toFile(tempDir, cleanChunk, { rate: dynamicRate, pitch: dynamicPitch });
@@ -927,7 +927,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
           if (!this.ttsClient || attempt > 1) {
             this.initTTS();
           }
-          await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+          await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
           this._cachedVoice = voice;
         }
         // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
@@ -1025,7 +1025,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         this.initTTS();
       }
       if (this._cachedVoice !== voice) {
-        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
         this._cachedVoice = voice;
       }
 
@@ -1133,7 +1133,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       if (!fs.existsSync(file)) {
         try {
           this.initTTS();
-          await this.ttsClient.setMetadata(this.config.voice || "en-US-AvaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+          await this.ttsClient.setMetadata(this.config.voice || "en-US-AvaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
           const res = await this.ttsClient.toFile("/tmp", phrases[i], { rate: "+8%", pitch: "+1Hz" });
           fs.copyFileSync(res.audioFilePath, file);
           try { fs.unlinkSync(res.audioFilePath); } catch (e) {}

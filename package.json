@@ -10,6 +10,7 @@
     "build": "electron-builder --mac --arm64",
     "build:mac": "electron-builder --mac --arm64",
     "build:mac-arm64": "electron-builder --mac --arm64",
+    "build:arm64": "npm run build:mac-arm64",
     "build:mac-x64": "electron-builder --mac --x64",
     "build:mac-universal": "electron-builder --mac --universal",
     "build:win": "electron-builder --win --x64",
