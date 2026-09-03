@@ -123,8 +123,31 @@ class ScreenShareManager {
     });
   }
 
-  captureInstantFrame() {
-    if (this.isCapturing) return;
+  captureInstantFrame(sync = false) {
+    if (sync) {
+      try {
+        execSync(`screencapture -x -C "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, { timeout: 2500 });
+        let appName = "";
+        try {
+          appName = execSync(
+            `osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`,
+            { timeout: 1000 }
+          ).toString().trim();
+        } catch (e) {}
+        const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
+        this.lastContext = {
+          appName: appName || "Active Workspace",
+          windowTitle: "",
+          timestamp: Date.now(),
+          frameSizeKB: stats ? Math.round(stats.size / 1024) : 0
+        };
+        return this.framePath;
+      } catch (e) {
+        return this.framePath;
+      }
+    }
+
+    if (this.isCapturing) return this.framePath;
     this.isCapturing = true;
 
     // Fast non-blocking capture and resize to 1280px optimized
