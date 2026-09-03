@@ -2006,10 +2006,11 @@ async function stopRecording() {
     const stats = fs.statSync(targetAudioFile);
     console.log(`📊 Audio file: ${Math.round(stats.size/1000)}KB`);
     
-    // Accept short human replies (e.g. "Yes", "Hello", "How") down to ~550ms (~18KB)
-    if (stats.size < 18000) {
+    // Accept short human replies down to 250ms (~8KB) in jarvis mode
+    const minAudioBytes = (currentMode === 'jarvis') ? 8000 : 18000;
+    if (stats.size < minAudioBytes) {
       if (currentMode === 'jarvis') {
-        console.log(`🎙️ Sub-vocal noise blip (${Math.round(stats.size/1000)}KB) - keeping mic active for real speech...`);
+        console.log(`🎙️ Sub-vocal noise blip (<250ms, ${Math.round(stats.size/1000)}KB) - keeping mic active for real speech...`);
         isProcessing = false;
         isStopRecordingLock = false;
         if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
@@ -2180,7 +2181,15 @@ async function stopRecording() {
           let userQuery = originalText;
           if (lastInterruptedUtterance) {
             console.log(`🔀 Injecting conversational interruption context: "${lastInterruptedUtterance}"`);
-            userQuery = `[Interruption Context: You were speaking: "${lastInterruptedUtterance}" when Hritthik interjected: "${originalText}". React naturally to the overlap with loving partner warmth, acknowledge the cutoff with a smile/chuckle, and answer his interjection directly!]`;
+            let reactionStyle = "acknowledge the mid-sentence pivot naturally as his loving partner";
+            if (activeAgent.name === "Andrew") {
+              reactionStyle = "pivot immediately like a sharp lead engineer ('Got you bro')";
+            } else if (activeAgent.name === "Brian") {
+              reactionStyle = "acknowledge the interjection with calm, grounded DevOps clarity";
+            } else if (activeAgent.name === "Jenny") {
+              reactionStyle = "integrate his new variable swiftly with sharp analytical precision";
+            }
+            userQuery = `[Context: You were saying: "${lastInterruptedUtterance}" when Hritthik added mid-sentence: "${originalText}". Yield the floor respectfully, ${reactionStyle}, seamlessly integrate his added info without repeating old sentences, and answer his interjection directly in clean spoken words!]`;
             lastInterruptedUtterance = null;
           }
           jarvisReply = await askJarvis(userQuery, activeAgent, originalText);
