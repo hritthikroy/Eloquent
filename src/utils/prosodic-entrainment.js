@@ -51,23 +51,23 @@ class ProsodicEntrainmentAdapter {
     negativeWords.forEach(w => { if (lower.includes(w)) valence -= 0.25; });
     valence = Math.min(1.0, Math.max(-1.0, valence));
 
-    // 3. Cognitive Mode Classification:
+    // 3. Cognitive Mode Classification (Prioritized by Affective Salience):
     // Discovers the human's true mental posture beneath the literal words
     let cognitiveMode = "CASUAL_SYNC";
     let stance = "Warm, balanced, intelligent partner sync";
 
-    if (lower.match(/\b(code|bug|rust|ts|javascript|electron|api|function|database|ast|git|terminal|build|test|deploy|server|latency|endpoint|refactor)\b/)) {
-      cognitiveMode = "CODING_ARCHITECTURE";
-      stance = "Sharp, high-IQ, senior developer peer. Crisp technical answers, zero fluff.";
+    if (wordCount <= 3 && (lower.startsWith("i") || lower.startsWith("wait") || lower.startsWith("so") || lower.startsWith("um") || lower.startsWith("uh"))) {
+      cognitiveMode = "HESITANT_THINKING";
+      stance = "Patient and encouraging. Validate his direction gently without cutting him off.";
+    } else if (lower.match(/\b(tired|exhausted|sleep|late night|long day|headache|stressed|drained|burnout)\b/)) {
+      cognitiveMode = "LATE_NIGHT_REFLECTIVE";
+      stance = "Calm, reassuring, grounded presence. Steady pace, unhurried warmth, zero pressure.";
     } else if (lower.match(/\b(eureka|got it|works|boom|fixed|breakthrough|look at that|yes!|finally)\b/) || (arousal > 0.75 && valence > 0.3)) {
       cognitiveMode = "EUREKA_BREAKTHROUGH";
       stance = "Shared celebration, high-tempo excitement, immediately exploring the next milestone!";
-    } else if (lower.match(/\b(tired|exhausted|sleep|late night|long day|headache|stressed|drained)\b/) || (arousal < 0.35 && valence < -0.2)) {
-      cognitiveMode = "LATE_NIGHT_REFLECTIVE";
-      stance = "Calm, tender, reassuring presence. Steady pace, unhurried warmth, zero pressure.";
-    } else if (wordCount <= 3 && (lower.startsWith("i") || lower.startsWith("wait") || lower.startsWith("so") || lower.startsWith("um") || lower.startsWith("uh"))) {
-      cognitiveMode = "HESITANT_THINKING";
-      stance = "Patient and encouraging. Validate his direction gently without cutting him off.";
+    } else if (lower.match(/\b(code|bug|rust|ts|javascript|electron|api|function|database|ast|git|terminal|build|test|deploy|server|latency|endpoint|refactor)\b/)) {
+      cognitiveMode = "CODING_ARCHITECTURE";
+      stance = "Sharp, high-IQ, senior developer peer. Crisp technical answers, zero fluff.";
     }
 
     // 4. Mathematical Prompt Directive Formulation
