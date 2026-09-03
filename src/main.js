@@ -2666,7 +2666,7 @@ function parseMultiAgentTurns(text) {
 async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   const startTime = Date.now();
   const agent = activeAgent || jarvisManager.agents.tuktuk;
-  let systemPrompt = jarvisManager.getSystemPrompt(agent);
+  let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech);
 
   // Human Talk Vibe Detector (HTVD): Inject real-time emotional & cognitive wavelength
   if (jarvisManager.prosodicEntrainment) {

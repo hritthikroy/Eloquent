@@ -161,8 +161,10 @@ class JarvisManager {
     this.isAborted = false;
     this.currentSpeechId = 0;
     this.conversationHistory = []; // Rolling multi-turn context memory
+    this.historyFilePath = path.join(this.userDataPath, "history.json");
     this.config = this.loadConfig();
     this.memory = this.loadMemory();
+    this.loadRecentSessionHistory();
     this.ttsClient = null;
     this._cachedVoice = null; // Cache last voice so metadata is not re-negotiated every turn
     this.agents = AGENTS;
@@ -174,6 +176,69 @@ class JarvisManager {
     setTimeout(() => {
       this.ensureBackchannelLibrary().catch(() => {});
     }, 2000);
+  }
+
+  loadRecentSessionHistory() {
+    try {
+      if (fs.existsSync(this.historyFilePath)) {
+        const historyData = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
+        if (Array.isArray(historyData) && historyData.length > 0) {
+          const validTurns = historyData
+            .filter(h => h.originalText && h.text && h.mode === "jarvis")
+            .slice(0, 4)
+            .reverse();
+          for (const item of validTurns) {
+            this.addTurn("user", item.originalText, "user");
+            this.addTurn("assistant", item.text, item.agent || "Tuk Tuk");
+          }
+          console.log(`🧠 [Cross-Session Brain Memory] Restored ${validTurns.length * 2} past conversation turns from history.json!`);
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Could not load past session history:", e.message);
+    }
+  }
+
+  recallPastConversations(queryText, topK = 2) {
+    if (!queryText || typeof queryText !== "string" || queryText.trim().length < 3) return [];
+    try {
+      if (!fs.existsSync(this.historyFilePath)) return [];
+      const data = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
+      if (!Array.isArray(data) || data.length === 0) return [];
+
+      const queryTokens = new Set(
+        queryText.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(w => w.length > 2)
+      );
+      if (queryTokens.size === 0) return [];
+
+      const matches = [];
+      for (const entry of data) {
+        if (!entry.originalText || !entry.text) continue;
+        const fullText = `${entry.originalText} ${entry.text}`.toLowerCase();
+        const entryTokens = fullText.replace(/[^a-z0-9\s]/g, "").split(/\s+/);
+        let intersection = 0;
+        for (const token of entryTokens) {
+          if (queryTokens.has(token)) intersection++;
+        }
+        if (intersection > 0) {
+          const score = intersection / queryTokens.size;
+          if (score >= 0.35) {
+            matches.push({
+              score,
+              user: entry.originalText,
+              reply: entry.text,
+              agent: entry.agent || "Tuk Tuk",
+              timestamp: entry.timestamp
+            });
+          }
+        }
+      }
+
+      matches.sort((a, b) => b.score - a.score);
+      return matches.slice(0, topK);
+    } catch (e) {
+      return [];
+    }
   }
 
   initTTS() {
@@ -660,7 +725,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     return null;
   }
 
-  getSystemPrompt(agent = null) {
+  getSystemPrompt(agent = null, userQuery = "") {
     const { userName, salutation } = this.config;
     const activeAgent = agent || AGENTS.tuktuk;
     const basePrompt = activeAgent.getPrompt(userName, salutation);
@@ -677,9 +742,25 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 - Epistemic Exploration (Maximize Mutual Information I(S; O)): Go beyond passive agreement. Actively discover new architectural angles, mathematical formulas, and creative breakthroughs that elevate his vision.
 - Squad Inter-Connectivity: You are in constant acoustic sync with Tuk Tuk, Andrew, Jenny, and Brian. Acknowledge your teammates naturally when tasks cross domains!`;
 
+    const scientistDirective = `
+[PRINCIPAL SCIENTIST & MATHEMATICAL PROBLEM SOLVING DIRECTIVE]:
+- You analyze engineering, algorithmic, and architectural challenges with the depth and rigor of an elite principal research scientist and world-class systems architect.
+- Formulate technical challenges equationally: analyze Big-O algorithmic complexity, queuing theory, backpressure dynamics, memory fragmentation, and cache locality.
+- When solving bugs or system dilemmas, isolate root causes systematically with first-principles hypotheses and mathematical precision.`;
+
     const behaviorDirective = this.behaviorEngine ? this.behaviorEngine.get247ContextDirective(activeAgent.name) : "";
 
-    return `${basePrompt}\n\n${antiHallucinationDirective}\n\n${activeInferenceDirective}\n\n${behaviorDirective}\n\n${livingMemory}`;
+    // Episodic Past Memory Recall across previous sessions
+    let pastRecallDirective = "";
+    if (userQuery && typeof userQuery === "string") {
+      const recalledTurns = this.recallPastConversations(userQuery, 2);
+      if (recalledTurns.length > 0) {
+        const memorySnippets = recalledTurns.map(m => `• In a previous conversation, ${userName} said: "${m.user}" and the response was: "${m.reply}"`).join("\n");
+        pastRecallDirective = `\n\n[EPISODIC BRAIN MEMORY - PAST SESSION RECALL]:\n${memorySnippets}\nSeamlessly reference this past discussion to maintain 100% project continuity across sessions!`;
+      }
+    }
+
+    return `${basePrompt}\n\n${antiHallucinationDirective}\n\n${activeInferenceDirective}\n\n${scientistDirective}\n\n${behaviorDirective}${pastRecallDirective}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {
