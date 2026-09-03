@@ -1003,11 +1003,18 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         const generatedPath = res.audioFilePath;
         let finalPlaybackPath = generatedPath;
 
-        // Human Acoustic Polish: Apply subtle chest warmth (+1.5dB bass) and plate resonance
-        // Eliminates flat synthetic transducer dryness
+        // Human Acoustic Polish: Apply subtle chest warmth (+1.5dB bass) and 3D HRTF Spatial Earwax
+        // Simulates physical acoustic spatial immersion rather than direct headphone mono pressure
         const polishedPath = path.join(tempDir, "polished.wav");
         try {
-          execSync(`sox "${generatedPath}" "${polishedPath}" bass +1.5 treble +0.5 norm -0.5 2>/dev/null`, { timeout: 1500 });
+          const isLateNight = this.prosodicEntrainment && this.prosodicEntrainment.currentVibe?.cognitiveMode === "LATE_NIGHT_REFLECTIVE";
+          if (isLateNight) {
+            // Late night: 44.1kHz stereo with 3D binaural earwax proximity filter (whisper in ear)
+            execSync(`sox "${generatedPath}" -r 44100 -c 2 "${polishedPath}" remix 1 1 earwax bass +2.0 treble -0.5 norm -1.0 2>/dev/null`, { timeout: 1500 });
+          } else {
+            // Standard conversational presence: Chest warmth + plate clarity
+            execSync(`sox "${generatedPath}" "${polishedPath}" bass +1.5 treble +0.5 norm -0.5 2>/dev/null`, { timeout: 1500 });
+          }
           if (fs.existsSync(polishedPath)) {
             finalPlaybackPath = polishedPath;
           }
