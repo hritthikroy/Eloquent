@@ -920,10 +920,12 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     for (let attempt = 1; attempt <= 2; attempt++) {
       let tempDir = null;
       try {
-        if (!this.ttsClient || !this.ttsClient._voice || attempt > 1 || this._cachedVoice !== voice) {
-          if (!this.ttsClient || attempt > 1) {
+        if (!this.ttsClient || attempt > 1 || this._cachedVoice !== voice) {
+          if (attempt > 1) {
             this.initTTS();
+            await new Promise(r => setTimeout(r, 100));
           }
+          if (!this.ttsClient) this.initTTS();
           await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
           this._cachedVoice = voice;
         }

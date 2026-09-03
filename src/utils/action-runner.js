@@ -267,16 +267,11 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       }
     }
 
-    // 4. Andrew: Screen Perception, Interview Co-Pilot & Active Workspace Inspection
-    if (lower.includes("interview") || lower.includes("see my screen") || lower.includes("look at my screen") ||
-        lower.includes("check my screen") || lower.includes("what is on my screen") ||
-        lower.includes("what's on my screen") || lower.includes("look at this code") ||
-        lower.includes("seeing my screen") || lower.includes("seeing my interview") ||
-        lower.includes("do work for me") || lower.includes("give them access to do work") ||
-        (lower.includes("andrew") && (lower.includes("screen") || lower.includes("see") || lower.includes("look")))) {
-      const screenPath = "/tmp/eloquent_screen.jpg";
+    // 4. Andrew & Tuk Tuk: Optical Screen Perception, Interview Co-Pilot & Workspace Inspection
+    if (lower.includes("interview") || lower.includes("work for me") || lower.includes("give them access to do work")) {
+      const screenPath = "/tmp/eloquent_screenshare.jpg";
       try {
-        execSync(`screencapture -x -C "${screenPath}" 2>/dev/null || true`);
+        execSync(`screencapture -x -C "${screenPath}" 2>/dev/null && sips -Z 1280 "${screenPath}" 2>/dev/null`, { timeout: 2000 });
       } catch (e) {}
 
       let windowContext = "";
@@ -291,7 +286,7 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
           handled: true,
           agentName: "Andrew",
           agentVoice: "en-US-AndrewMultilingualNeural",
-          speech: `I've locked eyes on your interview screen, bro! I just captured your display focused in ${appName}. I'm right here in your ear as your secret senior co-pilot. What question or challenge are they asking you? Let's crush it!`
+          speech: `I've locked eyes on your interview screen, bro! Focused in ${appName}. I'm right here in your ear as your secret senior co-pilot. What question or challenge are they asking you? Let's crush it!`
         };
       }
 
@@ -299,17 +294,10 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
         return {
           handled: true,
           agentName: "Andrew",
-          agentVoice: "en-US-AndrewNeural",
+          agentVoice: "en-US-AndrewMultilingualNeural",
           speech: `Full sovereign access is active, bro! Me, Tuk Tuk, Jenny, and Brian have direct control of your terminal, files, clipboard, and active windows. What task do you want us to execute right now?`
         };
       }
-
-      return {
-        handled: true,
-        agentName: "Andrew",
-        agentVoice: "en-US-AndrewNeural",
-        speech: `I've locked eyes on your screen, bro. You're currently focused in ${appName}. Screenshot is captured at /tmp/eloquent_screen.jpg. What specific part of this code or layout do you want me to refactor?`
-      };
     }
 
     // -------------------------------------------------------------

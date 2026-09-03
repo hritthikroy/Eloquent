@@ -2807,11 +2807,16 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     if (!content && geminiClient && geminiClient.isConfigured()) {
       try {
         console.log(`✨ [Jarvis Cortex] Invoking Google Gemini Brain for ${agent.name}...`);
+        const lowerSpeech = (displaySpeech || userSpeech).toLowerCase();
+        const isVisualContextQuery = lowerSpeech.includes("screen") || lowerSpeech.includes("look at") || lowerSpeech.includes("what is this") || lowerSpeech.includes("this error") || lowerSpeech.includes("this code") || lowerSpeech.includes("line ");
+        const framePath = (isVisualContextQuery && visionCtx.hasFrame) ? visionCtx.framePath : null;
+
         const geminiRes = await geminiClient.callChatCompletion(messages, {
           model: 'gemini-2.5-flash',
           temperature: dynamicTemperature,
           max_tokens: agent.key === 'team' ? 450 : 200,
-          timeout: 5000
+          timeout: 5000,
+          imagePath: framePath
         });
         if (geminiRes && geminiRes.content) {
           content = geminiRes.content;
