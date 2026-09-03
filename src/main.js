@@ -2154,6 +2154,12 @@ async function stopRecording() {
         overlayWindow.webContents.send('jarvis-thinking');
       }
 
+      // ⚡ Zero-Latency Paralinguistic Turn Filler (<80ms)
+      // Plays immediate vocal cue ("Hmm", "Yeah", "Gotchu", "On it") so there is ZERO dead silence while thinking
+      try {
+        jarvisManager.playInstantTurnFiller(activeAgent.name);
+      } catch (fillerErr) {}
+
       if (prefChange) {
         if (prefChange.type === 'name') {
           jarvisReply = `Understood. I will call you ${prefChange.value} from now on.`;
@@ -2225,6 +2231,9 @@ async function stopRecording() {
       }
 
       if (!standupAlreadySpoken) {
+        // Stop any running filler before speaking the full answer
+        try { jarvisManager.stopFiller(); } catch (e) {}
+
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-speaking');
         }
