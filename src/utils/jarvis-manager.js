@@ -855,7 +855,9 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     let cleanText = text
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
       .replace(/<\/?think>/gi, '')
-      // 2. Strip parenthetical stage directions, agent tags, emojis, markdown, quotation marks
+      // 2. Strip fenced code blocks from spoken audio (spoken voice should not read raw syntax)
+      .replace(/```[\s\S]*?```/g, '')
+      // 3. Strip parenthetical stage directions, agent tags, emojis, markdown, quotation marks
       .replace(/\([^)]*\)/g, '')
       .replace(/\[[^\]]*\]:?/g, '')
       .replace(/[*#_`~\u201C\u201D\u2018\u2019"""''']/g, '')
@@ -954,15 +956,21 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         console.warn(`⚠️ Neural TTS attempt ${attempt} warning:`, neuralErr.message);
         if (attempt === 2) {
           console.warn("⚠️ Neural TTS unavailable. Using emergency macOS voice fallback so user is never left in silence.");
-          try {
+          return new Promise((resolve) => {
             this.isSpeaking = true;
-            execSync(`say "${cleanText.replace(/"/g, '\\"')}"`, { timeout: 10000 });
-            this.isSpeaking = false;
-            return true;
-          } catch (sayErr) {
-            this.isSpeaking = false;
-            return false;
-          }
+            const fallbackProc = spawn("say", [cleanText]);
+            this.activeSpeechProcess = fallbackProc;
+            fallbackProc.on("close", () => {
+              this.isSpeaking = false;
+              this.activeSpeechProcess = null;
+              resolve(true);
+            });
+            fallbackProc.on("error", () => {
+              this.isSpeaking = false;
+              this.activeSpeechProcess = null;
+              resolve(false);
+            });
+          });
         }
         await new Promise(r => setTimeout(r, 250));
       }
@@ -975,7 +983,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     const speechId = ++this.currentSpeechId;
     this.isAborted = false;
 
-    const voice = customVoice || this.config.voice || "en-US-AvaNeural";
+    const voice = customVoice || this.config.voice || "en-US-AvaMultilingualNeural";
     console.log(`🎵 Synthesizing pure vocal Sur serenade for Tuk Tuk (Job #${speechId})...`);
 
     this.currentUtterance = songText;
