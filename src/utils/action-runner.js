@@ -17,6 +17,33 @@ class OfficeActionRunner {
     const lower = speechText.toLowerCase().trim();
 
     // -------------------------------------------------------------
+    // COMPOUND MULTI-TASK PIPELINE ("A and then B", "A and also B")
+    // -------------------------------------------------------------
+    if (lower.includes(" and then ") || lower.includes(" and also ") || (lower.includes(" and ") && (lower.includes("list files") || lower.includes("read file") || lower.includes("check battery") || lower.includes("turn volume") || lower.includes("what time")))) {
+      const parts = speechText.split(/\s+and(?:\s+then|\s+also)?\s+/i);
+      if (parts.length > 1 && parts.length <= 4) {
+        const subResults = [];
+        for (const part of parts) {
+          const trimmedPart = part.trim();
+          if (trimmedPart.length > 2) {
+            const res = await this.handleAction(trimmedPart, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
+            if (res && res.handled && res.speech) {
+              subResults.push(res.speech);
+            }
+          }
+        }
+        if (subResults.length > 0) {
+          return {
+            handled: true,
+            agentName: activeAgent?.name || "Tuk Tuk",
+            agentVoice: activeAgent?.voice || "en-US-AvaMultilingualNeural",
+            speech: subResults.join(" Also, ")
+          };
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
     // HIGH-LEVEL GEMINI COGNITIVE REASONING & MULTIMODAL VISION TASK
     // -------------------------------------------------------------
     const clientToUse = geminiClient || require("./gemini-client").geminiClient;
@@ -637,6 +664,8 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return {
         handled: true,
         isSinging: true,
+        agentName: "Tuk Tuk",
+        agentVoice: "en-US-AvaMultilingualNeural",
         speech: selectedSong
       };
     }
