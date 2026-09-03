@@ -1792,9 +1792,11 @@ function startRecording() {
         const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
         const totalDurationMs = Date.now() - jarvisSpeechStartTime;
 
-        // Dual-Horizon Adaptive Silence Threshold (Human Snappy Turn-Taking):
-        // 480ms for voiced sentences (human cadence); 650ms for short thoughts
-        const dynamicSilenceThreshold = voicedDurationMs >= 1000 ? 480 : 650;
+        // 3-Tier Anti-Cutoff & Adaptive Human Turn-Taking Threshold:
+        // 1. Incomplete fragment / hesitation (<800ms, e.g. "I...", "Wait...", "Um..."): 1200ms breathing room
+        // 2. Standard sentence (800ms - 2200ms, e.g. "Hello Tuk Tuk, how are you?"): 550ms natural handoff
+        // 3. Sustained monologue (>2200ms): 480ms ultra-snappy ping-pong
+        const dynamicSilenceThreshold = voicedDurationMs < 800 ? 1200 : (voicedDurationMs < 2200 ? 550 : 480);
         const isMaxSpeechCap = totalDurationMs >= 10000;
 
         if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 150) || isMaxSpeechCap) {
@@ -1874,9 +1876,11 @@ function startRecording() {
             const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // Dual-Horizon Adaptive Silence Threshold (Human Snappy Turn-Taking):
-            // 450ms for completed sentences (snappy human ping-pong); 600ms for short fragments
-            const dynamicSilenceThreshold = voicedDurationMs >= 1000 ? 450 : 600;
+            // 3-Tier Anti-Cutoff & Adaptive Human Turn-Taking Threshold:
+            // 1. Incomplete fragment / hesitation (<800ms, e.g. "I...", "Wait...", "Um..."): 1200ms breathing room
+            // 2. Standard sentence (800ms - 2200ms, e.g. "Hello Tuk Tuk, how are you?"): 550ms natural handoff
+            // 3. Sustained monologue (>2200ms): 480ms ultra-snappy ping-pong
+            const dynamicSilenceThreshold = voicedDurationMs < 800 ? 1200 : (voicedDurationMs < 2200 ? 550 : 480);
             const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 150);
             const isMaxSpeechCap = speechDurationMs >= 10000;
 
@@ -2654,6 +2658,12 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   const startTime = Date.now();
   const agent = activeAgent || jarvisManager.agents.tuktuk;
   let systemPrompt = jarvisManager.getSystemPrompt(agent);
+
+  // Human Talk Vibe Detector (HTVD): Inject real-time emotional & cognitive wavelength
+  if (jarvisManager.prosodicEntrainment) {
+    const vibeAnalysis = jarvisManager.prosodicEntrainment.analyzeVibe(displaySpeech || userSpeech);
+    systemPrompt += `\n\n${vibeAnalysis.directive}`;
+  }
 
   const visionCtx = screenShareManager.getVisionContext();
   if (visionCtx.isActive) {
