@@ -142,6 +142,8 @@ let jarvisSpeechStartTime = 0;
 let jarvisSpeechFrames = 0;
 let jarvisAutoStopTriggered = false;
 let jarvisVadHeartbeat = null;
+let jarvisLastBackchannelTime = 0;
+let jarvisBargeInCounter = 0;
 
 // Helper function to find sox/rec binary
 function getRecordingBinary() {
@@ -1760,7 +1762,7 @@ function startRecording() {
   jarvisSpeechStartTime = 0;   // When continuous speech first began (for duration gate)
   jarvisSpeechFrames = 0;      // Confirmed audio frames above threshold
   jarvisAutoStopTriggered = false;
-  let jarvisLastBackchannelTime = 0;
+  jarvisBargeInCounter = 0;
   if (jarvisVadHeartbeat) {
     clearInterval(jarvisVadHeartbeat);
     jarvisVadHeartbeat = null;

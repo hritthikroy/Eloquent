@@ -227,7 +227,7 @@ class AudioRecorder {
       return null;
     }
 
-    console.log('🛑 Stopping recording...');
+    console.log('🛑 Flushing CoreAudio recording buffer...');
 
     try {
       if (this.platform === 'win32') {
