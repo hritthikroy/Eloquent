@@ -27,9 +27,15 @@ class OfficeActionRunner {
     const lower = speechText.toLowerCase().trim();
 
     // -------------------------------------------------------------
-    // COMPOUND MULTI-TASK PIPELINE ("A and then B", "A and also B")
+    // COMPOUND MULTI-TASK PIPELINE ("A and then B", "A and also B", "A and B")
     // -------------------------------------------------------------
-    if (lower.includes(" and then ") || lower.includes(" and also ") || (lower.includes(" and ") && (lower.includes("list files") || lower.includes("read file") || lower.includes("check battery") || lower.includes("turn volume") || lower.includes("what time")))) {
+    const hasCompoundConj = lower.includes(" and then ") || lower.includes(" and also ") || lower.includes(" and ");
+    const hasActionKeyword = lower.includes("list files") || lower.includes("read file") || lower.includes("check battery") || 
+      lower.includes("turn volume") || lower.includes("what time") || lower.includes("check the time") || 
+      lower.includes("what files") || lower.includes("summarize what files") || lower.includes("git status") || 
+      lower.includes("sing") || lower.includes("eating my ram") || lower.includes("run command");
+
+    if (hasCompoundConj && hasActionKeyword) {
       const parts = speechText.split(/\s+and(?:\s+then|\s+also)?\s+/i);
       if (parts.length > 1 && parts.length <= 4) {
         const subResults = [];
@@ -708,7 +714,7 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       }
     }
 
-    if (lower.includes("what time") || lower.includes("current time") || lower.includes("what is the time") || lower.includes("what date")) {
+    if (lower.includes("what time") || lower.includes("current time") || lower.includes("what is the time") || lower.includes("check the time") || lower.includes("check time") || lower.includes("what date")) {
       return this.getTimeReport();
     }
 
@@ -766,8 +772,8 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       }
     }
 
-    // 2. Voice Workspace File Listing ("list files", "show project files", "what files are here")
-    if (lower.includes("list files") || lower.includes("show files") || lower.includes("list directory") || lower.includes("what files are here") || lower.includes("show project files")) {
+    // 2. Voice Workspace File Listing ("list files", "show project files", "what files are here", "summarize what files")
+    if (lower.includes("list files") || lower.includes("show files") || lower.includes("list directory") || lower.includes("what files are here") || lower.includes("show project files") || lower.includes("summarize what files") || lower.includes("summarize files")) {
       try {
         const files = fs.readdirSync(this.projectDir).filter(f => !f.startsWith(".") && f !== "node_modules" && f !== "dist" && f !== "userData");
         return {
