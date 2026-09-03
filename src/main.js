@@ -225,6 +225,7 @@ const ADMIN_CONFIG = {
 // Recording state
 let isRecording = false;
 let isProcessing = false;
+let isSessionAborted = false; // Flag to instantly kill all speech/pipeline when ESC is pressed
 let isCreatingOverlay = false;
 let overlayCreationLock = false;
 let lastOverlayCreationTime = 0;
@@ -1014,18 +1015,20 @@ let shortcutLock = false;
 function handleShortcut(action, mode = 'standard') {
   const now = Date.now();
 
-  if (shortcutLock || (now - lastShortcutTime < SHORTCUT_DEBOUNCE)) {
-    return;
+  // Always process 'stop' (ESC) immediately with 0ms debounce and zero lockout
+  if (action !== 'stop') {
+    if (shortcutLock || (now - lastShortcutTime < SHORTCUT_DEBOUNCE)) {
+      return;
+    }
+    lastShortcutTime = now;
+    shortcutLock = true;
+    setTimeout(() => {
+      shortcutLock = false;
+    }, SHORTCUT_DEBOUNCE);
   }
-
-  lastShortcutTime = now;
-  shortcutLock = true;
-
-  setTimeout(() => {
-    shortcutLock = false;
-  }, SHORTCUT_DEBOUNCE);
   
   if (action === 'start') {
+    isSessionAborted = false;
     if (mode === 'jarvis') {
       isJarvisLoopActive = true;
       playSound('start'); // Alexa-style activation chime
@@ -1037,15 +1040,39 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
-    if (isRecording) {
-      console.log('🛑 ESC pressed while recording - finishing and processing dictation with Magic Tool...');
-      stopRecording();
-    } else {
-      console.log('🛑 ESC pressed - silencing session immediately');
-      isJarvisLoopActive = false;
-      jarvisManager.stopSpeaking();
-      hideOverlay();
+    console.log('🛑 ESC pressed - terminating session immediately and completely');
+    isSessionAborted = true;
+    isJarvisLoopActive = false;
+    
+    // 1. Immediately silence any speech playback or audio synthesis
+    jarvisManager.stopSpeaking();
+    
+    // 2. Stop recording process cleanly if active
+    if (isRecording || recordingProcess) {
+      isRecording = false;
+      if (audioRecorder) {
+        audioRecorder.stopRecording().catch(() => {});
+      }
+      if (recordingProcess) {
+        try { recordingProcess.kill('SIGKILL'); } catch (e) {}
+        recordingProcess = null;
+      }
     }
+    
+    // 3. Clear all timers and flags
+    if (maxRecordingTimeout) {
+      clearTimeout(maxRecordingTimeout);
+      maxRecordingTimeout = null;
+    }
+    if (jarvisVadHeartbeat) {
+      clearInterval(jarvisVadHeartbeat);
+      jarvisVadHeartbeat = null;
+    }
+    isProcessing = false;
+    isStopRecordingLock = false;
+
+    // 4. Force hide overlay immediately
+    hideOverlay();
   }
 }
 
@@ -1246,15 +1273,16 @@ function showOverlayUltraFast(mode = 'standard') {
   }
 }
 
-// Hide overlay with smooth fade-out (preserves window in memory)
+// Hide overlay with smooth fade-out and instant dismissal
 function hideOverlay() {
-  if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
-    overlayWindow.webContents.send('close-with-animation');
-    setTimeout(() => {
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.hide();
-      }
-    }, 150);
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    try {
+      overlayWindow.webContents.send('close-with-animation');
+    } catch (e) {}
+    // Instant hide to ensure UI is 100% gone and unresponsive window state is impossible
+    try {
+      overlayWindow.hide();
+    } catch (e) {}
   }
 }
 
@@ -2039,7 +2067,7 @@ async function stopRecording() {
         console.log('🎙️ Tony Stark Suit Mode: No distinct speech detected - keeping 24/7 mic armed...');
         isProcessing = false;
         isStopRecordingLock = false;
-        if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+        if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
@@ -2048,6 +2076,15 @@ async function stopRecording() {
       }
       isStopRecordingLock = false;
       throw txErr;
+    }
+
+    // If ESC was pressed during transcription, discard immediately without background processing
+    if (isSessionAborted) {
+      console.log('🛑 Session was aborted via ESC - discarding transcribed text without background execution');
+      isProcessing = false;
+      isStopRecordingLock = false;
+      hideOverlay();
+      return;
     }
     
     // Notify overlay that AI is polishing the grammar
@@ -2175,6 +2212,14 @@ async function stopRecording() {
 
       finalText = jarvisReply;
 
+      if (isSessionAborted) {
+        console.log('🛑 Session was aborted via ESC - discarding speech synthesis');
+        isProcessing = false;
+        isStopRecordingLock = false;
+        hideOverlay();
+        return;
+      }
+
       if (!standupAlreadySpoken) {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-speaking');
@@ -2299,6 +2344,15 @@ async function stopRecording() {
 
     if (!finalText || finalText.trim().length === 0) {
       throw new Error('No speech detected. Please try again.');
+    }
+
+    // If aborted via ESC while processing standard/rewrite, discard and do not paste
+    if (isSessionAborted) {
+      console.log('🛑 Session was aborted via ESC - discarding paste operation');
+      isProcessing = false;
+      isStopRecordingLock = false;
+      hideOverlay();
+      return;
     }
 
     // Notify overlay of completed text
