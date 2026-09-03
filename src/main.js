@@ -1935,7 +1935,8 @@ let isStopRecordingLock = false;
 
 // OPTIMIZED: Fast and reliable stopRecording function
 async function stopRecording() {
-  if (isStopRecordingLock) {
+  // Prevent duplicate parallel executions and deadlocks
+  if (isStopRecordingLock || isProcessing) {
     return;
   }
   isStopRecordingLock = true;
@@ -1948,10 +1949,6 @@ async function stopRecording() {
   if (jarvisVadHeartbeat) {
     clearInterval(jarvisVadHeartbeat);
     jarvisVadHeartbeat = null;
-  }
-
-  if (isProcessing) {
-    return;
   }
 
   if (!isRecording && !recordingProcess) {
@@ -2673,11 +2670,27 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user');
 
-    const historyMessages = jarvisManager.getHistory();
-    // Replace the last turn content in messages with the full prompt containing interruption context
+    const historyMessages = jarvisManager.getHistory(12);
+    // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
+    const rawHistory = historyMessages.slice(0, -1);
+    const sanitizedHistory = [];
+    for (const msg of rawHistory) {
+      if (!msg.content || typeof msg.content !== 'string' || msg.content.trim().length === 0) continue;
+      if (sanitizedHistory.length > 0 && sanitizedHistory[sanitizedHistory.length - 1].role === msg.role) {
+        sanitizedHistory[sanitizedHistory.length - 1].content += `\n${msg.content}`;
+      } else {
+        sanitizedHistory.push({ role: msg.role, content: msg.content.trim() });
+      }
+    }
+
+    // Ensure alternating sequence: if history ends with user, pop it to avoid consecutive user turns
+    if (sanitizedHistory.length > 0 && sanitizedHistory[sanitizedHistory.length - 1].role === 'user') {
+      sanitizedHistory.pop();
+    }
+
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...historyMessages.slice(0, -1),
+      ...sanitizedHistory,
       { role: 'user', content: userSpeech }
     ];
 

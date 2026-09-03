@@ -470,18 +470,24 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
   addTurn(role, content, agentName = null) {
     if (!content || typeof content !== "string" || content.trim().length === 0) return;
     this.conversationHistory.push({ role, content: content.trim(), agent: agentName });
-    // Retain rolling window of the last 20 turns
-    if (this.conversationHistory.length > 20) {
-      this.conversationHistory = this.conversationHistory.slice(-20);
+    // Retain rolling window of the last 50 turns for deep contextual continuity
+    if (this.conversationHistory.length > 50) {
+      this.conversationHistory = this.conversationHistory.slice(-50);
     }
   }
 
-  getHistory(maxTurns = 6) {
+  getHistory(maxTurns = 12) {
     const recent = this.conversationHistory.slice(-maxTurns);
-    return recent.map(t => ({
-      role: t.role,
-      content: t.content
-    }));
+    return recent.map(t => {
+      // Attribute assistant turns to specific squad members so agents maintain clear identity
+      const text = (t.role === 'assistant' && t.agent && !t.content.startsWith('['))
+        ? `[${t.agent}]: ${t.content}`
+        : t.content;
+      return {
+        role: t.role,
+        content: text
+      };
+    });
   }
 
   clearHistory() {
