@@ -2689,8 +2689,32 @@ async function callGroqChatCompletion(messages, options = {}) {
       }
 
       if (response.status === 429) {
-        rotateToNextKey();
-        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated API key.`);
+        const nextKey = rotateToNextKey();
+        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated to Key: ${nextKey ? nextKey.slice(0, 8) + '...' : 'none'}`);
+        // Immediate retry with the fresh rotated key:
+        try {
+          const retryRes = await axios.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            {
+              model: model,
+              messages: messages,
+              temperature: options.temperature !== undefined ? options.temperature : 0.3,
+              max_tokens: options.max_tokens || 1500
+            },
+            {
+              headers: { 'Authorization': `Bearer ${nextKey}` },
+              httpsAgent: groqKeepAliveAgent,
+              timeout: options.timeout || 4000,
+              validateStatus: (s) => s < 500
+            }
+          );
+          const retryChoice = retryRes.data?.choices?.[0]?.message;
+          let retryContent = (retryChoice?.content || retryChoice?.reasoning || '').trim();
+          retryContent = retryContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
+          if (retryRes.status === 200 && retryContent.length > 0) {
+            return { content: retryContent, model: model, usage: retryRes.data.usage };
+          }
+        } catch (e) {}
       }
       lastError = new Error(response.data?.error?.message || `API error: ${response.status}`);
     } catch (err) {
