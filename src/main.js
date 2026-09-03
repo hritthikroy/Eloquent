@@ -624,13 +624,15 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Autonomous Team Eyes: Boot Camera Ocular Vision & Screen Perception automatically as human eyes
+  // Autonomous Team Eyes & Care Guardian: Boot Camera Ocular Vision & All-Day Care automatically
   try {
-    console.log('👁️ Initializing Autonomous Squad Ocular Eyes (Camera & Screen Vision)...');
+    console.log('👁️ Initializing Autonomous Squad Ocular Eyes & Daily Care Guardian...');
     cameraManager.start();
     screenShareManager.start();
+    const dailyCareGuardian = require('./utils/daily-care-guardian');
+    dailyCareGuardian.init(jarvisManager, cameraManager, screenShareManager);
   } catch (err) {
-    console.warn('⚠️ Autonomous Vision eyes initialization note:', err.message);
+    console.warn('⚠️ Autonomous Vision eyes & care initialization note:', err.message);
   }
 });
 
