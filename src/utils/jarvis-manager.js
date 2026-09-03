@@ -487,27 +487,18 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return AGENTS.andrew;
     }
 
-    // Research, Intelligence, Analysis, Wikipedia, Search -→ Jenny
-    if (lower.includes("research") || lower.includes("analyze") || lower.includes("competitor") ||
-        lower.includes("market") || lower.includes("document") || lower.includes("summary") ||
-        lower.includes("find out") || lower.includes("look up") || lower.includes("study") ||
-        lower.includes("wikipedia") || lower.includes("search for") || lower.includes("google") ||
-        lower.includes("what is") || lower.includes("who is") || lower.includes("tell me about") ||
-        lower.includes("explain") || lower.includes("how does") || lower.includes("how do") ||
-        lower.includes("news") || lower.includes("article") || lower.includes("information") ||
-        lower.includes("data on") || lower.includes("facts about") || lower.includes("latest on")) {
+    // Research, Market Intelligence & Deep Search -→ Jenny
+    if (lower.includes("research on") || lower.includes("competitor analysis") || lower.includes("market research") ||
+        lower.includes("wikipedia search") || lower.includes("search google for") || lower.includes("market intelligence") ||
+        lower.includes("find research on") || lower.includes("data analysis on") || lower.includes("latest papers on")) {
       return AGENTS.jenny;
     }
 
-    // System, Health, QA, Diagnostics, Hardware -→ Brian
-    if (lower.includes("test") || lower.includes("verify") || lower.includes("system status") ||
-        lower.includes("health") || lower.includes("telemetry") || lower.includes("cpu") ||
-        lower.includes("memory") || lower.includes("qa") || lower.includes("security") ||
-        lower.includes("diagnostics") || lower.includes("battery") || lower.includes("ram") ||
-        lower.includes("disk") || lower.includes("storage") || lower.includes("wifi") ||
-        lower.includes("network") || lower.includes("uptime") || lower.includes("port") ||
-        lower.includes("latency") || lower.includes("ping") || lower.includes("server") ||
-        lower.includes("clean cache") || lower.includes("lock screen") || lower.includes("performance")) {
+    // System Hardware, Diagnostics, Battery, Telemetry -→ Brian
+    if (lower.includes("battery level") || lower.includes("check battery") || lower.includes("system telemetry") ||
+        lower.includes("system diagnostics") || lower.includes("check ram") || lower.includes("check cpu") ||
+        lower.includes("disk space") || lower.includes("wifi status") || lower.includes("system uptime") ||
+        lower.includes("system health report") || lower.includes("network latency") || lower.includes("flush cache")) {
       return AGENTS.brian;
     }
 
@@ -656,12 +647,10 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     // Try Deep Neural Voice via msedge-tts with auto-retry (NEVER falls back to robotic Samantha)
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        if (!this.ttsClient || attempt > 1) {
-          this.initTTS();
-          this._cachedVoice = null; // Force re-negotiation after reinit
-        }
-        // Only renegotiate WebSocket metadata when voice changes (saves ~150ms per turn)
-        if (this._cachedVoice !== voice) {
+        if (!this.ttsClient || !this.ttsClient._voice || attempt > 1 || this._cachedVoice !== voice) {
+          if (!this.ttsClient || attempt > 1) {
+            this.initTTS();
+          }
           await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
           this._cachedVoice = voice;
         }

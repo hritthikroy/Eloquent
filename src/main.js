@@ -1523,11 +1523,9 @@ function isWhisperHallucination(text, recordingDurationMs = 0) {
   if (clean.length === 0) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
 
-  // On short audio (< 1.6s), Whisper notoriously hallucinates "thank you" / "thanks" on room noise
-  if (recordingDurationMs > 0 && recordingDurationMs < 1600) {
-    if (clean === 'thank you' || clean === 'thanks' || clean === 'you' || clean === 'bye') {
-      return true;
-    }
+  // Standalone silence priors: Whisper notoriously generates these on empty room hiss/breaths
+  if (clean === 'thank you' || clean === 'thanks' || clean === 'thank you very much' || clean === 'thank you so much' || clean === 'you' || clean === 'bye') {
+    return true;
   }
 
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*

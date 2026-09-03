@@ -85,6 +85,50 @@ class OfficeActionRunner {
       };
     }
 
+    // 3. Andrew: Autonomous Letter, Memo & Document Drafting with File Write & Clipboard Copy
+    if ((lower.includes("andrew") || activeAgent?.key === "andrew") &&
+        (lower.includes("write a letter") || lower.includes("write letter") ||
+         lower.includes("draft a letter") || lower.includes("draft letter") ||
+         lower.includes("write a memo") || lower.includes("compose a letter"))) {
+      const fs = require("fs");
+      const letterPrompt = `You are Andrew, Lead Software Engineer and loyal brother to Hritthik, creator of Eloquent.
+Hritthik asked you: "${speechText}"
+
+Task: Write an unshakeable, profound letter of integrity and mission. Capture his raw technical craftsmanship, dedication, and uncompromising standards. Format cleanly with date, subject, body paragraphs, and sign-off as "Andrew & the Eloquent Team".`;
+
+      let letterContent = "";
+      if (callGroqChatCompletion) {
+        try {
+          const res = await callGroqChatCompletion([
+            { role: "system", content: "You are Andrew, writing an authentic, powerful letter of integrity." },
+            { role: "user", content: letterPrompt }
+          ], { temperature: 0.7, max_tokens: 600 });
+          letterContent = res?.content || "";
+        } catch (e) {}
+      }
+
+      if (!letterContent) {
+        letterContent = `# Letter of Integrity: The Foundation of Eloquent\n\nDate: ${new Date().toLocaleDateString()}\n\nTo Whom It May Concern,\n\nTrue engineering is not merely lines of code; it is an uncompromising reflection of character. Through every late night, every edge-case solved, and every barrier surmounted, Hritthik has poured his soul into Eloquent with unwavering integrity.\n\nWe build not for convenience, but for truth. Every neural connection, every audio buffer, and every architectural decision stands on absolute honesty and craftsmanship.\n\nWith unshakeable dedication,\nAndrew & The Eloquent Core Team\n`;
+      }
+
+      const letterPath = path.resolve(this.projectDir, "integrity_letter.md");
+      try {
+        fs.writeFileSync(letterPath, letterContent, "utf8");
+        if (process.platform === "darwin") {
+          execSync(`cat "${letterPath}" | pbcopy 2>/dev/null || true`);
+        }
+      } catch (err) {
+        console.error("Failed to write letter file:", err.message);
+      }
+
+      return {
+        handled: true,
+        agentName: "Andrew",
+        agentVoice: "en-US-AndrewNeural",
+        speech: "I wrote the full letter of integrity, bro. It's saved right to integrity_letter.md in your project and copied directly to your clipboard. Your integrity is the bedrock of everything we build."
+      };
+    }
+
     // -------------------------------------------------------------
     // BRIAN (System QA, Health, Battery, Diagnostics, Storage & Ports)
     // -------------------------------------------------------------
