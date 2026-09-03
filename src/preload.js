@@ -72,6 +72,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
+  },
+  
+  // Conversational State Management APIs
+  requestState: () => ipcRenderer.invoke('state-request'),
+  commitState: (state) => ipcRenderer.invoke('state-commit', state),
+  onStateUpdate: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    ipcRenderer.on('state-updated', subscription);
+    return () => {
+      ipcRenderer.removeListener('state-updated', subscription);
+    };
   }
 });
 

@@ -52,6 +52,7 @@ const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
 const actionRunner = require('./utils/action-runner');
 const screenShareManager = require('./utils/screen-share-manager');
 const { registerLibboardIpcHandlers } = require('./main/ipcHandlers');
+const { StateManager } = require('./main/stateManager');
 
 // Ultra-Fast Persistent HTTPS Agent with TCP Keep-Alive for Zero Connection Overhead
 const https = require('https');
@@ -4631,6 +4632,40 @@ try {
   registerLibboardIpcHandlers(ipcMain, app.getPath('userData'));
 } catch (libboardErr) {
   console.warn('⚠️ Could not register Libboard IPC handlers:', libboardErr.message);
+}
+
+// Conversational StateManager IPC handlers with atomic persistence and broadcast
+let persistentStateManager = null;
+try {
+  persistentStateManager = StateManager.getInstance(app.getPath('userData'), {
+    broadcaster: {
+      broadcast: (channel, data) => {
+        BrowserWindow.getAllWindows().forEach(win => {
+          if (!win.isDestroyed()) {
+            win.webContents.send(channel, data);
+          }
+        });
+      }
+    }
+  });
+
+  ipcMain.handle('state-request', async () => {
+    return persistentStateManager.loadState();
+  });
+
+  ipcMain.handle('state-commit', async (_event, payload) => {
+    if (payload && payload.contextBuffer && payload.contextBuffer.length > 0) {
+      const latestTurn = payload.contextBuffer[payload.contextBuffer.length - 1];
+      persistentStateManager.updateTurn(latestTurn);
+    } else {
+      persistentStateManager.saveState();
+    }
+    return { success: true, state: persistentStateManager.currentState };
+  });
+
+  console.log('✅ [StateManager] Registered state-request and state-commit IPC handlers');
+} catch (stateErr) {
+  console.warn('⚠️ Could not register StateManager IPC handlers:', stateErr.message);
 }
 
 // Function to log API requests

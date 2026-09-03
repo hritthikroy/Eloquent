@@ -441,6 +441,46 @@ If you find Eloquent useful, please consider giving it a ⭐ on GitHub!
 
 ---
 
+## 🧠 Persistent Conversational State Management
+
+Eloquent includes an atomic, cross-process conversational state management subsystem synchronizing UI, Electron main process, and the Go audio backend:
+
+- **Atomic Disk Persistence**: Writes state to unique temporary files before atomically renaming to `userData/state.json`, surviving sudden power loss or process crashes.
+- **IPC State Synchronization**:
+  ```javascript
+  // Request latest state from StateManager
+  const state = await window.electronAPI.requestState();
+
+  // Commit an updated turn
+  await window.electronAPI.commitState({
+    contextBuffer: [...state.contextBuffer, { speaker: 'user', text: 'Deploying audio update' }]
+  });
+
+  // Listen for real-time state broadcasts
+  window.electronAPI.onStateUpdate((updatedState) => {
+    console.log('Turn updated:', updatedState.turnId);
+  });
+  ```
+- **Thread-Safe Go Backend**: Package `eloquent-backend/audio` provides `sync.RWMutex`-protected state management with automatic rate-limit reset cycles.
+
+---
+
+## ⚡ Antigravity CLI & Clibb Prompt Generation
+
+Generate structured, production-ready 3-section developer prompts for downstream AI agents on the Clibb platform:
+
+```bash
+# Generate prompt from intent
+node src/cli.js clibb-prompt "Implement low-latency PCM audio ring buffer in Go"
+
+# Or using npm binary alias
+eloquent-cli clibb-prompt "Optimize conversational state synchronization"
+```
+
+All generated prompts adhere strictly to the 3-section layout (`Clear Technical Objective`, `Key Files / Architecture`, `Quality Requirements & AST Verification`) and validate embedded code snippets with `node -c`.
+
+---
+
 **Made with ❤️ by Hritthik Roy**
 
 **Repository:** https://github.com/hritthikroy/Eloquent  

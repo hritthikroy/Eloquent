@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EloquentConversationalState",
+  "description": "Persistent conversational state schema across UI, Electron main, and Go backend",
+  "type": "object",
+  "required": [
+    "turnId",
+    "participants",
+    "lastMessageTimestamp",
+    "contextBuffer",
+    "rateLimitInfo"
+  ],
+  "properties": {
+    "turnId": {
+      "type": "string",
+      "description": "Unique identifier for current active dialogue turn"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of active participants (e.g. user, Tuk Tuk, Andrew)"
+    },
+    "lastMessageTimestamp": {
+      "type": "integer",
+      "description": "Epoch timestamp in milliseconds of the latest message"
+    },
+    "contextBuffer": {
+      "type": "array",
+      "description": "Sequential buffer of past conversational context and turns",
+      "items": {
+        "type": "object",
+        "required": ["speaker", "text", "timestamp"],
+        "properties": {
+          "speaker": { "type": "string" },
+          "text": { "type": "string" },
+          "timestamp": { "type": "integer" },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "rateLimitInfo": {
+      "type": "object",
+      "required": ["requestsRemaining", "resetTimestamp", "isThrottled"],
+      "properties": {
+        "requestsRemaining": { "type": "integer", "minimum": 0 },
+        "resetTimestamp": { "type": "integer" },
+        "isThrottled": { "type": "boolean" },
+        "backoffMs": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "additionalProperties": true
+}
