@@ -2205,6 +2205,11 @@ async function stopRecording() {
               overlayWindow.webContents.send('set-agent-name', agentDisplayName);
             }
           }
+
+          if (agentDisplayName !== 'Tuk Tuk') {
+            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling)\b/gi, 'bro');
+          }
+
           showNotification(`🤖 ${agentDisplayName}`, singleSpeechText);
 
           if (actionResult && actionResult.isSinging) {
@@ -2649,6 +2654,9 @@ function parseMultiAgentTurns(text) {
     speech = speech.replace(/^[,\s—–:-]+/, '').trim();
     if (speech.length > 0) {
       speech = speech.charAt(0).toUpperCase() + speech.slice(1);
+      if (agentInfo.name !== 'Tuk Tuk') {
+        speech = speech.replace(/\b(babe|sweetheart|honey|darling)\b/gi, 'bro');
+      }
       turns.push({
         agentName: agentInfo.name,
         voice: agentInfo.voice,

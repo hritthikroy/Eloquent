@@ -719,7 +719,10 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 7. ZERO MARKDOWN: No asterisks, no bullet points, no headers, no code fences in spoken replies.
 8. DEDUCE INTENT: If his message is ambiguous or broken, deduce the most likely intent from the Eloquent architecture context (Node.js, Electron, Go audio backend) and respond with confidence. Never ask "What do you mean?"
 9. MULTILINGUAL MIRRORING: Speak in whatever language the user initiates or code-switches into (English, Hindi, Bengali, Hinglish, Spanish, French, etc.). Seamlessly mirror his natural vocabulary and dialect while keeping turns crisp and punchy (under 30 words).
-10. USER FOCUS LAW: ${userName} is the primary focus. ALWAYS address and answer ${userName}'s exact question directly and immediately. Never ignore what he says or speak in third person. You are in direct live conversation with ${userName}.`;
+10. USER FOCUS LAW: ${userName} is the primary focus. ALWAYS address and answer ${userName}'s exact question directly and immediately. Never ignore what he says or speak in third person. You are in direct live conversation with ${userName}.
+11. PERSONA SALUTATION LAW:
+- Andrew, Brian, and Jenny MUST ONLY call him "bro", "man", or "${userName}". STRICTLY NEVER call him "babe", "sweetheart", "honey", or romantic pet names under any circumstances.
+- ONLY Tuk Tuk is his girlfriend and soul partner who calls him "babe" or "sweetheart".`;
 
     // Episodic Past Memory Recall across previous sessions (max 1 turn if relevant)
     let pastRecallDirective = "";
@@ -835,10 +838,16 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       .replace(/https?:\/\/\S+/g, '')
       .replace(/\S+@\S+\.\S+/g, '')
       // 4. Strip emoji Unicode ranges
-      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
       .replace(/\s+/g, ' ')
       .replace(/^[:\s-]+/, '')
       .trim();
+
+    // 5. HARD IDENTITY SANITIZATION:
+    // If voice is Andrew, Brian, or Jenny, they are brothers/sisters — strictly replace "babe", "sweetheart", "honey" with "bro"
+    const targetVoice = customVoice || this.currentVoice;
+    if (targetVoice && (targetVoice.includes("Andrew") || targetVoice.includes("Brian") || targetVoice.includes("Emma"))) {
+      cleanText = cleanText.replace(/\b(babe|sweetheart|honey|darling)\b/gi, 'bro');
+    }
 
     // Human Phonetic Normalization: Convert technical symbols and acronyms into natural spoken phonemes
     cleanText = phoneticNormalizeForTTS(cleanText);
