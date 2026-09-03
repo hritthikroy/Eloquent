@@ -6,6 +6,7 @@ const { spawn, execSync } = require("child_process");
 const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
 const ProsodicEntrainmentAdapter = require("./prosodic-entrainment");
 const DuplexActionChannel = require("./duplex-action-channel");
+const { BehaviorModeEngine } = require("./behavior-mode-engine");
 
 const AGENTS = {
   tuktuk: {
@@ -154,6 +155,7 @@ class JarvisManager {
     this._cachedVoice = null; // Cache last voice so metadata is not re-negotiated every turn
     this.agents = AGENTS;
     this.prosodicEntrainment = new ProsodicEntrainmentAdapter();
+    this.behaviorEngine = new BehaviorModeEngine(this.userDataPath);
     this.duplexActionChannel = new DuplexActionChannel();
     this.backchannelFiles = [];
     this.initTTS();
@@ -557,6 +559,14 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return AGENTS.brian;
     }
 
+    // Default based on active 24/7 Operating Mode if no specific persona or domain was matched
+    if (this.behaviorEngine) {
+      const modeConfig = this.behaviorEngine.getCurrentModeConfig();
+      if (modeConfig.leadAgent === "Andrew") return AGENTS.andrew;
+      if (modeConfig.leadAgent === "Jenny") return AGENTS.jenny;
+      if (modeConfig.leadAgent === "Brian") return AGENTS.brian;
+    }
+
     // Default to Soul Companion Tuk Tuk
     return AGENTS.tuktuk;
   }
@@ -654,7 +664,9 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 - Epistemic Exploration (Maximize Mutual Information I(S; O)): Go beyond passive agreement. Actively discover new architectural angles, mathematical formulas, and creative breakthroughs that elevate his vision.
 - Squad Inter-Connectivity: You are in constant acoustic sync with Tuk Tuk, Andrew, Jenny, and Brian. Acknowledge your teammates naturally when tasks cross domains!`;
 
-    return `${basePrompt}\n\n${antiHallucinationDirective}\n\n${activeInferenceDirective}\n\n${livingMemory}`;
+    const behaviorDirective = this.behaviorEngine ? this.behaviorEngine.get247ContextDirective(activeAgent.name) : "";
+
+    return `${basePrompt}\n\n${antiHallucinationDirective}\n\n${activeInferenceDirective}\n\n${behaviorDirective}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {

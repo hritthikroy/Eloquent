@@ -2261,6 +2261,12 @@ async function stopRecording() {
         jarvisManager.prosodicEntrainment.observeUserTurn(recordingDuration, turnWordCount);
       }
 
+      // 24/7 Autonomous Behavior & Mode Engine Update (AWBE)
+      if (jarvisManager.behaviorEngine) {
+        const vibe = jarvisManager.prosodicEntrainment ? jarvisManager.prosodicEntrainment.currentVibe : null;
+        jarvisManager.behaviorEngine.updateBehavior(originalText, recordingDuration, vibe);
+      }
+
       // If user aborted during speech with ESC
       if (!isJarvisLoopActive) {
         hideOverlay();

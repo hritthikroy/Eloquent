@@ -27,6 +27,68 @@ class OfficeActionRunner {
     }
 
     // -------------------------------------------------------------
+    // 24/7 AUTONOMOUS OPERATING MODE & BEHAVIOR TRACKING (AWBE)
+    // -------------------------------------------------------------
+    if (lower.includes("status report") || lower.includes("behavior status") || lower.includes("focus status") || lower.includes("how am i doing") || lower.includes("check my mode") || lower.includes("what mode are we in")) {
+      if (jarvisManager && jarvisManager.behaviorEngine) {
+        return {
+          handled: true,
+          speech: jarvisManager.behaviorEngine.getStatusReport()
+        };
+      }
+    }
+
+    if (lower.match(/\b(switch to|enter|activate)\s+(deep build|coding mode|build mode)\b/) || lower === "deep build mode") {
+      if (jarvisManager && jarvisManager.behaviorEngine) {
+        jarvisManager.behaviorEngine.setMode("DEEP_BUILD");
+        return {
+          handled: true,
+          speech: "Switched to Deep Build Mode. Andrew has the lead, terminal and AST tooling armed. Let's build."
+        };
+      }
+    }
+
+    if (lower.match(/\b(switch to|enter|activate)\s+(triage mode|problem triage|debug mode)\b/) || lower === "triage mode") {
+      if (jarvisManager && jarvisManager.behaviorEngine) {
+        jarvisManager.behaviorEngine.setMode("PROBLEM_TRIAGE");
+        return {
+          handled: true,
+          speech: "Switched to Problem Triage Mode. Brian and Andrew are isolating system diagnostics and error traces."
+        };
+      }
+    }
+
+    if (lower.match(/\b(switch to|enter|activate)\s+(strategy mode|product mode|creative mode)\b/) || lower === "strategy mode") {
+      if (jarvisManager && jarvisManager.behaviorEngine) {
+        jarvisManager.behaviorEngine.setMode("PRODUCT_STRATEGY");
+        return {
+          handled: true,
+          speech: "Switched to Product Strategy Mode. Tuk Tuk and Jenny ready for high-level roadmap and creative brainstorming."
+        };
+      }
+    }
+
+    if (lower.match(/\b(switch to|enter|activate)\s+(research mode|academic mode)\b/) || lower === "research mode") {
+      if (jarvisManager && jarvisManager.behaviorEngine) {
+        jarvisManager.behaviorEngine.setMode("KNOWLEDGE_RESEARCH");
+        return {
+          handled: true,
+          speech: "Switched to Knowledge Research Mode. Jenny has the floor with literature citations and algorithmic equations."
+        };
+      }
+    }
+
+    if (lower.match(/\b(switch to|enter|activate)\s+(late night mode|unwind mode|relax mode)\b/) || lower === "late night mode") {
+      if (jarvisManager && jarvisManager.behaviorEngine) {
+        jarvisManager.behaviorEngine.setMode("LATE_NIGHT_RECOVERY");
+        return {
+          handled: true,
+          speech: "Switched to Late Night Mode. Lowering pace and vocal volume. I'm right here with you, let's take it easy."
+        };
+      }
+    }
+
+    // -------------------------------------------------------------
     // REMOTE OFFICE ZOOM MEETING & TEAM STANDUP
     // -------------------------------------------------------------
     if (lower.includes("team standup") || lower.includes("office meeting") || lower.includes("morning sync") || lower.includes("zoom meeting") || lower.includes("office standup") || lower.includes("team sync") || lower.includes("team rollcall") || lower.includes("start standup") || lower.includes("call meeting") || lower.includes("who is in the office")) {
