@@ -1830,17 +1830,22 @@ function startRecording() {
       // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
         // Full-Duplex Overlap: While AI is speaking, detect deliberate user vocal interjection/barge-in
-        // 0.45 threshold ensures loud direct human voice triggers barge-in while MacBook speaker bleed (<0.32) is ignored!
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
-          if (amplitude >= 0.45) {
-            console.log('⚡ Full-Duplex Overlap! Hritthik interjected mid-sentence. Halting AI speech gracefully...');
-            lastInterruptedUtterance = jarvisManager.currentUtterance;
-            jarvisManager.stopSpeaking();
-            // Start capturing user's interjection immediately
-            jarvisSpeechDetected = true;
-            jarvisSpeechStartTime = Date.now();
-            jarvisLastSpeechTime = Date.now();
-            jarvisSpeechFrames = 1;
+          if (amplitude >= 0.38) {
+            jarvisBargeInCounter = (jarvisBargeInCounter || 0) + 1;
+            if (jarvisBargeInCounter >= 2 || amplitude >= 0.50) {
+              console.log('⚡ Full-Duplex Overlap! Hritthik interjected mid-sentence. Halting AI speech gracefully...');
+              lastInterruptedUtterance = jarvisManager.currentUtterance;
+              jarvisManager.stopSpeaking();
+              jarvisBargeInCounter = 0;
+              // Start capturing user's interjection immediately
+              jarvisSpeechDetected = true;
+              jarvisSpeechStartTime = Date.now();
+              jarvisLastSpeechTime = Date.now();
+              jarvisSpeechFrames = 1;
+            }
+          } else {
+            jarvisBargeInCounter = 0;
           }
           return; // Strictly ignore speaker bleed while AI is still speaking
         }
@@ -2566,8 +2571,9 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       { role: 'user', content: userSpeech }
     ];
 
+    const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : 0.65);
     const { content, usage, model } = await callGroqChatCompletion(messages, {
-      temperature: 0.72,
+      temperature: dynamicTemperature,
       max_tokens: 160,
       timeout: 10000
     });

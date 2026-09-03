@@ -862,12 +862,13 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       const file = this.backchannelFiles[i];
       if (!fs.existsSync(file)) {
         try {
-          if (!this.ttsClient) this.initTTS();
+          this.initTTS();
           await this.ttsClient.setMetadata(this.config.voice || "en-US-AvaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
           const res = await this.ttsClient.toFile("/tmp", phrases[i], { rate: "+8%", pitch: "+1Hz" });
           fs.copyFileSync(res.audioFilePath, file);
           try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
           console.log(`🎙️ Pre-synthesized neural backchannel: ${file}`);
+          await new Promise(r => setTimeout(r, 350));
         } catch (e) {}
       }
     }
