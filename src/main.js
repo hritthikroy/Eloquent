@@ -1833,10 +1833,11 @@ function startRecording() {
       // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
         // Full-Duplex Overlap: While AI is speaking, detect deliberate user vocal interjection/barge-in
+        // Geigel DTD Equation: |d(n)| >= c * max(|x(n)|)
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
-          if (amplitude >= 0.38) {
+          if (amplitude >= 0.32) {
             jarvisBargeInCounter = (jarvisBargeInCounter || 0) + 1;
-            if (jarvisBargeInCounter >= 2 || amplitude >= 0.50) {
+            if (jarvisBargeInCounter >= 2 || amplitude >= 0.45) {
               console.log('⚡ Full-Duplex Overlap! Hritthik interjected mid-sentence. Halting AI speech gracefully...');
               lastInterruptedUtterance = jarvisManager.currentUtterance;
               jarvisManager.stopSpeaking();
@@ -2197,18 +2198,25 @@ async function stopRecording() {
         const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
         const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
 
+        // Full-Duplex Breakthrough: Re-arm the recording microphone BEFORE speech begins
+        // Allows user to speak simultaneously, interject, or give new inputs while any agent is talking!
+        isProcessing = false;
+        startRecording();
+
         const multiTurns = parseMultiAgentTurns(jarvisReply);
         if (multiTurns.length > 1) {
           console.log(`🎙️ Multi-Party Squad Exchange initiated (${multiTurns.length} agent turns)!`);
           for (const step of multiTurns) {
-            if (!isJarvisLoopActive) break;
+            if (!isJarvisLoopActive || lastInterruptedUtterance) break;
             if (overlayWindow && !overlayWindow.isDestroyed()) {
               overlayWindow.webContents.send('set-agent-name', step.agentName);
               overlayWindow.webContents.send('jarvis-speaking');
             }
             showNotification(`🤖 ${step.agentName}`, step.text);
             await jarvisManager.speak(step.text, step.voice);
+            if (!isJarvisLoopActive || lastInterruptedUtterance) break;
             await new Promise(r => setTimeout(r, 140));
+            if (!isJarvisLoopActive || lastInterruptedUtterance) break;
           }
         } else {
           // Show notification with specialist agent name and role
@@ -2248,23 +2256,25 @@ async function stopRecording() {
         jarvisManager.prosodicEntrainment.observeUserTurn(recordingDuration, turnWordCount);
       }
 
-      // Mark processing finished so next turn is accepted cleanly
-      isProcessing = false;
-
       // If user aborted during speech with ESC
       if (!isJarvisLoopActive) {
         hideOverlay();
         return;
       }
 
-      // Real-time hands-free turn taking loop - Tony Stark Suit 24/7 Mode
+      // Continuous Hands-Free Full-Duplex Listening
+      // If user did NOT interject during speech, refresh clean audio buffer for fresh turn
       if (isJarvisLoopActive) {
-        console.log('🎙️ Tony Stark Suit Mode: Re-arming clean mic for next conversational turn...');
-        setTimeout(() => {
-          if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
-          overlayWindow.webContents.send('jarvis-listening');
-          startRecording();
-        }, 120);
+        if (!jarvisSpeechDetected && !lastInterruptedUtterance) {
+          console.log('🎙️ Full-Duplex Loop: Clean mic buffer ready for next turn...');
+          audioRecorder.stopRecording().then(() => {
+            if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
+            overlayWindow.webContents.send('jarvis-listening');
+            startRecording();
+          });
+        } else {
+          console.log('🎙️ User already speaking/interjected — keeping active audio stream flowing...');
+        }
       } else {
         hideOverlay();
       }
