@@ -1913,12 +1913,6 @@ function startRecording() {
             }
           }
         }
-
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          const hasVoiceActivity = amplitude > 0.10;
-          overlayWindow.webContents.send('amplitude', amplitude);
-          overlayWindow.webContents.send('voice-activity', hasVoiceActivity);
-        }
       };
     })
     .catch((error) => {
@@ -2923,13 +2917,13 @@ function pasteTextRobust(text) {
 }
 
 // Show system notification with better UX
-function showNotification(title, body) {
+function showNotification(title, body, silent = true) {
   try {
     if (Notification.isSupported()) {
       const notification = new Notification({
         title: title,
         body: body,
-        silent: false, // Allow sound for better UX
+        silent: silent, // Prevent system audio chime from bleeding into microphone
         timeoutType: 'default',
         urgency: 'normal'
       });

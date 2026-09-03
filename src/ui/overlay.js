@@ -235,8 +235,6 @@ let currentAgentName = 'Ava';
 // Jarvis / Ava state listeners
 ipcRenderer.on('set-agent-name', (_, agentName) => {
   if (agentName) currentAgentName = agentName;
-  const recLabel = document.querySelector('.rec-label');
-  if (recLabel && agentName) recLabel.textContent = agentName;
 });
 
 ipcRenderer.on('jarvis-thinking', () => {
