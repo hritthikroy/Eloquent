@@ -2783,13 +2783,43 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 
     // Temperature tuning per persona: Tuk Tuk warmer/creative, Andrew precise, Jenny curious, Brian grounded
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.85 : (agent.key === 'andrew' ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
-    const { content, usage, model } = await callGroqChatCompletion(messages, {
-      model: 'qwen/qwen3.8-27b',
-      temperature: dynamicTemperature,
-      // 420 tokens for regular agents (enough for 2 full spoken sentences + reasoning headroom), 550 for team multi-agent
-      max_tokens: agent.key === 'team' ? 550 : 420,
-      timeout: 10000
-    });
+    
+    // Primary Intelligence: Google Gemini 3.7 / 3.5 Pool for deep frontier reasoning & screen vision
+    // Fallback: Groq Qwen 27B for ultra-fast LPU failover
+    let content = null;
+    let usage = null;
+    let model = null;
+
+    if (geminiClient && geminiClient.isConfigured()) {
+      try {
+        console.log(`✨ [Jarvis Cortex] Invoking Google Gemini High-Level Brain for ${agent.name}...`);
+        const geminiRes = await geminiClient.callChatCompletion(messages, {
+          model: 'gemini-3.7-flash',
+          temperature: dynamicTemperature,
+          max_tokens: agent.key === 'team' ? 650 : 450,
+          timeout: 8000
+        });
+        if (geminiRes && geminiRes.content) {
+          content = geminiRes.content;
+          model = `gemini/${geminiRes.model}`;
+          usage = geminiRes.usage;
+        }
+      } catch (geminiErr) {
+        console.warn('⚠️ [Jarvis Gemini] Transient failover to Groq LPU:', geminiErr.message);
+      }
+    }
+
+    if (!content) {
+      const groqRes = await callGroqChatCompletion(messages, {
+        model: 'qwen/qwen3.8-27b',
+        temperature: dynamicTemperature,
+        max_tokens: agent.key === 'team' ? 550 : 420,
+        timeout: 10000
+      });
+      content = groqRes.content;
+      usage = groqRes.usage;
+      model = groqRes.model;
+    }
 
     let reply = content.trim();
 
