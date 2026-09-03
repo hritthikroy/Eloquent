@@ -1070,6 +1070,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
   }
 
   stopSpeaking() {
+    this.stopFiller();
     this.isAborted = true;
     this.isSpeaking = false;
     this.currentSpeechId++; // Invalidate all pending async speech jobs
