@@ -618,6 +618,32 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return { handled: true, speech: "Opening the Weather forecast for you now." };
     }
 
+    // Background Spoken Voice Timer ("set a timer for 5 minutes", "timer for 30 seconds")
+    const timerMatch = lower.match(/(?:set a timer for|set timer for|timer for)\s+(\d+)\s*(minute|minutes|min|mins|second|seconds|sec|secs|hour|hours)/i);
+    if (timerMatch && timerMatch[1]) {
+      const num = parseInt(timerMatch[1], 10);
+      const unit = timerMatch[2].toLowerCase();
+      let ms = num * 1000;
+      if (unit.startsWith("min")) ms = num * 60 * 1000;
+      if (unit.startsWith("hour")) ms = num * 3600 * 1000;
+
+      setTimeout(() => {
+        try {
+          exec('afplay /System/Library/Sounds/Glass.aiff 2>/dev/null || true');
+          if (jarvisManager && typeof jarvisManager.speak === "function") {
+            jarvisManager.speak(`Time's up! Your ${num} ${unit} timer has finished.`, activeAgent?.voice || "en-US-AvaMultilingualNeural");
+          }
+        } catch (e) {}
+      }, ms);
+
+      return {
+        handled: true,
+        agentName: activeAgent?.name || "Tuk Tuk",
+        agentVoice: activeAgent?.voice || "en-US-AvaMultilingualNeural",
+        speech: `Timer set for ${num} ${unit}. I will alert you when time is up.`
+      };
+    }
+
     if (lower.includes("set a timer") || lower.includes("set timer") || lower.includes("open clock") || lower.includes("set an alarm") || lower.includes("open timer")) {
       try { exec('open -a Clock 2>/dev/null'); } catch (e) {}
       return { handled: true, speech: "Opening Clock and timers for you now." };
