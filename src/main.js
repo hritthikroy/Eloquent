@@ -1517,11 +1517,18 @@ const SILENCE_HALLUCINATIONS = new Set([
   'shadow neutral', 'ava neural', 'en-us-avaneural'
 ]);
 
-function isWhisperHallucination(text) {
+function isWhisperHallucination(text, recordingDurationMs = 0) {
   if (!text || typeof text !== 'string') return true;
   const clean = text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').trim();
   if (clean.length === 0) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
+
+  // On short audio (< 1.6s), Whisper notoriously hallucinates "thank you" / "thanks" on room noise
+  if (recordingDurationMs > 0 && recordingDurationMs < 1600) {
+    if (clean === 'thank you' || clean === 'thanks' || clean === 'you' || clean === 'bye') {
+      return true;
+    }
+  }
 
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
   const trimmed = text.trim();
@@ -1774,12 +1781,12 @@ function startRecording() {
       if (jarvisManager.isSpeaking) {
         return;
       }
-      if (jarvisSpeechDetected && jarvisSpeechFrames >= 2) {
+      if (jarvisSpeechDetected && jarvisSpeechFrames >= 4) {
         const silenceMs = Date.now() - jarvisLastSpeechTime;
-        const speechDurationMs = Date.now() - jarvisSpeechStartTime;
-        // 320ms natural silence after >= 120ms real voice = immediate auto-submit!
-        if (silenceMs >= 320 && speechDurationMs >= 120) {
-          console.log(`🗣️ VAD Heartbeat: Natural pause detected (${silenceMs}ms silence after ${speechDurationMs}ms speech) - auto-submitting!`);
+        const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
+        // Require at least 300ms of sustained real voice AND 420ms natural pause
+        if (silenceMs >= 420 && voicedDurationMs >= 300) {
+          console.log(`🗣️ VAD Heartbeat: Natural pause detected (${silenceMs}ms silence after ${voicedDurationMs}ms voiced speech) - auto-submitting!`);
           jarvisAutoStopTriggered = true;
           if (jarvisVadHeartbeat) {
             clearInterval(jarvisVadHeartbeat);
@@ -1820,7 +1827,7 @@ function startRecording() {
           return; // Strictly ignore speaker bleed while AI is still speaking
         }
 
-        // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after speech
+        // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
           const SPEECH_THRESHOLD = 0.12; // Sensitive to real human voice
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
@@ -1834,22 +1841,29 @@ function startRecording() {
             jarvisSpeechFrames++;
           }
 
-          if (jarvisSpeechDetected) {
+          if (jarvisSpeechDetected && jarvisSpeechFrames >= 4) {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
-            const speechDurationMs = Date.now() - jarvisSpeechStartTime;
+            const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
 
-            // 1. Natural Pause: 320ms silence after >= 120ms real speech (instant response!)
-            const isNaturalPause = !isSpeechFrame && (silenceMs >= 320) && (speechDurationMs >= 120);
-            // 2. Hard Speech Cap: 6.0s total elapsed speech for full expressive thoughts
-            const isMaxSpeechCap = speechDurationMs >= 6000;
+            // 1. Natural Pause: 420ms silence after >= 300ms sustained real voice!
+            const isNaturalPause = !isSpeechFrame && (silenceMs >= 420) && (voicedDurationMs >= 300);
+            // 2. Hard Speech Cap: 8.0s total elapsed speech for full expressive thoughts
+            const isMaxSpeechCap = (Date.now() - jarvisSpeechStartTime) >= 8000;
 
             if (isNaturalPause || isMaxSpeechCap) {
-              const reason = isMaxSpeechCap ? "6.0s max speech cap" : `${silenceMs}ms natural pause`;
-              console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${speechDurationMs}ms speech)...`);
+              const reason = isMaxSpeechCap ? "8.0s max speech cap" : `${silenceMs}ms natural pause`;
+              console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${voicedDurationMs}ms voiced speech)...`);
               jarvisAutoStopTriggered = true;
+              if (jarvisVadHeartbeat) {
+                clearInterval(jarvisVadHeartbeat);
+                jarvisVadHeartbeat = null;
+              }
               stopRecording();
-            } else if (!isSpeechFrame && silenceMs > 1500 && jarvisSpeechFrames < 2) {
-              // Isolated solitary noise blip with prolonged silence (>1.5s) — reset to listen cleanly
+            }
+          } else if (jarvisSpeechDetected && !isSpeechFrame) {
+            const silenceMs = Date.now() - jarvisLastSpeechTime;
+            // Noise blip filter: If fewer than 4 frames of voice and > 1.2s silence, reset cleanly
+            if (silenceMs > 1200 && jarvisSpeechFrames < 4) {
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;
@@ -1954,13 +1968,13 @@ async function stopRecording() {
     const stats = fs.statSync(targetAudioFile);
     console.log(`📊 Audio file: ${Math.round(stats.size/1000)}KB`);
     
-    if (stats.size < 5000) {
+    if (stats.size < 45000) {
       if (currentMode === 'jarvis') {
-        console.log('🎙️ Tony Stark Suit Mode: Ambient silence in room - keeping mic active 24/7...');
+        console.log(`🎙️ Sub-vocal noise blip (${Math.round(stats.size/1000)}KB) - keeping mic active for real speech...`);
         isProcessing = false;
+        isStopRecordingLock = false;
         if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
-          overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
         }
         return;
@@ -2001,12 +2015,11 @@ async function stopRecording() {
 
     if (currentMode === 'jarvis') {
       // Silently discard Whisper hallucinations — don't waste an AI call on phantom speech
-      if (isWhisperHallucination(originalText)) {
-        console.log(`🔇 Jarvis: discarding Whisper hallucination "${originalText}" — re-arming mic...`);
+      if (isWhisperHallucination(originalText, recordingDuration)) {
+        console.log(`🔇 Jarvis: discarding Whisper hallucination "${originalText}" (${recordingDuration}ms) — re-arming mic...`);
         isProcessing = false;
         if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
-          overlayWindow.webContents.send('recording-started', Date.now());
           startRecording();
         }
         return;
@@ -2419,10 +2432,10 @@ async function transcribe(filePath) {
 // Robust Groq Chat Completion with automatic model fallback
 async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
-    CONFIG.aiModel,
-    process.env.GROQ_MODEL,
-    'qwen/qwen3.8-27b',
     'llama-3.3-70b-versatile',
+    process.env.GROQ_MODEL,
+    CONFIG.aiModel,
+    'qwen/qwen3.8-27b',
     'openai/gpt-oss-120b'
   ].filter(Boolean);
 
