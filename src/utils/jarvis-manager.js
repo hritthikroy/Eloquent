@@ -891,11 +891,12 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         }
         // Isolated directory prevents file-lock collisions with CoreAudio afplay
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "eloquent_tts_"));
+        // 9-second timeout protection so initial TLS handshake never fails prematurely
         const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
         const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanText) : "+0Hz";
         const toFilePromise = this.ttsClient.toFile(tempDir, cleanText, { rate: dynamicRate, pitch: dynamicPitch });
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 5s")), 5000)
+          setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 9s")), 9000)
         );
         const res = await Promise.race([toFilePromise, timeoutPromise]);
 
