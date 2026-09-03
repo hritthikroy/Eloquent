@@ -1936,13 +1936,13 @@ function startRecording() {
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
             // Quantum Dynamical Turn-Taking Endpointing (Levinson & Torreira 2015 TRP: 190ms - 270ms)
-            // Multimodal Audio-Visual VAD (AV-VAD): If camera is active and lips have sealed, cut off in 25ms!
+            // Multimodal Audio-Visual VAD (AV-VAD): If camera is active and lips have sealed after actual speech, cut off in 140ms!
             let dynamicSilenceThreshold = quantumVibeEngine.getDynamicSilenceThreshold(voicedDurationMs);
-            if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && silenceMs >= 25) {
-              dynamicSilenceThreshold = 25; // Instant lip-closure cut-off (<25ms)
+            if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 400 && silenceMs >= 140) {
+              dynamicSilenceThreshold = 140; // Natural snappy lip-closure cut-off without premature cuts
             }
             const isMaxSpeechCap = speechDurationMs >= 60000; // Expanded to 60s so long continuous sentences are never truncated
-            const isNaturalPause = silenceMs >= dynamicSilenceThreshold;
+            const isNaturalPause = silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 200;
 
             if (isNaturalPause || isMaxSpeechCap) {
               const reason = isMaxSpeechCap ? "60s max speech cap" : `${silenceMs}ms natural pause`;
