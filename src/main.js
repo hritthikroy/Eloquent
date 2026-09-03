@@ -2569,11 +2569,8 @@ async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
     options.model,
     'qwen/qwen3.8-27b',
-    'openai/gpt-oss-20b',
-    'groq/compound-mini',
-    'openai/gpt-oss-120b',
-    CONFIG.aiModel,
-    process.env.GROQ_MODEL
+    'qwen/qwen3.6-27b',
+    'groq/compound-mini'
   ].filter(Boolean);
 
   const uniqueModels = [...new Set(candidateModels)];
@@ -2592,7 +2589,7 @@ async function callGroqChatCompletion(messages, options = {}) {
         {
           headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
           httpsAgent: groqKeepAliveAgent,
-          timeout: options.timeout || 20000,
+          timeout: options.timeout || 4000,
           validateStatus: function (status) {
             return status < 500;
           }
@@ -2602,7 +2599,7 @@ async function callGroqChatCompletion(messages, options = {}) {
       const rawChoice = response.data?.choices?.[0]?.message;
       let rawContent = (rawChoice?.content || rawChoice?.reasoning || '').trim();
       // Eliminate internal chain-of-thought tokens (<think>...</think>)
-      rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      rawContent = rawContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
 
       if (response.status === 200 && rawContent.length > 0) {
         return { content: rawContent, model: model, usage: response.data.usage };
@@ -2610,14 +2607,10 @@ async function callGroqChatCompletion(messages, options = {}) {
 
       if (response.status === 429) {
         rotateToNextKey();
-        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated API key and backing off 300ms...`);
-        await new Promise(r => setTimeout(r, 300));
-      } else {
-        console.warn(`⚠️ Model ${model} returned status ${response.status} with empty content, attempting fallback...`);
+        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated API key.`);
       }
       lastError = new Error(response.data?.error?.message || `API error: ${response.status}`);
     } catch (err) {
-      console.warn(`⚠️ Model ${model} failed (${err.message}), attempting fallback...`);
       lastError = err;
     }
   }
@@ -3045,7 +3038,7 @@ CORE GUIDELINES:
         content: grammarPrompt
       },
       { role: 'user', content: text }
-    ], { temperature: 0.2, max_tokens: 2000, timeout: 30000 });
+    ], { model: 'qwen/qwen3.8-27b', temperature: 0.2, max_tokens: 1000, timeout: 5000 });
 
     const fixTime = Date.now() - startTime;
     console.log(`⚡ Grammar fixes applied using ${model} in ${fixTime}ms`);
@@ -3061,9 +3054,14 @@ CORE GUIDELINES:
     return content.trim();
   } catch (error) {
     const fixTime = Date.now() - startTime;
-    console.warn('⚠️ Grammar fix failed:', error.message);
+    console.warn('⚠️ Grammar fix failed, applying fallback capitalization:', error.message);
     logApiRequest('llama-grammar', 'error', fixTime, null, error.message);
-    return text; // Return uncorrected text on error to avoid breaking workflow
+    let fallback = (text || '').trim();
+    if (fallback.length > 0) {
+      fallback = fallback.charAt(0).toUpperCase() + fallback.slice(1);
+      if (!/[.!?]$/.test(fallback)) fallback += '.';
+    }
+    return fallback;
   }
 }
 
