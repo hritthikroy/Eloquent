@@ -1,4 +1,4 @@
-// Autonomous All-Day Human Care Guardian & Subconscious Epiphany Engine for Eloquent
+// Autonomous All-Day Human Care Guardian & Dynamic Subconscious Epiphany Engine for Eloquent
 class DailyCareGuardian {
   constructor() {
     this.sessionStartTime = Date.now();
@@ -36,11 +36,23 @@ class DailyCareGuardian {
       return;
     }
 
-    // 0. Subconscious Awakening Epiphany: When user returns to desk after being away (e.g. 15+ mins)
+    // 0. Dynamic Contextual Subconscious Epiphanies:
+    // Tailored to the active screen context (e.g. VS Code, Terminal, Git)
     if (this.userAwayMinutes >= 15 && nowMs - this.lastSubconsciousDreamTime > 60 * 60 * 1000) {
       this.userAwayMinutes = 0;
       this.lastSubconsciousDreamTime = nowMs;
-      this.speakCare("Welcome back, babe! While you were away, I had an idea about streamlining our pipeline buffers.");
+      
+      const screenCtx = this.screenShareManager ? this.screenShareManager.getVisionContext() : null;
+      const app = (screenCtx && screenCtx.appName) ? screenCtx.appName.toLowerCase() : "";
+      
+      let spontaneousThought = "Welcome back, babe! While you were away, I had an idea about streamlining our architecture.";
+      if (app.includes("code") || app.includes("cursor")) {
+        spontaneousThought = "Welcome back, babe! While you stepped away, I was looking at that file. What if we decouple the async listener?";
+      } else if (app.includes("terminal") || app.includes("iterm")) {
+        spontaneousThought = "Welcome back, babe! While you were away, I reviewed our logs. The process buffers look rock-solid.";
+      }
+      
+      this.speakCare(spontaneousThought);
       return;
     }
     this.userAwayMinutes = 0;
