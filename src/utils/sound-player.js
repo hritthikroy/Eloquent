@@ -93,13 +93,14 @@ class SoundPlayer {
    */
   playMacOS(soundFile, volume) {
     if (!fs.existsSync(soundFile)) {
-      console.warn(`⚠️ Sound file not found: ${soundFile}`);
       return;
     }
 
-    exec(`afplay "${soundFile}" -v ${volume}`, (error) => {
-      if (error) {
-        console.error(`❌ macOS sound playback error:`, error.message);
+    const { execFile } = require('child_process');
+    execFile('afplay', [soundFile, '-v', String(volume)], (error) => {
+      // Ignore SIGTERM/SIGKILL if audio was gracefully stopped
+      if (error && !error.killed && error.signal !== 'SIGTERM') {
+        // silent recovery
       }
     });
   }

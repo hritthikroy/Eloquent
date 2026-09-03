@@ -587,8 +587,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return AGENTS.team;
     }
 
-    // 1. Explicit Direct Name Invocations (Single Agent)
-    if (/\b(andrew|and\s*rew|an\s*drew)\b/i.test(lower) || /\band you\b(?=\s+(check|write|fix|code|build|refactor|take|run|inspect))/i.test(lower)) {
+    // 1. Explicit Direct Name Invocations
+    if (/\b(andrew|and\s*rew|an\s*drew)\b/i.test(lower)) {
       return AGENTS.andrew;
     }
     if (/\b(jenny)\b/i.test(lower)) {
@@ -597,32 +597,16 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (/\b(brian)\b/i.test(lower)) {
       return AGENTS.brian;
     }
-    if (/\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava)\b/i.test(lower)) {
+    if (/\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava|babe|sweetheart|honey|darling)\b/i.test(lower)) {
       return AGENTS.tuktuk;
     }
 
-    // 2. Automatic Multi-Party Squad Trigger:
-    // When the user asks open-ended collaborative questions ("what do you think?", "how do we solve this?", "what should we do next?")
-    // OR when the utterance touches multiple specialist domains simultaneously!
-    const hasCode = /\b(code|bug|rust|ts|electron|api|ast|git|terminal|build|test|deploy|server|refactor|function|antigravity|script|interview)\b/i.test(lower);
-    const hasResearch = /\b(paper|research|academic|market|algorithm|literature|study|trends|competitor|intelligence)\b/i.test(lower);
-    const hasTelemetry = /\b(latency|ram|cpu|hardware|telemetry|crash|panic|diagnostics|uptime|health|battery|network)\b/i.test(lower);
-    const hasStrategy = /\b(product|strategy|roadmap|vision|future|partner|design|brand|feature|milestone)\b/i.test(lower);
-
-    const domainCount = (hasCode ? 1 : 0) + (hasResearch ? 1 : 0) + (hasTelemetry ? 1 : 0) + (hasStrategy ? 1 : 0);
-    const isOpenEnded = /\b(what do you think|how should we|what are our next steps|what should we do|how do we solve|what is the plan|how do we tackle|where do we go from here|what is your take)\b/i.test(lower);
-
-    if (domainCount >= 2 || isOpenEnded) {
-      console.log(`🤝 [Auto Squad Arbiter] Cross-domain/open-ended inquiry detected (domains: ${domainCount}, openEnded: ${isOpenEnded}) -> Auto-routing to AGENTS.team!`);
+    // 2. Explicit Squad / Team Invocations
+    if (/\b(squad|team standup|office meeting|all of you|everyone|guys)\b/i.test(lower)) {
       return AGENTS.team;
     }
 
-    // 3. Single-Domain Specialist Routing (Only for explicit technical/research queries)
-    if (hasCode) return AGENTS.andrew;
-    if (hasResearch) return AGENTS.jenny;
-    if (hasTelemetry) return AGENTS.brian;
-
-    // 4. Default to Co-Founder & Team Leader Tuk Tuk for all greetings and general conversation
+    // 3. Default to Tuk Tuk (Soul Partner & Co-Founder) for 100% stable, zero-flickering presence
     return AGENTS.tuktuk;
   }
 
