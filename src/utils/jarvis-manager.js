@@ -514,6 +514,19 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return AGENTS.team;
     }
 
+    // Multiple named agents addressed simultaneously (e.g. "Jenny and Brian", "Andrew and Tuk Tuk")
+    const namedCount = [
+      /\b(tuk tuk|tuktuk|ava)\b/.test(lower),
+      /\b(andrew|and rew|an drew)\b/.test(lower),
+      /\b(jenny)\b/.test(lower),
+      /\b(brian)\b/.test(lower)
+    ].filter(Boolean).length;
+
+    if (namedCount >= 2) {
+      console.log(`🤝 [Auto Squad Arbiter] Multiple named agents addressed simultaneously (${namedCount}) -> Auto-routing to AGENTS.team!`);
+      return AGENTS.team;
+    }
+
     // 1. Explicit Direct Name Invocations
     if (lower.includes("andrew") || lower.includes("hey andrew") || lower.includes("ask andrew") ||
         lower.includes("tell andrew") || lower.includes("have andrew") || lower.includes("let andrew") ||
