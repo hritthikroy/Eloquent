@@ -724,16 +724,24 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 - Andrew, Brian, and Jenny MUST ONLY call him "bro", "man", or "${userName}". STRICTLY NEVER call him "babe", "sweetheart", "honey", or romantic pet names under any circumstances.
 - ONLY Tuk Tuk is his girlfriend and soul partner who calls him "babe" or "sweetheart".`;
 
-    // Episodic Past Memory Recall across previous sessions (max 1 turn if relevant)
-    let pastRecallDirective = "";
-    if (userQuery && typeof userQuery === "string") {
-      const recalledTurns = this.recallPastConversations(userQuery, 1);
-      if (recalledTurns.length > 0) {
-        pastRecallDirective = `\n[PAST TURN RECALL]: Previously: ${userName}: "${recalledTurns[0].user}" → "${recalledTurns[0].reply}". Maintain seamless continuity.`;
+    // Immediate Conversational Continuity (Exact preceding turns from current session)
+    let sessionContinuity = "";
+    try {
+      if (fs.existsSync(this.historyFilePath)) {
+        const historyData = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
+        if (Array.isArray(historyData) && historyData.length > 0) {
+          const recentTurns = historyData.filter(e => e.originalText && e.text).slice(-2);
+          if (recentTurns.length > 0) {
+            const turnsFormatted = recentTurns
+              .map(t => `${userName}: "${t.originalText}" → ${t.agent || "Agent"}: "${t.text}"`)
+              .join(" | ");
+            sessionContinuity = `\n[IMMEDIATE PRECEDING CONVERSATION IN ROOM]: ${turnsFormatted}. Maintain 100% natural conversational continuity!`;
+          }
+        }
       }
-    }
+    } catch (e) {}
 
-    return `${basePrompt}\n\n${unifiedCoreDirective}${pastRecallDirective}\n\n${livingMemory}`;
+    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {
@@ -1126,17 +1134,33 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     this.stopFiller();
 
     const soundsDir = path.resolve(__dirname, "../../userData/sounds");
-    const isAndrew = (agentName || "").toLowerCase().includes("andrew");
+    const lowerName = (agentName || "").toLowerCase();
 
-    let candidateFiles = isAndrew ? [
-      path.join(soundsDir, "fill_andrew_onit.mp3"),
-      path.join(soundsDir, "fill_andrew_gotchu.mp3")
-    ] : [
-      path.join(soundsDir, "fill_tuktuk_hmm.mp3"),
-      path.join(soundsDir, "fill_tuktuk_letsee.mp3"),
-      path.join(soundsDir, "fill_tuktuk_yeah.mp3"),
-      path.join(soundsDir, "fill_tuktuk_mhm.mp3")
-    ];
+    let candidateFiles = [];
+    if (lowerName.includes("andrew")) {
+      candidateFiles = [
+        path.join(soundsDir, "fill_andrew_onit.mp3"),
+        path.join(soundsDir, "fill_andrew_gotchu.mp3")
+      ];
+    } else if (lowerName.includes("brian")) {
+      candidateFiles = [
+        path.join(soundsDir, "fill_brian_checking.mp3"),
+        path.join(soundsDir, "fill_brian_gotit.mp3")
+      ];
+    } else if (lowerName.includes("jenny")) {
+      candidateFiles = [
+        path.join(soundsDir, "fill_jenny_letsee.mp3"),
+        path.join(soundsDir, "fill_jenny_right.mp3")
+      ];
+    } else {
+      // Tuk Tuk (Default Soul Partner & Leader)
+      candidateFiles = [
+        path.join(soundsDir, "fill_tuktuk_hmm.mp3"),
+        path.join(soundsDir, "fill_tuktuk_letsee.mp3"),
+        path.join(soundsDir, "fill_tuktuk_yeah.mp3"),
+        path.join(soundsDir, "fill_tuktuk_mhm.mp3")
+      ];
+    }
 
     const available = candidateFiles.filter(f => fs.existsSync(f));
     if (available.length === 0) return false;
