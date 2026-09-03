@@ -12,7 +12,7 @@ class PromptAssembler {
 Your job is to transform raw developer intent, conversational context, and instructions into a pristine, production-ready, structured developer prompt.
 
 OUTPUT FORMAT REQUIREMENTS (STRICT):
-You must output EXACTLY and ONLY the following 3 sections:
+You must output EXACTLY the following 4 sections:
 
 Clear Technical Objective
 [A concise, authoritative, single-paragraph statement of the task and what the code change accomplishes.]
@@ -22,6 +22,9 @@ Key Files / Architecture
 
 Quality Requirements & AST Verification
 - [Explicit requirements for static analysis, AST syntax verification via node -c, zero regressions, and edge-case handling.]
+
+Next Steps & Continuation Roadmap
+- [List 2 to 3 logical next features, optimizations, or test enhancements to continue the build process immediately after execution.]
 
 CRITICAL RULES:
 1. NO PREAMBLE. Do NOT start with "Sure", "Here is your prompt", "Okay bro", or any conversational filler.
@@ -69,7 +72,12 @@ Key Files / Architecture
 Quality Requirements & AST Verification
 - Validate 100% AST syntax clean execution via node -c across all modified modules.
 - Ensure zero conversational regressions or rate limit bottlenecks.
-- Verify all edge cases handle ambiguous input gracefully.`;
+- Verify all edge cases handle ambiguous input gracefully.
+
+Next Steps & Continuation Roadmap
+- Monitor buffer telemetry and CPU impact during real-world streaming.
+- Wire auto-retry mechanisms for transient network fluctuations.
+- Run integration test suite across multi-agent turns.`;
   }
 }
 

@@ -6,6 +6,7 @@
 const INTENTS = {
   SMOOTH_CONVERSATION: "SMOOTH_CONVERSATION",
   GENERATE_PROMPT: "GENERATE_PROMPT",
+  EXECUTE_PROMPT: "EXECUTE_PROMPT",
   STANDARD_QUERY: "STANDARD_QUERY"
 };
 
@@ -23,7 +24,24 @@ class IntentParser {
       return { intent: INTENTS.STANDARD_QUERY, confidence: 1.0, target: rawText };
     }
 
-    // 2. Smooth Conversation Intent Detection
+    // 2. Execute & Fire Prompt Intent Detection ("execute prompt", "fire prompt", "send prompt", "paste and run", "paste and fire")
+    const executePatterns = [
+      /\b(?:fire|execute|run|send|submit|push)\s+(?:the\s+|this\s+)?(?:prompt|task|instruction)\b/i,
+      /\b(?:paste\s+and\s+(?:fire|execute|run|send|press\s+enter))\b/i,
+      /\b(?:fire\s+it|send\s+it|execute\s+it)\b/i
+    ];
+
+    for (const pattern of executePatterns) {
+      if (pattern.test(lower)) {
+        return {
+          intent: INTENTS.EXECUTE_PROMPT,
+          confidence: 0.95,
+          target: "execute_and_fire"
+        };
+      }
+    }
+
+    // 2.5 Smooth Conversation Intent Detection
     const smoothPatterns = [
       /\b(?:make|get)\s+(?:our\s+|the\s+)?conversation\s+(?:smooth|smoother|flow)\b/i,
       /\b(?:smooth|fix)\s+(?:our\s+|the\s+)?(?:conversation|interaction)\s+(?:flow|state|glitches)?\b/i,

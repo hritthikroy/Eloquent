@@ -211,9 +211,15 @@ class OfficeActionRunner {
     if (promptRes && promptRes.handled) {
       // In hands-free mode, auto-paste straight into the active Antigravity window
       try {
-        if (process.platform === "darwin") {
+        if (process.platform === "darwin" && promptRes.intent !== "EXECUTE_PROMPT") {
           setTimeout(() => {
             exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down' 2>/dev/null || true`);
+            // If user asked to "execute", "fire", or "run", send an Enter key right after pasting
+            if (lower.includes("and fire") || lower.includes("and run") || lower.includes("and execute") || lower.includes("and send")) {
+              setTimeout(() => {
+                exec(`osascript -e 'tell application "System Events" to key code 36' 2>/dev/null || true`);
+              }, 450);
+            }
           }, 350);
         }
       } catch (e) {}

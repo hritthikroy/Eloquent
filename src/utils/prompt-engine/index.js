@@ -30,6 +30,22 @@ class PromptEngine {
 
     console.log(`🚀 [PromptEngine] Triggered intent: ${intent} with target: "${target}"`);
 
+    // Handle immediate execution / firing of pending prompt into Antigravity
+    if (intent === INTENTS.EXECUTE_PROMPT) {
+      if (process.platform === "darwin") {
+        try {
+          const { exec } = require("child_process");
+          // Press Enter (Key Code 36) in active Antigravity window
+          exec(`osascript -e 'tell application "System Events" to key code 36' 2>/dev/null || true`);
+        } catch (e) {}
+      }
+      return {
+        handled: true,
+        intent,
+        speech: "Fired the prompt into Antigravity, bro! Execution is running now."
+      };
+    }
+
     // 3. Enrich context with multi-turn history and vision telemetry
     const enrichedContext = ContextEnricher.enrich({
       rawInput: target || sanitized,
@@ -62,8 +78,8 @@ class PromptEngine {
 
     // 6. Return response payload for Andrew
     const speechConfirmation = intent === INTENTS.SMOOTH_CONVERSATION
-      ? "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt for Antigravity, bro! It's copied to your clipboard and auto-pasted."
-      : "I crafted the developer prompt based on our discussion and injected it straight into your Antigravity text window, bro! It's also on your clipboard.";
+      ? "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's injected into your chat window and ready to fire."
+      : "I crafted the developer prompt with continuation ideas and injected it directly into Antigravity, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
 
     return {
       handled: true,
