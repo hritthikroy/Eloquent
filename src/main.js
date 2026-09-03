@@ -2750,7 +2750,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       try {
         console.log(`✨ [Jarvis Cortex] Invoking Google Gemini Brain for ${agent.name}...`);
         const geminiRes = await geminiClient.callChatCompletion(messages, {
-          model: 'gemini-3.7-flash',
+          model: 'gemini-3.5-flash',
           temperature: dynamicTemperature,
           max_tokens: agent.key === 'team' ? 450 : 200,
           timeout: 5000

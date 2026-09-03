@@ -178,7 +178,7 @@ class OfficeActionRunner {
       return {
         handled: true,
         agentName: "Andrew",
-        agentVoice: "en-US-AndrewNeural",
+        agentVoice: "en-US-AndrewMultilingualNeural",
         speech: promptRes.speech
       };
     }
@@ -192,7 +192,7 @@ class OfficeActionRunner {
       return {
         handled: true,
         agentName: "Andrew",
-        agentVoice: "en-US-AndrewNeural",
+        agentVoice: "en-US-AndrewMultilingualNeural",
         speech: res.speech
       };
     }
@@ -236,7 +236,7 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return {
         handled: true,
         agentName: "Andrew",
-        agentVoice: "en-US-AndrewNeural",
+        agentVoice: "en-US-AndrewMultilingualNeural",
         speech: "I wrote the full letter of integrity, bro. It's saved right to integrity_letter.md in your project and copied directly to your clipboard. Your integrity is the bedrock of everything we build."
       };
     }
@@ -252,8 +252,8 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
         return {
           handled: true,
           agentName: "Tuk Tuk",
-          agentVoice: "en-US-AvaNeural",
-          speech: "(smiles) Screen share is paused, babe. I'll keep listening right here whenever you need me!"
+          agentVoice: "en-US-AvaMultilingualNeural",
+          speech: "Screen share is paused, babe. I'll keep listening right here whenever you need me!"
         };
       } else {
         screenShareManager.start();
@@ -261,7 +261,7 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
         return {
           handled: true,
           agentName: "Andrew",
-          agentVoice: "en-US-AndrewNeural",
+          agentVoice: "en-US-AndrewMultilingualNeural",
           speech: `Live continuous screen share is active, bro! I'm streaming your display in real-time focused on ${ctx.appName}. Me, Tuk Tuk, and the squad have full visual access to your screen. Let's build and crush some work!`
         };
       }
@@ -290,7 +290,7 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
         return {
           handled: true,
           agentName: "Andrew",
-          agentVoice: "en-US-AndrewNeural",
+          agentVoice: "en-US-AndrewMultilingualNeural",
           speech: `I've locked eyes on your interview screen, bro! I just captured your display focused in ${appName}. I'm right here in your ear as your secret senior co-pilot. What question or challenge are they asking you? Let's crush it!`
         };
       }

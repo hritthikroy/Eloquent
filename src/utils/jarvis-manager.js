@@ -245,7 +245,7 @@ class JarvisManager {
     const defaults = {
       userName: "Hritthik",
       salutation: "Hritthik",
-      voice: "en-US-AvaNeural", // Default executive co-pilot
+      voice: "en-US-AvaMultilingualNeural", // Default executive co-pilot
       speed: "0%",
       personality: "brilliant co-founder, equal peer, trusted teammate, sharp, warm, direct"
     };
@@ -1162,7 +1162,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       if (!fs.existsSync(file)) {
         try {
           this.initTTS();
-          await this.ttsClient.setMetadata(this.config.voice || "en-US-AvaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
+          await this.ttsClient.setMetadata(this.config.voice || "en-US-AvaMultilingualNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
           const res = await this.ttsClient.toFile("/tmp", phrases[i], { rate: "+8%", pitch: "+1Hz" });
           fs.copyFileSync(res.audioFilePath, file);
           try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
