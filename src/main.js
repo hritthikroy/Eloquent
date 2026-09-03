@@ -2101,6 +2101,8 @@ async function stopRecording() {
       originalText = originalText
         .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
         .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk')
+        .replace(/\b(?:hey\s+|listen\s+)?andrew\s+bhai\b/gi, 'Andrew')
+        .replace(/\b(?:hey\s+)?bhai\s+andrew\b/gi, 'Andrew')
         .replace(/\band you\b(?=\s+(check|modify|write|tell|see|look|help|code|build|refactor|take|run|fix|draft|craft|inspect))/gi, 'Andrew')
         .replace(/\b(?:and\s*rew|an\s*drew)\b/gi, 'Andrew')
         .replace(/\b(on this course)\b/gi, 'on this code');
@@ -2750,8 +2752,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user');
 
-    // 4-turn window: 2 full exchanges — tight context, fast generation
-    const historyMessages = jarvisManager.getHistory(4);
+    // 8-turn window: 4 full conversational exchanges for podcast-grade continuity & zero repetition
+    const historyMessages = jarvisManager.getHistory(8);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
     const sanitizedHistory = [];
