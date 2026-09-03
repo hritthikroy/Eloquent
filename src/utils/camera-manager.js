@@ -88,13 +88,13 @@ class CameraManager {
   }
 
   stop() {
+    this.isActive = false;
+    this.isLipsMoving = false;
     if (this.workerWindow && !this.workerWindow.isDestroyed()) {
       this.workerWindow.webContents.send("stop-camera");
-      this.isActive = false;
       console.log("👁️ [Camera Manager] Camera stream paused");
-      return true;
     }
-    return false;
+    return true;
   }
 
   /**
