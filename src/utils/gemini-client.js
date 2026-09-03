@@ -9,12 +9,13 @@ const DEFAULT_GEMINI_API_KEYS = [
 ];
 
 const CANDIDATE_MODELS = [
-  "gemini-flash-latest",
-  "gemini-3.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-3.5-flash-lite",
   "gemini-3.7-flash",
-  "gemini-3.6-flash"
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.7-pro",
+  "gemini-3.5-pro",
+  "gemini-flash-latest"
 ];
 
 class GeminiClient {
@@ -341,8 +342,9 @@ ${context.additionalContext ? `\nAdditional Context: ${context.additionalContext
     ];
 
     const res = await this.callChatCompletion(messages, {
+      model: options.model || "gemini-3.7-flash",
       temperature: options.temperature !== undefined ? options.temperature : 0.2,
-      max_tokens: options.max_tokens || 800,
+      max_tokens: options.max_tokens || 1200,
       imagePath: context.imagePath || null
     });
 
