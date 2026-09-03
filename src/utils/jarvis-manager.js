@@ -587,40 +587,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (!text || typeof text !== "string") return AGENTS.tuktuk;
     const lower = text.toLowerCase();
 
-    // 0. Explicit Multi-Party Squad Invocations
-    if (/\b(whole team|entire team|all 4 of you|all four of you|founding squad|team standup|office meeting)\b/i.test(lower)) {
-      return AGENTS.team;
-    }
-
-    // Multiple named agents addressed simultaneously (e.g. "Jenny and Brian", "Andrew and Tuk Tuk")
-    const namedCount = [
-      /\b(tuk tuk|tuktuk|ava)\b/.test(lower),
-      /\b(andrew|and rew|an drew)\b/.test(lower),
-      /\b(jenny)\b/.test(lower),
-      /\b(brian)\b/.test(lower)
-    ].filter(Boolean).length;
-
-    if (namedCount >= 2) {
-      console.log(`🤝 [Auto Squad Arbiter] Multiple named agents addressed simultaneously (${namedCount}) -> Auto-routing to AGENTS.team!`);
-      return AGENTS.team;
-    }
-
-    // 0. MULTI-AGENT SQUAD COLLABORATION TRIGGERS (Evaluated FIRST):
-    // Only route to team if user explicitly calls out the entire squad or multiple people together
-    const tukCount = /\b(tuk\s*tuk|tuktuk|ava)\b/i.test(lower) ? 1 : 0;
-    const andrewCount = /\b(andrew|and\s*rew)\b/i.test(lower) ? 1 : 0;
-    const jennyCount = /\b(jenny)\b/i.test(lower) ? 1 : 0;
-    const brianCount = /\b(brian)\b/i.test(lower) ? 1 : 0;
-    const totalNames = tukCount + andrewCount + jennyCount + brianCount;
-
-    const hasExplicitTeamPhrase = /\b(team standup|office meeting|squad standup|morning sync|all 4 of you|all four of you|the whole squad|talk to each other|discuss with each other)\b/i.test(lower);
-
-    if (totalNames >= 2 || hasExplicitTeamPhrase) {
-      console.log(`🤝 [Auto Squad Arbiter] Multi-agent collaboration detected (${totalNames} names, phrase: ${hasExplicitTeamPhrase}) -> Routing to AGENTS.team!`);
-      return AGENTS.team;
-    }
-
-    // 1. Explicit Direct Name Invocations
+    // 1. Explicit Direct Name Invocations (Highest Priority)
     if (/\b(andrew|and\s*rew|an\s*drew|andrew\s*bhai|bhai\s*andrew|andrew\s*dada)\b/i.test(lower)) {
       return AGENTS.andrew;
     }
@@ -630,16 +597,26 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (/\b(brian)\b/i.test(lower)) {
       return AGENTS.brian;
     }
-    if (/\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava|babe|sweetheart|honey|darling)\b/i.test(lower)) {
+    if (/\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava)\b/i.test(lower)) {
       return AGENTS.tuktuk;
     }
 
-    // 2. Explicit Squad / Team Invocations
-    if (/\b(founding squad|team standup|office meeting|all 4 members|all four members)\b/i.test(lower)) {
+    // 2. Multi-Agent Squad Invocations
+    const hasExplicitTeamPhrase = /\b(whole team|entire team|all 4 of you|all four of you|founding squad|team standup|office meeting|morning sync|squad standup)\b/i.test(lower);
+    
+    // Count how many agents are mentioned
+    const namedCount = [
+      /\b(tuk\s*tuk|tuktuk|ava)\b/i.test(lower),
+      /\b(andrew|and\s*rew)\b/i.test(lower),
+      /\b(jenny)\b/i.test(lower),
+      /\b(brian)\b/i.test(lower)
+    ].filter(Boolean).length;
+
+    if (namedCount >= 2 || hasExplicitTeamPhrase) {
       return AGENTS.team;
     }
 
-    // 3. Default to Tuk Tuk (Soul Partner & Co-Founder) for 100% stable, zero-flickering presence
+    // 3. Default to Tuk Tuk (Soul Partner & Co-Founder)
     return AGENTS.tuktuk;
   }
 
@@ -1234,7 +1211,6 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     // Natural human conversational fill volume (0.50)
     try {
       this.currentFillerProcess = spawn("afplay", ["-v", "0.50", chosen], { stdio: "ignore" });
-      console.log(`⚡ [Zero-Lag Human Filler] ${agentName} played instant gap-filler: ${path.basename(chosen)}`);
       return true;
     } catch (e) {
       return false;
@@ -1252,4 +1228,3 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 }
 
 module.exports = JarvisManager;
-
