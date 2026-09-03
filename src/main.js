@@ -1037,21 +1037,15 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
-    console.log('🛑 ESC pressed - canceling and silencing session immediately');
-    isJarvisLoopActive = false;
-    jarvisManager.stopSpeaking();
     if (isRecording) {
-      if (recordingProcess) {
-        try { recordingProcess.kill(); } catch (e) {}
-        recordingProcess = null;
-      }
-      isRecording = false;
-      isProcessing = false;
-      if (audioRecorder) {
-        audioRecorder.stopRecording().catch(() => {});
-      }
+      console.log('🛑 ESC pressed while recording - finishing and processing dictation with Magic Tool...');
+      stopRecording();
+    } else {
+      console.log('🛑 ESC pressed - silencing session immediately');
+      isJarvisLoopActive = false;
+      jarvisManager.stopSpeaking();
+      hideOverlay();
     }
-    hideOverlay();
   }
 }
 
