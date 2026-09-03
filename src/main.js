@@ -52,6 +52,7 @@ const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
 const actionRunner = require('./utils/action-runner');
 const screenShareManager = require('./utils/screen-share-manager');
 const { registerLibboardIpcHandlers } = require('./main/ipcHandlers');
+const { registerClipboardHandlers } = require('./main/index');
 const { StateManager } = require('./main/stateManager');
 const { geminiClient } = require('./utils/gemini-client');
 const { quantumVibeEngine } = require('./utils/quantum-vibe-engine');
@@ -4734,6 +4735,13 @@ try {
   registerLibboardIpcHandlers(ipcMain, app.getPath('userData'));
 } catch (libboardErr) {
   console.warn('⚠️ Could not register Libboard IPC handlers:', libboardErr.message);
+}
+
+// Register secure bidirectional Clipboard IPC channels
+try {
+  registerClipboardHandlers(ipcMain);
+} catch (clipboardErr) {
+  console.warn('⚠️ Could not register Clipboard IPC handlers:', clipboardErr.message);
 }
 
 // Conversational StateManager IPC handlers with atomic persistence and broadcast

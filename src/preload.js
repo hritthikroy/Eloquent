@@ -177,3 +177,16 @@ contextBridge.exposeInMainWorld('electronInvoke', {
     return Promise.reject(new Error(`Invalid channel: ${channel}`));
   }
 });
+
+// Expose secure clipboard API bridge
+contextBridge.exposeInMainWorld('clipboard', {
+  copy: (payload) => {
+    const safePayload = typeof payload === 'string' ? { text: payload } : (payload || {});
+    return ipcRenderer.invoke('clipboard:copy', safePayload);
+  },
+  paste: () => ipcRenderer.invoke('clipboard:paste'),
+  readText: () => ipcRenderer.invoke('clipboard:read-text'),
+  writeText: (text) => ipcRenderer.invoke('clipboard:write-text', text === null || text === undefined ? '' : String(text)),
+  writeHTML: (html, text = '') => ipcRenderer.invoke('clipboard:write-html', { html, text }),
+  clear: () => ipcRenderer.invoke('clipboard:clear')
+});

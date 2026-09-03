@@ -28,7 +28,7 @@
     "backend:test": "cd backend-go && go test ./...",
     "backend:clean": "cd backend-go && go clean && rm -f eloquent-backend",
     "build:ts": "tsc",
-    "test": "tsc && node dist-ts/tests/integrity-auditor.spec.js && node dist-ts/tests/prompt-engineer.spec.js && node test/unit/conversationProcessor.test.js && node test/stateManager.test.js && node tests/commands/clibbPrompt.test.js",
+    "test": "tsc && node dist-ts/tests/integrity-auditor.spec.js && node dist-ts/tests/prompt-engineer.spec.js && node test/unit/conversationProcessor.test.js && node test/stateManager.test.js && node tests/commands/clibbPrompt.test.js && node test/unit/clipboard-service.test.js",
     "lint": "echo 'No linting configured yet'",
     "webpack": "webpack --mode=production",
     "build:optimized": "node scripts/optimize-build.js",
