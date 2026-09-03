@@ -2120,6 +2120,14 @@ async function stopRecording() {
           jarvisReply = `Understood. I will call you ${prefChange.value} from now on.`;
         } else if (prefChange.type === 'salutation') {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
+        } else if (prefChange.type === 'rule') {
+          jarvisReply = activeAgent.name === 'Tuk Tuk'
+            ? `Got it, babe. I've committed that new rule to our team directives.`
+            : `Understood, bro. Locked that new rule into my directives.`;
+        } else if (prefChange.type === 'clear_rules') {
+          jarvisReply = activeAgent.name === 'Tuk Tuk'
+            ? `All custom team directives have been cleared, babe.`
+            : `All custom directives cleared, bro.`;
         }
       } else {
         // activeAgent directly answers with unified domain intelligence

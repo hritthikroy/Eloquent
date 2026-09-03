@@ -134,6 +134,7 @@ class JarvisManager {
     this.userDataPath = userDataPath || process.cwd();
     this.configPath = path.join(this.userDataPath, "jarvis-config.json");
     this.memoryPath = path.join(this.userDataPath, "agent-brain-memory.json");
+    this.directivesPath = path.join(this.userDataPath, "dynamic-directives.json");
     this.activeSpeechProcess = null;
     this.isSpeaking = false;
     this.isAborted = false;
@@ -333,6 +334,43 @@ class JarvisManager {
       return true;
     } catch (err) {
       console.error("❌ Failed to save agent memory:", err.message);
+      return false;
+    }
+  }
+
+  loadDynamicDirectives() {
+    try {
+      if (fs.existsSync(this.directivesPath)) {
+        const data = JSON.parse(fs.readFileSync(this.directivesPath, "utf8"));
+        if (Array.isArray(data)) return data;
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  addDynamicDirective(rule, target = "all") {
+    try {
+      const directives = this.loadDynamicDirectives();
+      directives.push({
+        id: Date.now(),
+        rule: rule.trim(),
+        target: target.toLowerCase(),
+        createdAt: new Date().toISOString()
+      });
+      fs.writeFileSync(this.directivesPath, JSON.stringify(directives, null, 2), "utf8");
+      console.log(`✨ [Self-Evolution] Dynamic Directive committed (${target}): "${rule}"`);
+      return true;
+    } catch (e) {
+      console.error("❌ Failed to save dynamic directive:", e.message);
+      return false;
+    }
+  }
+
+  clearDynamicDirectives() {
+    try {
+      fs.writeFileSync(this.directivesPath, JSON.stringify([], null, 2), "utf8");
+      return true;
+    } catch (e) {
       return false;
     }
   }
@@ -725,12 +763,51 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       }
     } catch (e) {}
 
-    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}\n\n${livingMemory}`;
+    // Inject Autonomously Mutated Dynamic Directives & Custom Voice Rules
+    const dynamicDirectives = this.loadDynamicDirectives();
+    let directivesSection = "";
+    if (dynamicDirectives.length > 0) {
+      const agentKey = (activeAgent?.key || "tuktuk").toLowerCase();
+      const applicable = dynamicDirectives.filter(d => d.target === "all" || d.target === agentKey);
+      if (applicable.length > 0) {
+        const rulesList = applicable.map((d, i) => `${i + 1}. ${d.rule}`).join("\n");
+        directivesSection = `\n\n[AUTONOMOUSLY MUTATED TEAM DIRECTIVES & VOICE RULES]:\n${rulesList}`;
+      }
+    }
+
+    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}${directivesSection}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {
     if (!text || typeof text !== "string") return null;
     const lower = text.toLowerCase().trim();
+
+    // Clear dynamic rules: "clear all rules", "reset our rules", "clear team rules"
+    if (lower.includes("clear all rules") || lower.includes("reset our rules") || lower.includes("clear team rules") || lower.includes("clear rules")) {
+      this.clearDynamicDirectives();
+      return { type: "clear_rules", value: "All custom team directives and rules have been cleared." };
+    }
+
+    // Dynamic Rule Mutation / Team Directive:
+    // Matches: "remember a new rule: ...", "add a rule: ...", "new team rule: ...", "from now on always ..."
+    const ruleMatch = lower.match(/(?:remember a new rule|add a rule|new team rule|new rule|from now on always|from now on never)\s*[:—–,-]?\s*(.+)/i);
+    if (ruleMatch && ruleMatch[1]) {
+      const cleanRule = ruleMatch[1].trim();
+      if (cleanRule.length > 5) {
+        let target = "all";
+        if (lower.includes("for andrew") || lower.includes("andrew")) target = "andrew";
+        else if (lower.includes("for tuk tuk") || lower.includes("tuk tuk")) target = "tuktuk";
+        else if (lower.includes("for jenny") || lower.includes("jenny")) target = "jenny";
+        else if (lower.includes("for brian") || lower.includes("brian")) target = "brian";
+
+        this.addDynamicDirective(cleanRule, target);
+        return {
+          type: "rule",
+          target,
+          value: cleanRule
+        };
+      }
+    }
 
     // Change name / call me
     const nameMatch = lower.match(/(?:call me|change my name to|my name is)\s+([a-z0-9_\-\s]+)/i);
