@@ -1784,8 +1784,11 @@ function startRecording() {
       if (jarvisSpeechDetected && jarvisSpeechFrames >= 4) {
         const silenceMs = Date.now() - jarvisLastSpeechTime;
         const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
-        // Require at least 300ms of sustained real voice AND 420ms natural pause
-        if (silenceMs >= 420 && voicedDurationMs >= 300) {
+        // Dual-Horizon Adaptive Silence Threshold (Academic Standard):
+        // 1100ms floor-holding for mid-thought pauses, gaps & breaths; 850ms for completed sentences
+        const dynamicSilenceThreshold = voicedDurationMs >= 1800 ? 850 : 1100;
+
+        if (silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 300) {
           console.log(`🗣️ VAD Heartbeat: Natural pause detected (${silenceMs}ms silence after ${voicedDurationMs}ms voiced speech) - auto-submitting!`);
           jarvisAutoStopTriggered = true;
           if (jarvisVadHeartbeat) {
@@ -1844,14 +1847,17 @@ function startRecording() {
           if (jarvisSpeechDetected && jarvisSpeechFrames >= 4) {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
             const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
+            const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // 1. Natural Pause: 420ms silence after >= 300ms sustained real voice!
-            const isNaturalPause = !isSpeechFrame && (silenceMs >= 420) && (voicedDurationMs >= 300);
-            // 2. Hard Speech Cap: 8.0s total elapsed speech for full expressive thoughts
-            const isMaxSpeechCap = (Date.now() - jarvisSpeechStartTime) >= 8000;
+            // Dual-Horizon Adaptive Silence Threshold:
+            // 1100ms for short/fragmented speech with gaps & breathing; 850ms for completed sentences
+            const dynamicSilenceThreshold = voicedDurationMs >= 1800 ? 850 : 1100;
+            const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 300);
+            // 15s max speech cap so long complex thoughts are never severed
+            const isMaxSpeechCap = speechDurationMs >= 15000;
 
             if (isNaturalPause || isMaxSpeechCap) {
-              const reason = isMaxSpeechCap ? "8.0s max speech cap" : `${silenceMs}ms natural pause`;
+              const reason = isMaxSpeechCap ? "15s max speech cap" : `${silenceMs}ms natural pause`;
               console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${voicedDurationMs}ms voiced speech)...`);
               jarvisAutoStopTriggered = true;
               if (jarvisVadHeartbeat) {
