@@ -1538,9 +1538,13 @@ function isWhisperHallucination(text, recordingDurationMs = 0) {
   if (clean.length === 0) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
 
-  // Standalone silence priors: Whisper notoriously generates these on empty room hiss/breaths
-  if (clean === 'thank you' || clean === 'thanks' || clean === 'thank you very much' || clean === 'thank you so much' || clean === 'you' || clean === 'bye') {
-    return true;
+  // Only treat minimal acknowledgment words as hallucinations on VERY short recordings (<1.2s)
+  // On longer recordings they are genuine speech - the user said something real
+  if (recordingDurationMs < 1200) {
+    if (clean === 'thank you' || clean === 'thanks' || clean === 'thank you very much' ||
+        clean === 'thank you so much' || clean === 'you' || clean === 'bye') {
+      return true;
+    }
   }
 
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
@@ -2105,18 +2109,22 @@ async function stopRecording() {
       }
 
       console.log('🤖 Jarvis conversational mode: generating intelligent response...');
-      if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.webContents.send('jarvis-thinking');
-      }
 
       // Check for voice preference change (e.g. "call me Hritthik", "address me as Boss")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
       const delegation = jarvisManager.evaluateTaskAssignment(originalText);
       let jarvisReply = '';
-      let activeAgent = jarvisManager.agents.tuktuk;
+      // Pre-detect the active agent NOW before any async work, so overlay label is correct immediately
+      let activeAgent = delegation ? delegation.assignedAgent : jarvisManager.detectActiveAgent(originalText);
       currentActiveAgent = activeAgent;
       let standupAlreadySpoken = false;
       let actionResult = null;
+
+      // Set the correct agent name BEFORE showing "thinking..." so overlay never flashes "Ava" or wrong name
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('set-agent-name', delegation ? delegation.lead.name : activeAgent.name);
+        overlayWindow.webContents.send('jarvis-thinking');
+      }
 
       if (prefChange) {
         if (prefChange.type === 'name') {
@@ -2162,13 +2170,8 @@ async function stopRecording() {
         await jarvisManager.speak(jarvisReply, activeAgent.voice);
         standupAlreadySpoken = true;
       } else {
-        // Detect which of the 4 specialized agents should respond
-        activeAgent = jarvisManager.detectActiveAgent(originalText);
-        currentActiveAgent = activeAgent;
+        // activeAgent already pre-detected above from detectActiveAgent(originalText)
         console.log(`🎯 Routing query to specialist: ${activeAgent.name} (${activeAgent.role})`);
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('set-agent-name', activeAgent.name);
-        }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
         actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion);
         if (actionResult && actionResult.handled) {

@@ -220,7 +220,7 @@ ipcRenderer.on('set-mode', (_, m) => {
     if (m === 'rewrite') {
       recLabel.textContent = 'AI Rewriter';
     } else if (m === 'jarvis') {
-      recLabel.textContent = 'Ava';
+      recLabel.textContent = currentAgentName || 'Listening...';
     } else {
       recLabel.textContent = 'Recording';
     }
@@ -230,21 +230,31 @@ ipcRenderer.on('set-mode', (_, m) => {
   updateTimer();
 });
 
-let currentAgentName = 'Ava';
+let currentAgentName = 'Tuk Tuk';
 
-// Jarvis / Ava state listeners
+// Jarvis / Agent state listeners
 ipcRenderer.on('set-agent-name', (_, agentName) => {
-  if (agentName) currentAgentName = agentName;
+  if (agentName) {
+    currentAgentName = agentName;
+    // Only update label if we are not mid-thinking/speaking (those have their own state)
+    const recLabel = document.querySelector('.rec-label');
+    if (recLabel) {
+      const cur = recLabel.textContent || '';
+      if (!cur.includes('thinking') && !cur.includes('speaking')) {
+        recLabel.textContent = currentAgentName;
+      }
+    }
+  }
 });
 
 ipcRenderer.on('jarvis-thinking', () => {
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = `${currentAgentName} Thinking...`;
+  if (recLabel) recLabel.textContent = `${currentAgentName} thinking...`;
 });
 
 ipcRenderer.on('jarvis-speaking', () => {
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = `${currentAgentName} Speaking...`;
+  if (recLabel) recLabel.textContent = `${currentAgentName} speaking...`;
 });
 
 ipcRenderer.on('jarvis-listening', () => {

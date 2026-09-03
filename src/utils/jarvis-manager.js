@@ -851,14 +851,22 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return false;
     }
 
-    // Sanitize for TTS: Strip parenthetical stage directions, agent tags, emojis, markdown, and quotation marks
+    // Sanitize for TTS:
+    // 1. Strip any <think>...</think> reasoning tokens that may leak from Qwen/GPT-OSS models
     let cleanText = text
-      .replace(/\([^)]*\)/g, "")
-      .replace(/\[[^\]]*\]:?/g, "")
-      .replace(/[*#_`~"“”'‘’]/g, "")
-      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
-      .replace(/\s+/g, " ")
-      .replace(/^[:\s-]+/, "")
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<\/?think>/gi, '')
+      // 2. Strip parenthetical stage directions, agent tags, emojis, markdown, quotation marks
+      .replace(/\([^)]*\)/g, '')
+      .replace(/\[[^\]]*\]:?/g, '')
+      .replace(/[*#_`~\u201C\u201D\u2018\u2019"""''']/g, '')
+      // 3. Strip URLs and emails (sound terrible when spoken)
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\S+@\S+\.\S+/g, '')
+      // 4. Strip emoji Unicode ranges
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .replace(/^[:\s-]+/, '')
       .trim();
 
     // Human Phonetic Normalization: Convert technical symbols and acronyms into natural spoken phonemes
