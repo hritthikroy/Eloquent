@@ -151,6 +151,25 @@ Example:
 // Backwards-compatible alias for Ava -> Tuk Tuk
 AGENTS.ava = AGENTS.tuktuk;
 
+function phoneticNormalizeForTTS(text) {
+  if (!text || typeof text !== "string") return text;
+  return text
+    .replace(/[—–]/g, ", ")
+    .replace(/--/g, ", ")
+    .replace(/\b(\d+)\s*ms\b/gi, "$1 milliseconds")
+    .replace(/\b(\d+)\s*fps\b/gi, "$1 frames per second")
+    .replace(/\b(\d+)\s*kbps\b/gi, "$1 kilobits per second")
+    .replace(/\b(\d+)\s*mb\b/gi, "$1 megabytes")
+    .replace(/\b(\d+)\s*gb\b/gi, "$1 gigabytes")
+    .replace(/\bAPI\b/g, "A P I")
+    .replace(/\bTTS\b/g, "T T S")
+    .replace(/\bVAD\b/g, "V A D")
+    .replace(/\bUI\b/g, "U I")
+    .replace(/\bWS\b/g, "WebSocket")
+    .replace(/\bC\+\+\b/g, "C plus plus")
+    .replace(/\bNode\.js\b/gi, "Node J S");
+}
+
 class JarvisManager {
   constructor(userDataPath) {
     this.userDataPath = userDataPath || process.cwd();
@@ -860,6 +879,9 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       .replace(/^[:\s-]+/, "")
       .trim();
 
+    // Human Phonetic Normalization: Convert technical symbols and acronyms into natural spoken phonemes
+    cleanText = phoneticNormalizeForTTS(cleanText);
+
     // Guaranteed Non-Empty Fallback: Never leave agent mute if LLM generated only an action tag
     if (!cleanText || cleanText.length === 0) {
       cleanText = "I am right here with you, babe!";
@@ -872,58 +894,16 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     this.currentUtterance = cleanText;
     this.speechStartTime = Date.now();
 
-    // =============================================================
-    // FRONTIER OPTIMIZATION: STREAMING FIRST-CLAUSE TTS PIPELINING
-    // Slashing Time-to-First-Audio (TTFA) to < 320ms
-    // =============================================================
-    const clauseMatches = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
-    if (clauseMatches.length >= 2 && cleanText.split(/\s+/).length >= 7) {
-      const clause1 = clauseMatches[0].trim();
-      const clause2 = clauseMatches.slice(1).join(" ").trim();
-      console.log(`⚡ [Streaming First-Clause TTS] Synthesizing Clause 1 (${clause1.split(/\s+/).length} words) for <320ms TTFA...`);
-
-      const file1 = await this._synthesizeAudioChunk(clause1, voice, speechId);
-      if (file1 && this.currentSpeechId === speechId && !this.isAborted) {
-        const ttfaMs = Date.now() - this.speechStartTime;
-        console.log(`🚀 [TTFA Breakthrough] First clause playing aloud in ${ttfaMs}ms!`);
-
-        // Concurrently synthesize remaining clauses in the background
-        const clause2Promise = this._synthesizeAudioChunk(clause2, voice, speechId);
-
-        // Play Clause 1 natively via CoreAudio
-        const p1Success = await this._playAudioFile(file1, speechId);
-        if (!p1Success || this.currentSpeechId !== speechId || this.isAborted) {
-          this.isSpeaking = false;
-          return false;
-        }
-
-        // Clause 1 finished. Await Clause 2 (which downloaded concurrently during Clause 1 playback!)
-        const file2 = await clause2Promise;
-        if (file2 && this.currentSpeechId === speechId && !this.isAborted) {
-          const p2Success = await this._playAudioFile(file2, speechId);
-          setTimeout(() => {
-            this.isSpeaking = false;
-            this.currentUtterance = null;
-            this.interruptedUtterance = null;
-            this.activeSpeechProcess = null;
-          }, 75);
-          return p2Success;
-        }
-        this.isSpeaking = false;
-        return true;
-      }
-    }
-
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
 
-    // Try Deep Neural Voice via msedge-tts with auto-retry (NEVER falls back to robotic Samantha)
+    // High-Fidelity Studio Neural Voice via msedge-tts (96kbps Mono MP3)
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         if (!this.ttsClient || !this.ttsClient._voice || attempt > 1 || this._cachedVoice !== voice) {
           if (!this.ttsClient || attempt > 1) {
             this.initTTS();
           }
-          await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+          await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
           this._cachedVoice = voice;
         }
         // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
