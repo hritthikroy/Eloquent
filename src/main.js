@@ -2099,22 +2099,21 @@ async function stopRecording() {
 
       // Check for voice preference change (e.g. "call me Hritthik", "address me as Boss")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
-      const delegation = jarvisManager.evaluateTaskAssignment(originalText);
       let jarvisReply = '';
       // Pre-detect the active agent NOW before any async work, so overlay label is correct immediately
-      let activeAgent = delegation ? delegation.assignedAgent : jarvisManager.detectActiveAgent(originalText);
+      let activeAgent = jarvisManager.detectActiveAgent(originalText);
       currentActiveAgent = activeAgent;
       let standupAlreadySpoken = false;
       let actionResult = null;
 
-      // Set the correct agent name BEFORE showing "thinking..." so overlay never flashes "Ava" or wrong name
+      // Set the correct agent name BEFORE showing "thinking..." so overlay never flashes wrong name
       if (overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.webContents.send('set-agent-name', delegation ? delegation.lead.name : activeAgent.name);
+        overlayWindow.webContents.send('set-agent-name', activeAgent.name);
         overlayWindow.webContents.send('jarvis-thinking');
       }
 
       // Play instant acoustic turn filler (<50ms) to hold conversational floor while LLM generates in parallel
-      jarvisManager.playInstantTurnFiller(delegation ? delegation.lead.name : activeAgent.name);
+      jarvisManager.playInstantTurnFiller(activeAgent.name);
 
       if (prefChange) {
         if (prefChange.type === 'name') {
@@ -2122,46 +2121,9 @@ async function stopRecording() {
         } else if (prefChange.type === 'salutation') {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
         }
-      } else if (delegation) {
-        console.log(`🤝 Intelligent Task Assignment: Tuk Tuk delegating to ${delegation.assignedAgent.name} (${delegation.assignedAgent.role})`);
-
-        // 1. Ava assigns the task out loud
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('set-agent-name', delegation.lead.name);
-          overlayWindow.webContents.send('jarvis-speaking');
-        }
-        showNotification(`🤖 ${delegation.lead.name} (${delegation.lead.role})`, delegation.handoffLine);
-        await jarvisManager.speak(delegation.handoffLine, delegation.lead.voice);
-        await new Promise(r => setTimeout(r, 250));
-
-        // 2. Assigned specialist agent automatically answers intelligently
-        activeAgent = delegation.assignedAgent;
-        currentActiveAgent = activeAgent;
-        console.log(`🎯 Assigned Specialist Auto-Answering: ${activeAgent.name} (${activeAgent.role})`);
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('set-agent-name', activeAgent.name);
-          overlayWindow.webContents.send('jarvis-thinking');
-        }
-
-        // Check if specialist executes an automated system action
-        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
-        if (actionResult && actionResult.handled) {
-          console.log(`⚡ Specialist Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
-          jarvisReply = actionResult.speech;
-        } else {
-          // Specialist answers intelligently with domain expertise
-          jarvisReply = await askJarvis(originalText, activeAgent);
-        }
-
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('jarvis-speaking');
-        }
-        showNotification(`🤖 ${activeAgent.name} (${activeAgent.role})`, jarvisReply);
-        await jarvisManager.speak(jarvisReply, activeAgent.voice);
-        standupAlreadySpoken = true;
       } else {
-        // activeAgent already pre-detected above from detectActiveAgent(originalText)
-        console.log(`🎯 Routing query to specialist: ${activeAgent.name} (${activeAgent.role})`);
+        // activeAgent directly answers with unified domain intelligence
+        console.log(`🎯 Routing query directly to: ${activeAgent.name} (${activeAgent.role})`);
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
         actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
         if (actionResult && actionResult.handled) {
