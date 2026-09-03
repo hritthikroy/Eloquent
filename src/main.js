@@ -1878,8 +1878,8 @@ function startRecording() {
           return; // Strictly ignore speaker bleed while AI is still speaking
         }
 
-        // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech
-        if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
+        // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech across all modes
+        if (isRecording && !jarvisAutoStopTriggered) {
           const SPEECH_THRESHOLD = 0.035; // Ultra-sensitive: catches soft speech, whisper tones, and quiet laptop mics
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
 
@@ -2063,7 +2063,11 @@ async function stopRecording() {
       overlayWindow.webContents.send('live-polishing');
     }
 
-    if (currentMode === 'jarvis') {
+    // Automatic conversational routing: If user addresses an agent or is in jarvis mode, talk out loud
+    const isDirectedToAgent = (currentMode === 'jarvis') ||
+      /\b(tuk\s*tuk|took\s*took|tuck\s*tuck|andrew|jenny|brian|jarvis|squad|team)\b/i.test(originalText);
+
+    if (currentMode === 'jarvis' || isDirectedToAgent) {
       // 1. Acoustic Phonetic Normalization for Project Terms
       originalText = originalText
         .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
