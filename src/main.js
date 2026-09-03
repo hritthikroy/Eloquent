@@ -1730,6 +1730,7 @@ function startRecording() {
 
   ensureHealthyMicVolume();
   isRecording = true;
+  isStopRecordingLock = false; // Always ensure stop lock is reset when recording begins
   performanceMonitor.startRecording();
 
   audioFile = path.join(app.getPath('temp'), `eloquent-${Date.now()}.wav`);
@@ -1838,14 +1839,14 @@ function startRecording() {
         // Full-Duplex Overlap: While AI is speaking, detect deliberate user vocal interjection/barge-in
         // Geigel DTD Equation: |d(n)| >= c * max(|x(n)|)
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
-          if (amplitude >= 0.32) {
+          // Immunity to laptop speaker bleed: Only deliberate, high-energy vocal interjection triggers barge-in
+          if (amplitude >= 0.78) {
             jarvisBargeInCounter = (jarvisBargeInCounter || 0) + 1;
-            if (jarvisBargeInCounter >= 2 || amplitude >= 0.45) {
-              console.log('⚡ Full-Duplex Overlap! Hritthik interjected mid-sentence. Halting AI speech gracefully...');
+            if (jarvisBargeInCounter >= 2) {
+              console.log('⚡ High-energy vocal barge-in detected! Halting AI speech gracefully...');
               lastInterruptedUtterance = jarvisManager.currentUtterance;
               jarvisManager.stopSpeaking();
               jarvisBargeInCounter = 0;
-              // Start capturing user's interjection immediately
               jarvisSpeechDetected = true;
               jarvisSpeechStartTime = Date.now();
               jarvisLastSpeechTime = Date.now();
@@ -2038,6 +2039,7 @@ async function stopRecording() {
       if (currentMode === 'jarvis') {
         console.log('🎙️ Tony Stark Suit Mode: No distinct speech detected - keeping 24/7 mic armed...');
         isProcessing = false;
+        isStopRecordingLock = false;
         if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
@@ -2045,6 +2047,7 @@ async function stopRecording() {
         }
         return;
       }
+      isStopRecordingLock = false;
       throw txErr;
     }
     
@@ -2069,6 +2072,7 @@ async function stopRecording() {
         if (cleanLower === 'right' || cleanLower === 'rightright' || cleanLower === 'yeah' || cleanLower === 'mhm' || cleanLower === 'uhhuh' || cleanLower === 'okay') {
           console.log(`🔇 Jarvis: discarding backchannel self-echo "${originalText}" (${timeSinceBC}ms after BC) — re-arming mic...`);
           isProcessing = false;
+          isStopRecordingLock = false;
           if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
             overlayWindow.webContents.send('jarvis-listening');
             startRecording();
@@ -2081,6 +2085,7 @@ async function stopRecording() {
       if (isWhisperHallucination(originalText, recordingDuration)) {
         console.log(`🔇 Jarvis: discarding Whisper hallucination "${originalText}" (${recordingDuration}ms) — re-arming mic...`);
         isProcessing = false;
+        isStopRecordingLock = false;
         if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
           startRecording();
@@ -2206,11 +2211,6 @@ async function stopRecording() {
         const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
         const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
 
-        // Full-Duplex Breakthrough: Re-arm the recording microphone BEFORE speech begins
-        // Allows user to speak simultaneously, interject, or give new inputs while any agent is talking!
-        isProcessing = false;
-        startRecording();
-
         const multiTurns = parseMultiAgentTurns(jarvisReply);
         if (multiTurns.length > 1) {
           console.log(`🎙️ Multi-Party Squad Exchange initiated (${multiTurns.length} agent turns)!`);
@@ -2227,14 +2227,24 @@ async function stopRecording() {
             if (!isJarvisLoopActive || lastInterruptedUtterance) break;
           }
         } else {
-          // Show notification with specialist agent name and role
-          showNotification(`🤖 ${speakingAgentName}`, jarvisReply);
+          // Single agent turn — clean text and voice extraction
+          let singleSpeechText = jarvisReply;
+          let singleVoice = speakingVoice;
+          let agentDisplayName = speakingAgentName;
+          if (multiTurns.length === 1) {
+            singleSpeechText = multiTurns[0].text;
+            singleVoice = multiTurns[0].voice;
+            agentDisplayName = multiTurns[0].agentName;
+            if (overlayWindow && !overlayWindow.isDestroyed()) {
+              overlayWindow.webContents.send('set-agent-name', agentDisplayName);
+            }
+          }
+          showNotification(`🤖 ${agentDisplayName}`, singleSpeechText);
 
-          // Speak response aloud or Sing with acoustic accompaniment (Sur, Taal, Laya)!
           if (actionResult && actionResult.isSinging) {
-            await jarvisManager.sing(jarvisReply, speakingVoice);
+            await jarvisManager.sing(singleSpeechText, singleVoice);
           } else {
-            await jarvisManager.speak(jarvisReply, speakingVoice);
+            await jarvisManager.speak(singleSpeechText, singleVoice);
           }
         }
       }
@@ -2270,25 +2280,29 @@ async function stopRecording() {
         jarvisManager.behaviorEngine.updateBehavior(originalText, recordingDuration, vibe);
       }
 
+      // Clear processing and lock flags completely
+      isProcessing = false;
+      isStopRecordingLock = false;
+
       // If user aborted during speech with ESC
       if (!isJarvisLoopActive) {
         hideOverlay();
         return;
       }
 
-      // Continuous Hands-Free Full-Duplex Listening
-      // If user did NOT interject during speech, refresh clean audio buffer for fresh turn
+      // Re-arm recording immediately for Hritthik's next turn on a 100% pristine mic buffer!
       if (isJarvisLoopActive) {
-        if (!jarvisSpeechDetected && !lastInterruptedUtterance) {
-          console.log('🎙️ Full-Duplex Loop: Clean mic buffer ready for next turn...');
-          audioRecorder.stopRecording().then(() => {
-            if (!isJarvisLoopActive || !overlayWindow || overlayWindow.isDestroyed()) return;
-            overlayWindow.webContents.send('jarvis-listening');
-            startRecording();
-          });
-        } else {
-          console.log('🎙️ User already speaking/interjected — keeping active audio stream flowing...');
+        lastInterruptedUtterance = null;
+        jarvisSpeechDetected = false;
+        jarvisSpeechStartTime = 0;
+        jarvisLastSpeechTime = 0;
+        jarvisSpeechFrames = 0;
+        jarvisAutoStopTriggered = false;
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-listening');
         }
+        console.log('🎙️ Speech complete. Hands-free listening re-armed for Hritthik...');
+        startRecording();
       } else {
         hideOverlay();
       }
