@@ -397,7 +397,7 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return this.getRecentCommits();
     }
 
-    if (lower.includes("git status") || lower.includes("check git") || lower.includes("git branch")) {
+    if (lower.includes("git status") || lower.includes("check git") || lower.includes("git branch") || lower.includes("what branch") || lower.includes("which branch")) {
       return this.getGitStatus();
     }
 
