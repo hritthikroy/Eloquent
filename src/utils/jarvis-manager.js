@@ -139,6 +139,11 @@ Format EXACTLY as:
 Example:
 [Tuk Tuk]: We are completely locked in on this vision, babe!
 [Andrew]: And the architecture is clean bro, let us deploy the equations into production!
+- STRICT PERSONA VOCABULARY:
+  * Tuk Tuk calls him "babe" or "${userName}" (NEVER "bro").
+  * ONLY Andrew calls him "bro".
+  * Brian calls him "brother" or "${userName}".
+  * Jenny addresses him professionally as "${userName}".
 - STRICTLY REAL SPOKEN WORDS ONLY: Zero parenthetical stage directions or actions like (smiles) or (chuckles). Zero markdown (*, #) or emojis. Only actual words spoken aloud!`
   }
 };
