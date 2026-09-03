@@ -51,6 +51,16 @@ const soundPlayer = new SoundPlayer();
 const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
 const actionRunner = require('./utils/action-runner');
 const screenShareManager = require('./utils/screen-share-manager');
+const { registerLibboardIpcHandlers } = require('./main/ipcHandlers');
+
+// Ultra-Fast Persistent HTTPS Agent with TCP Keep-Alive for Zero Connection Overhead
+const https = require('https');
+const groqKeepAliveAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 32,
+  keepAliveMsecs: 60000,
+  timeout: 15000
+});
 
 // Exit early if electron is not available (during build)
 if (!app) {
@@ -2580,6 +2590,7 @@ async function callGroqChatCompletion(messages, options = {}) {
         },
         {
           headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
+          httpsAgent: groqKeepAliveAgent,
           timeout: options.timeout || 20000,
           validateStatus: function (status) {
             return status < 500;
@@ -4614,6 +4625,13 @@ ipcMain.handle('get-auth-token', async () => {
     return null;
   }
 });
+
+// Register Libboard prompt generation IPC channel
+try {
+  registerLibboardIpcHandlers(ipcMain, app.getPath('userData'));
+} catch (libboardErr) {
+  console.warn('⚠️ Could not register Libboard IPC handlers:', libboardErr.message);
+}
 
 // Function to log API requests
 function logApiRequest(type, status, duration, tokens = null, errorMessage = null) {
