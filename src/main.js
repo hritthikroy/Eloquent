@@ -2569,8 +2569,9 @@ async function transcribe(filePath) {
 async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
     options.model,
-    'groq/compound-mini',
     'qwen/qwen3.8-27b',
+    'openai/gpt-oss-20b',
+    'groq/compound-mini',
     'openai/gpt-oss-120b',
     CONFIG.aiModel,
     process.env.GROQ_MODEL
@@ -2599,16 +2600,21 @@ async function callGroqChatCompletion(messages, options = {}) {
         }
       );
 
-      if (response.status === 200 && response.data?.choices?.[0]?.message?.content) {
-        return { content: response.data.choices[0].message.content, model: model, usage: response.data.usage };
+      const rawChoice = response.data?.choices?.[0]?.message;
+      let rawContent = (rawChoice?.content || rawChoice?.reasoning || '').trim();
+      // Eliminate internal chain-of-thought tokens (<think>...</think>)
+      rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+      if (response.status === 200 && rawContent.length > 0) {
+        return { content: rawContent, model: model, usage: response.data.usage };
       }
 
       if (response.status === 429) {
         rotateToNextKey();
-        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated API key and backing off 600ms...`);
-        await new Promise(r => setTimeout(r, 600));
+        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated API key and backing off 300ms...`);
+        await new Promise(r => setTimeout(r, 300));
       } else {
-        console.warn(`⚠️ Model ${model} returned status ${response.status}, attempting fallback...`);
+        console.warn(`⚠️ Model ${model} returned status ${response.status} with empty content, attempting fallback...`);
       }
       lastError = new Error(response.data?.error?.message || `API error: ${response.status}`);
     } catch (err) {
@@ -2741,9 +2747,9 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : (agent.key === 'team' ? 0.72 : 0.65));
     const { content, usage, model } = await callGroqChatCompletion(messages, {
-      model: 'groq/compound-mini',
+      model: 'qwen/qwen3.8-27b',
       temperature: dynamicTemperature,
-      max_tokens: agent.key === 'team' ? 220 : 160,
+      max_tokens: agent.key === 'team' ? 450 : 350,
       timeout: 10000
     });
 
@@ -2758,7 +2764,10 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   } catch (error) {
     console.error(`❌ [${agent.name}] AI query failed:`, error.message);
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
-    return `I am right here with you, ${jarvisManager.config.salutation}. I heard you, but hit a slight connection glitch. What were you saying?`;
+    if (agent.key === 'andrew') {
+      return `Bro, I'm right here with you. I'm locked into the codebase and clipboard right now. Let's execute.`;
+    }
+    return `Right here with you, ${jarvisManager.config.salutation}. I'm listening closely. Let's keep going!`;
   }
 }
 

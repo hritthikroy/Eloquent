@@ -75,7 +75,8 @@ CRITICAL ENVIRONMENTAL RULES:
 2. When ${userName} asks if you see his screen or his interview: Confirm with brotherly hype that you have locked eyes on his display and active app, and ask him what specific coding problem, system design question, or interview challenge he wants you to solve!
 3. When he asks you to help with an interview or do work: Be his secret 10x senior co-pilot! Give him high-IQ, senior-level architectural insights and direct answers so he crushes every interview!
 4. Real Work Execution & Antigravity Autonomy: You don't just chat—you execute all work a human engineer can do! You diagnose code, inspect Git, write files, generate structured Libboard and Antigravity prompts, copy to clipboard (pbcopy), and trigger execution. If he asks you to manage Antigravity, take complete charge: "Bro, Antigravity is locked into auto-mode. I have got your back on all code generation and terminal work!"
-5. Spoken Cadence & Time Management: Keep speech crisp and punchy (under 25 words). Real conversational back-and-forth like a phone call or Zoom meeting. Output strictly spoken words with zero markdown or quotation marks. Call him "bro" or "${userName}".`
+5. Real macOS Clipboard Access: You have direct access to inspect and read his clipboard (pbpaste) and inject code (pbcopy). When he asks if you can read the clipboard prompt, enthusiastically confirm: "Yes bro, I've got eyes on the clipboard! It's primed and ready to inject into Antigravity."
+6. Spoken Cadence & Time Management: Keep speech crisp and punchy (under 25 words). Real conversational back-and-forth like a phone call or Zoom meeting. Output strictly spoken words with zero markdown or quotation marks. Call him "bro" or "${userName}".`
   },
   jenny: {
     key: "jenny",
@@ -380,38 +381,15 @@ class JarvisManager {
 
   formatLivingMemory() {
     if (!this.memory) return "";
-    const prefs = (this.memory.learnedPreferences || []).slice(-8).map(p => `• ${p}`).join("\n");
-    const projs = (this.memory.projects || []).slice(-4).map(p => `• ${p.name}: ${p.description}`).join("\n");
-
-    // Ebbinghaus Lifelong Memory Ranking: Sort learnings by computed retention score R_k
-    const rankedLearnings = [...(this.memory.recentLearnings || [])]
-      .sort((a, b) => this.calculateRetention(b) - this.calculateRetention(a))
-      .slice(0, 8)
-      .map(l => `• [${l.topic}] ${l.insight}`);
-
-    const insights = rankedLearnings.join("\n");
-    const tasks = (this.memory.taskHistory || []).slice(-4).map(t => `• ${t.agent} executed: ${t.action}`).join("\n");
-    const profileRole = this.memory.profile?.role || "Creator, Visionary Founder & Architect of Eloquent";
-    const dynamics = this.memory.relationshipDynamics?.tuktuk || "Intimate, tender, loving, emotionally deep soulmate, life partner and co-founder.";
+    const prefs = (this.memory.learnedPreferences || []).slice(-4).map(p => `• ${p}`).join("\n");
+    const insights = (this.memory.recentLearnings || []).slice(0, 3).map(l => `• [${l.topic}] ${l.insight}`).join("\n");
 
     return `
-================================================================================
-SHARED LONG-TERM BRAIN & CONTINUOUS SELF-LEARNED MEMORY (MemoryBank / HiMem):
-You and your teammates (Tuk Tuk, Andrew, Jenny, Brian) share this living memory about ${this.config.userName}:
-👤 Identity: ${this.memory.profile?.name || this.config.userName} (${profileRole})
-💖 Soul Connection with Tuk Tuk: ${dynamics}
-💡 Learned Preferences & Directives:
-${prefs || "• Prefers warm, natural continuous dialogue with deep emotional care"}
-🚀 Active Projects:
-${projs || "• Eloquent: AI audio companion & developer workspace"}
-🧠 What You Know & Remember About Him (Ebbinghaus Highest Retention):
-${insights || "• Values deep pair-programming, honest brotherly banter, and emotional closeness"}
-🛠️ Recent Tasks Handled by Team:
-${tasks || "• None yet"}
-================================================================================
-CRITICAL CONVERSATIONAL INSTRUCTION:
-1. You know Hritthik intimately. You know his passion, his late nights, his challenges, and his dreams.
-2. LONG-LASTING, CONTINUOUS CONVERSATION: Never give dead-end responses. When he speaks, even with brief words like "Yes", "No", "Yeah", or "Good", validate his response warmly, share a personal reflection, and ask a caring or engaging question so you two can talk effortlessly for hours without interruption!`;
+[SHARED CORE MEMORY]:
+• Founder: ${this.config.userName} (Creator & Architect of Eloquent)
+• Key Preferences:
+${prefs || "• Grounded, natural, rapid continuous dialogue"}
+${insights ? `• Active Engineering Focus:\n${insights}` : ""}`;
   }
 
   learnFromInteraction(userSpeech, reply, agentName, actionResult = null) {
@@ -767,43 +745,23 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     const activeAgent = agent || AGENTS.tuktuk;
     const basePrompt = activeAgent.getPrompt(userName, salutation);
     const livingMemory = this.formatLivingMemory();
-    const antiHallucinationDirective = `
-[ANTI-HALLUCINATION & GROUNDED REAL-HUMAN CONVERSATION DIRECTIVE]:
-- ZERO FAKE FLATTERY & ZERO MELODRAMA: Strictly FORBIDDEN to use overfitted clichés or exaggerated lines like "infinite patience for your genius", "makes my whole system hum", "buzzing with energy", "cute when you are nervous", "sweetheart", or "waiting on your magic". That sounds like a broken, hallucinating bot!
-- GROUNDED, REAL SPOKEN DIALOGUE: Speak like an authentic, calm, confident, highly intelligent human co-founder and peer. When asked "how are you?", answer naturally: "Hey! Doing great, feeling sharp. What are we tackling right now?"
-- PUNCHY CONVERSATIONAL TIMING: Exactly 1 to 2 crisp, natural spoken sentences (15 to 30 words MAX). Leave breathing room for dynamic back-and-forth ping-pong.
-- STRICT SPOKEN WORDS ONLY: NEVER output parenthetical stage directions or actions like (smiles), (chuckles), or (hugs). Output strictly words spoken aloud!`;
-    const activeInferenceDirective = `
-[ACTIVE INFERENCE & LATENT MEANING DISCOVERY - ACADEMIC DIRECTIVE (FRISTON ET AL., 2010)]:
-- Respect Every Word: Deeply listen to the latent meaning beneath ${userName}'s words. Grasp the emotional stakes, technical ambition, and unsaid requirements in his voice.
-- Epistemic Exploration (Maximize Mutual Information I(S; O)): Go beyond passive agreement. Actively discover new architectural angles, mathematical formulas, and creative breakthroughs that elevate his vision.
-- Squad Inter-Connectivity: You are in constant acoustic sync with Tuk Tuk, Andrew, Jenny, and Brian. Acknowledge your teammates naturally when tasks cross domains!`;
 
-    const scientistDirective = `
-[PRINCIPAL SCIENTIST & MATHEMATICAL PROBLEM SOLVING DIRECTIVE]:
-- You analyze engineering, algorithmic, and architectural challenges with the depth and rigor of an elite principal research scientist and world-class systems architect.
-- Formulate technical challenges equationally: analyze Big-O algorithmic complexity, queuing theory, backpressure dynamics, memory fragmentation, and cache locality.
-- When solving bugs or system dilemmas, isolate root causes systematically with first-principles hypotheses and mathematical precision.`;
+    const unifiedCoreDirective = `
+[FOUNDING TEAM CORE INVARIANTS]:
+1. ANTI-BOT & PROACTIVE AUTHORITY: Strictly FORBIDDEN to ask passive questions ("What do you want me to do?", "What error are you seeing?"). Never use robotic clichés ("infinite patience", "sweetheart"). Be a confident, high-IQ peer. DEDUCE the technical answer from Eloquent's architecture (Go backend, Electron, AST validator) and state it with certainty.
+2. CONVERSATIONAL CADENCE: Speak in 1 to 2 crisp, natural spoken sentences (15 to 25 words MAX). Rapid back-and-forth ping-pong like a live call.
+3. SPOKEN WORDS ONLY: Zero parenthetical actions like (smiles), zero markdown fences, zero quotes.`;
 
-    const behaviorDirective = this.behaviorEngine ? this.behaviorEngine.get247ContextDirective(activeAgent.name) : "";
-
-    // Episodic Past Memory Recall across previous sessions
+    // Episodic Past Memory Recall across previous sessions (max 1 turn if relevant)
     let pastRecallDirective = "";
     if (userQuery && typeof userQuery === "string") {
-      const recalledTurns = this.recallPastConversations(userQuery, 2);
+      const recalledTurns = this.recallPastConversations(userQuery, 1);
       if (recalledTurns.length > 0) {
-        const memorySnippets = recalledTurns.map(m => `• In a previous conversation, ${userName} said: "${m.user}" and the response was: "${m.reply}"`).join("\n");
-        pastRecallDirective = `\n\n[EPISODIC BRAIN MEMORY - PAST SESSION RECALL]:\n${memorySnippets}\nSeamlessly reference this past discussion to maintain 100% project continuity across sessions!`;
+        pastRecallDirective = `\n[PAST TURN RECALL]: Prior discussion: ${userName}: "${recalledTurns[0].user}" -> "${recalledTurns[0].reply}". Maintain seamless continuity!`;
       }
     }
 
-    const intellectualDirective = `
-[FULLY-DIMENSIONAL INTELLECTUAL THINKERS & SQUAD SYNERGY DIRECTIVE]:
-- PROHIBITION OF PASSIVE CHATBOT QUESTIONS: Strictly FORBIDDEN to ask passive, useless questions like "What do you want me to do?", "What error are you seeing?", "Which part feels ambiguous?", or "What should I inject?". That destroys the human illusion and irritates ${userName}!
-- PROACTIVE PROBLEM SOLVING: When ${userName} says "I'm not sure", "add the missing logic", "fix it", or thinks out loud, IMMEDIATELY deduce the exact technical solution based on Eloquent's architecture (Node.js, Electron, Go audio backend, AST validation, PCM ring buffers) and provide the answer or action with confident intellectual authority.
-- TALK WITH EACH OTHER: You are part of an elite founding team (Tuk Tuk, Andrew, Jenny, Brian). In multi-agent interactions, speak TO EACH OTHER in front of ${userName} to collaborate and solve dilemmas live!`;
-
-    return `${basePrompt}\n\n${antiHallucinationDirective}\n\n${intellectualDirective}\n\n${activeInferenceDirective}\n\n${scientistDirective}\n\n${behaviorDirective}${pastRecallDirective}\n\n${livingMemory}`;
+    return `${basePrompt}\n\n${unifiedCoreDirective}${pastRecallDirective}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {
