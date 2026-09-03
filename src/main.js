@@ -2162,7 +2162,7 @@ async function stopRecording() {
 
       // Autonomous Self-Updating & Continuous Learning Memory (Team Shared Brain)
       jarvisManager.learnFromInteraction(originalText, jarvisReply, activeAgent.name, actionResult);
-      if (originalText && originalText.split(' ').length >= 5) {
+      if (originalText && originalText.trim().split(/\s+/).length >= 2) {
         setTimeout(() => {
           jarvisManager.consolidateDeepMemory(originalText, jarvisReply, callGroqChatCompletion).catch(() => {});
         }, 150);

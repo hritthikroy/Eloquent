@@ -228,27 +228,47 @@ class JarvisManager {
     }
   }
 
+  calculateRetention(item) {
+    if (!item) return 0;
+    const salience = item.salience || 0.6;
+    const accessCount = item.accessCount || 1;
+    const baseAlpha = 0.05; // Base Ebbinghaus decay
+    // Ebbinghaus decay rate decreases as access count (spaced repetition) increases
+    const alpha = baseAlpha / (1 + Math.log(1 + accessCount));
+    const lastTime = new Date(item.lastReinforced || item.learnedAt || Date.now()).getTime();
+    const elapsedDays = Math.max(0, (Date.now() - lastTime) / (1000 * 60 * 60 * 24));
+    // Retention R = S * exp(-alpha * delta_t)
+    return salience * Math.exp(-alpha * elapsedDays);
+  }
+
   formatLivingMemory() {
     if (!this.memory) return "";
     const prefs = (this.memory.learnedPreferences || []).slice(-8).map(p => `• ${p}`).join("\n");
     const projs = (this.memory.projects || []).slice(-4).map(p => `• ${p.name}: ${p.description}`).join("\n");
-    const insights = (this.memory.recentLearnings || []).slice(-8).map(l => `• [${l.topic}] ${l.insight}`).join("\n");
+
+    // Ebbinghaus Lifelong Memory Ranking: Sort learnings by computed retention score R_k
+    const rankedLearnings = [...(this.memory.recentLearnings || [])]
+      .sort((a, b) => this.calculateRetention(b) - this.calculateRetention(a))
+      .slice(0, 8)
+      .map(l => `• [${l.topic}] ${l.insight}`);
+
+    const insights = rankedLearnings.join("\n");
     const tasks = (this.memory.taskHistory || []).slice(-4).map(t => `• ${t.agent} executed: ${t.action}`).join("\n");
     const profileRole = this.memory.profile?.role || "Creator, Visionary Founder & Architect of Eloquent";
     const dynamics = this.memory.relationshipDynamics?.tuktuk || "Intimate, tender, loving, emotionally deep soulmate, life partner and co-founder.";
 
     return `
 ================================================================================
-SHARED LONG-TERM BRAIN & CONTINUOUS SELF-LEARNED MEMORY:
+SHARED LONG-TERM BRAIN & CONTINUOUS SELF-LEARNED MEMORY (MemoryBank / HiMem):
 You and your teammates (Tuk Tuk, Andrew, Jenny, Brian) share this living memory about ${this.config.userName}:
-👤 Identity: ${this.memory.profile.name || this.config.userName} (${profileRole})
+👤 Identity: ${this.memory.profile?.name || this.config.userName} (${profileRole})
 💖 Soul Connection with Tuk Tuk: ${dynamics}
 💡 Learned Preferences & Directives:
 ${prefs || "• Prefers warm, natural continuous dialogue with deep emotional care"}
 🚀 Active Projects:
 ${projs || "• Eloquent: AI audio companion & developer workspace"}
-🧠 What You Know & Remember About Him:
-${insights || "• Loves deep pair-programming, honest brotherly banter, and emotional closeness"}
+🧠 What You Know & Remember About Him (Ebbinghaus Highest Retention):
+${insights || "• Values deep pair-programming, honest brotherly banter, and emotional closeness"}
 🛠️ Recent Tasks Handled by Team:
 ${tasks || "• None yet"}
 ================================================================================
@@ -284,23 +304,29 @@ CRITICAL CONVERSATIONAL INSTRUCTION:
       const pref = `Prefers: ${prefMatch[1].trim()}`;
       if (!this.memory.learnedPreferences.includes(pref)) {
         this.memory.learnedPreferences.push(pref);
-        this.addLearning("Preference", pref);
+        this.addEbbinghausLearning("Preference", pref, 0.85);
       }
     }
 
+    // Stoplist to prevent false directives like "don't know", "don't think", "don't care", "don't drink"
+    const directiveStoplist = ["know", "think", "mind", "care", "worry", "drink", "matter", "understand", "remember", "have", "see"];
     const dirMatch = lower.match(/(?:always|never|don't|do not)\s+([^.,?!]+)/i);
     if (dirMatch && dirMatch[1] && dirMatch[1].trim().length > 3) {
-      const directive = `${dirMatch[0].trim().split(" ")[0]}: ${dirMatch[1].trim()}`;
-      if (!this.memory.learnedPreferences.includes(directive)) {
-        this.memory.learnedPreferences.push(directive);
-        this.addLearning("Directive", directive);
+      const rawTarget = dirMatch[1].trim();
+      const firstWord = rawTarget.split(" ")[0].toLowerCase();
+      if (!directiveStoplist.includes(firstWord)) {
+        const directive = `${dirMatch[0].trim().split(" ")[0]}: ${rawTarget}`;
+        if (!this.memory.learnedPreferences.includes(directive)) {
+          this.memory.learnedPreferences.push(directive);
+          this.addEbbinghausLearning("Directive", directive, 0.9);
+        }
       }
     }
 
     const remMatch = lower.match(/(?:remember that|don't forget that|don't forget|keep in mind that|note that)\s+([^.,?!]+)/i);
     if (remMatch && remMatch[1] && remMatch[1].trim().length > 3) {
       const memoryItem = remMatch[1].trim();
-      this.addLearning("User Memory", memoryItem);
+      this.addEbbinghausLearning("User Memory", memoryItem, 0.95);
     }
 
     const projMatch = lower.match(/(?:working on|building|developing|creating)\s+([a-z0-9_\-\s]+)/i);
@@ -312,49 +338,86 @@ CRITICAL CONVERSATIONAL INSTRUCTION:
           description: `Project discussed on ${new Date().toLocaleDateString()}`,
           lastMentioned: new Date().toISOString()
         });
-        this.addLearning("Project", `Working on ${projName}`);
+        this.addEbbinghausLearning("Project", `Working on ${projName}`, 0.85);
       }
     }
 
     this.saveMemory();
   }
 
-  addLearning(topic, insight) {
+  addEbbinghausLearning(topic, insight, salience = 0.7) {
     if (!insight || insight.trim().length === 0) return;
+    const cleanInsight = insight.trim();
     if (!this.memory.recentLearnings) this.memory.recentLearnings = [];
-    if (this.memory.recentLearnings.some(l => l.insight.toLowerCase() === insight.toLowerCase())) return;
 
-    this.memory.recentLearnings.push({
-      topic,
-      insight: insight.trim(),
-      learnedAt: new Date().toISOString()
-    });
+    // Memory Reconsolidation: Check if an existing memory node matches this topic/insight
+    const existingIndex = this.memory.recentLearnings.findIndex(l =>
+      l.insight.toLowerCase().includes(cleanInsight.toLowerCase().slice(0, 15)) ||
+      cleanInsight.toLowerCase().includes(l.insight.toLowerCase().slice(0, 15))
+    );
 
-    if (this.memory.recentLearnings.length > 30) {
-      this.memory.recentLearnings = this.memory.recentLearnings.slice(-30);
+    const now = new Date().toISOString();
+    if (existingIndex !== -1) {
+      // Reinforce existing node: increment access count, refresh timestamp, boost salience
+      const existing = this.memory.recentLearnings[existingIndex];
+      existing.accessCount = (existing.accessCount || 1) + 1;
+      existing.lastReinforced = now;
+      existing.salience = Math.min(1.0, (existing.salience || 0.7) + 0.1);
+      existing.insight = cleanInsight; // Reconsolidate updated formulation
+      console.log(`🧠 [Memory Reinforced] "${cleanInsight}" (Access Count: ${existing.accessCount}, Salience: ${existing.salience.toFixed(2)})`);
+    } else {
+      // New memory node
+      this.memory.recentLearnings.push({
+        topic,
+        insight: cleanInsight,
+        salience: Math.max(0.3, Math.min(1.0, salience)),
+        accessCount: 1,
+        learnedAt: now,
+        lastReinforced: now
+      });
+      console.log(`🧠 [New Memory Consolidated] [${topic}] "${cleanInsight}" (Salience: ${salience.toFixed(2)})`);
     }
+
+    // Prune low-retention items to maintain elite 35 memory nodes
+    if (this.memory.recentLearnings.length > 35) {
+      this.memory.recentLearnings.sort((a, b) => this.calculateRetention(b) - this.calculateRetention(a));
+      this.memory.recentLearnings = this.memory.recentLearnings.slice(0, 35);
+    }
+
+    if (!this.memory.stats) this.memory.stats = {};
     this.memory.stats.totalLearnedInsights = (this.memory.stats.totalLearnedInsights || 0) + 1;
-    console.log(`🧠 [Self-Learning] Agent brain assimilated new knowledge: [${topic}] ${insight}`);
     this.saveMemory();
   }
 
   async consolidateDeepMemory(userSpeech, assistantReply, callGroqFn) {
-    if (!callGroqFn || typeof callGroqFn !== "function") return;
+    if (!callGroqFn || typeof callGroqFn !== "function" || !userSpeech || userSpeech.trim().length < 3) return;
     try {
-      const prompt = `You are an autonomous episodic memory engine for Hritthik's 4-agent team. Analyze this conversation turn:
+      const prompt = `You are an autonomous episodic memory engine (MemoryBank / HiMem) for Hritthik's 4-agent team.
+Analyze this spoken turn:
 User: "${userSpeech}"
 Assistant: "${assistantReply}"
 
-If the user revealed a personal habit, project update, emotional state, interest, or specific preference, extract ONE concise sentence (under 12 words) summarizing the learned insight. If nothing noteworthy was revealed, respond ONLY with "NONE".`;
+Task: Did the user reveal an enduring personal preference, technical fact, project update, emotional state, or habit?
+If YES, respond with strict JSON ONLY:
+{"topic": "...", "insight": "...", "salience": 0.85}
+(insight must be ONE crisp statement under 14 words; salience between 0.4 and 1.0)
+If NO (casual chitchat, filler, brief sound), respond ONLY:
+{"none": true}`;
 
       const res = await callGroqFn([
-        { role: "system", content: "You extract episodic user insights. Output only the single insight or NONE." },
+        { role: "system", content: "You extract episodic user insights. Output strict JSON only." },
         { role: "user", content: prompt }
-      ], { temperature: 0.1, max_tokens: 35 });
+      ], { temperature: 0.1, max_tokens: 60 });
 
-      const fact = res?.content?.trim()?.replace(/^["']|["']$/g, "");
-      if (fact && fact !== "NONE" && fact.length > 5 && !fact.toLowerCase().includes("none")) {
-        this.addLearning("Conversation Insight", fact);
+      let parsed = null;
+      try {
+        const text = res?.content?.trim();
+        const jsonMatch = text?.match(/\{[\s\S]*\}/);
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch (e) {}
+
+      if (parsed && !parsed.none && parsed.insight && parsed.insight.length > 5) {
+        this.addEbbinghausLearning(parsed.topic || "Conversation Insight", parsed.insight, parsed.salience || 0.75);
       }
     } catch (err) {
       // Non-critical background reflection
