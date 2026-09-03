@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const { spawn, execSync } = require("child_process");
 const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
+const ProsodicEntrainmentAdapter = require("./prosodic-entrainment");
+const DuplexActionChannel = require("./duplex-action-channel");
 
 const AGENTS = {
   tuktuk: {
@@ -122,6 +124,8 @@ class JarvisManager {
     this.ttsClient = null;
     this._cachedVoice = null; // Cache last voice so metadata is not re-negotiated every turn
     this.agents = AGENTS;
+    this.prosodicEntrainment = new ProsodicEntrainmentAdapter();
+    this.duplexActionChannel = new DuplexActionChannel();
     this.initTTS();
   }
 
@@ -655,7 +659,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
           this._cachedVoice = voice;
         }
         // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
-        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText);
+        const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
+        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText, { rate: dynamicRate });
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 7s")), 7000)
         );

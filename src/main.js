@@ -2181,6 +2181,12 @@ async function stopRecording() {
         }, 150);
       }
 
+      // Acoustic-Prosodic Entrainment: Adapt agent speech rate dynamically to match user tempo
+      const turnWordCount = originalText ? originalText.trim().split(/\s+/).length : 0;
+      if (jarvisManager.prosodicEntrainment && recordingDuration && turnWordCount > 0) {
+        jarvisManager.prosodicEntrainment.observeUserTurn(recordingDuration, turnWordCount);
+      }
+
       // Mark processing finished so next turn is accepted cleanly
       isProcessing = false;
 
