@@ -1856,7 +1856,7 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          const SPEECH_THRESHOLD = 0.08; // High sensitivity to human phonemes in SoX VU meter
+          const SPEECH_THRESHOLD = 0.035; // Ultra-sensitive: catches soft speech, whisper tones, and quiet laptop mics
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
 
           if (isSpeechFrame) {
@@ -1873,9 +1873,9 @@ function startRecording() {
             const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // Dual-Horizon Adaptive Silence Threshold:
-            // 950ms for short/fragmented speech with gaps; 800ms for completed sentences
-            const dynamicSilenceThreshold = voicedDurationMs >= 1400 ? 800 : 950;
+            // Dual-Horizon Adaptive Silence Threshold (Human Snappy Turn-Taking):
+            // 450ms for completed sentences (snappy human ping-pong); 600ms for short fragments
+            const dynamicSilenceThreshold = voicedDurationMs >= 1000 ? 450 : 600;
             const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 150);
             const isMaxSpeechCap = speechDurationMs >= 10000;
 
@@ -2422,7 +2422,7 @@ async function transcribe(filePath) {
   form.append('language', 'en'); // Force English for all modes (Jarvis & Dictation)
   form.append('response_format', 'json');
   form.append('temperature', '0');
-  form.append('prompt', 'Crisp, articulate professional English voice dictation and conversational dialogue with clean punctuation, periods, and capitalization.');
+  form.append('prompt', 'Hello Tuk Tuk, Andrew, Jenny, Brian, let us talk.');
   
   // High accuracy transcription
   try {
@@ -2461,7 +2461,7 @@ async function transcribe(filePath) {
       retryForm.append('language', 'en');
       retryForm.append('response_format', 'json');
       retryForm.append('temperature', '0');
-      retryForm.append('prompt', 'Professional voice dictation with zero background noise, crisp enunciation, accurate punctuation, commas, periods, and clean capitalization.');
+      retryForm.append('prompt', 'Hello Tuk Tuk, Andrew, Jenny, Brian, let us talk.');
 
       try {
         response = await axios.post(
