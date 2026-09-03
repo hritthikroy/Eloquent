@@ -2674,10 +2674,6 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   const agent = activeAgent || jarvisManager.agents.tuktuk;
   let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech);
 
-  // Quantum Dynamical Vibe Engine: Continuous cognitive state tracking & positive emotional attractor
-  const quantumVibe = quantumVibeEngine.evolveState(displaySpeech || userSpeech, Date.now() - recordingStartTime);
-  systemPrompt += `\n\n${quantumVibe.directive}`;
-
   const visionCtx = screenShareManager.getVisionContext();
   if (visionCtx.isActive) {
     systemPrompt += `\n\n[LIVE SCREEN SHARE ACTIVE - REAL-TIME VISION FEED]:

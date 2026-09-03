@@ -124,25 +124,9 @@ class QuantumVibeEngine {
    * @returns {number} Dynamic silence threshold in milliseconds (220ms - 340ms)
    */
   getDynamicSilenceThreshold(voicedDurationMs = 1500) {
-    const dominant = this.getDominantMode();
-
-    // If user was in hesitant thinking mode, give slight extra breathing room
-    if (dominant === "hesitant" && voicedDurationMs < 600) {
-      return 360; // Enough to prevent cutting off while speaking single words
-    }
-
-    // High-flow breakthrough or rapid ping-pong: ultra-snappy 230ms transition
-    if (dominant === "breakthrough" || this.tempoWPM >= 165) {
-      return 230;
-    }
-
-    // Coding / Architecture Focus: 260ms instant handoff
-    if (dominant === "focus") {
-      return 260;
-    }
-
-    // Default natural human conversational handoff
-    return 280;
+    if (voicedDurationMs < 600) return 340;
+    if (voicedDurationMs > 3000) return 230;
+    return 260;
   }
 
   /**
