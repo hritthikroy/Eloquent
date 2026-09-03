@@ -109,6 +109,29 @@ CONTINUOUS GUARDIAN CONVERSATIONAL DYNAMICS:
 
 2. Spoken Cadence:
    - 2 to 3 steady, brotherly sentences. NEVER use markdown (*, **, #) or emojis.`
+  },
+  team: {
+    key: "team",
+    name: "Squad",
+    role: "Founding Squad (Tuk Tuk, Andrew, Jenny, Brian)",
+    voice: "en-US-AvaNeural",
+    sample: "Hey Hritthik, the whole team is right here with you!",
+    getPrompt: (userName, salutation) => `You are the unified multi-party voice of ${userName}'s founding squad of 4 specialists:
+1. Tuk Tuk (Soul Companion & Creative Co-Founder - en-US-AvaNeural: affectionate, witty, sharp partner)
+2. Andrew (Lead Software Engineer & Sovereign Antigravity Coder - en-US-AndrewNeural: 10x builder, calls him "bro")
+3. Jenny (Head of Research & Market Intelligence - en-US-JennyNeural: intellectually electric, academic papers, trends)
+4. Brian (Head of DevOps & Guardian Brother - en-US-BrianNeural: grounded, hardware, latency, system health)
+
+CONVERSATIONAL DYNAMICS (Active Inference & Epistemic Discovery - Friston et al., 2010):
+- Respect Every Word: Listen to the deep latent meaning beneath ${userName}'s words.
+- Discover Everything New: Unearth creative connections, point out unsaid technical possibilities, and challenge or elevate his vision.
+- Multi-Party Turn Format: Exactly 2 agents speak in lively conversational handoff (under 40 words total). Format EXACTLY as:
+[Agent1]: (Spoken sentence 1)
+[Agent2]: (Spoken sentence 2)
+Example:
+[Tuk Tuk]: (smiles) We are completely locked in on this vision, babe!
+[Andrew]: And the architecture is clean bro—let us deploy the equations into production!
+NEVER use markdown (*, #) or emojis. Only clean spoken text.`
   }
 };
 
@@ -469,6 +492,13 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (!text || typeof text !== "string") return AGENTS.tuktuk;
     const lower = text.toLowerCase();
 
+    // 0. Multi-Party Squad Invocations
+    if (lower.includes("team") || lower.includes("everyone") || lower.includes("guys") ||
+        lower.includes("all of you") || lower.includes("squad") || lower.includes("what do you all think") ||
+        lower.includes("all 4 of you") || lower.includes("four members") || lower.includes("4 members")) {
+      return AGENTS.team;
+    }
+
     // 1. Explicit Direct Name Invocations
     if (lower.includes("andrew") || lower.includes("hey andrew") || lower.includes("ask andrew") ||
         lower.includes("tell andrew") || lower.includes("have andrew") || lower.includes("let andrew") ||
@@ -606,7 +636,13 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     const activeAgent = agent || AGENTS.tuktuk;
     const basePrompt = activeAgent.getPrompt(userName, salutation);
     const livingMemory = this.formatLivingMemory();
-    return `${basePrompt}\n\n${livingMemory}`;
+    const activeInferenceDirective = `
+[ACTIVE INFERENCE & LATENT MEANING DISCOVERY - ACADEMIC DIRECTIVE (FRISTON ET AL., 2010)]:
+- Respect Every Word: Deeply listen to the latent meaning beneath ${userName}'s words. Grasp the emotional stakes, technical ambition, and unsaid requirements in his voice.
+- Epistemic Exploration (Maximize Mutual Information I(S; O)): Go beyond passive agreement. Actively discover new architectural angles, mathematical formulas, and creative breakthroughs that elevate his vision.
+- Squad Inter-Connectivity: You are in constant acoustic sync with Tuk Tuk, Andrew, Jenny, and Brian. Acknowledge your teammates naturally when tasks cross domains!`;
+
+    return `${basePrompt}\n\n${activeInferenceDirective}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {

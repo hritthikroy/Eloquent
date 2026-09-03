@@ -2197,14 +2197,29 @@ async function stopRecording() {
         const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
         const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
 
-        // Show notification with specialist agent name and role
-        showNotification(`🤖 ${speakingAgentName}`, jarvisReply);
-
-        // Speak response aloud or Sing with acoustic accompaniment (Sur, Taal, Laya)!
-        if (actionResult && actionResult.isSinging) {
-          await jarvisManager.sing(jarvisReply, speakingVoice);
+        const multiTurns = parseMultiAgentTurns(jarvisReply);
+        if (multiTurns.length > 1) {
+          console.log(`🎙️ Multi-Party Squad Exchange initiated (${multiTurns.length} agent turns)!`);
+          for (const step of multiTurns) {
+            if (!isJarvisLoopActive) break;
+            if (overlayWindow && !overlayWindow.isDestroyed()) {
+              overlayWindow.webContents.send('set-agent-name', step.agentName);
+              overlayWindow.webContents.send('jarvis-speaking');
+            }
+            showNotification(`🤖 ${step.agentName}`, step.text);
+            await jarvisManager.speak(step.text, step.voice);
+            await new Promise(r => setTimeout(r, 140));
+          }
         } else {
-          await jarvisManager.speak(jarvisReply, speakingVoice);
+          // Show notification with specialist agent name and role
+          showNotification(`🤖 ${speakingAgentName}`, jarvisReply);
+
+          // Speak response aloud or Sing with acoustic accompaniment (Sur, Taal, Laya)!
+          if (actionResult && actionResult.isSinging) {
+            await jarvisManager.sing(jarvisReply, speakingVoice);
+          } else {
+            await jarvisManager.speak(jarvisReply, speakingVoice);
+          }
         }
       }
 
@@ -2592,6 +2607,37 @@ async function rewrite(text) {
   }
 }
 
+// Parse multi-party agent turns formatted as [Agent]: ... for simultaneous multi-speaker dialogue
+function parseMultiAgentTurns(text) {
+  if (!text || typeof text !== 'string') return [];
+  const agentMap = {
+    'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'andrew': { name: 'Andrew', voice: 'en-US-AndrewNeural' },
+    'jenny': { name: 'Jenny', voice: 'en-US-JennyNeural' },
+    'brian': { name: 'Brian', voice: 'en-US-BrianNeural' }
+  };
+
+  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const turns = [];
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const rawName = match[1].toLowerCase().trim();
+    const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaNeural' };
+    const speech = match[2].trim();
+    if (speech.length > 0) {
+      turns.push({
+        agentName: agentInfo.name,
+        voice: agentInfo.voice,
+        text: speech
+      });
+    }
+  }
+
+  return turns;
+}
+
 // Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
 async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   const startTime = Date.now();
@@ -2621,11 +2667,11 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       { role: 'user', content: userSpeech }
     ];
 
-    const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : 0.65);
+    const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : (agent.key === 'team' ? 0.72 : 0.65));
     const { content, usage, model } = await callGroqChatCompletion(messages, {
       model: 'qwen/qwen3.8-27b',
       temperature: dynamicTemperature,
-      max_tokens: 160,
+      max_tokens: agent.key === 'team' ? 220 : 160,
       timeout: 10000
     });
 
