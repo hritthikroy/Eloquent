@@ -950,8 +950,14 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     for (let attempt = 1; attempt <= 2; attempt++) {
       let tempDir = null;
       try {
-        const client = new MsEdgeTTS();
-        await client.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
+        if (!this.ttsClient) {
+          this.initTTS();
+        }
+        const client = this.ttsClient;
+        if (this._cachedVoice !== voice) {
+          await client.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
+          this._cachedVoice = voice;
+        }
         // Isolated directory prevents file-lock collisions with CoreAudio afplay
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "eloquent_tts_"));
         // 5-second timeout — with 20-word cap, synthesis finishes in under 1s
@@ -962,7 +968,6 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
           setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 5s")), 5000)
         );
         const res = await Promise.race([toFilePromise, timeoutPromise]);
-        try { if (typeof client.close === "function") client.close(); } catch (e) {}
 
         // Check if this synthesis was superseded or aborted while awaiting download
         if (this.currentSpeechId !== speechId || this.isAborted) {
@@ -1014,6 +1019,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         if (tempDir) {
           try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
         }
+        this.ttsClient = null;
+        this._cachedVoice = null;
         console.warn(`⚠️ Neural TTS attempt ${attempt} warning:`, neuralErr.message);
         if (attempt === 2) {
           console.warn("⚠️ Neural TTS unavailable. Using emergency macOS voice fallback so user is never left in silence.");
