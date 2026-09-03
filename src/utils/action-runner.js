@@ -3,6 +3,7 @@ const { execSync, exec } = require("child_process");
 const os = require("os");
 const path = require("path");
 const AntigravityEngine = require("./antigravity-engine");
+const { PromptEngine } = require("./prompt-engine");
 
 class OfficeActionRunner {
   constructor() {
@@ -52,34 +53,15 @@ class OfficeActionRunner {
     // -------------------------------------------------------------
     // ANDREW (Lead Software Engineer: Antigravity Auto-Mode & Master Prompt Engineer)
     // -------------------------------------------------------------
-    // 1. Antigravity Master Prompt Engineer & Grammar Fixer
-    // 1. Antigravity Master Prompt Engineer & Direct Window Injector
-    if (lower.includes("write a prompt") || lower.includes("write prompt") ||
-        lower.includes("write the prompt") || lower.includes("write up the prompt") ||
-        lower.includes("create a prompt") || lower.includes("create prompt") ||
-        lower.includes("make a prompt") || lower.includes("make prompt") ||
-        lower.includes("prepare a prompt") || lower.includes("prepare prompt") ||
-        lower.includes("craft a prompt") || lower.includes("craft prompt") ||
-        lower.includes("prompt in antigravity") || lower.includes("prompt in entry gravity") ||
-        lower.includes("prompt for next task") || lower.includes("prompt for my next task") ||
-        lower.includes("prompt for antigravity") || lower.includes("write up the prompt for me") ||
-        lower.includes("fix grammar and write prompt") || lower.includes("fix grammar and make prompt")) {
-      // Extract prompt topic or pull from recent multi-turn conversation context
-      let promptConcept = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:use\s+access\s+to\s+work\s+in\s+antigravity\s+and\s+)?(?:write|create|make|prepare|craft)?\s*(?:up\s+)?(?:the\s+|a\s+)?(?:prompt\s+for\s+(?:my\s+)?next\s+task|prompt\s+in\s+antigravity(?:\s+text\s+window)?|prompt\s+for\s+antigravity|prompt)?(?:\s+for\s+me)?(?:\s+with\s+proper\s+grammar\s+fix\s+and\s+all)?(?:\s*[:,-]?\s*)/i, "").trim();
+    // 1. Antigravity Master Prompt Engineer & Conversational Smoothness Pipeline
+    const promptRes = await PromptEngine.process(speechText, {
+      jarvisManager,
+      screenShareManager: require("./screen-share-manager"),
+      callGroqChatCompletion,
+      projectDir: this.projectDir
+    });
 
-      if ((!promptConcept || promptConcept.length < 15) && jarvisManager) {
-        try {
-          const hist = jarvisManager.getHistory().slice(-4);
-          const recentUserTurns = hist.filter(h => h.role === "user").map(h => h.content);
-          if (recentUserTurns.length > 0) {
-            promptConcept = recentUserTurns.join(" — ");
-          }
-        } catch (e) {}
-      }
-      promptConcept = promptConcept || speechText;
-
-      const res = await this.antigravity.generateOptimizedPrompt(promptConcept, { callGroqChatCompletion });
-
+    if (promptRes && promptRes.handled) {
       // In hands-free mode, auto-paste straight into the active Antigravity window
       try {
         if (process.platform === "darwin") {
@@ -93,7 +75,7 @@ class OfficeActionRunner {
         handled: true,
         agentName: "Andrew",
         agentVoice: "en-US-AndrewNeural",
-        speech: "I crafted the prompt based on our discussion and injected it straight into your Antigravity text window, bro! It's also on your clipboard. Review it and run!"
+        speech: promptRes.speech
       };
     }
 
