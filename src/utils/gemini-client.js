@@ -285,6 +285,106 @@ class GeminiClient {
   }
 
   /**
+   * Streaming chat completion with Server-Sent Events (SSE) for ultra-low Time-To-First-Token
+   */
+  async streamChatCompletion(messages, onChunk, options = {}) {
+    if (!this.isConfigured()) {
+      throw new Error("Gemini API keys are not configured");
+    }
+
+    const payload = this._formatGeminiPayload(messages, options);
+    const candidateModels = options.model ? [options.model, ...this.models] : this.models;
+    const uniqueModels = [...new Set(candidateModels)];
+
+    let lastError = null;
+    const initialKeyCount = this.apiKeys.length;
+
+    for (let k = 0; k < initialKeyCount; k++) {
+      const currentApiKey = this.getActiveKey();
+
+      for (const modelName of uniqueModels) {
+        try {
+          const finalPayload = JSON.parse(JSON.stringify(payload));
+          if (!modelName.includes("3.7") && finalPayload.generationConfig && finalPayload.generationConfig.thinkingConfig) {
+            delete finalPayload.generationConfig.thinkingConfig;
+          }
+          const postData = JSON.stringify(finalPayload);
+
+          const result = await new Promise((resolve) => {
+            let fullText = "";
+            const req = https.request({
+              hostname: "generativelanguage.googleapis.com",
+              path: `/v1beta/models/${modelName}:streamGenerateContent?key=${currentApiKey}&alt=sse`,
+              method: "POST",
+              agent: this.httpsAgent,
+              headers: {
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(postData)
+              },
+              timeout: options.timeout || 12000
+            }, (res) => {
+              if (res.statusCode !== 200) {
+                let errBody = "";
+                res.on("data", c => errBody += c);
+                res.on("end", () => resolve({ status: res.statusCode, error: errBody }));
+                return;
+              }
+
+              res.on("data", (chunk) => {
+                const lines = chunk.toString().split("\n");
+                for (const line of lines) {
+                  if (line.startsWith("data: ")) {
+                    try {
+                      const json = JSON.parse(line.slice(6));
+                      const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                      if (text) {
+                        fullText += text;
+                        if (typeof onChunk === "function") onChunk(text);
+                      }
+                    } catch (e) {}
+                  }
+                }
+              });
+
+              res.on("end", () => {
+                resolve({
+                  status: 200,
+                  content: fullText.trim(),
+                  model: modelName
+                });
+              });
+            });
+
+            req.on("error", (err) => resolve({ status: 0, error: err.message }));
+            req.on("timeout", () => {
+              req.destroy();
+              resolve({ status: 408, error: "Stream timed out" });
+            });
+
+            req.write(postData);
+            req.end();
+          });
+
+          if (result.status === 200 && result.content && result.content.length > 0) {
+            return result;
+          }
+
+          if (result.status === 429) {
+            this.rotateToNextKey();
+            break;
+          }
+
+          lastError = new Error(result.error || `Gemini status ${result.status}`);
+        } catch (err) {
+          lastError = err;
+        }
+      }
+    }
+
+    throw lastError || new Error("All candidate Gemini streaming models exhausted");
+  }
+
+  /**
    * Main chat completion with multi-key pool rotation and multi-model fallback
    */
   async callChatCompletion(messages, options = {}) {
