@@ -448,11 +448,39 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return { handled: true, speech: "Opening gaming hub now." };
     }
 
-    // --- SCREEN & VISION STATUS ---
-    if (lower.includes("see our screen") || lower.includes("see my screen") || lower.includes("seeing our screen") || lower.includes("seeing my screen") || lower.includes("look at our screen") || lower.includes("look at my screen") || lower.includes("can you see the screen") || lower.includes("can you see my screen")) {
+    // --- SCREEN & VISION STATUS (Direct Gemini 2.5 Multimodal Optical Analysis) ---
+    if (lower.includes("see our screen") || lower.includes("see my screen") || lower.includes("seeing our screen") || lower.includes("seeing my screen") || lower.includes("look at our screen") || lower.includes("look at my screen") || lower.includes("can you see the screen") || lower.includes("can you see my screen") || lower.includes("what is on my screen") || lower.includes("what's on my screen") || lower.includes("what is on the screen")) {
+      const screenShareManager = require('./screen-share-manager');
+      const framePath = screenShareManager.framePath || "/tmp/eloquent_screenshare.jpg";
+      
+      // Ensure we have a fresh frame right now
+      try {
+        execSync(`screencapture -x -C "${framePath}" 2>/dev/null && sips -Z 1280 "${framePath}" 2>/dev/null`, { timeout: 2000 });
+      } catch (e) {}
+
+      const client = geminiClient || require('./gemini-client').geminiClient;
+      if (client && client.isConfigured() && fs.existsSync(framePath)) {
+        try {
+          console.log('👁️ [Multimodal Vision] Inspecting desktop screen frame with Google Gemini 2.5 Flash...');
+          const visionRes = await client.analyzeScreen(framePath, speechText);
+          const cleanSpeech = visionRes.content.replace(/[*#_`~[\]()]/g, "").trim();
+          return {
+            handled: true,
+            agentName: activeAgent?.name || "Tuk Tuk",
+            agentVoice: activeAgent?.voice || "en-US-AvaMultilingualNeural",
+            speech: cleanSpeech
+          };
+        } catch (visionErr) {
+          console.warn('⚠️ Vision inspection error:', visionErr.message);
+        }
+      }
+
+      const ctx = screenShareManager.getVisionContext();
       return {
         handled: true,
-        speech: "I don't have direct optical vision on your display yet, but I'm tracking all your active processes, apps, and audio feeds."
+        agentName: activeAgent?.name || "Tuk Tuk",
+        agentVoice: activeAgent?.voice || "en-US-AvaMultilingualNeural",
+        speech: `I have eyes on your screen, babe! You are currently focused in ${ctx.appName}. Tell me what part of your screen or code you want me to inspect.`
       };
     }
 
@@ -953,12 +981,28 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       "google chrome": "Google Chrome",
       "browser": "Google Chrome",
       "safari": "Safari",
+      "vscode": "Visual Studio Code",
+      "vs code": "Visual Studio Code",
+      "code": "Visual Studio Code",
+      "antigravity": "Antigravity",
+      "antigravity ide": "Antigravity",
+      "terminal": "Terminal",
+      "iterm": "iTerm",
+      "warp": "Warp",
       "notes": "Notes",
       "finder": "Finder",
       "downloads": "~/Downloads",
+      "documents": "~/Documents",
+      "desktop": "~/Desktop",
       "slack": "Slack",
+      "discord": "Discord",
+      "telegram": "Telegram",
+      "whatsapp": "WhatsApp",
       "spotify": "Spotify",
       "calculator": "Calculator",
+      "calendar": "Calendar",
+      "reminders": "Reminders",
+      "system settings": "System Settings",
       "settings": "System Settings"
     };
 

@@ -97,11 +97,66 @@
 
     .overlay.jarvis .rec-ring {
       border-color: #38bdf8;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
     }
 
     .overlay.jarvis .rec-dot {
       background: #38bdf8;
+    }
+
+    /* Stonic-Grade Agent Telemetry & Personality Auras */
+    .overlay.agent-tuktuk .rec-ring {
+      border-color: #f43f5e;
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.6);
+    }
+    .overlay.agent-tuktuk .rec-dot {
+      background: #f43f5e;
+    }
+    .overlay.agent-tuktuk {
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+
+    .overlay.agent-andrew .rec-ring {
+      border-color: #06b6d4;
+      box-shadow: 0 0 14px rgba(6, 182, 212, 0.6);
+    }
+    .overlay.agent-andrew .rec-dot {
+      background: #06b6d4;
+    }
+    .overlay.agent-andrew {
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    .overlay.agent-jenny .rec-ring {
+      border-color: #10b981;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+    }
+    .overlay.agent-jenny .rec-dot {
+      background: #10b981;
+    }
+    .overlay.agent-jenny {
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .overlay.agent-brian .rec-ring {
+      border-color: #f59e0b;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.6);
+    }
+    .overlay.agent-brian .rec-dot {
+      background: #f59e0b;
+    }
+    .overlay.agent-brian {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    /* Thinking Core Particle Orb Animation */
+    .overlay.thinking .rec-ring {
+      animation: thinkingOrb 0.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes thinkingOrb {
+      0% { transform: scale(0.9); opacity: 0.6; filter: blur(0.5px); }
+      100% { transform: scale(1.4); opacity: 1; filter: blur(0px); }
     }
 
     @keyframes ringPulse {

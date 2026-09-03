@@ -1032,6 +1032,8 @@ function handleShortcut(action, mode = 'standard') {
     if (mode === 'jarvis') {
       isJarvisLoopActive = true;
       playSound('start'); // Alexa-style activation chime
+      // Ambient Screen Perception: capture fresh frame in background immediately
+      try { screenShareManager.captureInstantFrame(); } catch (e) {}
     }
     if (isRecording) {
       console.log('🛑 Shortcut pressed while recording - toggling stop');

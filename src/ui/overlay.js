@@ -236,6 +236,15 @@ let currentAgentName = 'Tuk Tuk';
 ipcRenderer.on('set-agent-name', (_, agentName) => {
   if (agentName) {
     currentAgentName = agentName;
+    const lower = agentName.toLowerCase();
+    if (overlay) {
+      overlay.classList.remove('agent-tuktuk', 'agent-andrew', 'agent-jenny', 'agent-brian');
+      if (lower.includes('tuk')) overlay.classList.add('agent-tuktuk');
+      else if (lower.includes('andrew')) overlay.classList.add('agent-andrew');
+      else if (lower.includes('jenny')) overlay.classList.add('agent-jenny');
+      else if (lower.includes('brian')) overlay.classList.add('agent-brian');
+    }
+
     // Only update label if we are not mid-thinking/speaking (those have their own state)
     const recLabel = document.querySelector('.rec-label');
     if (recLabel) {
@@ -248,16 +257,19 @@ ipcRenderer.on('set-agent-name', (_, agentName) => {
 });
 
 ipcRenderer.on('jarvis-thinking', () => {
+  if (overlay) overlay.classList.add('thinking');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} thinking...`;
 });
 
 ipcRenderer.on('jarvis-speaking', () => {
+  if (overlay) overlay.classList.remove('thinking');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} speaking...`;
 });
 
 ipcRenderer.on('jarvis-listening', () => {
+  if (overlay) overlay.classList.remove('thinking');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = 'Listening...';
 });
