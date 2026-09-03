@@ -719,33 +719,33 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       steps: [
         {
           agent: "Tuk Tuk",
-          role: "Executive Co-Founder & Team Lead",
-          voice: "en-US-AvaNeural",
-          speech: "Morning team! Standup is live. Let's sync up bro. Andrew, what's our engineering velocity?"
+          role: "Soul Partner & Co-Founder",
+          voice: "en-US-AvaMultilingualNeural",
+          speech: "Morning team! Standup is live. Babe, right here beside you. Andrew, what's our engineering velocity?"
         },
         {
           agent: "Andrew",
           role: "Lead Software Engineer",
-          voice: "en-US-AndrewNeural",
+          voice: "en-US-AndrewMultilingualNeural",
           speech: `Hey bro, Andrew here. We're on branch ${branch}, and ${gitMsg}. Codebase is clean, zero regressions, ready to ship.`
         },
         {
           agent: "Jenny",
-          role: "Head of Research & Intel",
-          voice: "en-US-JennyNeural",
-          speech: "Jenny here bro. Market data feeds and research benchmarks are live with high signal-to-noise ratio."
+          role: "Head of Research & Architecture",
+          voice: "en-US-EmmaMultilingualNeural",
+          speech: "Jenny here, bro. Research benchmarks and architecture pipelines are fully synced and ready."
         },
         {
           agent: "Brian",
-          role: "Head of DevOps & QA",
-          voice: "en-US-BrianNeural",
+          role: "Head of DevOps & Reliability",
+          voice: "en-US-BrianMultilingualNeural",
           speech: `Brian here bro. Power is at ${battPct} percent, memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} CPU cores. Telemetry is rock solid.`
         },
         {
           agent: "Tuk Tuk",
-          role: "Executive Co-Founder & Team Lead",
-          voice: "en-US-AvaNeural",
-          speech: "Love the energy team! We're locked in and ready to build bro. What are we tackling first?"
+          role: "Soul Partner & Co-Founder",
+          voice: "en-US-AvaMultilingualNeural",
+          speech: "We are locked in and ready to build, babe. What are we tackling first?"
         }
       ]
     };
