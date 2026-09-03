@@ -190,3 +190,43 @@ contextBridge.exposeInMainWorld('clipboard', {
   writeHTML: (html, text = '') => ipcRenderer.invoke('clipboard:write-html', { html, text }),
   clear: () => ipcRenderer.invoke('clipboard:clear')
 });
+
+// Expose Shared Memory API for zero-copy agent state synchronization
+contextBridge.exposeInMainWorld('sharedMemory', {
+  // Get SharedArrayBuffer from main process
+  getBuffer: () => ipcRenderer.invoke('shared-memory:get-buffer'),
+  
+  // Agent state operations
+  readAgentState: (agentId) => ipcRenderer.invoke('shared-memory:read-agent', agentId),
+  writeAgentState: (agentId, state) => ipcRenderer.invoke('shared-memory:write-agent', agentId, state),
+  listAgents: () => ipcRenderer.invoke('shared-memory:list-agents'),
+  getAgentMetadata: (agentId) => ipcRenderer.invoke('shared-memory:get-metadata', agentId),
+  clearAgentState: (agentId) => ipcRenderer.invoke('shared-memory:clear-agent', agentId),
+  
+  // Agent lifecycle
+  initializeAgent: (agentId) => ipcRenderer.invoke('shared-memory:init-agent', agentId),
+  addConversationTurn: (agentId, role, content) => 
+    ipcRenderer.invoke('shared-memory:add-turn', agentId, role, content),
+  updateEmotionalState: (agentId, mood, intensity) =>
+    ipcRenderer.invoke('shared-memory:update-emotion', agentId, mood, intensity),
+  
+  // Memory statistics
+  getStats: () => ipcRenderer.invoke('shared-memory:get-stats'),
+  
+  // Event subscriptions
+  onStateUpdate: (callback) => {
+    const subscription = (_event, data) => callback(data);
+    ipcRenderer.on('shared-memory:state-updated', subscription);
+    return () => {
+      ipcRenderer.removeListener('shared-memory:state-updated', subscription);
+    };
+  },
+  
+  onAgentRegistered: (callback) => {
+    const subscription = (_event, data) => callback(data);
+    ipcRenderer.on('shared-memory:agent-registered', subscription);
+    return () => {
+      ipcRenderer.removeListener('shared-memory:agent-registered', subscription);
+    };
+  }
+});

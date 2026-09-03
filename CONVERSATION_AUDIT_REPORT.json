@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-09-03T19:52:20.669Z",
+  "bugs": [],
+  "warnings": [
+    {
+      "category": "Reconnection",
+      "issue": "No automatic reconnection logic detected in jarvis-manager",
+      "timestamp": 1788465140162
+    },
+    {
+      "category": "History Config",
+      "issue": "No conversation history configuration",
+      "timestamp": 1788465140165
+    },
+    {
+      "category": "Offline Mode",
+      "issue": "No offline request queuing detected",
+      "timestamp": 1788465140167
+    }
+  ],
+  "summary": {
+    "totalBugs": 0,
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "warnings": 3
+  }
+}
