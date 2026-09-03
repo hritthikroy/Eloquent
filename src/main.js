@@ -2724,7 +2724,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user');
 
-    const historyMessages = jarvisManager.getHistory(12);
+    // 6-turn window: enough for 3 full exchanges of context without overflowing qwen3.8-27b prompt budget
+    const historyMessages = jarvisManager.getHistory(6);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
     const sanitizedHistory = [];
@@ -2748,29 +2749,73 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       { role: 'user', content: userSpeech }
     ];
 
-    const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : (agent.key === 'team' ? 0.72 : 0.65));
+    // Temperature tuning per persona: Tuk Tuk warmer/creative, Andrew precise, Jenny curious, Brian grounded
+    const dynamicTemperature = agent.key === 'tuktuk' ? 0.85 : (agent.key === 'andrew' ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
     const { content, usage, model } = await callGroqChatCompletion(messages, {
       model: 'qwen/qwen3.8-27b',
       temperature: dynamicTemperature,
-      max_tokens: agent.key === 'team' ? 450 : 350,
+      // 420 tokens for regular agents (enough for 2 full spoken sentences + reasoning headroom), 550 for team multi-agent
+      max_tokens: agent.key === 'team' ? 550 : 420,
       timeout: 10000
     });
 
-    const reply = content.trim();
+    let reply = content.trim();
+
+    // ── ALIVE-HUMAN POST-PROCESSOR ──────────────────────────────────────────
+    // Strip robotic openers even if the model ignored the system prompt instruction.
+    // This is the last safety net before the user hears the response.
+    const roboticOpeners = [
+      /^(Certainly|Sure|Of course|Absolutely|Great|Excellent|Indeed|Wonderful|Noted|Understood|Happy to|I'd be happy to|I would be happy to|I'm happy to|I am happy to|Allow me to|Let me help|Of course,|Sure,|Certainly,|Absolutely,|Great!|Sure!|Of course!|Certainly!|Absolutely!|No problem[,!]?|My pleasure[,!]?|Glad to help[,!]?)[\s,!]+/i,
+      /^(As your (partner|co-founder|assistant|AI|engineer|researcher|DevOps|guardian)[,\s]+)/i,
+      /^(That('s| is) (a )?(great|good|wonderful|excellent|interesting|fascinating) (question|point|observation|idea)[,!.]+\s*)/i,
+    ];
+    for (const pattern of roboticOpeners) {
+      reply = reply.replace(pattern, '');
+    }
+    reply = reply.trim();
+
+    // Hard cap at 55 words for spoken delivery — split on last whitespace before the limit
+    // (Team/squad mode gets 75 words since 2 agents speak)
+    const wordCap = agent.key === 'team' ? 75 : 55;
+    const words = reply.split(/\s+/);
+    if (words.length > wordCap) {
+      reply = words.slice(0, wordCap).join(' ');
+      // If we cut mid-sentence, try to end at a natural boundary
+      const lastPunct = Math.max(reply.lastIndexOf('.'), reply.lastIndexOf('?'), reply.lastIndexOf('!'));
+      if (lastPunct > reply.length * 0.55) {
+        reply = reply.slice(0, lastPunct + 1);
+      }
+    }
+    reply = reply.trim();
+
+    // Guaranteed non-empty fallback per agent persona
+    if (!reply || reply.length < 2) {
+      const fallbacks = {
+        tuktuk: `Right here babe. What are we doing?`,
+        andrew: `On it bro. Talk to me.`,
+        jenny: `Wait — tell me more about that.`,
+        brian: `Right here. What do you need?`,
+        team: `[Tuk Tuk]: We are on it.\n[Andrew]: Tell us what to tackle first.`
+      };
+      reply = fallbacks[agent.key] || `Right here. Let's go.`;
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     jarvisManager.addTurn('assistant', reply, agent.name);
 
     const elapsed = Date.now() - startTime;
-    console.log(`⚡ [${agent.name}] responded in ${elapsed}ms using ${model}`);
+    console.log(`⚡ [${agent.name}] responded in ${elapsed}ms using ${model} (${reply.split(/\s+/).length} words)`);
     logApiRequest('jarvis-talk', 'success', elapsed, usage?.total_tokens);
 
     return reply;
   } catch (error) {
     console.error(`❌ [${agent.name}] AI query failed:`, error.message);
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
-    if (agent.key === 'andrew') {
-      return `Bro, I'm right here with you. I'm locked into the codebase and clipboard right now. Let's execute.`;
-    }
-    return `Right here with you, ${jarvisManager.config.salutation}. I'm listening closely. Let's keep going!`;
+    // Persona-aware error fallbacks that still sound alive
+    if (agent.key === 'andrew') return `Bro, still right here — network hiccup. Tell me what to build.`;
+    if (agent.key === 'jenny') return `Hmm, lost connection for a sec. What were you saying?`;
+    if (agent.key === 'brian') return `Systems dipped for a moment. Still here bro, keep going.`;
+    return `Hey, I'm right here. One sec — what did you need?`;
   }
 }
 
