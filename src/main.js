@@ -1892,13 +1892,16 @@ function startRecording() {
       // Wire real voice amplitude from SoX VU meter to overlay, live barge-in, and silence VAD
       audioRecorder.onAmplitude = (amplitude) => {
         // Full-Duplex Overlap: While AI is speaking, detect deliberate user vocal interjection/barge-in
-        // Geigel DTD Equation: |d(n)| >= c * max(|x(n)|)
+        // Geigel DTD Equation + Optical Lip Aperture Overlap:
+        // When camera detects lips moving, user doesn't need to shout to interrupt!
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
-          // Immunity to laptop speaker bleed: Only deliberate, high-energy vocal interjection triggers barge-in
-          if (amplitude >= 0.78) {
+          const isLipsMoving = cameraManager && cameraManager.isActive && cameraManager.isLipMovementDetected();
+          const bargeInThreshold = isLipsMoving ? 0.32 : 0.65; // Ultra-responsive optical barge-in
+
+          if (amplitude >= bargeInThreshold) {
             jarvisBargeInCounter = (jarvisBargeInCounter || 0) + 1;
-            if (jarvisBargeInCounter >= 2) {
-              console.log('⚡ High-energy vocal barge-in detected! Halting AI speech gracefully...');
+            if (jarvisBargeInCounter >= (isLipsMoving ? 1 : 2)) {
+              console.log('⚡ Natural human conversational barge-in detected! Halting AI speech gracefully...');
               lastInterruptedUtterance = jarvisManager.currentUtterance;
               jarvisManager.stopSpeaking();
               jarvisBargeInCounter = 0;
@@ -1910,7 +1913,7 @@ function startRecording() {
           } else {
             jarvisBargeInCounter = 0;
           }
-          return; // Strictly ignore speaker bleed while AI is still speaking
+          return;
         }
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech across all modes
