@@ -1,9 +1,12 @@
-// Gemini Client - High-Level Reasoning, Multimodal Vision & Task Execution Engine
+// Gemini Client - High-Level Reasoning, Multimodal Vision & 24/7 Multi-Key Pool
 const fs = require("fs");
 const path = require("path");
 const https = require("https");
 
-const DEFAULT_GEMINI_API_KEY = "";
+const DEFAULT_GEMINI_API_KEYS = [
+  "",
+  ""
+];
 
 const CANDIDATE_MODELS = [
   "gemini-flash-latest",
@@ -15,53 +18,107 @@ const CANDIDATE_MODELS = [
 ];
 
 class GeminiClient {
-  constructor(apiKey = null, userDataPath = null) {
+  constructor(apiKeys = null, userDataPath = null) {
     this.userDataPath = userDataPath || path.resolve(__dirname, "../../userData");
-    this.apiKey = apiKey || this._loadApiKey();
+    this.apiKeys = this._normalizeKeys(apiKeys) || this._loadApiKeys();
+    this.activeKeyIndex = 0;
     this.models = CANDIDATE_MODELS;
   }
 
-  _loadApiKey() {
-    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
-      return process.env.GEMINI_API_KEY.trim();
+  _normalizeKeys(keys) {
+    if (!keys) return null;
+    if (Array.isArray(keys)) {
+      const valid = keys.filter(k => k && typeof k === "string" && k.trim().length > 10);
+      return valid.length > 0 ? valid : null;
     }
+    if (typeof keys === "string" && keys.trim().length > 10) {
+      return [keys.trim()];
+    }
+    return null;
+  }
+
+  _loadApiKeys() {
+    const keys = [];
+    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
+      keys.push(process.env.GEMINI_API_KEY.trim());
+    }
+    if (process.env.GEMINI_API_KEY_2 && process.env.GEMINI_API_KEY_2.trim()) {
+      keys.push(process.env.GEMINI_API_KEY_2.trim());
+    }
+
     try {
       const adminConfigFile = path.join(this.userDataPath, "admin-config.json");
       if (fs.existsSync(adminConfigFile)) {
         const data = JSON.parse(fs.readFileSync(adminConfigFile, "utf8"));
-        if (data.geminiApiKey && data.geminiApiKey.trim()) {
-          return data.geminiApiKey.trim();
+        if (Array.isArray(data.geminiApiKeys)) {
+          for (const k of data.geminiApiKeys) {
+            if (k && typeof k === "string" && k.trim()) keys.push(k.trim());
+          }
+        }
+        if (data.geminiApiKey && typeof data.geminiApiKey === "string" && data.geminiApiKey.trim()) {
+          keys.push(data.geminiApiKey.trim());
         }
       }
     } catch (e) {
       // Ignore read error
     }
-    return DEFAULT_GEMINI_API_KEY;
+
+    // Merge default master keys to ensure 24/7 uninterrupted uptime
+    for (const defKey of DEFAULT_GEMINI_API_KEYS) {
+      if (!keys.includes(defKey)) {
+        keys.push(defKey);
+      }
+    }
+
+    return [...new Set(keys)];
   }
 
   setApiKey(key) {
     if (!key || typeof key !== "string") return;
-    this.apiKey = key.trim();
+    const trimmed = key.trim();
+    if (!this.apiKeys.includes(trimmed)) {
+      this.apiKeys.unshift(trimmed);
+    }
+    this.persistKeys();
+  }
+
+  addApiKey(key) {
+    this.setApiKey(key);
+  }
+
+  persistKeys() {
     try {
       const adminConfigFile = path.join(this.userDataPath, "admin-config.json");
       let data = {};
       if (fs.existsSync(adminConfigFile)) {
         data = JSON.parse(fs.readFileSync(adminConfigFile, "utf8"));
       }
-      data.geminiApiKey = this.apiKey;
+      data.geminiApiKey = this.getActiveKey();
+      data.geminiApiKeys = this.apiKeys;
       fs.writeFileSync(adminConfigFile, JSON.stringify(data, null, 2), "utf8");
-      console.log("✅ [Gemini Client] API key persisted to admin-config.json");
+      console.log(`✅ [Gemini Client] ${this.apiKeys.length} API keys persisted to admin-config.json`);
     } catch (err) {
-      console.warn("⚠️ [Gemini Client] Could not persist API key:", err.message);
+      console.warn("⚠️ [Gemini Client] Could not persist API keys:", err.message);
     }
   }
 
-  getApiKey() {
-    return this.apiKey || DEFAULT_GEMINI_API_KEY;
+  getActiveKey() {
+    if (!this.apiKeys || this.apiKeys.length === 0) {
+      return DEFAULT_GEMINI_API_KEYS[0];
+    }
+    return this.apiKeys[this.activeKeyIndex % this.apiKeys.length];
+  }
+
+  rotateToNextKey() {
+    if (this.apiKeys.length > 1) {
+      this.activeKeyIndex = (this.activeKeyIndex + 1) % this.apiKeys.length;
+      console.log(`🔄 [Gemini Key Pool] Rotated to Key #${this.activeKeyIndex + 1} of ${this.apiKeys.length}`);
+    }
+    return this.getActiveKey();
   }
 
   isConfigured() {
-    return Boolean(this.getApiKey() && this.getApiKey().length > 10);
+    return Boolean(this.apiKeys && this.apiKeys.length > 0);
   }
 
   /**
@@ -86,7 +143,6 @@ class GeminiClient {
       }
     }
 
-    // Ensure at least one user turn exists
     if (contents.length === 0) {
       contents.push({
         role: "user",
@@ -94,7 +150,6 @@ class GeminiClient {
       });
     }
 
-    // If an image is provided, attach it to the latest user message
     if (options.imagePath && fs.existsSync(options.imagePath)) {
       try {
         const imageBuffer = fs.readFileSync(options.imagePath);
@@ -137,10 +192,9 @@ class GeminiClient {
   /**
    * Send single REST generateContent request to a specific Gemini model
    */
-  _requestGenerateContent(modelName, payload, timeoutMs = 12000) {
+  _requestGenerateContent(modelName, apiKey, payload, timeoutMs = 12000) {
     return new Promise((resolve) => {
       const postData = JSON.stringify(payload);
-      const apiKey = this.getApiKey();
 
       const req = https.request({
         hostname: "generativelanguage.googleapis.com",
@@ -208,11 +262,11 @@ class GeminiClient {
   }
 
   /**
-   * Main chat completion with automatic fallback through candidate Gemini models
+   * Main chat completion with multi-key pool rotation and multi-model fallback
    */
   async callChatCompletion(messages, options = {}) {
     if (!this.isConfigured()) {
-      throw new Error("Gemini API key is not configured");
+      throw new Error("Gemini API keys are not configured");
     }
 
     const payload = this._formatGeminiPayload(messages, options);
@@ -220,30 +274,38 @@ class GeminiClient {
     const uniqueModels = [...new Set(candidateModels)];
 
     let lastError = null;
+    const initialKeyCount = this.apiKeys.length;
 
-    for (const modelName of uniqueModels) {
-      try {
-        console.log(`✨ [Gemini Engine] Querying model: ${modelName}...`);
-        const result = await this._requestGenerateContent(modelName, payload, options.timeout || 12000);
+    // Try keys in rotation
+    for (let k = 0; k < initialKeyCount; k++) {
+      const currentApiKey = this.getActiveKey();
 
-        if (result.status === 200 && result.content && result.content.length > 0) {
-          console.log(`✅ [Gemini Engine] ${modelName} completed response (${result.content.length} chars)`);
-          return {
-            content: result.content,
-            model: modelName,
-            usage: result.usage
-          };
+      for (const modelName of uniqueModels) {
+        try {
+          const result = await this._requestGenerateContent(modelName, currentApiKey, payload, options.timeout || 12000);
+
+          if (result.status === 200 && result.content && result.content.length > 0) {
+            return {
+              content: result.content,
+              model: modelName,
+              usage: result.usage
+            };
+          }
+
+          if (result.status === 429) {
+            console.warn(`⚠️ [Gemini Key #${this.activeKeyIndex + 1}] Quota exceeded (429). Rotating to next fallback key...`);
+            this.rotateToNextKey();
+            break; // Break inner model loop to retry with new key
+          }
+
+          lastError = new Error(result.error || `Gemini status ${result.status}`);
+        } catch (err) {
+          lastError = err;
         }
-
-        console.warn(`⚠️ [Gemini Engine] Model ${modelName} returned status ${result.status}: ${result.error}. Trying next model...`);
-        lastError = new Error(result.error || `Gemini status ${result.status}`);
-      } catch (err) {
-        console.warn(`⚠️ [Gemini Engine] Exception on model ${modelName}:`, err.message);
-        lastError = err;
       }
     }
 
-    throw lastError || new Error("All candidate Gemini models failed");
+    throw lastError || new Error("All candidate Gemini models and API keys exhausted");
   }
 
   /**
@@ -318,11 +380,11 @@ ${context.additionalContext ? `\nAdditional Context: ${context.additionalContext
   }
 }
 
-// Export singleton instance initialized with default key
+// Export singleton instance initialized with default keys
 const defaultGeminiClient = new GeminiClient();
 
 module.exports = {
   GeminiClient,
   geminiClient: defaultGeminiClient,
-  DEFAULT_GEMINI_API_KEY
+  DEFAULT_GEMINI_API_KEYS
 };

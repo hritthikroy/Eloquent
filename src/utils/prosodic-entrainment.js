@@ -108,23 +108,18 @@ class ProsodicEntrainmentAdapter {
   }
 
   /**
-   * Get rate string formatted for MsEdgeTTS (+4%, -3%, etc.)
+   * Get rate string formatted for MsEdgeTTS - stabilized for natural human warmth
    */
   getRateString() {
-    const ratePercent = Math.round((this.agentRate - 1.0) * 100);
-    return ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
+    // Keep rate tightly grounded to natural baseline to prevent unnatural sped-up speech
+    return "+0%";
   }
 
   /**
-   * Calculate dynamic pitch based on affective valence/arousal
+   * Calculate dynamic pitch - preserve natural studio neural acoustic resonance
    */
   getPitchString(replyText = "") {
-    if (this.currentVibe.cognitiveMode === "LATE_NIGHT_REFLECTIVE" || this.currentVibe.arousal < 0.35) {
-      return "-2Hz";
-    }
-    if (this.currentVibe.cognitiveMode === "EUREKA_BREAKTHROUGH" || this.currentVibe.arousal > 0.7) {
-      return "+2Hz";
-    }
+    // Maintain neutral pitch (+0Hz) to prevent unnatural pitch shifts or artifacts
     return "+0Hz";
   }
 }

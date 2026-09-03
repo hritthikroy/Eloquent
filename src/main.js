@@ -1903,13 +1903,7 @@ function startRecording() {
             const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 150);
             const isMaxSpeechCap = speechDurationMs >= 10000;
 
-            // Active Listening Micro-Backchannel Trigger (VAP-BC / Hume Standard)
-            // Emits an unintrusive "mhm" / "yeah" during mid-utterance breathing pauses (>3.8s speech)
-            const timeSinceLastBC = Date.now() - jarvisLastBackchannelTime;
-            if (!isSpeechFrame && voicedDurationMs >= 3800 && silenceMs >= 350 && silenceMs <= 600 && timeSinceLastBC >= 5000) {
-              jarvisLastBackchannelTime = Date.now();
-              jarvisManager.playMicroBackchannel();
-            }
+            // Standard natural pause detection for dynamic conversational flow
 
             if (isNaturalPause || isMaxSpeechCap) {
               const reason = isMaxSpeechCap ? "10s max speech cap" : `${silenceMs}ms natural pause`;
@@ -1977,11 +1971,6 @@ async function stopRecording() {
   isRecording = false;
   console.log('🛑 Stopping recording...');
   stopLiveStreaming();
-
-  // Instant zero-lag human conversational filler (<80ms)
-  if (currentMode === 'jarvis' && jarvisSpeechDetected) {
-    jarvisManager.playInstantTurnFiller((currentActiveAgent && currentActiveAgent.name) || "Tuk Tuk");
-  }
 
   // Instantly hide overlay for standard/rewrite - keep open for Jarvis to show status
   if (currentMode !== 'jarvis' && overlayWindow && !overlayWindow.isDestroyed()) {
