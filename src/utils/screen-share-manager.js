@@ -39,10 +39,10 @@ class ScreenShareManager {
     // Capture initial frame immediately
     this.captureFrame();
 
-    // Start 2.5s continuous streaming loop
+    // Ultra-low CPU idle background heartbeat (7s) - only active when user toggles screen share
     this.interval = setInterval(() => {
       this.captureFrame();
-    }, 2500);
+    }, 7000);
 
     return true;
   }
