@@ -2112,9 +2112,6 @@ async function stopRecording() {
         overlayWindow.webContents.send('jarvis-thinking');
       }
 
-      // Play instant acoustic turn filler (<50ms) to hold conversational floor while LLM generates in parallel
-      jarvisManager.playInstantTurnFiller(activeAgent.name);
-
       if (prefChange) {
         if (prefChange.type === 'name') {
           jarvisReply = `Understood. I will call you ${prefChange.value} from now on.`;
