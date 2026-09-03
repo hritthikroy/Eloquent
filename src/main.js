@@ -2519,7 +2519,8 @@ async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
     options.model,
     'qwen/qwen3.8-27b',
-    'llama-3.3-70b-versatile',
+    'groq/compound-mini',
+    'openai/gpt-oss-120b',
     CONFIG.aiModel,
     process.env.GROQ_MODEL
   ].filter(Boolean);
@@ -2550,7 +2551,12 @@ async function callGroqChatCompletion(messages, options = {}) {
         return { content: response.data.choices[0].message.content, model: model, usage: response.data.usage };
       }
 
-      console.warn(`⚠️ Model ${model} returned status ${response.status}, attempting fallback...`);
+      if (response.status === 429) {
+        console.warn(`⚠️ Model ${model} rate-limited (429). Exponential backoff 850ms...`);
+        await new Promise(r => setTimeout(r, 850));
+      } else {
+        console.warn(`⚠️ Model ${model} returned status ${response.status}, attempting fallback...`);
+      }
       lastError = new Error(response.data?.error?.message || `API error: ${response.status}`);
     } catch (err) {
       console.warn(`⚠️ Model ${model} failed (${err.message}), attempting fallback...`);

@@ -453,8 +453,9 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     }
   }
 
-  getHistory() {
-    return this.conversationHistory.map(t => ({
+  getHistory(maxTurns = 6) {
+    const recent = this.conversationHistory.slice(-maxTurns);
+    return recent.map(t => ({
       role: t.role,
       content: t.content
     }));
