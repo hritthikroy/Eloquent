@@ -1001,6 +1001,17 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         }
 
         const generatedPath = res.audioFilePath;
+        let finalPlaybackPath = generatedPath;
+
+        // Human Acoustic Polish: Apply subtle chest warmth (+1.5dB bass) and plate resonance
+        // Eliminates flat synthetic transducer dryness
+        const polishedPath = path.join(tempDir, "polished.wav");
+        try {
+          execSync(`sox "${generatedPath}" "${polishedPath}" bass +1.5 treble +0.5 norm -0.5 2>/dev/null`, { timeout: 1500 });
+          if (fs.existsSync(polishedPath)) {
+            finalPlaybackPath = polishedPath;
+          }
+        } catch (e) {}
 
         // Instant process termination if previous speech is still playing
         if (this.activeSpeechProcess) {
@@ -1017,7 +1028,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 
           this.stopFiller();
           this.isSpeaking = true;
-          this.activeSpeechProcess = spawn("afplay", ["-q", "1", generatedPath]);
+          this.activeSpeechProcess = spawn("afplay", ["-q", "1", finalPlaybackPath]);
 
           this.activeSpeechProcess.on("close", (code) => {
             // 50ms speaker decay — crisp fade before mic re-arms
