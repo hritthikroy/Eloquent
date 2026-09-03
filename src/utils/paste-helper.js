@@ -108,31 +108,27 @@ class PasteHelper {
       // Ignore check errors and proceed to osascript
     }
 
-    // Use AppleScript with Cmd+V
+    const { execFile } = require('child_process');
     const pasteScript = `tell application "System Events" to keystroke "v" using command down`;
     
     return new Promise((resolve) => {
-      setTimeout(() => {
-        exec(`osascript -e '${pasteScript}'`, (error) => {
-          if (error) {
-            console.log('⚠️ AppleScript paste failed:', error.message);
-            
-            // Try cliclick as backup
-            exec('cliclick kd:cmd t:v ku:cmd', (cliclickError) => {
-              if (cliclickError) {
-                console.log('⚠️ cliclick also failed:', cliclickError.message);
-                resolve(false);
-              } else {
-                console.log('✅ Auto-paste successful (cliclick)');
-                resolve(true);
-              }
-            });
-          } else {
-            console.log('✅ Auto-paste successful (AppleScript)');
-            resolve(true);
-          }
-        });
-      }, 100); // Small delay to ensure focus is on target app
+      execFile('osascript', ['-e', pasteScript], (error) => {
+        if (error) {
+          console.log('⚠️ AppleScript paste failed:', error.message);
+          exec('cliclick kd:cmd t:v ku:cmd', (cliclickError) => {
+            if (cliclickError) {
+              console.log('⚠️ cliclick also failed:', cliclickError.message);
+              resolve(false);
+            } else {
+              console.log('✅ Auto-paste successful (cliclick)');
+              resolve(true);
+            }
+          });
+        } else {
+          console.log('✅ Auto-paste successful (Instant AppleScript)');
+          resolve(true);
+        }
+      });
     });
   }
 

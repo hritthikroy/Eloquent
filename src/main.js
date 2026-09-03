@@ -2367,9 +2367,7 @@ async function stopRecording() {
     if (wordsToReplace > 0 && process.platform === 'darwin') {
       replaceLiveWordsWithFinal(wordsToReplace, finalText);
     } else {
-      setTimeout(() => {
-        pasteTextRobust(finalText);
-      }, 50);
+      pasteTextRobust(finalText);
     }
 
     // Track API usage locally
@@ -2468,6 +2466,7 @@ async function transcribe(filePath) {
             ...form.getHeaders(),
             'Authorization': `Bearer ${getActiveAPIKey()}`
           },
+          httpsAgent: groqKeepAliveAgent,
           timeout: uploadTimeout,
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
