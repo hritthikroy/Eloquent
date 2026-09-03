@@ -150,6 +150,31 @@ class AntigravityEngine {
       // -------------------------------------------------------------
       taskRecord.steps.push({ action: "autonomous_reasoning", target: taskPrompt });
 
+      // If Gemini High-Level Engine is configured, run deep reasoning first
+      const gemini = options.geminiClient || require("./gemini-client").geminiClient;
+      if (gemini && gemini.isConfigured()) {
+        try {
+          const taskRes = await gemini.executeHighLevelTask(taskPrompt, {
+            additionalContext: "Antigravity Auto-Mode execution for Andrew (Lead Software Engineer)"
+          });
+          if (taskRes && taskRes.result) {
+            const spokenAnswer = taskRes.result.trim().replace(/[*#_`~[\]()]/g, "");
+            taskRecord.status = "success";
+            taskRecord.result = spokenAnswer;
+            this._saveTaskLog(taskRecord);
+            const elapsed = Date.now() - startTime;
+            console.log(`✅ [Antigravity Auto-Mode] Gemini Task #${taskId} finished in ${elapsed}ms using ${taskRes.model}`);
+            return {
+              success: true,
+              taskId,
+              speech: spokenAnswer
+            };
+          }
+        } catch (gemErr) {
+          console.warn("⚠️ [Antigravity] Gemini task fallback:", gemErr.message);
+        }
+      }
+
       // If callGroqChatCompletion is provided in options, run deep Antigravity code reasoning
       if (options.callGroqChatCompletion && typeof options.callGroqChatCompletion === "function") {
         const systemPrompt = `You are the Google Antigravity Autonomous Engine executing for Andrew (Lead Software Engineer) and Hritthik (Creator of Eloquent).

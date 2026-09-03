@@ -53,6 +53,7 @@ const actionRunner = require('./utils/action-runner');
 const screenShareManager = require('./utils/screen-share-manager');
 const { registerLibboardIpcHandlers } = require('./main/ipcHandlers');
 const { StateManager } = require('./main/stateManager');
+const { geminiClient } = require('./utils/gemini-client');
 
 // Ultra-Fast Persistent HTTPS Agent with TCP Keep-Alive for Zero Connection Overhead
 const https = require('https');
@@ -199,6 +200,7 @@ const CONFIG = {
     process.env.GROQ_API_KEY_4 || '', // API Key 4 (optional)
     process.env.GROQ_API_KEY_5 || ''  // API Key 5 (optional)
   ],
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
   language: process.env.LANGUAGE || 'en',
   customDictionary: '',
   aiMode: process.env.AI_MODE || 'auto',
@@ -211,6 +213,7 @@ const CONFIG = {
 // Admin configuration
 const ADMIN_CONFIG = {
   masterApiKey: process.env.GROQ_API_KEY || '',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
   dailyLimit: 1000,
   rateLimitPerUser: 100,
   users: [],
@@ -2154,7 +2157,7 @@ async function stopRecording() {
         }
 
         // Check if specialist executes an automated system action
-        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion);
+        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
         if (actionResult && actionResult.handled) {
           console.log(`⚡ Specialist Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
           jarvisReply = actionResult.speech;
@@ -2173,7 +2176,7 @@ async function stopRecording() {
         // activeAgent already pre-detected above from detectActiveAgent(originalText)
         console.log(`🎯 Routing query to specialist: ${activeAgent.name} (${activeAgent.role})`);
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
-        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion);
+        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
             console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
@@ -2626,6 +2629,23 @@ async function callGroqChatCompletion(messages, options = {}) {
     }
   }
 
+  // High-Level Cognitive Failover: Engage Google Gemini Engine if Groq endpoints exhausted
+  if (geminiClient && geminiClient.isConfigured()) {
+    try {
+      console.log('✨ [AI Failover] Groq models exhausted. Invoking Google Gemini High-Level Engine...');
+      const geminiRes = await geminiClient.callChatCompletion(messages, options);
+      if (geminiRes && geminiRes.content) {
+        return {
+          content: geminiRes.content,
+          model: `gemini/${geminiRes.model}`,
+          usage: geminiRes.usage
+        };
+      }
+    } catch (geminiErr) {
+      console.warn('⚠️ [AI Failover] Gemini fallback error:', geminiErr.message);
+    }
+  }
+
   throw lastError || new Error('All candidate AI models failed.');
 }
 
@@ -3070,6 +3090,7 @@ function saveAdminConfigToFile() {
     adminConfigSaveTimer = null;
     try {
       const adminConfigFile = path.join(app.getPath('userData'), 'admin-config.json');
+      ADMIN_CONFIG.geminiApiKey = geminiClient.getApiKey();
       fs.writeFile(adminConfigFile, JSON.stringify(ADMIN_CONFIG, null, 2), (err) => {
         if (err) console.error('❌ Error saving admin config async:', err.message);
       });
@@ -3090,6 +3111,11 @@ function loadAdminConfigFromFile() {
       
       // Merge saved config with defaults
       if (savedAdminConfig.masterApiKey) ADMIN_CONFIG.masterApiKey = savedAdminConfig.masterApiKey;
+      if (savedAdminConfig.geminiApiKey) {
+        ADMIN_CONFIG.geminiApiKey = savedAdminConfig.geminiApiKey;
+        CONFIG.geminiApiKey = savedAdminConfig.geminiApiKey;
+        geminiClient.setApiKey(savedAdminConfig.geminiApiKey);
+      }
       if (savedAdminConfig.dailyLimit) ADMIN_CONFIG.dailyLimit = savedAdminConfig.dailyLimit;
       if (savedAdminConfig.rateLimitPerUser) ADMIN_CONFIG.rateLimitPerUser = savedAdminConfig.rateLimitPerUser;
       if (savedAdminConfig.users) ADMIN_CONFIG.users = savedAdminConfig.users;
@@ -3100,7 +3126,7 @@ function loadAdminConfigFromFile() {
         CONFIG.apiKeys[0] = ADMIN_CONFIG.masterApiKey;
       }
       
-      console.log(`🔑 Loaded admin config with ${ADMIN_CONFIG.users.length} users`);
+      console.log(`🔑 Loaded admin config with ${ADMIN_CONFIG.users.length} users and Gemini Key configured: ${geminiClient.isConfigured()}`);
     } else {
       console.log('📋 No saved admin config found, using defaults');
     }

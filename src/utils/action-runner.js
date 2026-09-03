@@ -11,9 +11,50 @@ class OfficeActionRunner {
     this.antigravity = new AntigravityEngine(this.projectDir);
   }
 
-  async handleAction(speechText, activeAgent, jarvisManager = null, callGroqChatCompletion = null) {
+  async handleAction(speechText, activeAgent, jarvisManager = null, callGroqChatCompletion = null, geminiClient = null) {
     if (!speechText || typeof speechText !== "string") return { handled: false };
     const lower = speechText.toLowerCase().trim();
+
+    // -------------------------------------------------------------
+    // HIGH-LEVEL GEMINI COGNITIVE REASONING & MULTIMODAL VISION TASK
+    // -------------------------------------------------------------
+    const clientToUse = geminiClient || require("./gemini-client").geminiClient;
+    const isGeminiQuery = lower.includes("gemini") || lower.includes("high level task") || lower.includes("deep reasoning") ||
+      lower.includes("analyze my screen") || lower.includes("look at my screen") || lower.includes("what is on my screen") ||
+      lower.includes("check my screen") || lower.includes("inspect screen") || lower.includes("deep architecture review");
+
+    if (isGeminiQuery && clientToUse && clientToUse.isConfigured()) {
+      console.log(`✨ [ActionRunner] Activating Google Gemini High-Level Engine for: "${speechText}"`);
+      const screenPath = "/tmp/eloquent_screenshare.jpg";
+      const hasScreen = fs.existsSync(screenPath);
+      const isScreenQuery = lower.includes("screen") || lower.includes("look at") || lower.includes("what is on");
+
+      try {
+        if (hasScreen && isScreenQuery) {
+          const visionRes = await clientToUse.analyzeScreen(screenPath, speechText);
+          const cleanSpeech = visionRes.content.replace(/[*#_`~[\]()]/g, "").trim();
+          return {
+            handled: true,
+            agentName: activeAgent?.name || "Andrew",
+            agentVoice: activeAgent?.voice || "en-US-AndrewNeural",
+            speech: cleanSpeech
+          };
+        } else {
+          const taskRes = await clientToUse.executeHighLevelTask(speechText, {
+            additionalContext: `Triggered by agent: ${activeAgent?.name || "Andrew"}`
+          });
+          const cleanSpeech = taskRes.result.replace(/[*#_`~[\]()]/g, "").trim();
+          return {
+            handled: true,
+            agentName: activeAgent?.name || "Andrew",
+            agentVoice: activeAgent?.voice || "en-US-AndrewNeural",
+            speech: cleanSpeech
+          };
+        }
+      } catch (gemErr) {
+        console.warn("⚠️ [ActionRunner] Gemini task execution error:", gemErr.message);
+      }
+    }
 
     // -------------------------------------------------------------
     // LIVING MEMORY & SELF-LEARNED INSIGHTS (Self-Updating Brain)
