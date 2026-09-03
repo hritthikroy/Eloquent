@@ -1768,6 +1768,7 @@ function startRecording() {
   }
 
   // Independent 60ms VAD Heartbeat: Checks silence continuously regardless of SoX stderr buffering
+  const jarvisSessionStartTime = Date.now();
   if (currentMode === 'jarvis') {
     jarvisVadHeartbeat = setInterval(() => {
       if (!isRecording || currentMode !== 'jarvis' || jarvisAutoStopTriggered) {
@@ -1781,15 +1782,21 @@ function startRecording() {
       if (jarvisManager.isSpeaking) {
         return;
       }
-      if (jarvisSpeechDetected && jarvisSpeechFrames >= 4) {
+
+      // Confirmed speech: 2+ frames (~150-200ms) of real voice
+      if (jarvisSpeechDetected && jarvisSpeechFrames >= 2) {
         const silenceMs = Date.now() - jarvisLastSpeechTime;
         const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
-        // Dual-Horizon Adaptive Silence Threshold (Academic Standard):
-        // 1100ms floor-holding for mid-thought pauses, gaps & breaths; 850ms for completed sentences
-        const dynamicSilenceThreshold = voicedDurationMs >= 1800 ? 850 : 1100;
+        const totalDurationMs = Date.now() - jarvisSpeechStartTime;
 
-        if (silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 300) {
-          console.log(`🗣️ VAD Heartbeat: Natural pause detected (${silenceMs}ms silence after ${voicedDurationMs}ms voiced speech) - auto-submitting!`);
+        // Dual-Horizon Adaptive Silence Threshold:
+        // 950ms for short words/thoughts with thinking gaps; 800ms for completed sentences
+        const dynamicSilenceThreshold = voicedDurationMs >= 1400 ? 800 : 950;
+        const isMaxSpeechCap = totalDurationMs >= 10000;
+
+        if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 150) || isMaxSpeechCap) {
+          const reason = isMaxSpeechCap ? "10s max speech ceiling" : `${silenceMs}ms natural pause`;
+          console.log(`🗣️ VAD Heartbeat: Turn completion detected (${reason}, ${voicedDurationMs}ms speech) - auto-submitting!`);
           jarvisAutoStopTriggered = true;
           if (jarvisVadHeartbeat) {
             clearInterval(jarvisVadHeartbeat);
@@ -1797,6 +1804,15 @@ function startRecording() {
           }
           stopRecording();
         }
+      } else if (!jarvisSpeechDetected && (Date.now() - jarvisSessionStartTime >= 12000)) {
+        // Idle safety: If open for 12 seconds with zero speech, auto-stop cleanly
+        console.log('⏱️ VAD Heartbeat: 12s idle with no speech detected - auto-stopping.');
+        jarvisAutoStopTriggered = true;
+        if (jarvisVadHeartbeat) {
+          clearInterval(jarvisVadHeartbeat);
+          jarvisVadHeartbeat = null;
+        }
+        stopRecording();
       }
     }, 60);
   }
@@ -1832,7 +1848,7 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech
         if (currentMode === 'jarvis' && isRecording && !jarvisAutoStopTriggered) {
-          const SPEECH_THRESHOLD = 0.12; // Sensitive to real human voice
+          const SPEECH_THRESHOLD = 0.08; // High sensitivity to human phonemes in SoX VU meter
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
 
           if (isSpeechFrame) {
@@ -1844,20 +1860,19 @@ function startRecording() {
             jarvisSpeechFrames++;
           }
 
-          if (jarvisSpeechDetected && jarvisSpeechFrames >= 4) {
+          if (jarvisSpeechDetected && jarvisSpeechFrames >= 2) {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
             const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
             // Dual-Horizon Adaptive Silence Threshold:
-            // 1100ms for short/fragmented speech with gaps & breathing; 850ms for completed sentences
-            const dynamicSilenceThreshold = voicedDurationMs >= 1800 ? 850 : 1100;
-            const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 300);
-            // 15s max speech cap so long complex thoughts are never severed
-            const isMaxSpeechCap = speechDurationMs >= 15000;
+            // 950ms for short/fragmented speech with gaps; 800ms for completed sentences
+            const dynamicSilenceThreshold = voicedDurationMs >= 1400 ? 800 : 950;
+            const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 150);
+            const isMaxSpeechCap = speechDurationMs >= 10000;
 
             if (isNaturalPause || isMaxSpeechCap) {
-              const reason = isMaxSpeechCap ? "15s max speech cap" : `${silenceMs}ms natural pause`;
+              const reason = isMaxSpeechCap ? "10s max speech cap" : `${silenceMs}ms natural pause`;
               console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${voicedDurationMs}ms voiced speech)...`);
               jarvisAutoStopTriggered = true;
               if (jarvisVadHeartbeat) {
@@ -1868,8 +1883,8 @@ function startRecording() {
             }
           } else if (jarvisSpeechDetected && !isSpeechFrame) {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
-            // Noise blip filter: If fewer than 4 frames of voice and > 1.2s silence, reset cleanly
-            if (silenceMs > 1200 && jarvisSpeechFrames < 4) {
+            // Noise blip filter: If fewer than 2 frames and > 1.2s silence, reset
+            if (silenceMs > 1200 && jarvisSpeechFrames < 2) {
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
               jarvisLastSpeechTime = 0;

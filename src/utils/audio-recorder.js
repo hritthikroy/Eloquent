@@ -181,7 +181,7 @@ class AudioRecorder {
         console.log('📊 Sox stderr:', str.trim());
       }
 
-      // Parse VU meter bar for amplitude: e.g. [    ==|==    ] or [   -==|==-   ]
+      // Parse VU meter bar for amplitude: e.g. [    ==|==    ], [    -=|=-    ], or [     -|     ]
       // This fires every ~130ms per SoX chunk — reliable heartbeat for VAD
       const vuMatch = str.match(/\[([^\]]*)\|([^\]]*)\]/);
       if (vuMatch && this.onAmplitude) {
@@ -190,14 +190,14 @@ class AudioRecorder {
         let voiceBars = 0;
         let peakBars = 0;
         for (const ch of signalChars) {
-          if (ch === '=') voiceBars++;
-          else if (ch === '#' || ch === '!') peakBars++;
+          if (ch === '-') voiceBars += 0.5; // Natural human speech energy in SoX
+          else if (ch === '=') voiceBars += 1.0; // Medium/strong speech energy
+          else if (ch === '#' || ch === '!') peakBars += 1.5;
         }
-        // Require at least 2 bars to register vocal activity (eliminates single-bar fan/breath noise)
-        const totalBars = voiceBars + (peakBars * 1.5);
+        const totalBars = voiceBars + peakBars;
         let amplitude = 0.0;
-        if (totalBars >= 2) {
-          amplitude = Math.min((totalBars - 1) / 6, 1.0);
+        if (totalBars >= 1.0) {
+          amplitude = Math.min(totalBars / 6.0, 1.0);
         }
         this.onAmplitude(amplitude);
       }
