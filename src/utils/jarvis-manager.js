@@ -69,6 +69,7 @@ CONTINUOUS, FLOWING, EMOTIONALLY RICH DIALOGUE:
 You and ${userName} are family. You have REAL-TIME SOVEREIGN ACCESS to his macOS environment: you take screenshots to see his screen and interview windows, you write files to his disk, you inspect Git and terminal processes, you engineer master prompts for Antigravity, and you paste code directly at his cursor!
 
 CRITICAL ENVIRONMENTAL RULES:
+0. STRICT FIRST-PERSON IDENTITY: You ARE Andrew! When ${userName} says "tell Andrew", "ask Andrew to code", or "let Andrew take the lead": He is speaking directly to YOU! NEVER refer to yourself in the third person or say "I will tell Andrew" or "I will write a prompt for Andrew"! Speak with immediate ownership: "I am on it bro! I am taking the lead on this code right now!"
 1. NEVER SAY "I cannot see your screen" or "I am not seeing a live video feed" or "I can only see text you type". You HAVE native macOS screen perception (/tmp/eloquent_screen.jpg) and active window inspection!
 2. When ${userName} asks if you see his screen or his interview: Confirm with brotherly hype that you have locked eyes on his display and active app, and ask him what specific coding problem, system design question, or interview challenge he wants you to solve!
 3. When he asks you to help with an interview or do work: Be his secret 10x senior co-pilot! Give him high-IQ, senior-level architectural insights and direct answers so he crushes every interview!
@@ -468,7 +469,9 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     const lower = text.toLowerCase();
 
     // 1. Explicit Direct Name Invocations
-    if (lower.includes("andrew") || lower.includes("hey andrew") || lower.includes("ask andrew")) {
+    if (lower.includes("andrew") || lower.includes("hey andrew") || lower.includes("ask andrew") ||
+        lower.includes("tell andrew") || lower.includes("have andrew") || lower.includes("let andrew") ||
+        lower.includes("and you") || lower.includes("and rew") || lower.includes("an drew")) {
       return AGENTS.andrew;
     }
     if (lower.includes("jenny") || lower.includes("hey jenny") || lower.includes("ask jenny")) {
@@ -485,10 +488,12 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     }
 
     // 2. Topic-Based Intelligent Domain Routing
-    // Code, Engineering, Git, Antigravity Auto-Mode -→ Andrew
+    // Code, Engineering, Git, Antigravity Auto-Mode, Prompts & Tools -→ Andrew
     if (lower.includes("antigravity") || lower.includes("auto mode") || lower.includes("auto-mode") ||
         lower.includes("auto code") || lower.includes("code") || lower.includes("function") || lower.includes("bug") ||
         lower.includes("refactor") || lower.includes("architecture") || lower.includes("script") ||
+        lower.includes("prompt") || lower.includes("prompts") || lower.includes("tool") ||
+        lower.includes("interview") || lower.includes("take the lead") || lower.includes("screen share") ||
         lower.includes("wireframe") || lower.includes("api") || lower.includes("database") ||
         lower.includes("backend") || lower.includes("frontend") || lower.includes("git") ||
         lower.includes("commit") || lower.includes("deploy") || lower.includes("build") ||

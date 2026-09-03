@@ -2073,7 +2073,10 @@ async function stopRecording() {
       // 1. Acoustic Phonetic Normalization for Project Terms
       originalText = originalText
         .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
-        .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk');
+        .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk')
+        .replace(/\band you\b(?=\s+(check|modify|write|tell|see|look|help|code|build|refactor|take|run|fix|draft|craft|inspect))/gi, 'Andrew')
+        .replace(/\b(?:and\s*rew|an\s*drew)\b/gi, 'Andrew')
+        .replace(/\b(on this course)\b/gi, 'on this code');
 
       // 2. Backchannel Self-Echo Blinding Filter
       const timeSinceBC = Date.now() - (jarvisLastBackchannelTime || 0);
@@ -2141,7 +2144,7 @@ async function stopRecording() {
         }
 
         // Check if specialist executes an automated system action
-        actionResult = await actionRunner.handleAction(originalText, activeAgent);
+        actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion);
         if (actionResult && actionResult.handled) {
           console.log(`⚡ Specialist Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
           jarvisReply = actionResult.speech;
