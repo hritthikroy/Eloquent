@@ -991,6 +991,51 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     console.log(`✨ [Active Listening Backchannel] Tuk Tuk emitted micro-paralinguistic nod: ${path.basename(chosen)}`);
     return true;
   }
+
+  /**
+   * Play an immediate zero-latency conversational filler (<80ms) upon turn end
+   * Completely bridges the gap between user stopping speech and LLM first-clause output!
+   */
+  playInstantTurnFiller(agentName = "Tuk Tuk") {
+    if (this.isSpeaking) return false;
+    this.stopFiller();
+
+    const soundsDir = path.resolve(__dirname, "../../userData/sounds");
+    const isAndrew = (agentName || "").toLowerCase().includes("andrew");
+
+    let candidateFiles = isAndrew ? [
+      path.join(soundsDir, "fill_andrew_onit.mp3"),
+      path.join(soundsDir, "fill_andrew_gotchu.mp3")
+    ] : [
+      path.join(soundsDir, "fill_tuktuk_hmm.mp3"),
+      path.join(soundsDir, "fill_tuktuk_letsee.mp3"),
+      path.join(soundsDir, "fill_tuktuk_yeah.mp3"),
+      path.join(soundsDir, "fill_tuktuk_mhm.mp3")
+    ];
+
+    const available = candidateFiles.filter(f => fs.existsSync(f));
+    if (available.length === 0) return false;
+
+    const chosen = available[Math.floor(Math.random() * available.length)];
+    // Natural human conversational fill volume (0.50)
+    try {
+      this.currentFillerProcess = spawn("afplay", ["-v", "0.50", chosen], { stdio: "ignore" });
+      console.log(`⚡ [Zero-Lag Human Filler] ${agentName} played instant gap-filler: ${path.basename(chosen)}`);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  stopFiller() {
+    if (this.currentFillerProcess) {
+      try {
+        this.currentFillerProcess.kill("SIGTERM");
+      } catch (e) {}
+      this.currentFillerProcess = null;
+    }
+  }
 }
 
 module.exports = JarvisManager;
+

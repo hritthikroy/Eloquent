@@ -1791,9 +1791,9 @@ function startRecording() {
         const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
         const totalDurationMs = Date.now() - jarvisSpeechStartTime;
 
-        // Dual-Horizon Adaptive Silence Threshold:
-        // 950ms for short words/thoughts with thinking gaps; 800ms for completed sentences
-        const dynamicSilenceThreshold = voicedDurationMs >= 1400 ? 800 : 950;
+        // Dual-Horizon Adaptive Silence Threshold (Human Snappy Turn-Taking):
+        // 480ms for voiced sentences (human cadence); 650ms for short thoughts
+        const dynamicSilenceThreshold = voicedDurationMs >= 1000 ? 480 : 650;
         const isMaxSpeechCap = totalDurationMs >= 10000;
 
         if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 150) || isMaxSpeechCap) {
@@ -1962,6 +1962,11 @@ async function stopRecording() {
   console.log('🛑 Stopping recording...');
   stopLiveStreaming();
 
+  // Instant zero-lag human conversational filler (<80ms)
+  if (currentMode === 'jarvis' && jarvisSpeechDetected) {
+    jarvisManager.playInstantTurnFiller((activeAgent && activeAgent.name) || "Tuk Tuk");
+  }
+
   // Instantly hide overlay for standard/rewrite - keep open for Jarvis to show status
   if (currentMode !== 'jarvis' && overlayWindow && !overlayWindow.isDestroyed()) {
     hideOverlay();
@@ -2004,7 +2009,8 @@ async function stopRecording() {
     const stats = fs.statSync(targetAudioFile);
     console.log(`📊 Audio file: ${Math.round(stats.size/1000)}KB`);
     
-    if (stats.size < 45000) {
+    // Accept short human replies (e.g. "Yes", "Hello", "How") down to ~550ms (~18KB)
+    if (stats.size < 18000) {
       if (currentMode === 'jarvis') {
         console.log(`🎙️ Sub-vocal noise blip (${Math.round(stats.size/1000)}KB) - keeping mic active for real speech...`);
         isProcessing = false;
@@ -2375,8 +2381,8 @@ async function transcribe(filePath) {
     throw new Error('Recording is too long (> 24MB). Please keep recordings under 10 minutes for fast dictation.');
   }
 
-  // Dynamic resilient timeout: 7s for Jarvis turns, scaled for long dictation
-  const uploadTimeout = currentMode === 'jarvis' ? 7000 : Math.max(30000, Math.min(90000, Math.round((stats.size / 1000000) * 8000)));
+  // Dynamic resilient timeout: 14s for Jarvis turns (preventing premature 7s dropouts)
+  const uploadTimeout = currentMode === 'jarvis' ? 14000 : Math.max(30000, Math.min(90000, Math.round((stats.size / 1000000) * 8000)));
 
   const FormData = require('form-data');
   const form = new FormData();
@@ -2415,11 +2421,11 @@ async function transcribe(filePath) {
       response = { status: 500, data: { error: { message: postErr.message } } };
     }
 
-    // Auto-recovery on 429 Rate Limit: rotate key, wait 800ms and retry
-    if (response.status === 429) {
+    // Auto-recovery on 429 Rate Limit, 500 Error, or Network Timeout: rotate key and retry immediately
+    if (response.status === 429 || response.status >= 500) {
       rotateToNextKey();
-      console.warn('⚠️ Whisper rate limit reached (429). Rotated API key and retrying in 800ms...');
-      await new Promise(r => setTimeout(r, 800));
+      console.warn(`⚠️ Whisper transcription hiccup (${response.status}: ${response.data?.error?.message || "timeout"}). Rotated API key and retrying in 400ms...`);
+      await new Promise(r => setTimeout(r, 400));
 
       const retryForm = new FormData();
       retryForm.append('file', fs.createReadStream(filePath), {
