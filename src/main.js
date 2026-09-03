@@ -215,46 +215,26 @@ let lastOverlayCreationTime = 0;
 let recordingStartTime = 0;
 let isJarvisLoopActive = false;
 
-// Get active API key based on usage
+let activeKeyPoolIndex = 0;
+
+function rotateToNextKey() {
+  const validKeys = CONFIG.apiKeys.filter(key => key && key.trim() !== '');
+  if (validKeys.length > 1) {
+    activeKeyPoolIndex = (activeKeyPoolIndex + 1) % validKeys.length;
+    console.log(`🔄 [API Key Pool] Rotated to Key #${activeKeyPoolIndex + 1} of ${validKeys.length}`);
+    return validKeys[activeKeyPoolIndex];
+  }
+  return validKeys[0];
+}
+
+// Get active API key based on usage and pool rotation
 function getActiveAPIKey() {
   const validKeys = CONFIG.apiKeys.filter(key => key && key.trim() !== '');
   if (validKeys.length === 0) {
     throw new Error('No API keys configured');
   }
 
-  // Get usage data from file
-  const today = new Date().toISOString().split('T')[0];
-  const usageFile = path.join(app.getPath('userData'), 'api-usage.json');
-
-  let usageData = { date: '', keys: [] };
-  if (fs.existsSync(usageFile)) {
-    try {
-      usageData = JSON.parse(fs.readFileSync(usageFile, 'utf8'));
-    } catch (error) {
-      console.error('Error reading usage file:', error);
-    }
-  }
-
-  // Reset if new day or no data
-  if (usageData.date !== today) {
-    const newUsage = {
-      date: today,
-      keys: validKeys.map(key => ({ key, timeUsed: 0 }))
-    };
-    fs.writeFileSync(usageFile, JSON.stringify(newUsage, null, 2));
-    return validKeys[0];
-  }
-
-  // Find key with least usage (under 40 minutes)
-  const MAX_TIME_PER_KEY = 40 * 60; // 40 minutes in seconds
-  for (const keyData of usageData.keys || []) {
-    if (validKeys.includes(keyData.key) && keyData.timeUsed < MAX_TIME_PER_KEY) {
-      return keyData.key;
-    }
-  }
-
-  // If all keys exhausted, return first key (will show error to user)
-  return validKeys[0];
+  return validKeys[activeKeyPoolIndex % validKeys.length];
 }
 
 // Track API usage time
@@ -2435,10 +2415,11 @@ async function transcribe(filePath) {
       response = { status: 500, data: { error: { message: postErr.message } } };
     }
 
-    // Auto-recovery on 429 Rate Limit: wait 2 seconds and retry once
+    // Auto-recovery on 429 Rate Limit: rotate key, wait 800ms and retry
     if (response.status === 429) {
-      console.warn('⚠️ Whisper rate limit reached (429). Waiting 2s and retrying...');
-      await new Promise(r => setTimeout(r, 2000));
+      rotateToNextKey();
+      console.warn('⚠️ Whisper rate limit reached (429). Rotated API key and retrying in 800ms...');
+      await new Promise(r => setTimeout(r, 800));
 
       const retryForm = new FormData();
       retryForm.append('file', fs.createReadStream(filePath), {
@@ -2552,8 +2533,9 @@ async function callGroqChatCompletion(messages, options = {}) {
       }
 
       if (response.status === 429) {
-        console.warn(`⚠️ Model ${model} rate-limited (429). Exponential backoff 850ms...`);
-        await new Promise(r => setTimeout(r, 850));
+        rotateToNextKey();
+        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated API key and backing off 600ms...`);
+        await new Promise(r => setTimeout(r, 600));
       } else {
         console.warn(`⚠️ Model ${model} returned status ${response.status}, attempting fallback...`);
       }
