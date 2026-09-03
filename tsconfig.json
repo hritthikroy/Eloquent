@@ -20,6 +20,9 @@
   "exclude": [
     "node_modules",
     "dist",
-    "dist-ts"
+    "dist-ts",
+    "tests/utils/**",
+    "tests/memory/**",
+    "tests/agents/**"
   ]
 }
