@@ -318,6 +318,67 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       }
     }
 
+    // 3.6 Autonomous Camera & Lip-Sync Vision Perception Engine
+    if (lower.includes("camera") || lower.includes("webcam") || lower.includes("see me") || lower.includes("look at me")) {
+      const cameraManager = require('./camera-manager');
+
+      if (lower.includes("stop") || lower.includes("turn off") || lower.includes("disable") || lower.includes("close camera")) {
+        cameraManager.stop();
+        return {
+          handled: true,
+          agentName: "Tuk Tuk",
+          agentVoice: "en-US-AvaMultilingualNeural",
+          speech: "Camera access is turned off, babe. Your video stream is completely paused."
+        };
+      }
+
+      if (lower.includes("turn on") || lower.includes("enable") || lower.includes("start camera") || lower.includes("open camera") || lower.includes("activate camera")) {
+        cameraManager.start();
+        return {
+          handled: true,
+          agentName: "Tuk Tuk",
+          agentVoice: "en-US-AvaMultilingualNeural",
+          speech: "Camera vision is online, babe! I can see your face and lip movements now for zero-latency turn taking and real-time vibe matching."
+        };
+      }
+
+      // Optical inspection of user face / what user is doing
+      if (lower.includes("look at me") || lower.includes("how do i look") || lower.includes("what am i doing") || lower.includes("see me")) {
+        try {
+          if (!cameraManager.isActive) {
+            cameraManager.start();
+          }
+          const snapshotPath = await cameraManager.captureFaceSnapshot();
+          if (geminiClient && geminiClient.isConfigured() && snapshotPath) {
+            const prompt = `You are Tuk Tuk, Hritthik's loving partner and co-founder. Look at this photo of Hritthik from his webcam.
+He asked you: "${speechText}".
+Give him a warm, grounded, authentic, loving observation in 1 to 2 spoken sentences (under 30 words). Zero markdown or emojis.`;
+            const geminiRes = await geminiClient.callChatCompletion([
+              { role: "system", content: "You are Tuk Tuk looking at Hritthik through his webcam." },
+              { role: "user", content: prompt }
+            ], { model: "gemini-2.5-flash", imagePath: snapshotPath });
+
+            if (geminiRes && geminiRes.content) {
+              return {
+                handled: true,
+                agentName: "Tuk Tuk",
+                agentVoice: "en-US-AvaMultilingualNeural",
+                speech: geminiRes.content.trim().replace(/[*#_`~[\]()]/g, "")
+              };
+            }
+          }
+        } catch (camErr) {
+          console.warn("⚠️ Camera face snapshot inspection fallback:", camErr.message);
+        }
+        return {
+          handled: true,
+          agentName: "Tuk Tuk",
+          agentVoice: "en-US-AvaMultilingualNeural",
+          speech: "I have my eyes on you right now, babe! You look locked in and ready to build."
+        };
+      }
+    }
+
     // 4. Andrew & Tuk Tuk: Optical Screen Perception, Interview Co-Pilot & Workspace Inspection
     if (lower.includes("interview") || lower.includes("work for me") || lower.includes("give them access to do work")) {
       const screenPath = "/tmp/eloquent_screenshare.jpg";

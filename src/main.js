@@ -56,6 +56,7 @@ const { registerClipboardHandlers } = require('./main/index');
 const { StateManager } = require('./main/stateManager');
 const { geminiClient } = require('./utils/gemini-client');
 const { quantumVibeEngine } = require('./utils/quantum-vibe-engine');
+const cameraManager = require('./utils/camera-manager');
 
 // Ultra-Fast Persistent HTTPS Agent with TCP Keep-Alive for Zero Connection Overhead
 const https = require('https');
@@ -1921,9 +1922,12 @@ function startRecording() {
             const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // Quantum Dynamical Turn-Taking Endpointing (Levinson & Torreira 2015 TRP: 230ms - 320ms)
-            // Eliminates 700ms - 900ms of dead air latency while preventing accidental cutoffs
-            const dynamicSilenceThreshold = quantumVibeEngine.getDynamicSilenceThreshold(voicedDurationMs);
+            // Quantum Dynamical Turn-Taking Endpointing (Levinson & Torreira 2015 TRP: 190ms - 270ms)
+            // Multimodal Audio-Visual VAD (AV-VAD): If camera is active and lips have sealed, cut off in 25ms!
+            let dynamicSilenceThreshold = quantumVibeEngine.getDynamicSilenceThreshold(voicedDurationMs);
+            if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && silenceMs >= 25) {
+              dynamicSilenceThreshold = 25; // Instant lip-closure cut-off (<25ms)
+            }
             const isMaxSpeechCap = speechDurationMs >= 60000; // Expanded to 60s so long continuous sentences are never truncated
             const isNaturalPause = silenceMs >= dynamicSilenceThreshold;
 

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Eloquent Camera Worker</title>
+</head>
+<body style="background: transparent; margin: 0; padding: 0; overflow: hidden;">
+  <video id="videoElement" autoplay playsinline muted width="320" height="240" style="display: none;"></video>
+  <canvas id="canvasElement" width="320" height="240" style="display: none;"></canvas>
+
+  <script>
+    const { ipcRenderer } = require("electron");
+
+    const video = document.getElementById("videoElement");
+    const canvas = document.getElementById("canvasElement");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+    let isStreaming = false;
+    let streamTrack = null;
+    let processInterval = null;
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 30 }
+          },
+          audio: false
+        });
+
+        video.srcObject = stream;
+        streamTrack = stream.getVideoTracks()[0];
+        await video.play();
+        isStreaming = true;
+
+        ipcRenderer.send("camera-status-changed", { active: true });
+
+        // Run ultra-lightweight optical motion & mouth-region tracking at 20 FPS (~1.5% CPU)
+        processInterval = setInterval(processFrame, 50);
+      } catch (err) {
+        console.error("Camera access error:", err.message);
+        ipcRenderer.send("camera-status-changed", { active: false, error: err.message });
+      }
+    }
+
+    function stopCamera() {
+      if (processInterval) {
+        clearInterval(processInterval);
+        processInterval = null;
+      }
+      if (streamTrack) {
+        streamTrack.stop();
+        streamTrack = null;
+      }
+      if (video.srcObject) {
+        video.srcObject = null;
+      }
+      isStreaming = false;
+      ipcRenderer.send("camera-status-changed", { active: false });
+    }
+
+    let prevMouthData = null;
+
+    function processFrame() {
+      if (!isStreaming || video.readyState < 2) return;
+
+      try {
+        ctx.drawImage(video, 0, 0, 160, 120);
+        // Crop lower-third center region (approximate mouth/chin locus)
+        const mouthWidth = 70;
+        const mouthHeight = 45;
+        const imgData = ctx.getImageData(45, 70, mouthWidth, mouthHeight);
+        const data = imgData.data;
+
+        // Optical delta between consecutive frames in mouth locus
+        let totalDelta = 0;
+        const pixelCount = mouthWidth * mouthHeight;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          if (prevMouthData) {
+            totalDelta += Math.abs(lum - prevMouthData[i]);
+          }
+        }
+
+        prevMouthData = new Uint8ClampedArray(data);
+
+        // Normalized Motion Energy (0.0 to 1.0)
+        const avgDelta = prevMouthData ? (totalDelta / pixelCount) : 0;
+        const lipMotionEnergy = Math.min(1.0, avgDelta / 12.0);
+
+        // When lips part for speech, optical energy in mouth locus exceeds threshold
+        const isLipsMoving = lipMotionEnergy > 0.10;
+
+        ipcRenderer.send("camera-telemetry", {
+          lipMotionEnergy,
+          isLipsMoving,
+          timestamp: Date.now()
+        });
+      } catch (e) {}
+    }
+
+    ipcRenderer.on("capture-snapshot", () => {
+      try {
+        const snapCanvas = document.createElement("canvas");
+        snapCanvas.width = video.videoWidth || 640;
+        snapCanvas.height = video.videoHeight || 480;
+        const snapCtx = snapCanvas.getContext("2d");
+        snapCtx.drawImage(video, 0, 0, snapCanvas.width, snapCanvas.height);
+        const dataUrl = snapCanvas.toDataURL("image/jpeg", 0.85);
+        ipcRenderer.send("camera-snapshot-captured", { dataUrl });
+      } catch (err) {
+        ipcRenderer.send("camera-snapshot-captured", { error: err.message });
+      }
+    });
+
+    ipcRenderer.on("start-camera", startCamera);
+    ipcRenderer.on("stop-camera", stopCamera);
+
+    startCamera();
+  </script>
+</body>
+</html>

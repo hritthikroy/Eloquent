@@ -70,6 +70,16 @@ class QuantumVibeEngine {
       pRecovery += 0.70;
     }
 
+    // Optical Camera Visual Affect Ingestion (Multimodal Perception)
+    try {
+      const cameraManager = require('./camera-manager');
+      if (cameraManager && cameraManager.isActive) {
+        if (cameraManager.lipMotionEnergy > 0.45) {
+          pBreakthrough += 0.20; // Animated high-energy facial delivery
+        }
+      }
+    } catch (e) {}
+
     // 2. Lindblad Positive Emotional Attractor (L_pos):
     // Biases state away from negative spirals towards positive momentum and supportive confidence
     pBreakthrough += 0.15;
