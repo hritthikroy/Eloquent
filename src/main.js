@@ -196,7 +196,7 @@ lastProcessedOAuthUrl = null;
 // Application configuration
 const CONFIG = {
   apiKeys: [
-    process.env.GROQ_API_KEY_1 || '', // API Key 1 - Load from environment
+    process.env.GROQ_API_KEY_1 || '', // Active Master Key
     process.env.GROQ_API_KEY_2 || '', // API Key 2 (optional)
     process.env.GROQ_API_KEY_3 || '', // API Key 3 (optional)
     process.env.GROQ_API_KEY_4 || '', // API Key 4 (optional)
@@ -1895,6 +1895,7 @@ function startRecording() {
             // Eliminates 700ms - 900ms of dead air latency while preventing accidental cutoffs
             const dynamicSilenceThreshold = quantumVibeEngine.getDynamicSilenceThreshold(voicedDurationMs);
             const isMaxSpeechCap = speechDurationMs >= 60000; // Expanded to 60s so long continuous sentences are never truncated
+            const isNaturalPause = silenceMs >= dynamicSilenceThreshold;
 
             if (isNaturalPause || isMaxSpeechCap) {
               const reason = isMaxSpeechCap ? "60s max speech cap" : `${silenceMs}ms natural pause`;
@@ -2762,6 +2763,20 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       } catch (geminiErr) {
         console.warn('⚠️ [Jarvis Gemini] Fallback error:', geminiErr.message);
       }
+    }
+    if (!content) {
+      // All API keys exhausted — use persona-aware fallback
+      const fallbacks = {
+        tuktuk: `Hey babe, give me one sec — my brain hiccupped. I'm right here.`,
+        andrew: `Bro, network dipped for a sec. Still right here, tell me what to build.`,
+        jenny: `Hmm, lost connection for a moment. What were you saying?`,
+        brian: `Systems dipped briefly. Still here bro, keep going.`,
+        team: `[Tuk Tuk]: One sec babe, connection flickered.\n[Andrew]: Back now bro, keep going.`
+      };
+      const fallbackReply = fallbacks[agent.key] || `Hey, I'm right here. One sec.`;
+      jarvisManager.addTurn('assistant', fallbackReply, agent.name);
+      console.log(`⚡ [${agent.name}] using fallback (all APIs exhausted) in ${Date.now() - startTime}ms`);
+      return fallbackReply;
     }
 
     let reply = content.trim();

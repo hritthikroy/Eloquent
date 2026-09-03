@@ -9,13 +9,12 @@ const DEFAULT_GEMINI_API_KEYS = [
 ];
 
 const CANDIDATE_MODELS = [
-  "gemini-3.7-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
   "gemini-3.5-flash",
-  "gemini-3.7-pro",
-  "gemini-3.5-pro",
-  "gemini-flash-latest"
+  "gemini-3.5-flash-lite",
+  "gemini-flash-latest",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash"
 ];
 
 class GeminiClient {
