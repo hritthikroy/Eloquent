@@ -1,6 +1,7 @@
 // Jarvis Manager - Personalized Voice AI Engine & Neural Speech Synthesizer
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const { spawn, execSync } = require("child_process");
 const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
 const ProsodicEntrainmentAdapter = require("./prosodic-entrainment");
@@ -628,28 +629,28 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
   async _synthesizeAudioChunk(textChunk, voice, speechId) {
     if (!textChunk || textChunk.trim().length === 0) return null;
     const cleanChunk = textChunk.trim();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "tts_chunk_"));
     const tempAudio = `/tmp/eloquent_chunk_${Date.now()}_${Math.floor(Math.random()*10000)}.mp3`;
     try {
-      if (!this.ttsClient || !this.ttsClient._voice || this._cachedVoice !== voice) {
-        this.initTTS();
-        await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-        this._cachedVoice = voice;
-      }
+      const client = new MsEdgeTTS();
+      await client.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
       const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
       const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanChunk) : "+0Hz";
-      const toFilePromise = this.ttsClient.toFile("/tmp", cleanChunk, { rate: dynamicRate, pitch: dynamicPitch });
+      const toFilePromise = client.toFile(tempDir, cleanChunk, { rate: dynamicRate, pitch: dynamicPitch });
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("MsEdgeTTS chunk timeout")), 5000)
       );
       const res = await Promise.race([toFilePromise, timeoutPromise]);
       if (this.currentSpeechId !== speechId || this.isAborted) {
-        try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
+        try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
         return null;
       }
-      fs.renameSync(res.audioFilePath, tempAudio);
+      fs.copyFileSync(res.audioFilePath, tempAudio);
+      try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
       return tempAudio;
     } catch (err) {
       console.warn("⚠️ Chunk synthesis warning:", err.message);
+      try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
       return null;
     }
   }
@@ -753,9 +754,10 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
           this._cachedVoice = voice;
         }
         // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "eloquent_tts_"));
         const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
         const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanText) : "+0Hz";
-        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText, { rate: dynamicRate, pitch: dynamicPitch });
+        const toFilePromise = this.ttsClient.toFile(tempDir, cleanText, { rate: dynamicRate, pitch: dynamicPitch });
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 7s")), 7000)
         );
@@ -764,12 +766,13 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         // Check if this synthesis was superseded or aborted while awaiting download
         if (this.currentSpeechId !== speechId || this.isAborted) {
           console.log(`⏹️ Discarding superseded voice output #${speechId}`);
-          try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
+          try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
           return false;
         }
 
-        // Rename to unique temp file
-        fs.renameSync(res.audioFilePath, tempAudioPath);
+        // Copy out of isolated tempDir and cleanup
+        fs.copyFileSync(res.audioFilePath, tempAudioPath);
+        try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
 
         // Ensure no stray afplay audio is playing before starting
         try {

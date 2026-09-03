@@ -2371,8 +2371,8 @@ async function transcribe(filePath) {
     throw new Error('Recording is too long (> 24MB). Please keep recordings under 10 minutes for fast dictation.');
   }
 
-  // Dynamic resilient timeout: scales with audio size (30s minimum, up to 90s for multi-minute audio)
-  const uploadTimeout = Math.max(30000, Math.min(90000, Math.round((stats.size / 1000000) * 8000)));
+  // Dynamic resilient timeout: 7s for Jarvis turns, scaled for long dictation
+  const uploadTimeout = currentMode === 'jarvis' ? 7000 : Math.max(30000, Math.min(90000, Math.round((stats.size / 1000000) * 8000)));
 
   const FormData = require('form-data');
   const form = new FormData();
@@ -2494,11 +2494,10 @@ async function transcribe(filePath) {
 async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
     options.model,
-    'llama-3.1-8b-instant',
-    CONFIG.aiModel,
-    process.env.GROQ_MODEL,
+    'qwen/qwen3.8-27b',
     'llama-3.3-70b-versatile',
-    'qwen/qwen3.8-27b'
+    CONFIG.aiModel,
+    process.env.GROQ_MODEL
   ].filter(Boolean);
 
   const uniqueModels = [...new Set(candidateModels)];
@@ -2596,7 +2595,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : 0.65);
     const { content, usage, model } = await callGroqChatCompletion(messages, {
-      model: 'llama-3.1-8b-instant',
+      model: 'qwen/qwen3.8-27b',
       temperature: dynamicTemperature,
       max_tokens: 160,
       timeout: 10000
