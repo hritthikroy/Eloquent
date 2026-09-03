@@ -262,6 +262,17 @@ class JarvisManager {
       }
       this.ttsClient = new MsEdgeTTS();
       this._cachedVoice = null;
+      // Pre-warm the WebSocket metadata connection so Turn 1 has 0ms cold-start latency
+      this.ttsClient.setMetadata("en-US-AvaMultilingualNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {}).catch(() => {});
+
+      // Keep-alive heartbeat every 20s to ensure instant 166ms warm TTFB all day long
+      if (!this._ttsKeepAliveTimer) {
+        this._ttsKeepAliveTimer = setInterval(() => {
+          if (this.ttsClient && !this.isSpeaking) {
+            this.ttsClient.setMetadata(this._cachedVoice || "en-US-AvaMultilingualNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {}).catch(() => {});
+          }
+        }, 20000);
+      }
     } catch (e) {
       console.warn("⚠️ MsEdgeTTS init warning:", e.message);
     }
