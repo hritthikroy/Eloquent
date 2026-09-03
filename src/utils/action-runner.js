@@ -29,14 +29,14 @@ class OfficeActionRunner {
     // -------------------------------------------------------------
     // COMPOUND MULTI-TASK PIPELINE ("A and then B", "A and also B", "A and B")
     // -------------------------------------------------------------
-    const hasCompoundConj = lower.includes(" and then ") || lower.includes(" and also ") || lower.includes(" and ");
+    const hasCompoundConj = lower.includes(" and then ") || lower.includes(" and also ") || lower.includes(" and ") || lower.includes(" then ");
     const hasActionKeyword = lower.includes("list files") || lower.includes("read file") || lower.includes("check battery") || 
       lower.includes("turn volume") || lower.includes("what time") || lower.includes("check the time") || 
       lower.includes("what files") || lower.includes("summarize what files") || lower.includes("git status") || 
-      lower.includes("sing") || lower.includes("eating my ram") || lower.includes("run command");
+      lower.includes("sing") || lower.includes("eating my ram") || lower.includes("run command") || lower.includes("tile");
 
     if (hasCompoundConj && hasActionKeyword) {
-      const parts = speechText.split(/\s+and(?:\s+then|\s+also)?\s+/i);
+      const parts = speechText.split(/\s+(?:and(?:\s+then|\s+also)?|then)\s+/i);
       if (parts.length > 1 && parts.length <= 4) {
         const subResults = [];
         for (const part of parts) {
@@ -821,14 +821,14 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
     }
 
     // 4. macOS Window Management & Desktop Tiling ("tile window left", "tile window right", "minimize window", "maximize window")
-    if (lower.includes("tile left") || lower.includes("snap left")) {
+    if (lower.includes("tile left") || lower.includes("snap left") || (lower.includes("tile") && lower.includes("left"))) {
       try {
         exec(`osascript -e 'tell application "System Events" to key code 123 using {control down, option down}' 2>/dev/null || true`);
       } catch (e) {}
       return { handled: true, speech: "Tiled active window to the left." };
     }
 
-    if (lower.includes("tile right") || lower.includes("snap right")) {
+    if (lower.includes("tile right") || lower.includes("snap right") || (lower.includes("tile") && lower.includes("right"))) {
       try {
         exec(`osascript -e 'tell application "System Events" to key code 124 using {control down, option down}' 2>/dev/null || true`);
       } catch (e) {}
