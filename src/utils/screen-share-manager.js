@@ -83,7 +83,11 @@ class ScreenShareManager {
     // Asynchronously capture screen to avoid blocking event loop
     exec(`screencapture -x -C "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, (err) => {
       this.isCapturing = false;
-      if (err) return;
+      
+      if (err) {
+        console.error('🖥️ [Screen Share] Capture error:', err.message);
+        return;
+      }
 
       try {
         let appName = "";
@@ -94,7 +98,9 @@ class ScreenShareManager {
             { timeout: 1000 }
           ).toString().trim();
           if (appOut) appName = appOut;
-        } catch (e) {}
+        } catch (e) {
+          console.warn('🖥️ [Screen Share] Could not get app name:', e.message);
+        }
 
         const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
         this.lastContext = {
@@ -107,9 +113,13 @@ class ScreenShareManager {
         if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
           try {
             this.overlayWindow.webContents.send("screenshare-frame-updated", this.lastContext);
-          } catch (e) {}
+          } catch (e) {
+            console.error('🖥️ [Screen Share] Failed to send frame update:', e.message);
+          }
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('🖥️ [Screen Share] Context extraction error:', e.message);
+      }
     });
   }
 
