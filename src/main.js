@@ -1900,13 +1900,10 @@ function startRecording() {
             // Quantum Dynamical Turn-Taking Endpointing (Levinson & Torreira 2015 TRP: 230ms - 320ms)
             // Eliminates 700ms - 900ms of dead air latency while preventing accidental cutoffs
             const dynamicSilenceThreshold = quantumVibeEngine.getDynamicSilenceThreshold(voicedDurationMs);
-            const isNaturalPause = !isSpeechFrame && (silenceMs >= dynamicSilenceThreshold) && (voicedDurationMs >= 150);
-            const isMaxSpeechCap = speechDurationMs >= 10000;
-
-            // Standard natural pause detection for dynamic conversational flow
+            const isMaxSpeechCap = speechDurationMs >= 60000; // Expanded to 60s so long continuous sentences are never truncated
 
             if (isNaturalPause || isMaxSpeechCap) {
-              const reason = isMaxSpeechCap ? "10s max speech cap" : `${silenceMs}ms natural pause`;
+              const reason = isMaxSpeechCap ? "60s max speech cap" : `${silenceMs}ms natural pause`;
               console.log(`🗣️ Auto-submitting to Tuk Tuk (${reason}, ${voicedDurationMs}ms voiced speech)...`);
               jarvisAutoStopTriggered = true;
               if (jarvisVadHeartbeat) {
@@ -2463,7 +2460,7 @@ async function transcribe(filePath) {
   form.append('language', 'en'); // Force English for all modes (Jarvis & Dictation)
   form.append('response_format', 'json');
   form.append('temperature', '0');
-  form.append('prompt', 'Hello Tuk Tuk, Andrew, Jenny, Brian, let us talk.');
+  form.append('prompt', 'Hritthik, Tuk Tuk, Andrew, Jenny, Brian, Eloquent, Antigravity, Electron, Go audio backend, IPC, API, bug, code refactor, latency, TypeScript, Node.js.');
   
   // High accuracy transcription
   try {
