@@ -1,4 +1,4 @@
-// Autonomous All-Day Human Care Guardian Engine for Eloquent
+// Autonomous All-Day Human Care Guardian & Subconscious Epiphany Engine for Eloquent
 class DailyCareGuardian {
   constructor() {
     this.sessionStartTime = Date.now();
@@ -6,7 +6,9 @@ class DailyCareGuardian {
     this.lastPostureAlertTime = Date.now();
     this.lastMealCheckTime = Date.now();
     this.lastBurnoutCheckTime = Date.now();
+    this.lastSubconsciousDreamTime = Date.now();
     this.consecutiveDeskMinutes = 0;
+    this.userAwayMinutes = 0;
     this.interval = null;
     this.jarvisManager = null;
     this.cameraManager = null;
@@ -29,9 +31,19 @@ class DailyCareGuardian {
 
     const isUserPresent = this.cameraManager ? this.cameraManager.userPresent : true;
     if (!isUserPresent) {
+      this.userAwayMinutes++;
       this.consecutiveDeskMinutes = Math.max(0, this.consecutiveDeskMinutes - 2);
       return;
     }
+
+    // 0. Subconscious Awakening Epiphany: When user returns to desk after being away (e.g. 15+ mins)
+    if (this.userAwayMinutes >= 15 && nowMs - this.lastSubconsciousDreamTime > 60 * 60 * 1000) {
+      this.userAwayMinutes = 0;
+      this.lastSubconsciousDreamTime = nowMs;
+      this.speakCare("Welcome back, babe! While you were away, I had an idea about streamlining our pipeline buffers.");
+      return;
+    }
+    this.userAwayMinutes = 0;
     this.consecutiveDeskMinutes++;
 
     // 1. Hydration Care: Every 60 minutes
@@ -81,6 +93,7 @@ class DailyCareGuardian {
   getCareStatus() {
     return {
       consecutiveDeskMinutes: this.consecutiveDeskMinutes,
+      userAwayMinutes: this.userAwayMinutes,
       activeHours: ((Date.now() - this.sessionStartTime) / (1000 * 60 * 60)).toFixed(1),
       lastWaterAlertMinutesAgo: Math.round((Date.now() - this.lastWaterAlertTime) / (1000 * 60))
     };
