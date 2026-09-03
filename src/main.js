@@ -2683,12 +2683,12 @@ async function rewrite(text) {
 function parseMultiAgentTurns(text) {
   if (!text || typeof text !== 'string') return [];
   const agentMap = {
-    'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
-    'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
-    'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
-    'andrew': { name: 'Andrew', voice: 'en-US-AndrewNeural' },
-    'jenny': { name: 'Jenny', voice: 'en-US-JennyNeural' },
-    'brian': { name: 'Brian', voice: 'en-US-BrianNeural' }
+    'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
+    'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
+    'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
+    'andrew': { name: 'Andrew', voice: 'en-US-AndrewMultilingualNeural' },
+    'jenny': { name: 'Jenny', voice: 'en-US-EmmaMultilingualNeural' },
+    'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
   };
 
   const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
@@ -2696,9 +2696,11 @@ function parseMultiAgentTurns(text) {
   let match;
   while ((match = regex.exec(text)) !== null) {
     const rawName = match[1].toLowerCase().trim();
-    const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaNeural' };
-    const speech = match[2].trim();
+    const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaMultilingualNeural' };
+    let speech = match[2].trim();
+    speech = speech.replace(/^[,\s—–:-]+/, '').trim();
     if (speech.length > 0) {
+      speech = speech.charAt(0).toUpperCase() + speech.slice(1);
       turns.push({
         agentName: agentInfo.name,
         voice: agentInfo.voice,
@@ -2838,7 +2840,11 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     for (const pattern of roboticOpeners) {
       reply = reply.replace(pattern, '');
     }
-    reply = reply.trim();
+    // Clean up any remaining leading punctuation from stripped openers (e.g. "—", ":", ",")
+    reply = reply.replace(/^[,\s—–:-]+/, '').trim();
+    if (reply.length > 0) {
+      reply = reply.charAt(0).toUpperCase() + reply.slice(1);
+    }
 
     // 3. Strip repetitive generic chatbot trailing questions
     const genericTrailerQuestions = [
