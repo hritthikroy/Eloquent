@@ -695,7 +695,109 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return this.setVolume(level, `Volume adjusted to ${level} percent.`);
     }
 
-    // Open common apps
+    // -------------------------------------------------------------
+    // STONIC-GRADE AUTONOMOUS OFFICE & OS EXECUTION CAPABILITIES
+    // -------------------------------------------------------------
+    // 1. Voice File Reading ("read file <name>", "show file <name>", "what is in <name>")
+    const readFileMatch = lower.match(/(?:read file|show file|open file|view file|inspect file|what is in file|what's in file)\s+([a-z0-9_\-\.\/]+)/i);
+    if (readFileMatch && readFileMatch[1]) {
+      const targetFileName = readFileMatch[1].trim();
+      const resolvedPath = path.isAbsolute(targetFileName) ? targetFileName : path.join(this.projectDir, targetFileName);
+      if (fs.existsSync(resolvedPath)) {
+        try {
+          const stats = fs.statSync(resolvedPath);
+          if (stats.isFile()) {
+            const content = fs.readFileSync(resolvedPath, "utf8");
+            const preview = content.split("\n").slice(0, 4).join(" ").replace(/[*`_#]/g, "").slice(0, 160);
+            return {
+              handled: true,
+              agentName: activeAgent?.name || "Andrew",
+              agentVoice: activeAgent?.voice || "en-US-AndrewMultilingualNeural",
+              speech: `File ${targetFileName} has ${content.split("\n").length} lines. Preview: ${preview}`
+            };
+          }
+        } catch (e) {}
+      } else {
+        return {
+          handled: true,
+          agentName: activeAgent?.name || "Andrew",
+          agentVoice: activeAgent?.voice || "en-US-AndrewMultilingualNeural",
+          speech: `I looked for ${targetFileName}, but it does not exist in the project directory, bro.`
+        };
+      }
+    }
+
+    // 2. Voice Workspace File Listing ("list files", "show project files", "what files are here")
+    if (lower.includes("list files") || lower.includes("show files") || lower.includes("list directory") || lower.includes("what files are here") || lower.includes("show project files")) {
+      try {
+        const files = fs.readdirSync(this.projectDir).filter(f => !f.startsWith(".") && f !== "node_modules" && f !== "dist" && f !== "userData");
+        return {
+          handled: true,
+          agentName: activeAgent?.name || "Andrew",
+          agentVoice: activeAgent?.voice || "en-US-AndrewMultilingualNeural",
+          speech: `Project root contains ${files.length} primary items, including ${files.slice(0, 5).join(", ")}.`
+        };
+      } catch (e) {
+        return { handled: true, speech: "Project directory files scanned." };
+      }
+    }
+
+    // 3. Autonomous Shell & Command Execution ("run command <cmd>", "execute terminal <cmd>")
+    const execCmdMatch = lower.match(/(?:run command|execute command|run in terminal|execute in terminal)\s+(.+)/i);
+    if (execCmdMatch && execCmdMatch[1]) {
+      const cmdToRun = execCmdMatch[1].trim();
+      // Block dangerous root-level deletion commands for safety
+      if (cmdToRun.includes("rm -rf /") || cmdToRun.includes(":(){ :|:& };:")) {
+        return {
+          handled: true,
+          agentName: activeAgent?.name || "Andrew",
+          agentVoice: activeAgent?.voice || "en-US-AndrewMultilingualNeural",
+          speech: "That command is blocked for system safety, bro."
+        };
+      }
+
+      try {
+        const out = execSync(cmdToRun, { cwd: this.projectDir, timeout: 6000 }).toString().trim();
+        const firstLine = (out.split("\n")[0] || "Executed cleanly").slice(0, 120);
+        return {
+          handled: true,
+          agentName: activeAgent?.name || "Andrew",
+          agentVoice: activeAgent?.voice || "en-US-AndrewMultilingualNeural",
+          speech: `Command executed with status zero, bro. Output: ${firstLine}`
+        };
+      } catch (execErr) {
+        return {
+          handled: true,
+          agentName: activeAgent?.name || "Andrew",
+          agentVoice: activeAgent?.voice || "en-US-AndrewMultilingualNeural",
+          speech: `Command finished with an exit code: ${execErr.message.slice(0, 90)}`
+        };
+      }
+    }
+
+    // 4. macOS Window Management & Desktop Tiling ("tile window left", "tile window right", "minimize window", "maximize window")
+    if (lower.includes("tile left") || lower.includes("snap left")) {
+      try {
+        exec(`osascript -e 'tell application "System Events" to key code 123 using {control down, option down}' 2>/dev/null || true`);
+      } catch (e) {}
+      return { handled: true, speech: "Tiled active window to the left." };
+    }
+
+    if (lower.includes("tile right") || lower.includes("snap right")) {
+      try {
+        exec(`osascript -e 'tell application "System Events" to key code 124 using {control down, option down}' 2>/dev/null || true`);
+      } catch (e) {}
+      return { handled: true, speech: "Tiled active window to the right." };
+    }
+
+    if (lower.includes("minimize window") || lower.includes("hide window")) {
+      try {
+        exec(`osascript -e 'tell application "System Events" to set miniaturized of first window of (first application process whose frontmost is true) to true' 2>/dev/null || true`);
+      } catch (e) {}
+      return { handled: true, speech: "Minimized active window." };
+    }
+
+    // 5. Open common apps
     if (lower.startsWith("open ") || lower.startsWith("launch ")) {
       const appMatch = lower.match(/(?:open|launch)\s+([a-z0-9_\-\s]+)/i);
       if (appMatch && appMatch[1]) {
