@@ -196,7 +196,7 @@ lastProcessedOAuthUrl = null;
 // Application configuration
 const CONFIG = {
   apiKeys: [
-    process.env.GROQ_API_KEY_1 || '', // Active Master Key
+    process.env.GROQ_API_KEY_1 || process.env.GROQ_API_KEY || '', // API Key 1 from .env
     process.env.GROQ_API_KEY_2 || '', // API Key 2 (optional)
     process.env.GROQ_API_KEY_3 || '', // API Key 3 (optional)
     process.env.GROQ_API_KEY_4 || '', // API Key 4 (optional)
