@@ -124,9 +124,9 @@ class QuantumVibeEngine {
    * @returns {number} Dynamic silence threshold in milliseconds (220ms - 340ms)
    */
   getDynamicSilenceThreshold(voicedDurationMs = 1500) {
-    if (voicedDurationMs < 600) return 340;
-    if (voicedDurationMs > 3000) return 230;
-    return 260;
+    if (voicedDurationMs < 600) return 270;
+    if (voicedDurationMs > 3000) return 190;
+    return 220;
   }
 
   /**
