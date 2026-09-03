@@ -779,7 +779,25 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       }
     }
 
-    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}${directivesSection}\n\n${livingMemory}`;
+    // Real-Time Ocular Vision Perception (Camera Eyes & Screen Awareness)
+    let visualPresence = "";
+    try {
+      const cameraManager = require('./camera-manager');
+      if (cameraManager && cameraManager.isActive) {
+        visualPresence = `\n${cameraManager.getVisualContext()}`;
+      }
+    } catch (e) {}
+
+    let screenPresence = "";
+    try {
+      const screenShareManager = require('./screen-share-manager');
+      if (screenShareManager && screenShareManager.isActive) {
+        const ctx = screenShareManager.getVisionContext();
+        screenPresence = `\n[SCREEN VISION PERCEPTION]: Frontmost App: ${ctx.appName || "Workspace"}, Window: ${ctx.windowTitle || "Code"}`;
+      }
+    } catch (e) {}
+
+    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}${directivesSection}${visualPresence}${screenPresence}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {

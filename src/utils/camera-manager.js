@@ -1,5 +1,4 @@
 // Camera Vision, Lip-Sync VAD & Affective Presence Engine for Eloquent
-const { BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
 
@@ -10,6 +9,9 @@ class CameraManager {
     this.isLipsMoving = false;
     this.lastLipMotionTime = 0;
     this.lipMotionEnergy = 0.0;
+    this.userPresent = true;
+    this.isAttentive = true;
+    this.lastVisualPerceptionTime = 0;
     this.snapshotPath = "/tmp/eloquent_face.jpg";
     this.pendingSnapshotPromise = null;
 
@@ -23,18 +25,21 @@ class CameraManager {
 
     ipc.on("camera-status-changed", (event, status) => {
       this.isActive = !!status.active;
-      console.log(`👁️ [Camera Manager] Camera active state: ${this.isActive}`);
+      console.log(`👁️ [Ocular Eyes] Camera active as squad eyes: ${this.isActive}`);
     });
 
-    ipcMain.on("camera-telemetry", (event, data) => {
+    ipc.on("camera-telemetry", (event, data) => {
       this.lipMotionEnergy = data.lipMotionEnergy || 0.0;
       this.isLipsMoving = !!data.isLipsMoving;
+      this.userPresent = data.userPresent !== undefined ? !!data.userPresent : true;
+      this.isAttentive = data.isAttentive !== undefined ? !!data.isAttentive : true;
       if (this.isLipsMoving) {
         this.lastLipMotionTime = Date.now();
       }
+      this.lastVisualPerceptionTime = Date.now();
     });
 
-    ipcMain.on("camera-snapshot-captured", (event, res) => {
+    ipc.on("camera-snapshot-captured", (event, res) => {
       if (this.pendingSnapshotPromise) {
         if (res.dataUrl) {
           try {
@@ -55,6 +60,7 @@ class CameraManager {
   start() {
     if (this.workerWindow && !this.workerWindow.isDestroyed()) {
       this.workerWindow.webContents.send("start-camera");
+      this.isActive = true;
       return true;
     }
 
@@ -62,7 +68,6 @@ class CameraManager {
       const electron = require("electron");
       const BrowserWindowClass = electron.BrowserWindow || (electron.default && electron.default.BrowserWindow);
       if (!BrowserWindowClass) {
-        // Mock fallback if running in standalone Node.js CLI
         this.isActive = true;
         return true;
       }
@@ -79,10 +84,11 @@ class CameraManager {
 
       const workerPath = path.join(__dirname, "../ui/camera-worker.html");
       this.workerWindow.loadFile(workerPath);
-      console.log("👁️ [Camera Manager] Background Camera Worker initiated");
+      this.isActive = true;
+      console.log("👁️ [Ocular Eyes] Squad visual ocular presence activated 24/7!");
       return true;
     } catch (err) {
-      console.error("❌ Failed to initiate Camera Manager:", err.message);
+      console.error("❌ Failed to initiate Ocular Eyes:", err.message);
       return false;
     }
   }
@@ -92,27 +98,31 @@ class CameraManager {
     this.isLipsMoving = false;
     if (this.workerWindow && !this.workerWindow.isDestroyed()) {
       this.workerWindow.webContents.send("stop-camera");
-      console.log("👁️ [Camera Manager] Camera stream paused");
+      console.log("👁️ [Ocular Eyes] Visual perception paused");
     }
     return true;
   }
 
-  /**
-   * Audio-Visual Voice Activity Detection Check
-   * Returns true if lips are actively moving or were moving within the last 40ms
-   */
   isLipMovementDetected() {
     if (!this.isActive) return false;
     const elapsedSinceMotion = Date.now() - this.lastLipMotionTime;
     return this.isLipsMoving || (elapsedSinceMotion < 45);
   }
 
-  /**
-   * Capture on-demand snapshot of user face for Gemini Vision
-   */
+  getVisualContext() {
+    if (!this.isActive) return "Camera perception is currently paused.";
+    const status = this.userPresent
+      ? (this.isAttentive ? "Hritthik is at his desk, eyes focused forward on screen/code." : "Hritthik is at his desk, moving or conversing naturally.")
+      : "Hritthik is momentarily away from the desk.";
+    return `[OCULAR VISUAL PERCEPTION]: ${status} (Visual telemetry synced real-time)`;
+  }
+
   async captureFaceSnapshot() {
-    if (!this.isActive || !this.workerWindow || this.workerWindow.isDestroyed()) {
-      throw new Error("Camera is not active. Turn on camera first.");
+    if (!this.isActive) {
+      this.start();
+    }
+    if (!this.workerWindow || this.workerWindow.isDestroyed()) {
+      throw new Error("Camera window unavailable");
     }
 
     return new Promise((resolve, reject) => {

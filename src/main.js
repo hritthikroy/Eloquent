@@ -624,6 +624,14 @@ app.whenReady().then(async () => {
     }
   }
 
+  // Autonomous Team Eyes: Boot Camera Ocular Vision & Screen Perception automatically as human eyes
+  try {
+    console.log('👁️ Initializing Autonomous Squad Ocular Eyes (Camera & Screen Vision)...');
+    cameraManager.start();
+    screenShareManager.start();
+  } catch (err) {
+    console.warn('⚠️ Autonomous Vision eyes initialization note:', err.message);
+  }
 });
 
 function promptChangeJarvisName() {

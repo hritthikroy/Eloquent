@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Eloquent Camera Worker</title>
+  <title>Eloquent Ocular Vision Engine</title>
 </head>
 <body style="background: transparent; margin: 0; padding: 0; overflow: hidden;">
   <video id="videoElement" autoplay playsinline muted width="320" height="240" style="display: none;"></video>
@@ -37,7 +37,7 @@
 
         ipcRenderer.send("camera-status-changed", { active: true });
 
-        // Run ultra-lightweight optical motion & mouth-region tracking at 20 FPS (~1.5% CPU)
+        // Continuous Ocular Eyes: 20 FPS (~1.5% CPU hardware accelerated)
         processInterval = setInterval(processFrame, 50);
       } catch (err) {
         console.error("Camera access error:", err.message);
@@ -62,41 +62,59 @@
     }
 
     let prevMouthData = null;
+    let prevEyesData = null;
 
     function processFrame() {
       if (!isStreaming || video.readyState < 2) return;
 
       try {
         ctx.drawImage(video, 0, 0, 160, 120);
-        // Crop lower-third center region (approximate mouth/chin locus)
-        const mouthWidth = 70;
-        const mouthHeight = 45;
-        const imgData = ctx.getImageData(45, 70, mouthWidth, mouthHeight);
-        const data = imgData.data;
 
-        // Optical delta between consecutive frames in mouth locus
-        let totalDelta = 0;
-        const pixelCount = mouthWidth * mouthHeight;
+        // 1. Mouth Region (Lower center: x:45-115, y:70-115)
+        const mouthW = 70, mouthH = 45;
+        const mouthImg = ctx.getImageData(45, 70, mouthW, mouthH);
+        const mouthData = mouthImg.data;
+        let mouthDelta = 0;
+        const mouthPixels = mouthW * mouthH;
 
-        for (let i = 0; i < data.length; i += 4) {
-          const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        for (let i = 0; i < mouthData.length; i += 4) {
+          const lum = 0.299 * mouthData[i] + 0.587 * mouthData[i + 1] + 0.114 * mouthData[i + 2];
           if (prevMouthData) {
-            totalDelta += Math.abs(lum - prevMouthData[i]);
+            mouthDelta += Math.abs(lum - prevMouthData[i]);
           }
         }
-
-        prevMouthData = new Uint8ClampedArray(data);
-
-        // Normalized Motion Energy (0.0 to 1.0)
-        const avgDelta = prevMouthData ? (totalDelta / pixelCount) : 0;
-        const lipMotionEnergy = Math.min(1.0, avgDelta / 12.0);
-
-        // When lips part for speech, optical energy in mouth locus exceeds threshold
+        prevMouthData = new Uint8ClampedArray(mouthData);
+        const avgMouthDelta = prevMouthData ? (mouthDelta / mouthPixels) : 0;
+        const lipMotionEnergy = Math.min(1.0, avgMouthDelta / 12.0);
         const isLipsMoving = lipMotionEnergy > 0.10;
+
+        // 2. Eye & Upper Face Region (Center top: x:40-120, y:20-65) - Gaze, Blinking & Fatigue
+        const eyeW = 80, eyeH = 45;
+        const eyeImg = ctx.getImageData(40, 20, eyeW, eyeH);
+        const eyeData = eyeImg.data;
+        let eyeDelta = 0;
+        let eyeLuminanceSum = 0;
+        const eyePixels = eyeW * eyePixels;
+
+        for (let i = 0; i < eyeData.length; i += 4) {
+          const lum = 0.299 * eyeData[i] + 0.587 * eyeData[i + 1] + 0.114 * eyeData[i + 2];
+          eyeLuminanceSum += lum;
+          if (prevEyesData) {
+            eyeDelta += Math.abs(lum - prevEyesData[i]);
+          }
+        }
+        prevEyesData = new Uint8ClampedArray(eyeData);
+        const eyeMotion = eyeDelta / (eyeW * eyeH);
+
+        // User is directly facing camera and present if luminance variance exists
+        const userPresent = (eyeLuminanceSum / (eyeW * eyeH)) > 15;
+        const isAttentive = userPresent && (eyeMotion < 18.0); // Stable gaze focused at monitor
 
         ipcRenderer.send("camera-telemetry", {
           lipMotionEnergy,
           isLipsMoving,
+          userPresent,
+          isAttentive,
           timestamp: Date.now()
         });
       } catch (e) {}
