@@ -2679,7 +2679,7 @@ async function rewrite(text) {
   }
 }
 
-// Parse multi-party agent turns formatted as [Agent]: ... for simultaneous multi-speaker dialogue
+// Parse multi-party agent turns formatted as [Agent]: ... or Agent: ... for seamless podcast-style dialogue
 function parseMultiAgentTurns(text) {
   if (!text || typeof text !== 'string') return [];
   const agentMap = {
@@ -2691,11 +2691,11 @@ function parseMultiAgentTurns(text) {
     'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
   };
 
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?)|$)/gi;
   const turns = [];
   let match;
-  while ((match = regex.exec(text)) !== null) {
-    const rawName = match[1].toLowerCase().trim();
+  while ((match = pattern.exec(text)) !== null) {
+    const rawName = match[1].toLowerCase().replace(/\s+/g, ' ').trim();
     const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaMultilingualNeural' };
     let speech = match[2].trim();
     speech = speech.replace(/^[,\s—–:-]+/, '').trim();
