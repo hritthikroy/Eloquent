@@ -3,10 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 
-const DEFAULT_GEMINI_API_KEYS = [
-  "",
-  ""
-];
+// API keys must be loaded from environment variables only for security
+const DEFAULT_GEMINI_API_KEYS = [];
 
 const CANDIDATE_MODELS = [
   "gemini-3.5-flash",
