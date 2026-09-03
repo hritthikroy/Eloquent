@@ -2432,11 +2432,11 @@ async function transcribe(filePath) {
 // Robust Groq Chat Completion with automatic model fallback
 async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
-    'llama-3.3-70b-versatile',
-    process.env.GROQ_MODEL,
     CONFIG.aiModel,
+    process.env.GROQ_MODEL,
     'qwen/qwen3.8-27b',
-    'openai/gpt-oss-120b'
+    'llama-3.1-70b-versatile',
+    'llama-3.1-8b-instant'
   ].filter(Boolean);
 
   const uniqueModels = [...new Set(candidateModels)];
