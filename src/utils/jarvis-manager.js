@@ -171,12 +171,15 @@ class JarvisManager {
     this.agents = AGENTS;
     this.prosodicEntrainment = new ProsodicEntrainmentAdapter();
     this.behaviorEngine = new BehaviorModeEngine(this.userDataPath);
-    this.duplexActionChannel = new DuplexActionChannel();
-    this.backchannelFiles = [];
+    this.backchannelFiles = [
+      path.join(path.resolve(__dirname, "../../userData/sounds"), "bc_mhm.mp3"),
+      path.join(path.resolve(__dirname, "../../userData/sounds"), "bc_yeah.mp3"),
+      path.join(path.resolve(__dirname, "../../userData/sounds"), "bc_uhhuh.mp3")
+    ];
     this.initTTS();
     setTimeout(() => {
       this.ensureBackchannelLibrary().catch(() => {});
-    }, 2000);
+    }, 500);
   }
 
   loadRecentSessionHistory() {
