@@ -867,6 +867,9 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         try { fs.unlinkSync(audioPath); } catch (e) {}
         return resolve(false);
       }
+      // HARD SINGLE-AUDIO MUTUAL EXCLUSION:
+      // Kill any lingering filler process before starting main voice playback
+      this.stopFiller();
       this.isSpeaking = true;
       this.activeSpeechProcess = spawn("afplay", [audioPath]);
       this.activeSpeechProcess.on("close", (code) => {
@@ -980,6 +983,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
             return resolve(false);
           }
 
+          this.stopFiller();
           this.isSpeaking = true;
           this.activeSpeechProcess = spawn("afplay", ["-q", "1", generatedPath]);
 
@@ -1240,7 +1244,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
   stopFiller() {
     if (this.currentFillerProcess) {
       try {
-        this.currentFillerProcess.kill("SIGTERM");
+        this.currentFillerProcess.kill("SIGKILL");
       } catch (e) {}
       this.currentFillerProcess = null;
     }
