@@ -214,6 +214,7 @@ let overlayCreationLock = false;
 let lastOverlayCreationTime = 0;
 let recordingStartTime = 0;
 let isJarvisLoopActive = false;
+let currentActiveAgent = null;
 
 let activeKeyPoolIndex = 0;
 
@@ -1965,7 +1966,7 @@ async function stopRecording() {
 
   // Instant zero-lag human conversational filler (<80ms)
   if (currentMode === 'jarvis' && jarvisSpeechDetected) {
-    jarvisManager.playInstantTurnFiller((activeAgent && activeAgent.name) || "Tuk Tuk");
+    jarvisManager.playInstantTurnFiller((currentActiveAgent && currentActiveAgent.name) || "Tuk Tuk");
   }
 
   // Instantly hide overlay for standard/rewrite - keep open for Jarvis to show status
@@ -2101,6 +2102,7 @@ async function stopRecording() {
       const delegation = jarvisManager.evaluateTaskAssignment(originalText);
       let jarvisReply = '';
       let activeAgent = jarvisManager.agents.tuktuk;
+      currentActiveAgent = activeAgent;
       let standupAlreadySpoken = false;
       let actionResult = null;
 
@@ -2124,6 +2126,7 @@ async function stopRecording() {
 
         // 2. Assigned specialist agent automatically answers intelligently
         activeAgent = delegation.assignedAgent;
+        currentActiveAgent = activeAgent;
         console.log(`🎯 Assigned Specialist Auto-Answering: ${activeAgent.name} (${activeAgent.role})`);
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
@@ -2149,6 +2152,7 @@ async function stopRecording() {
       } else {
         // Detect which of the 4 specialized agents should respond
         activeAgent = jarvisManager.detectActiveAgent(originalText);
+        currentActiveAgent = activeAgent;
         console.log(`🎯 Routing query to specialist: ${activeAgent.name} (${activeAgent.role})`);
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('set-agent-name', activeAgent.name);
