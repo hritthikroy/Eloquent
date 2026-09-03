@@ -3110,7 +3110,7 @@ function saveAdminConfigToFile() {
     adminConfigSaveTimer = null;
     try {
       const adminConfigFile = path.join(app.getPath('userData'), 'admin-config.json');
-      ADMIN_CONFIG.geminiApiKey = geminiClient.getApiKey();
+      ADMIN_CONFIG.geminiApiKey = (geminiClient && typeof geminiClient.getApiKey === 'function') ? geminiClient.getApiKey() : '';
       fs.writeFile(adminConfigFile, JSON.stringify(ADMIN_CONFIG, null, 2), (err) => {
         if (err) console.error('❌ Error saving admin config async:', err.message);
       });

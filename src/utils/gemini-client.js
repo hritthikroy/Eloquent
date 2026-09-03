@@ -109,6 +109,10 @@ class GeminiClient {
     return this.apiKeys[this.activeKeyIndex % this.apiKeys.length];
   }
 
+  getApiKey() {
+    return this.getActiveKey();
+  }
+
   rotateToNextKey() {
     if (this.apiKeys.length > 1) {
       this.activeKeyIndex = (this.activeKeyIndex + 1) % this.apiKeys.length;
