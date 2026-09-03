@@ -601,8 +601,8 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return { handled: true, speech: "Opening Google Maps now." };
     }
 
-    if (lower.includes("search google for") || lower.includes("search for") || lower.includes("google search")) {
-      const match = speechText.match(/(?:search google for|search for|google search for|google)\s+(.+)/i);
+    if (lower.match(/^(?:hey\s+\w+[,\s]+)?(?:search google for|google search for|google search|search the web for|search online for|search for)\s+(.+)/i)) {
+      const match = speechText.match(/(?:search google for|google search for|google search|search the web for|search online for|search for)\s+(.+)/i);
       if (match && match[1]) {
         return this.searchWeb(match[1].replace(/[.,?!]/g, "").trim());
       }
