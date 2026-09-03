@@ -587,10 +587,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (!text || typeof text !== "string") return AGENTS.tuktuk;
     const lower = text.toLowerCase();
 
-    // 0. Multi-Party Squad Invocations
-    if (lower.includes("team") || lower.includes("everyone") || lower.includes("guys") ||
-        lower.includes("all of you") || lower.includes("squad") || lower.includes("what do you all think") ||
-        lower.includes("all 4 of you") || lower.includes("four members") || lower.includes("4 members")) {
+    // 0. Explicit Multi-Party Squad Invocations
+    if (/\b(whole team|entire team|all 4 of you|all four of you|founding squad|team standup|office meeting)\b/i.test(lower)) {
       return AGENTS.team;
     }
 
@@ -608,18 +606,17 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     }
 
     // 0. MULTI-AGENT SQUAD COLLABORATION TRIGGERS (Evaluated FIRST):
-    // If multiple agent names are mentioned (e.g. "Listen Andrew, Tuk Tuk tell Andrew", "Andrew and Tuk Tuk", "Tuk Tuk and Brian")
-    // OR collaborative phrases ("talk with each other", "team", "everyone", "solve together", "why cannot execute", "not sure", "missing logic")
+    // Only route to team if user explicitly calls out the entire squad or multiple people together
     const tukCount = /\b(tuk\s*tuk|tuktuk|ava)\b/i.test(lower) ? 1 : 0;
     const andrewCount = /\b(andrew|and\s*rew)\b/i.test(lower) ? 1 : 0;
     const jennyCount = /\b(jenny)\b/i.test(lower) ? 1 : 0;
     const brianCount = /\b(brian)\b/i.test(lower) ? 1 : 0;
     const totalNames = tukCount + andrewCount + jennyCount + brianCount;
 
-    const hasTeamPhrase = /\b(team|squad|everyone|everybody|both\s+of\s+you|all\s+of\s+you|talk\s+with\s+each\s+other|talk\s+to\s+each\s+other|solve\s+together|work\s+together|collaborate|not\s+sure|missing\s+logic|why\s+cannot\s+execute|why\s+you\s+cannot\s+execute|tell\s+andrew\s*,\s*tuk\s*tuk|tuk\s*tuk\s*,\s*tell\s+andrew)\b/i.test(lower);
+    const hasExplicitTeamPhrase = /\b(team standup|office meeting|squad standup|morning sync|all 4 of you|all four of you|the whole squad|talk to each other|discuss with each other)\b/i.test(lower);
 
-    if (totalNames >= 2 || hasTeamPhrase) {
-      console.log(`🤝 [Auto Squad Arbiter] Multi-agent collaboration detected (${totalNames} names, phrase: ${hasTeamPhrase}) -> Routing to AGENTS.team!`);
+    if (totalNames >= 2 || hasExplicitTeamPhrase) {
+      console.log(`🤝 [Auto Squad Arbiter] Multi-agent collaboration detected (${totalNames} names, phrase: ${hasExplicitTeamPhrase}) -> Routing to AGENTS.team!`);
       return AGENTS.team;
     }
 
@@ -638,7 +635,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     }
 
     // 2. Explicit Squad / Team Invocations
-    if (/\b(squad|team standup|office meeting|all of you|everyone|guys)\b/i.test(lower)) {
+    if (/\b(founding squad|team standup|office meeting|all 4 members|all four members)\b/i.test(lower)) {
       return AGENTS.team;
     }
 
@@ -745,18 +742,22 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 - Andrew, Brian, and Jenny MUST ONLY call him "bro", "man", "bhai", or "${userName}". STRICTLY NEVER call him "babe", "sweetheart", "honey", or romantic pet names under any circumstances.
 - ONLY Tuk Tuk is his girlfriend and soul partner who calls him "babe" or "sweetheart".`;
 
-    // Immediate Conversational Continuity (Exact preceding turns from current session)
+    // Immediate Conversational Continuity (Preceding turns from current session)
     let sessionContinuity = "";
     try {
       if (fs.existsSync(this.historyFilePath)) {
         const historyData = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
         if (Array.isArray(historyData) && historyData.length > 0) {
-          const recentTurns = historyData.filter(e => e.originalText && e.text).slice(-2);
+          // historyData is unshifted (index 0 is most recent) -> take top 2 and reverse to chronological order
+          const recentTurns = historyData
+            .filter(e => e.originalText && e.text && e.mode === "jarvis")
+            .slice(0, 2)
+            .reverse();
           if (recentTurns.length > 0) {
             const turnsFormatted = recentTurns
               .map(t => `${userName}: "${t.originalText}" → ${t.agent || "Agent"}: "${t.text}"`)
               .join(" | ");
-            sessionContinuity = `\n[IMMEDIATE PRECEDING CONVERSATION IN ROOM]: ${turnsFormatted}. Maintain 100% natural conversational continuity!`;
+            sessionContinuity = `\n[IMMEDIATE PRECEDING TURNS]: ${turnsFormatted}. Continue from this exact context naturally!`;
           }
         }
       }
