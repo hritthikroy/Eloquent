@@ -220,13 +220,12 @@ class JarvisManager {
 
   initTTS() {
     try {
-      if (this.ttsClient && typeof this.ttsClient.close === "function") {
-        try { this.ttsClient.close(); } catch (e) {}
-      }
       this.ttsClient = new MsEdgeTTS();
       this._cachedVoice = null;
-      // Pre-warm the WebSocket metadata connection so Turn 1 has 0ms cold-start latency
-      this.ttsClient.setMetadata("en-US-AvaMultilingualNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {}).catch(() => {});
+      // Pre-warm the WebSocket metadata connection asynchronously
+      this.ttsClient.setMetadata("en-US-AvaMultilingualNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {})
+        .then(() => { this._cachedVoice = "en-US-AvaMultilingualNeural"; })
+        .catch(() => {});
 
       // Keep-alive heartbeat every 20s to ensure instant 166ms warm TTFB all day long
       if (!this._ttsKeepAliveTimer) {
@@ -920,25 +919,19 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     for (let attempt = 1; attempt <= 2; attempt++) {
       let tempDir = null;
       try {
-        if (!this.ttsClient || attempt > 1 || this._cachedVoice !== voice) {
-          if (attempt > 1) {
-            this.initTTS();
-            await new Promise(r => setTimeout(r, 100));
-          }
-          if (!this.ttsClient) this.initTTS();
-          await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
-          this._cachedVoice = voice;
-        }
+        const client = new MsEdgeTTS();
+        await client.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
         // Isolated directory prevents file-lock collisions with CoreAudio afplay
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "eloquent_tts_"));
         // 5-second timeout — with 20-word cap, synthesis finishes in under 1s
         const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
         const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanText) : "+0Hz";
-        const toFilePromise = this.ttsClient.toFile(tempDir, cleanText, { rate: dynamicRate, pitch: dynamicPitch });
+        const toFilePromise = client.toFile(tempDir, cleanText, { rate: dynamicRate, pitch: dynamicPitch });
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 5s")), 5000)
         );
         const res = await Promise.race([toFilePromise, timeoutPromise]);
+        try { if (typeof client.close === "function") client.close(); } catch (e) {}
 
         // Check if this synthesis was superseded or aborted while awaiting download
         if (this.currentSpeechId !== speechId || this.isAborted) {
