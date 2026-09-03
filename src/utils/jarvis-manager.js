@@ -337,6 +337,10 @@ class JarvisManager {
     }
   }
 
+  getLivingMemory() {
+    return this.memory || this.loadMemory();
+  }
+
   calculateRetention(item) {
     if (!item) return 0;
     const salience = item.salience || 0.6;
