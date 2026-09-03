@@ -160,7 +160,7 @@ class OfficeActionRunner {
     // -------------------------------------------------------------
     // REMOTE OFFICE ZOOM MEETING & TEAM STANDUP
     // -------------------------------------------------------------
-    if (lower.includes("team standup") || lower.includes("office meeting") || lower.includes("morning sync") || lower.includes("zoom meeting") || lower.includes("office standup") || lower.includes("team sync") || lower.includes("team rollcall") || lower.includes("start standup") || lower.includes("call meeting") || lower.includes("who is in the office")) {
+    if (lower.includes("team standup") || lower.includes("squad standup") || lower.includes("standup meeting") || lower.includes("office meeting") || lower.includes("morning sync") || lower.includes("zoom meeting") || lower.includes("office standup") || lower.includes("team sync") || lower.includes("team rollcall") || lower.includes("start standup") || lower.includes("call meeting") || lower.includes("who is in the office") || lower.includes("office briefing")) {
       return this.generateStandupPlan();
     }
 
