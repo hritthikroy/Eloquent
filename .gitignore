@@ -3,6 +3,8 @@ node_modules/
 
 # Build output - use GitHub Releases for distribution
 dist/
+dist-ts/
+.cache/
 
 # Environment variables
 .env
@@ -13,9 +15,12 @@ dist/
 .DS_Store
 *.DS_Store
 
-# Logs
+# Logs & Test Scratch
 *.log
 npm-debug.log*
+agent-brain-memory.json
+*.wav
+*.mp3
 
 # IDE
 .vscode/
