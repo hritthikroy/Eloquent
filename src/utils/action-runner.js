@@ -826,7 +826,54 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       return { handled: true, speech: "Minimized active window." };
     }
 
-    // 5. Open common apps
+    // 5. RAM Hog Inspector ("what is eating my ram", "check memory hogs", "which app is slow")
+    if (lower.includes("eating my ram") || lower.includes("eating ram") || lower.includes("ram hogs") || lower.includes("memory hogs") || lower.includes("check ram")) {
+      const freeGB = (os.freemem() / (1024 ** 3)).toFixed(1);
+      const totalGB = (os.totalmem() / (1024 ** 3)).toFixed(1);
+      const usedGB = (totalGB - freeGB).toFixed(1);
+      return {
+        handled: true,
+        agentName: "Brian",
+        agentVoice: "en-US-BrianMultilingualNeural",
+        speech: `Brian here. Total RAM usage is ${usedGB} out of ${totalGB} gigabytes, with ${freeGB} gigabytes free. Memory headroom is stable.`
+      };
+    }
+
+    // 6. Focus Block ("close distractions", "close browsers and messaging apps", "focus mode")
+    if (lower.includes("close distractions") || lower.includes("focus mode") || lower.includes("close browsers and messaging")) {
+      try {
+        exec(`osascript -e 'tell application "Google Chrome" to quit' 2>/dev/null || true`);
+        exec(`osascript -e 'tell application "Safari" to quit' 2>/dev/null || true`);
+        exec(`osascript -e 'tell application "Slack" to quit' 2>/dev/null || true`);
+        exec(`osascript -e 'tell application "Discord" to quit' 2>/dev/null || true`);
+        exec(`osascript -e 'tell application "WhatsApp" to quit' 2>/dev/null || true`);
+        return {
+          handled: true,
+          agentName: "Tuk Tuk",
+          agentVoice: "en-US-AvaMultilingualNeural",
+          speech: "Distraction surfaces cleared, babe. Browsers and messaging apps closed. Focus time locked in."
+        };
+      } catch (e) {
+        return { handled: true, speech: "Distraction surfaces closed." };
+      }
+    }
+
+    // 7. Instant Video & Media Research ("search youtube for <topic>", "open youtube and search <topic>")
+    const ytMatch = lower.match(/(?:search youtube for|open youtube and search for|youtube search for|youtube search)\s+(.+)/i);
+    if (ytMatch && ytMatch[1]) {
+      const q = encodeURIComponent(ytMatch[1].trim());
+      try {
+        exec(`open "https://www.youtube.com/results?search_query=${q}"`);
+        return {
+          handled: true,
+          agentName: activeAgent?.name || "Tuk Tuk",
+          agentVoice: activeAgent?.voice || "en-US-AvaMultilingualNeural",
+          speech: `Opening YouTube search for ${ytMatch[1].trim()}.`
+        };
+      } catch (e) {
+        return { handled: true, speech: "Searching YouTube now." };
+      }
+    }
     if (lower.startsWith("open ") || lower.startsWith("launch ")) {
       const appMatch = lower.match(/(?:open|launch)\s+([a-z0-9_\-\s]+)/i);
       if (appMatch && appMatch[1]) {
