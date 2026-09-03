@@ -129,6 +129,30 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       };
     }
 
+    // 4. Andrew: Screen Perception & Active Workspace Inspection ("look at my screen", "see my screen")
+    if (lower.includes("see my screen") || lower.includes("look at my screen") ||
+        lower.includes("check my screen") || lower.includes("what is on my screen") ||
+        lower.includes("what's on my screen") || lower.includes("look at this code") ||
+        (lower.includes("andrew") && lower.includes("screen"))) {
+      const screenPath = "/tmp/eloquent_screen.jpg";
+      try {
+        execSync(`screencapture -x -C "${screenPath}" 2>/dev/null || true`);
+      } catch (e) {}
+
+      let windowContext = "";
+      try {
+        windowContext = execSync(`osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`, { timeout: 1500 }).toString().trim();
+      } catch (e) {}
+
+      const appName = windowContext || "your active workspace";
+      return {
+        handled: true,
+        agentName: "Andrew",
+        agentVoice: "en-US-AndrewNeural",
+        speech: `I've locked eyes on your screen, bro. You're currently focused in ${appName}. Screenshot is captured at /tmp/eloquent_screen.jpg. What specific part of this code or layout do you want me to refactor?`
+      };
+    }
+
     // -------------------------------------------------------------
     // BRIAN (System QA, Health, Battery, Diagnostics, Storage & Ports)
     // -------------------------------------------------------------

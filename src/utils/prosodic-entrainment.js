@@ -39,6 +39,30 @@ class ProsodicEntrainmentAdapter {
     const ratePercent = Math.round((this.agentRate - 1.0) * 100);
     return ratePercent >= 0 ? `+${ratePercent}%` : `${ratePercent}%`;
   }
+
+  /**
+   * Calculate dynamic pitch based on affective valence/arousal in reply text
+   */
+  getPitchString(replyText = "") {
+    if (!replyText) return "+0Hz";
+    const lower = replyText.toLowerCase();
+
+    // High arousal / excitement / playful banter -> slightly higher pitch (+2Hz to +3Hz)
+    if (lower.includes("!") || lower.includes("(laughs") || lower.includes("(chuckles") ||
+        lower.includes("(giggles") || lower.includes("awesome") || lower.includes("eureka") ||
+        lower.includes("breakthrough") || lower.includes("love")) {
+      return "+2Hz";
+    }
+
+    // Low arousal / tender / late night / calming -> warm lowered pitch (-2Hz to -3Hz)
+    if (lower.includes("exhausted") || lower.includes("tired") || lower.includes("relax") ||
+        lower.includes("breathe") || lower.includes("steady") || lower.includes("late night") ||
+        lower.includes("sleep") || lower.includes("tender")) {
+      return "-2Hz";
+    }
+
+    return "+0Hz";
+  }
 }
 
 module.exports = ProsodicEntrainmentAdapter;

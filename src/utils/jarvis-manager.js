@@ -126,7 +126,11 @@ class JarvisManager {
     this.agents = AGENTS;
     this.prosodicEntrainment = new ProsodicEntrainmentAdapter();
     this.duplexActionChannel = new DuplexActionChannel();
+    this.backchannelFiles = [];
     this.initTTS();
+    setTimeout(() => {
+      this.ensureBackchannelLibrary().catch(() => {});
+    }, 2000);
   }
 
   initTTS() {
@@ -660,7 +664,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
         }
         // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
         const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
-        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText, { rate: dynamicRate });
+        const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanText) : "+0Hz";
+        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText, { rate: dynamicRate, pitch: dynamicPitch });
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 7s")), 7000)
         );
@@ -833,6 +838,54 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     try {
       execSync("killall afplay say 2>/dev/null || true");
     } catch (e) {}
+  }
+
+  /**
+   * Pre-synthesize paralinguistic vocal backchannels for active listening
+   * (Inoue et al. / Hume EVI-2 standard)
+   */
+  async ensureBackchannelLibrary() {
+    const soundsDir = path.resolve(__dirname, "../../userData/sounds");
+    try {
+      if (!fs.existsSync(soundsDir)) fs.mkdirSync(soundsDir, { recursive: true });
+    } catch (e) {}
+
+    this.backchannelFiles = [
+      path.join(soundsDir, "bc_mhm.mp3"),
+      path.join(soundsDir, "bc_yeah.mp3"),
+      path.join(soundsDir, "bc_listening.mp3")
+    ];
+
+    const phrases = ["Mhm.", "Yeah.", "Right."];
+
+    for (let i = 0; i < this.backchannelFiles.length; i++) {
+      const file = this.backchannelFiles[i];
+      if (!fs.existsSync(file)) {
+        try {
+          if (!this.ttsClient) this.initTTS();
+          await this.ttsClient.setMetadata(this.config.voice || "en-US-AvaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+          const res = await this.ttsClient.toFile("/tmp", phrases[i], { rate: "+8%", pitch: "+1Hz" });
+          fs.copyFileSync(res.audioFilePath, file);
+          try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
+          console.log(`🎙️ Pre-synthesized neural backchannel: ${file}`);
+        } catch (e) {}
+      }
+    }
+  }
+
+  /**
+   * Play an unintrusive paralinguistic audio cue during extended user speech
+   */
+  playMicroBackchannel() {
+    if (this.isSpeaking) return false;
+    const available = (this.backchannelFiles || []).filter(f => fs.existsSync(f));
+    if (available.length === 0) return false;
+
+    const chosen = available[Math.floor(Math.random() * available.length)];
+    // Subtle background paralinguistic audio (-14dB = ~0.32 volume)
+    spawn("afplay", ["-v", "0.32", chosen], { stdio: "ignore" });
+    console.log(`✨ [Active Listening Backchannel] Tuk Tuk emitted micro-paralinguistic nod: ${path.basename(chosen)}`);
+    return true;
   }
 }
 
