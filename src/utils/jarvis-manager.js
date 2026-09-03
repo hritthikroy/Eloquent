@@ -414,15 +414,20 @@ class JarvisManager {
 
   formatLivingMemory() {
     if (!this.memory) return "";
-    const prefs = (this.memory.learnedPreferences || []).slice(-4).map(p => `• ${p}`).join("\n");
-    const insights = (this.memory.recentLearnings || []).slice(0, 3).map(l => `• [${l.topic}] ${l.insight}`).join("\n");
+    const prefs = (this.memory.learnedPreferences || []).slice(-6).map(p => `• ${p}`).join("\n");
+    // Sort learnings by Ebbinghaus retention so the most salient and recently reinforced memories take priority
+    const sortedLearnings = (this.memory.recentLearnings || [])
+      .slice()
+      .sort((a, b) => this.calculateRetention(b) - this.calculateRetention(a))
+      .slice(0, 5);
+    const insights = sortedLearnings.map(l => `• [${l.topic}] ${l.insight}`).join("\n");
 
     return `
-[SHARED CORE MEMORY]:
+[SHARED LIVING MEMORY & AUTONOMOUS DIRECTIVES]:
 • Founder: ${this.config.userName} (Creator & Architect of Eloquent)
-• Key Preferences:
+• Dynamic Learned Preferences:
 ${prefs || "• Grounded, natural, rapid continuous dialogue"}
-${insights ? `• Active Engineering Focus:\n${insights}` : ""}`;
+${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
   }
 
   learnFromInteraction(userSpeech, reply, agentName, actionResult = null) {
