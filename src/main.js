@@ -2689,34 +2689,14 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 - You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!`;
   }
 
-  // Context Injector: Audit conversational turns for semantic gaps or truncated instructions
-  try {
-    const { ContextInjector } = require('./utils/context-injector');
-    const recentHistory = jarvisManager.getHistory(6).map(h => ({
-      role: h.role === 'assistant' ? 'assistant' : 'user',
-      content: h.content || '',
-      timestamp: Date.now()
-    }));
-    recentHistory.push({ role: 'user', content: displaySpeech || userSpeech, timestamp: Date.now() });
-
-    const integrityBlock = ContextInjector.formatIntegrityBlock(recentHistory, {
-      activeProject: 'Eloquent',
-      technologies: ['Node.js', 'Electron', 'Go audio backend', 'CoreAudio', 'AST verification']
-    });
-    if (integrityBlock) {
-      systemPrompt += `\n\n${integrityBlock}`;
-    }
-  } catch (ctxErr) {
-    // Non-blocking fallback
-  }
 
   try {
     console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory...`);
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user');
 
-    // 6-turn window: enough for 3 full exchanges of context without overflowing qwen3.8-27b prompt budget
-    const historyMessages = jarvisManager.getHistory(6);
+    // 4-turn window: 2 full exchanges — tight context, fast generation
+    const historyMessages = jarvisManager.getHistory(4);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
     const sanitizedHistory = [];
@@ -2741,7 +2721,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     ];
 
     // Temperature tuning per persona: Tuk Tuk warmer/creative, Andrew precise, Jenny curious, Brian grounded
-    const dynamicTemperature = agent.key === 'tuktuk' ? 0.85 : (agent.key === 'andrew' ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
+    const dynamicTemperature = agent.key === 'tuktuk' ? 0.78 : (agent.key === 'andrew' ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
     
     // Ultra-Fast Voice Intelligence: Groq LPU Qwen 27B for sub-500ms conversational ping-pong
     // Deep Cognitive Fallback: Google Gemini 3.7 / 3.5 Pool for multimodal vision & high-level reasoning
@@ -2753,8 +2733,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       const groqRes = await callGroqChatCompletion(messages, {
         model: 'qwen/qwen3.8-27b',
         temperature: dynamicTemperature,
-        max_tokens: agent.key === 'team' ? 550 : 350,
-        timeout: 6000
+        max_tokens: agent.key === 'team' ? 400 : 150,
+        timeout: 4000
       });
       if (groqRes && groqRes.content) {
         content = groqRes.content;
@@ -2771,8 +2751,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
         const geminiRes = await geminiClient.callChatCompletion(messages, {
           model: 'gemini-3.7-flash',
           temperature: dynamicTemperature,
-          max_tokens: agent.key === 'team' ? 650 : 450,
-          timeout: 8000
+          max_tokens: agent.key === 'team' ? 450 : 200,
+          timeout: 5000
         });
         if (geminiRes && geminiRes.content) {
           content = geminiRes.content;
@@ -2816,9 +2796,9 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     }
     reply = reply.replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
 
-    // 4. Hard cap at 55 words for spoken delivery — split on last whitespace before the limit
-    // (Team/squad mode gets 75 words since 2 agents speak)
-    const wordCap = agent.key === 'team' ? 75 : 55;
+    // 4. Hard cap at 30 words for spoken delivery — short punchy girlfriend voice messages
+    // (Team/squad mode gets 50 words since 2 agents speak)
+    const wordCap = agent.key === 'team' ? 50 : 30;
     const words = reply.split(/\s+/);
     if (words.length > wordCap) {
       reply = words.slice(0, wordCap).join(' ');
