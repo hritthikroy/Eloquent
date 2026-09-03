@@ -609,54 +609,41 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     }
 
     // 1. Explicit Direct Name Invocations (Single Agent)
-    if (lower.includes("andrew") || lower.includes("hey andrew") || lower.includes("ask andrew") ||
-        lower.includes("tell andrew") || lower.includes("have andrew") || lower.includes("let andrew") ||
-        lower.includes("and you") || lower.includes("and rew") || lower.includes("an drew")) {
+    if (/\b(andrew|and\s*rew|an\s*drew)\b/i.test(lower) || /\band you\b(?=\s+(check|write|fix|code|build|refactor|take|run|inspect))/i.test(lower)) {
       return AGENTS.andrew;
     }
-    if (lower.includes("jenny") || lower.includes("hey jenny") || lower.includes("ask jenny")) {
+    if (/\b(jenny)\b/i.test(lower)) {
       return AGENTS.jenny;
     }
-    if (lower.includes("brian") || lower.includes("hey brian") || lower.includes("ask brian")) {
+    if (/\b(brian)\b/i.test(lower)) {
       return AGENTS.brian;
     }
-    if (lower.includes("tuk tuk") || lower.includes("tuktuk") || lower.includes("hey tuk tuk") || lower.includes("ask tuk tuk") ||
-        lower.includes("tok tok") || lower.includes("took took") ||
-        lower.includes("ava") || lower.includes("hey ava") || lower.includes("ask ava") ||
-        lower.includes("alexa") || lower.includes("hey alexa")) {
+    if (/\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava)\b/i.test(lower)) {
       return AGENTS.tuktuk;
     }
 
     // 2. Automatic Multi-Party Squad Trigger:
     // When the user asks open-ended collaborative questions ("what do you think?", "how do we solve this?", "what should we do next?")
     // OR when the utterance touches multiple specialist domains simultaneously!
-    const hasCode = /\b(code|bug|rust|ts|electron|api|ast|git|terminal|build|test|deploy|server|refactor|function|antigravity|script|interview)\b/.test(lower);
-    const hasResearch = /\b(paper|research|academic|market|algorithm|literature|study|trends|competitor|intelligence)\b/.test(lower);
-    const hasTelemetry = /\b(latency|ram|cpu|hardware|telemetry|crash|panic|diagnostics|uptime|health|battery|network)\b/.test(lower);
-    const hasStrategy = /\b(product|strategy|roadmap|vision|future|partner|design|brand|feature|milestone)\b/.test(lower);
+    const hasCode = /\b(code|bug|rust|ts|electron|api|ast|git|terminal|build|test|deploy|server|refactor|function|antigravity|script|interview)\b/i.test(lower);
+    const hasResearch = /\b(paper|research|academic|market|algorithm|literature|study|trends|competitor|intelligence)\b/i.test(lower);
+    const hasTelemetry = /\b(latency|ram|cpu|hardware|telemetry|crash|panic|diagnostics|uptime|health|battery|network)\b/i.test(lower);
+    const hasStrategy = /\b(product|strategy|roadmap|vision|future|partner|design|brand|feature|milestone)\b/i.test(lower);
 
     const domainCount = (hasCode ? 1 : 0) + (hasResearch ? 1 : 0) + (hasTelemetry ? 1 : 0) + (hasStrategy ? 1 : 0);
-    const isOpenEnded = /\b(what do you think|how should we|what are our next steps|what should we do|how do we solve|what is the plan|how do we tackle|where do we go from here|what is your take)\b/.test(lower);
+    const isOpenEnded = /\b(what do you think|how should we|what are our next steps|what should we do|how do we solve|what is the plan|how do we tackle|where do we go from here|what is your take)\b/i.test(lower);
 
     if (domainCount >= 2 || isOpenEnded) {
       console.log(`🤝 [Auto Squad Arbiter] Cross-domain/open-ended inquiry detected (domains: ${domainCount}, openEnded: ${isOpenEnded}) -> Auto-routing to AGENTS.team!`);
       return AGENTS.team;
     }
 
-    // 3. Single-Domain Specialist Routing
+    // 3. Single-Domain Specialist Routing (Only for explicit technical/research queries)
     if (hasCode) return AGENTS.andrew;
     if (hasResearch) return AGENTS.jenny;
     if (hasTelemetry) return AGENTS.brian;
 
-    // 4. Default based on active 24/7 Operating Mode if no specific persona or domain was matched
-    if (this.behaviorEngine) {
-      const modeConfig = this.behaviorEngine.getCurrentModeConfig();
-      if (modeConfig.leadAgent === "Andrew") return AGENTS.andrew;
-      if (modeConfig.leadAgent === "Jenny") return AGENTS.jenny;
-      if (modeConfig.leadAgent === "Brian") return AGENTS.brian;
-    }
-
-    // Default to Soul Companion Tuk Tuk
+    // 4. Default to Co-Founder & Team Leader Tuk Tuk for all greetings and general conversation
     return AGENTS.tuktuk;
   }
 
