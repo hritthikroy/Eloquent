@@ -142,6 +142,32 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       };
     }
 
+    // 3.5 Continuous Screen Share Activation / Deactivation
+    if (lower.includes("screen share") || lower.includes("screenshare") ||
+        lower.includes("share our screen") || lower.includes("share my screen") ||
+        lower.includes("sharing my screen") || lower.includes("sharing our screen") ||
+        (lower.includes("access to see") && lower.includes("screen"))) {
+      const screenShareManager = require('./screen-share-manager');
+      if (lower.includes("stop") || lower.includes("turn off") || lower.includes("pause") || lower.includes("close") || lower.includes("disable")) {
+        screenShareManager.stop();
+        return {
+          handled: true,
+          agentName: "Tuk Tuk",
+          agentVoice: "en-US-AvaNeural",
+          speech: "(smiles) Screen share is paused, babe. I'll keep listening right here whenever you need me!"
+        };
+      } else {
+        screenShareManager.start();
+        const ctx = screenShareManager.getVisionContext();
+        return {
+          handled: true,
+          agentName: "Andrew",
+          agentVoice: "en-US-AndrewNeural",
+          speech: `Live continuous screen share is active, bro! I'm streaming your display in real-time focused on ${ctx.appName}. Me, Tuk Tuk, and the squad have full visual access to your screen. Let's build and crush some work!`
+        };
+      }
+    }
+
     // 4. Andrew: Screen Perception, Interview Co-Pilot & Active Workspace Inspection
     if (lower.includes("interview") || lower.includes("see my screen") || lower.includes("look at my screen") ||
         lower.includes("check my screen") || lower.includes("what is on my screen") ||

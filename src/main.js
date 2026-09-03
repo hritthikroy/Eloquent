@@ -50,6 +50,7 @@ const pasteHelper = new PasteHelper();
 const soundPlayer = new SoundPlayer();
 const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
 const actionRunner = require('./utils/action-runner');
+const screenShareManager = require('./utils/screen-share-manager');
 
 // Exit early if electron is not available (during build)
 if (!app) {
@@ -848,6 +849,16 @@ function createTray() {
       }
     },
     {
+      label: screenShareManager.isActive ? '🟢 Screen Share: ACTIVE (Streaming Display)' : '🖥️ Screen Share with AI Team (Alt+S)',
+      click: () => {
+        const isNowActive = screenShareManager.toggle(overlayWindow);
+        tray = null;
+        createTray();
+        playSound(isNowActive ? 'start' : 'stop');
+        showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Andrew & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
+      }
+    },
+    {
       label: 'Start AI Rewrite (Alt+Shift+Space)',
       click: () => {
         playSound('start');
@@ -1058,6 +1069,15 @@ function registerShortcuts() {
     handleShortcut('start', 'jarvis');
   });
 
+  // Live Screen Share with AI Team toggle (Alt+S)
+  const screenShareRegistered = globalShortcut.register('Alt+S', () => {
+    const isNowActive = screenShareManager.toggle(overlayWindow);
+    tray = null;
+    createTray();
+    playSound(isNowActive ? 'start' : 'stop');
+    showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Andrew & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
+  });
+
   // ULTRA-FAST shortcut registration - optimized for instant response
   const rewriteRegistered = globalShortcut.register('Alt+Shift+Space', () => {
     handleShortcut('start', 'rewrite');
@@ -1185,6 +1205,7 @@ function initOverlayWindow() {
   });
 
   overlayWindow.loadFile('src/ui/overlay.html');
+  screenShareManager.setOverlayWindow(overlayWindow);
 
   overlayWindow.on('closed', () => {
     overlayWindow = null;
@@ -2578,7 +2599,17 @@ async function rewrite(text) {
 async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
   const startTime = Date.now();
   const agent = activeAgent || jarvisManager.agents.tuktuk;
-  const systemPrompt = jarvisManager.getSystemPrompt(agent);
+  let systemPrompt = jarvisManager.getSystemPrompt(agent);
+
+  const visionCtx = screenShareManager.getVisionContext();
+  if (visionCtx.isActive) {
+    systemPrompt += `\n\n[LIVE SCREEN SHARE ACTIVE - REAL-TIME VISION FEED]:
+- You are actively streaming Hritthik's live display (/tmp/eloquent_screenshare.jpg).
+- Frontmost Focused Application: "${visionCtx.appName}".
+- Window / Document Context: "${visionCtx.windowTitle || visionCtx.appName}".
+- Screen Resolution: 1280px optimized (${visionCtx.frameSizeKB}KB).
+- You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!`;
+  }
 
   try {
     console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory...`);
