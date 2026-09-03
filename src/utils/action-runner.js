@@ -229,9 +229,11 @@ class OfficeActionRunner {
     // 2. Antigravity Auto-Mode Coding & Refactoring Execution (Strict Command Triggers)
     if (lower.includes("antigravity auto mode") || lower.includes("run antigravity") || lower.includes("execute auto code") ||
         lower.includes("run syntax audit") || lower.includes("audit syntax") || lower.includes("run test suite") ||
+        lower.includes("antigravity auto code") || lower.includes("antigravity refactor") || lower.includes("antigravity check") ||
+        (lower.includes("antigravity") && (lower.includes("code") || lower.includes("build") || lower.includes("fix") || lower.includes("audit") || lower.includes("status"))) ||
         (lower.includes("andrew") && (lower.includes("run antigravity") || lower.includes("syntax audit") || lower.includes("run tests")))) {
       const task = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*/i, "").trim();
-      const res = await this.antigravity.executeAutoCodingTask(task, { callGroqChatCompletion });
+      const res = await this.antigravity.executeAutoCodingTask(task, { callGroqChatCompletion, geminiClient });
       return {
         handled: true,
         agentName: "Andrew",

@@ -95,8 +95,8 @@ class AntigravityEngine {
       if (lower.includes("git status") || lower.includes("git checkpoint") || lower.includes("unstaged changes") || lower.includes("what changed")) {
         taskRecord.steps.push({ action: "git_inspection", target: "repo" });
 
-        const statusOutput = execSync("git status --short", { cwd: this.projectDir }).toString().trim();
-        const branch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: this.projectDir }).toString().trim();
+        const statusOutput = execSync("GIT_CONFIG_GLOBAL=/dev/null git status --short", { cwd: this.projectDir }).toString().trim();
+        const branch = execSync("GIT_CONFIG_GLOBAL=/dev/null git rev-parse --abbrev-ref HEAD", { cwd: this.projectDir }).toString().trim();
 
         const changeCount = statusOutput ? statusOutput.split("\n").length : 0;
         taskRecord.status = "success";
