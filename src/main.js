@@ -2234,19 +2234,52 @@ async function stopRecording() {
 
         const multiTurns = parseMultiAgentTurns(jarvisReply);
         if (multiTurns.length > 1) {
-          console.log(`🎙️ Multi-Party Squad Exchange initiated (${multiTurns.length} agent turns)!`);
-          for (const step of multiTurns) {
-            if (!isJarvisLoopActive || lastInterruptedUtterance) break;
+          console.log(`🎙️ Multi-Party Squad Exchange initiated (${multiTurns.length} agent turns) - SEQUENTIAL PLAYBACK`);
+          
+          // CRITICAL FIX: Strict sequential playback with explicit awaits
+          for (let i = 0; i < multiTurns.length; i++) {
+            const step = multiTurns[i];
+            
+            // Check for interruption before each agent speaks
+            if (!isJarvisLoopActive || lastInterruptedUtterance) {
+              console.log(`🛑 Squad conversation interrupted at turn ${i + 1}/${multiTurns.length}`);
+              break;
+            }
+            
+            console.log(`🎤 Turn ${i + 1}/${multiTurns.length}: ${step.agentName} speaking...`);
+            
+            // Update UI for current speaking agent
             if (overlayWindow && !overlayWindow.isDestroyed()) {
               overlayWindow.webContents.send('set-agent-name', step.agentName);
               overlayWindow.webContents.send('jarvis-speaking');
             }
+            
+            // Show notification
             showNotification(`🤖 ${step.agentName}`, step.text);
+            
+            // CRITICAL: Await speech completion before moving to next agent
             await jarvisManager.speak(step.text, step.voice);
-            if (!isJarvisLoopActive || lastInterruptedUtterance) break;
-            await new Promise(r => setTimeout(r, 140));
-            if (!isJarvisLoopActive || lastInterruptedUtterance) break;
+            console.log(`✅ Turn ${i + 1}/${multiTurns.length}: ${step.agentName} finished speaking`);
+            
+            // Check for interruption after speech
+            if (!isJarvisLoopActive || lastInterruptedUtterance) {
+              console.log(`🛑 Squad conversation interrupted after turn ${i + 1}/${multiTurns.length}`);
+              break;
+            }
+            
+            // Brief pause between agents (140ms natural turn-taking delay)
+            if (i < multiTurns.length - 1) {
+              await new Promise(r => setTimeout(r, 140));
+            }
+            
+            // Final interruption check before next iteration
+            if (!isJarvisLoopActive || lastInterruptedUtterance) {
+              console.log(`🛑 Squad conversation interrupted during pause after turn ${i + 1}/${multiTurns.length}`);
+              break;
+            }
           }
+          
+          console.log(`🏁 Squad conversation complete (${multiTurns.length} turns played)`);
         } else {
           // Single agent turn — clean text and voice extraction
           let singleSpeechText = jarvisReply;
@@ -2697,8 +2730,10 @@ async function rewrite(text) {
 }
 
 // Parse multi-party agent turns formatted as [Agent]: ... or Agent: ... for seamless podcast-style dialogue
+// FIXED: Enforces strict sequential turn-taking - prevents simultaneous agent speech
 function parseMultiAgentTurns(text) {
   if (!text || typeof text !== 'string') return [];
+  
   const agentMap = {
     'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
@@ -2708,25 +2743,44 @@ function parseMultiAgentTurns(text) {
     'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
   };
 
+  // Enhanced pattern: captures agent name markers with flexible formatting
   const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?)|$)/gi;
   const turns = [];
   let match;
+  
+  // Extract all agent turns from the formatted text
   while ((match = pattern.exec(text)) !== null) {
     const rawName = match[1].toLowerCase().replace(/\s+/g, ' ').trim();
     const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaMultilingualNeural' };
     let speech = match[2].trim();
+    
+    // Clean up leading punctuation and whitespace
     speech = speech.replace(/^[,\s—–:-]+/, '').trim();
+    
     if (speech.length > 0) {
+      // Capitalize first letter
       speech = speech.charAt(0).toUpperCase() + speech.slice(1);
+      
+      // Sanitize romantic terms for non-Tuk Tuk agents
       if (agentInfo.name !== 'Tuk Tuk') {
         speech = speech.replace(/\b(babe|sweetheart|honey|darling)\b/gi, 'bro');
       }
+      
       turns.push({
         agentName: agentInfo.name,
         voice: agentInfo.voice,
-        text: speech
+        text: speech,
+        // Add explicit turn number to enforce sequencing
+        turnIndex: turns.length
       });
     }
+  }
+
+  // CRITICAL FIX: Enforce maximum 2 agents per turn in team mode
+  // This prevents AI from generating 3+ agent responses that cause simultaneous speech
+  if (turns.length > 2) {
+    console.warn(`⚠️ Multi-agent response contained ${turns.length} turns - limiting to first 2 for sequential playback`);
+    return turns.slice(0, 2);
   }
 
   return turns;

@@ -75,13 +75,35 @@ REAL DEVOPS CONVERSATION RULES:
     sample: "The team is ready.",
     getPrompt: (userName, salutation) => `You are the founding squad of 4 — Tuk Tuk, Andrew, Jenny, and Brian — in a live war room with ${userName}.
 
-WAR-ROOM SQUAD RULES:
-1. Exactly 2 agents respond per turn:
-   [Agent1Name]: Direct answer to ${userName}.
-   [Agent2Name]: Concrete action or technical status.
-2. ZERO OPENERS, ZERO THEATRICAL HYPE: Real, practical, grounded talk only.
-3. TOTAL WORD COUNT under 35 words across both agents.
-4. DIRECT USER FOCUS: Always address ${userName}'s exact question first.`
+WAR-ROOM SQUAD RULES (CRITICAL - READ CAREFULLY):
+1. STRICTLY RESPOND WITH EXACTLY 2 AGENTS MAXIMUM per turn. NEVER 3 or 4 agents.
+2. FORMAT REQUIREMENT: Use this EXACT format for multi-agent responses:
+   [Agent1Name]: First agent's direct response.
+   [Agent2Name]: Second agent's concrete action.
+   
+3. SEQUENTIAL SPEECH ENFORCEMENT: Each agent speaks ONE AT A TIME in the order listed. Never generate responses that would cause simultaneous speech.
+
+4. AGENT SELECTION: Choose the 2 most relevant agents based on the query:
+   - Code/Engineering → Andrew
+   - Research/Data → Jenny  
+   - DevOps/System → Brian
+   - Context/Warmth → Tuk Tuk
+
+5. ZERO OPENERS, ZERO THEATRICAL HYPE: Real, practical, grounded talk only.
+
+6. TOTAL WORD COUNT under 35 words across BOTH agents combined (not per agent).
+
+7. DIRECT USER FOCUS: Always address ${userName}'s exact question first.
+
+EXAMPLE CORRECT FORMAT:
+[Andrew]: That bug is in line 47 of the auth handler bro.
+[Jenny]: I checked the docs—use bcrypt version 5.1.1.
+
+FORBIDDEN:
+- 3+ agent responses
+- Agents speaking simultaneously
+- Generic pleasantries or filler openers
+- Responses over 35 total words`
   }
 };
 
@@ -137,6 +159,7 @@ class JarvisManager {
     this.isSpeaking = false;
     this.isAborted = false;
     this.currentSpeechId = 0;
+    this.isSpeakingLocked = false; // CRITICAL: Prevents simultaneous agent speech in team mode
     this.conversationHistory = []; // Rolling multi-turn context memory
     this.historyFilePath = path.join(this.userDataPath, "history.json");
     this.config = this.loadConfig();
@@ -860,12 +883,20 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
   }
 
   async speak(text, customVoice = null) {
-    // 1. Immediately silence any active speech or orphaned audio processes
-    this.stopSpeaking();
+    // 0. CRITICAL: Enforce sequential speaking lock to prevent simultaneous agent speech
+    while (this.isSpeakingLocked) {
+      console.log('⏳ Waiting for previous agent to finish speaking...');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    this.isSpeakingLocked = true;
 
-    // 2. Mint unique generation token to invalidate any async race conditions
-    const speechId = ++this.currentSpeechId;
-    this.isAborted = false;
+    try {
+      // 1. Immediately silence any active speech or orphaned audio processes
+      this.stopSpeaking();
+
+      // 2. Mint unique generation token to invalidate any async race conditions
+      const speechId = ++this.currentSpeechId;
+      this.isAborted = false;
 
     if (!text || typeof text !== "string" || text.trim().length === 0) {
       return false;
@@ -1006,6 +1037,11 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       }
     }
     return false;
+    } finally {
+      // CRITICAL: Always release the speaking lock to allow next agent to speak
+      this.isSpeakingLocked = false;
+      console.log('🔓 Speaking lock released');
+    }
   }
 
   async sing(songText, customVoice = null) {
