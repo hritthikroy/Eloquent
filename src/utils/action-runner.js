@@ -142,11 +142,13 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       };
     }
 
-    // 4. Andrew: Screen Perception & Active Workspace Inspection ("look at my screen", "see my screen")
-    if (lower.includes("see my screen") || lower.includes("look at my screen") ||
+    // 4. Andrew: Screen Perception, Interview Co-Pilot & Active Workspace Inspection
+    if (lower.includes("interview") || lower.includes("see my screen") || lower.includes("look at my screen") ||
         lower.includes("check my screen") || lower.includes("what is on my screen") ||
         lower.includes("what's on my screen") || lower.includes("look at this code") ||
-        (lower.includes("andrew") && lower.includes("screen"))) {
+        lower.includes("seeing my screen") || lower.includes("seeing my interview") ||
+        lower.includes("do work for me") || lower.includes("give them access to do work") ||
+        (lower.includes("andrew") && (lower.includes("screen") || lower.includes("see") || lower.includes("look")))) {
       const screenPath = "/tmp/eloquent_screen.jpg";
       try {
         execSync(`screencapture -x -C "${screenPath}" 2>/dev/null || true`);
@@ -158,6 +160,25 @@ Task: Write an unshakeable, profound letter of integrity and mission. Capture hi
       } catch (e) {}
 
       const appName = windowContext || "your active workspace";
+
+      if (lower.includes("interview")) {
+        return {
+          handled: true,
+          agentName: "Andrew",
+          agentVoice: "en-US-AndrewNeural",
+          speech: `I've locked eyes on your interview screen, bro! I just captured your display focused in ${appName}. I'm right here in your ear as your secret senior co-pilot. What question or challenge are they asking you? Let's crush it!`
+        };
+      }
+
+      if (lower.includes("work for me") || lower.includes("give them access")) {
+        return {
+          handled: true,
+          agentName: "Andrew",
+          agentVoice: "en-US-AndrewNeural",
+          speech: `Full sovereign access is active, bro! Me, Tuk Tuk, Jenny, and Brian have direct control of your terminal, files, clipboard, and active windows. What task do you want us to execute right now?`
+        };
+      }
+
       return {
         handled: true,
         agentName: "Andrew",
