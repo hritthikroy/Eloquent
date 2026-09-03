@@ -24,6 +24,11 @@ class GeminiClient {
     this.apiKeys = this._normalizeKeys(apiKeys) || this._loadApiKeys();
     this.activeKeyIndex = 0;
     this.models = CANDIDATE_MODELS;
+    this.httpsAgent = new https.Agent({
+      keepAlive: true,
+      maxSockets: 25,
+      keepAliveMsecs: 30000
+    });
   }
 
   _normalizeKeys(keys) {
@@ -206,12 +211,18 @@ class GeminiClient {
    */
   _requestGenerateContent(modelName, apiKey, payload, timeoutMs = 12000) {
     return new Promise((resolve) => {
-      const postData = JSON.stringify(payload);
+      // Clone payload and only attach thinkingConfig if model supports it (Gemini 3.7)
+      const finalPayload = JSON.parse(JSON.stringify(payload));
+      if (!modelName.includes("3.7") && finalPayload.generationConfig && finalPayload.generationConfig.thinkingConfig) {
+        delete finalPayload.generationConfig.thinkingConfig;
+      }
+      const postData = JSON.stringify(finalPayload);
 
       const req = https.request({
         hostname: "generativelanguage.googleapis.com",
         path: `/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
         method: "POST",
+        agent: this.httpsAgent,
         headers: {
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(postData)
