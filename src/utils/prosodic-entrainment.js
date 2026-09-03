@@ -108,18 +108,32 @@ class ProsodicEntrainmentAdapter {
   }
 
   /**
-   * Get rate string formatted for MsEdgeTTS - stabilized for natural human warmth
+   * Get rate string formatted for MsEdgeTTS - Levitan & Hirschberg (2011) Entrainment:
+   * θ_agent = (1 - β) * θ_base + β * θ_user
    */
   getRateString() {
-    // Keep rate tightly grounded to natural baseline to prevent unnatural sped-up speech
-    return "+0%";
+    if (!this.agentRate || Math.abs(this.agentRate - 1.0) < 0.03) {
+      return "+0%";
+    }
+    // Dynamic prosodic tempo adaptation clamped to subtle human conversational delta [-10%, +12%]
+    const deltaPercent = Math.round((this.agentRate - 1.0) * 100);
+    const clampedDelta = Math.max(-10, Math.min(12, deltaPercent));
+    return clampedDelta >= 0 ? `+${clampedDelta}%` : `${clampedDelta}%`;
   }
 
   /**
-   * Calculate dynamic pitch - preserve natural studio neural acoustic resonance
+   * Calculate dynamic pitch according to Russell (1980) circumplex arousal/valence mapping:
+   * High excitement/breakthrough -> +2Hz to +4Hz warm lilt
+   * Late night fatigue/reflective -> -2Hz to -3Hz grounding chest resonance
    */
   getPitchString(replyText = "") {
-    // Maintain neutral pitch (+0Hz) to prevent unnatural pitch shifts or artifacts
+    if (!this.currentVibe) return "+0Hz";
+    if (this.currentVibe.cognitiveMode === "EUREKA_BREAKTHROUGH") {
+      return "+3Hz";
+    }
+    if (this.currentVibe.cognitiveMode === "LATE_NIGHT_REFLECTIVE") {
+      return "-2Hz";
+    }
     return "+0Hz";
   }
 }
