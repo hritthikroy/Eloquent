@@ -13,6 +13,16 @@ class OfficeActionRunner {
   }
 
   async handleAction(speechText, activeAgent, jarvisManager = null, callGroqChatCompletion = null, geminiClient = null) {
+    const res = await this._executeActionInternal(speechText, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
+    if (res && res.handled && jarvisManager && typeof jarvisManager.learnFromInteraction === "function") {
+      try {
+        jarvisManager.learnFromInteraction(speechText, res.speech || "Task executed", res.agentName || activeAgent?.name || "System", res);
+      } catch (e) {}
+    }
+    return res;
+  }
+
+  async _executeActionInternal(speechText, activeAgent, jarvisManager = null, callGroqChatCompletion = null, geminiClient = null) {
     if (!speechText || typeof speechText !== "string") return { handled: false };
     const lower = speechText.toLowerCase().trim();
 

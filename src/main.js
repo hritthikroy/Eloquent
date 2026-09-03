@@ -2956,6 +2956,12 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 
     jarvisManager.addTurn('assistant', reply, agent.name);
 
+    // Autonomous Self-Updating & Ebbinghaus Learning from Everyday Tasks and Talks
+    try {
+      jarvisManager.learnFromInteraction(displaySpeech || userSpeech, reply, agent.name);
+      jarvisManager.consolidateDeepMemory(displaySpeech || userSpeech, reply, callGroqChatCompletion);
+    } catch (learnErr) {}
+
     const elapsed = Date.now() - startTime;
     console.log(`⚡ [${agent.name}] responded in ${elapsed}ms using ${model} (${reply.split(/\s+/).length} words)`);
     logApiRequest('jarvis-talk', 'success', elapsed, usage?.total_tokens);
