@@ -2728,6 +2728,27 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 - You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!`;
   }
 
+  // Context Injector: Audit conversational turns for semantic gaps or truncated instructions
+  try {
+    const { ContextInjector } = require('./utils/context-injector');
+    const recentHistory = jarvisManager.getHistory(6).map(h => ({
+      role: h.role === 'assistant' ? 'assistant' : 'user',
+      content: h.content || '',
+      timestamp: Date.now()
+    }));
+    recentHistory.push({ role: 'user', content: displaySpeech || userSpeech, timestamp: Date.now() });
+
+    const integrityBlock = ContextInjector.formatIntegrityBlock(recentHistory, {
+      activeProject: 'Eloquent',
+      technologies: ['Node.js', 'Electron', 'Go audio backend', 'CoreAudio', 'AST verification']
+    });
+    if (integrityBlock) {
+      systemPrompt += `\n\n${integrityBlock}`;
+    }
+  } catch (ctxErr) {
+    // Non-blocking fallback
+  }
+
   try {
     console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory...`);
     const historyText = displaySpeech || userSpeech;
@@ -2771,8 +2792,12 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     let reply = content.trim();
 
     // ── ALIVE-HUMAN POST-PROCESSOR ──────────────────────────────────────────
-    // Strip robotic openers even if the model ignored the system prompt instruction.
-    // This is the last safety net before the user hears the response.
+    // 1. Strip agent name prefix echoes (e.g. "Tuk Tuk:", "[Tuk Tuk]:", ": ", "- ")
+    reply = reply.replace(/^(?:\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Squad|Assistant)\]?:?\s*)+/i, '')
+                 .replace(/^[:\s-]+/, '')
+                 .trim();
+
+    // 2. Strip robotic openers even if the model ignored the system prompt instruction.
     const roboticOpeners = [
       /^(Certainly|Sure|Of course|Absolutely|Great|Excellent|Indeed|Wonderful|Noted|Understood|Happy to|I'd be happy to|I would be happy to|I'm happy to|I am happy to|Allow me to|Let me help|Of course,|Sure,|Certainly,|Absolutely,|Great!|Sure!|Of course!|Certainly!|Absolutely!|No problem[,!]?|My pleasure[,!]?|Glad to help[,!]?)[\s,!]+/i,
       /^(As your (partner|co-founder|assistant|AI|engineer|researcher|DevOps|guardian)[,\s]+)/i,
@@ -2783,13 +2808,21 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     }
     reply = reply.trim();
 
-    // Hard cap at 55 words for spoken delivery — split on last whitespace before the limit
+    // 3. Strip repetitive generic chatbot trailing questions
+    const genericTrailerQuestions = [
+      /\s*(?:what('s| is) on your mind(?:\s+right now|\s+today)?\??|how (?:is|are) you feeling(?:\s+right now|\s+today)?\??|how('s| is) (?:your\s+focus|the\s+energy)(?:\s+holding\s+up|\s+feeling)?\??|what are we tackling(?:\s+next|\s+right now|\s+today)?\??|what do you want to (?:work on|build|code|tackle)(?:\s+next|\s+today)?\??|what('s| is) on your agenda(?:\s+today)?\??|what('s| is) going on in that brilliant head of yours\??)$/i
+    ];
+    for (const qPattern of genericTrailerQuestions) {
+      reply = reply.replace(qPattern, '.');
+    }
+    reply = reply.replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
+
+    // 4. Hard cap at 55 words for spoken delivery — split on last whitespace before the limit
     // (Team/squad mode gets 75 words since 2 agents speak)
     const wordCap = agent.key === 'team' ? 75 : 55;
     const words = reply.split(/\s+/);
     if (words.length > wordCap) {
       reply = words.slice(0, wordCap).join(' ');
-      // If we cut mid-sentence, try to end at a natural boundary
       const lastPunct = Math.max(reply.lastIndexOf('.'), reply.lastIndexOf('?'), reply.lastIndexOf('!'));
       if (lastPunct > reply.length * 0.55) {
         reply = reply.slice(0, lastPunct + 1);
