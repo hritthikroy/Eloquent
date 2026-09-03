@@ -35,6 +35,7 @@ api-usage.json
 history.json
 config.json
 admin-config.json
+dynamic-directives.json
 userData/
 
 # Electron cache
