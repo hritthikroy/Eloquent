@@ -119,11 +119,11 @@ class ProsodicEntrainmentAdapter {
    * Calculate dynamic pitch based on affective valence/arousal
    */
   getPitchString(replyText = "") {
-    if (this.currentVibe.cognitiveMode === "EUREKA_BREAKTHROUGH" || this.currentVibe.arousal > 0.7) {
-      return "+2Hz";
-    }
     if (this.currentVibe.cognitiveMode === "LATE_NIGHT_REFLECTIVE" || this.currentVibe.arousal < 0.35) {
       return "-2Hz";
+    }
+    if (this.currentVibe.cognitiveMode === "EUREKA_BREAKTHROUGH" || this.currentVibe.arousal > 0.7) {
+      return "+2Hz";
     }
     return "+0Hz";
   }

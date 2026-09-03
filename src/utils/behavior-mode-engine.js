@@ -180,7 +180,7 @@ class BehaviorModeEngine {
       this.setMode("KNOWLEDGE_RESEARCH");
       return;
     }
-    if (lower.match(/\b(late night|unwind|relax mode|goodnight|going to bed|sleep mode)\b/) || (currentHour >= 1 && currentHour <= 5 && this.state.energyScore < 0.4)) {
+    if (lower.match(/\b(late night|unwind|relax mode|goodnight|going to bed|sleep mode|exhausted|tired|drained|burnout)\b/) || (currentHour >= 1 && currentHour <= 5 && this.state.energyScore < 0.4)) {
       this.setMode("LATE_NIGHT_RECOVERY");
       return;
     }
