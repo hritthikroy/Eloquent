@@ -53,21 +53,34 @@ class OfficeActionRunner {
     // ANDREW (Lead Software Engineer: Antigravity Auto-Mode & Master Prompt Engineer)
     // -------------------------------------------------------------
     // 1. Antigravity Master Prompt Engineer & Grammar Fixer
+    // 1. Antigravity Master Prompt Engineer & Direct Window Injector
     if (lower.includes("write a prompt") || lower.includes("write prompt") ||
+        lower.includes("write the prompt") || lower.includes("write up the prompt") ||
         lower.includes("create a prompt") || lower.includes("create prompt") ||
         lower.includes("make a prompt") || lower.includes("make prompt") ||
         lower.includes("prepare a prompt") || lower.includes("prepare prompt") ||
         lower.includes("craft a prompt") || lower.includes("craft prompt") ||
+        lower.includes("prompt in antigravity") || lower.includes("prompt in entry gravity") ||
         lower.includes("prompt for next task") || lower.includes("prompt for my next task") ||
-        lower.includes("prompt for antigravity") || lower.includes("fix grammar and write prompt") ||
-        lower.includes("fix grammar and make prompt")) {
-      const promptConcept = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:write|create|make|prepare|craft)?\s*(?:a\s+)?(?:prompt\s+for\s+(?:my\s+)?next\s+task|prompt\s+for\s+antigravity|prompt)?(?:\s+with\s+proper\s+grammar\s+fix\s+and\s+all)?(?:\s*[:,-]?\s*)/i, "").trim() || speechText;
+        lower.includes("prompt for antigravity") || lower.includes("write up the prompt for me") ||
+        lower.includes("fix grammar and write prompt") || lower.includes("fix grammar and make prompt")) {
+      const promptConcept = speechText.replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:use\s+access\s+to\s+work\s+in\s+antigravity\s+and\s+)?(?:write|create|make|prepare|craft)?\s*(?:up\s+)?(?:the\s+|a\s+)?(?:prompt\s+for\s+(?:my\s+)?next\s+task|prompt\s+in\s+antigravity(?:\s+text\s+window)?|prompt\s+for\s+antigravity|prompt)?(?:\s+for\s+me)?(?:\s+with\s+proper\s+grammar\s+fix\s+and\s+all)?(?:\s*[:,-]?\s*)/i, "").trim() || speechText;
       const res = await this.antigravity.generateOptimizedPrompt(promptConcept, { callGroqChatCompletion });
+
+      // In hands-free mode, auto-paste straight into the active Antigravity window
+      try {
+        if (process.platform === "darwin") {
+          setTimeout(() => {
+            exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down' 2>/dev/null || true`);
+          }, 350);
+        }
+      } catch (e) {}
+
       return {
         handled: true,
         agentName: "Andrew",
         agentVoice: "en-US-AndrewNeural",
-        speech: res.speech
+        speech: "I crafted the prompt and injected it straight into your Antigravity text window, bro! It's also on your clipboard. Review it and run!"
       };
     }
 

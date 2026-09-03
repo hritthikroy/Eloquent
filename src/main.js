@@ -2047,6 +2047,26 @@ async function stopRecording() {
     }
 
     if (currentMode === 'jarvis') {
+      // 1. Acoustic Phonetic Normalization for Project Terms
+      originalText = originalText
+        .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
+        .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk');
+
+      // 2. Backchannel Self-Echo Blinding Filter
+      const timeSinceBC = Date.now() - (jarvisLastBackchannelTime || 0);
+      if (timeSinceBC < 3500) {
+        const cleanLower = originalText.toLowerCase().replace(/[^a-z]/g, '');
+        if (cleanLower === 'right' || cleanLower === 'rightright' || cleanLower === 'yeah' || cleanLower === 'mhm' || cleanLower === 'uhhuh' || cleanLower === 'okay') {
+          console.log(`🔇 Jarvis: discarding backchannel self-echo "${originalText}" (${timeSinceBC}ms after BC) — re-arming mic...`);
+          isProcessing = false;
+          if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('jarvis-listening');
+            startRecording();
+          }
+          return;
+        }
+      }
+
       // Silently discard Whisper hallucinations — don't waste an AI call on phantom speech
       if (isWhisperHallucination(originalText, recordingDuration)) {
         console.log(`🔇 Jarvis: discarding Whisper hallucination "${originalText}" (${recordingDuration}ms) — re-arming mic...`);

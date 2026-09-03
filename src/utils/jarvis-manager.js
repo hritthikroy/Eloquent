@@ -853,10 +853,10 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     this.backchannelFiles = [
       path.join(soundsDir, "bc_mhm.mp3"),
       path.join(soundsDir, "bc_yeah.mp3"),
-      path.join(soundsDir, "bc_listening.mp3")
+      path.join(soundsDir, "bc_uhhuh.mp3")
     ];
 
-    const phrases = ["Mhm.", "Yeah.", "Right."];
+    const phrases = ["Mhm.", "Yeah.", "Uh-huh."];
 
     for (let i = 0; i < this.backchannelFiles.length; i++) {
       const file = this.backchannelFiles[i];
