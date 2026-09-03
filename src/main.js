@@ -2558,8 +2558,8 @@ async function transcribe(filePath) {
 async function callGroqChatCompletion(messages, options = {}) {
   const candidateModels = [
     options.model,
-    'qwen/qwen3.8-27b',
     'groq/compound-mini',
+    'qwen/qwen3.8-27b',
     'openai/gpt-oss-120b',
     CONFIG.aiModel,
     process.env.GROQ_MODEL
@@ -2729,7 +2729,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
 
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.88 : (agent.key === 'andrew' ? 0.40 : (agent.key === 'team' ? 0.72 : 0.65));
     const { content, usage, model } = await callGroqChatCompletion(messages, {
-      model: 'qwen/qwen3.8-27b',
+      model: 'groq/compound-mini',
       temperature: dynamicTemperature,
       max_tokens: agent.key === 'team' ? 220 : 160,
       timeout: 10000
