@@ -176,13 +176,20 @@ class GeminiClient {
       }
     }
 
+    const generationConfig = {
+      temperature: options.temperature !== undefined ? options.temperature : 0.4,
+      maxOutputTokens: options.max_tokens ? Math.max(options.max_tokens, 1000) : (options.maxOutputTokens || 1200),
+      topP: options.topP || 0.95
+    };
+
+    // For low-latency conversational speech, set thinkingBudget to 0 for instant, untruncated answers
+    if (options.disableThinking !== false) {
+      generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    }
+
     const payload = {
       contents: contents,
-      generationConfig: {
-        temperature: options.temperature !== undefined ? options.temperature : 0.4,
-        maxOutputTokens: options.max_tokens || options.maxOutputTokens || 600,
-        topP: options.topP || 0.95
-      }
+      generationConfig: generationConfig
     };
 
     if (systemInstructionText.trim().length > 0) {

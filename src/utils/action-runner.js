@@ -1,4 +1,5 @@
 // Office Action Execution Engine for Autonomous Agents
+const fs = require("fs");
 const { execSync, exec } = require("child_process");
 const os = require("os");
 const path = require("path");
