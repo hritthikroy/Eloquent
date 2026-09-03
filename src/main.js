@@ -2786,15 +2786,31 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     // Temperature tuning per persona: Tuk Tuk warmer/creative, Andrew precise, Jenny curious, Brian grounded
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.85 : (agent.key === 'andrew' ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
     
-    // Primary Intelligence: Google Gemini 3.7 / 3.5 Pool for deep frontier reasoning & screen vision
-    // Fallback: Groq Qwen 27B for ultra-fast LPU failover
+    // Ultra-Fast Voice Intelligence: Groq LPU Qwen 27B for sub-500ms conversational ping-pong
+    // Deep Cognitive Fallback: Google Gemini 3.7 / 3.5 Pool for multimodal vision & high-level reasoning
     let content = null;
     let usage = null;
     let model = null;
 
-    if (geminiClient && geminiClient.isConfigured()) {
+    try {
+      const groqRes = await callGroqChatCompletion(messages, {
+        model: 'qwen/qwen3.8-27b',
+        temperature: dynamicTemperature,
+        max_tokens: agent.key === 'team' ? 550 : 350,
+        timeout: 6000
+      });
+      if (groqRes && groqRes.content) {
+        content = groqRes.content;
+        usage = groqRes.usage;
+        model = groqRes.model;
+      }
+    } catch (groqErr) {
+      console.warn('⚠️ [Jarvis Groq] Fast failover to Google Gemini Pool:', groqErr.message);
+    }
+
+    if (!content && geminiClient && geminiClient.isConfigured()) {
       try {
-        console.log(`✨ [Jarvis Cortex] Invoking Google Gemini High-Level Brain for ${agent.name}...`);
+        console.log(`✨ [Jarvis Cortex] Invoking Google Gemini Brain for ${agent.name}...`);
         const geminiRes = await geminiClient.callChatCompletion(messages, {
           model: 'gemini-3.7-flash',
           temperature: dynamicTemperature,
@@ -2807,20 +2823,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
           usage = geminiRes.usage;
         }
       } catch (geminiErr) {
-        console.warn('⚠️ [Jarvis Gemini] Transient failover to Groq LPU:', geminiErr.message);
+        console.warn('⚠️ [Jarvis Gemini] Fallback error:', geminiErr.message);
       }
-    }
-
-    if (!content) {
-      const groqRes = await callGroqChatCompletion(messages, {
-        model: 'qwen/qwen3.8-27b',
-        temperature: dynamicTemperature,
-        max_tokens: agent.key === 'team' ? 550 : 420,
-        timeout: 10000
-      });
-      content = groqRes.content;
-      usage = groqRes.usage;
-      model = groqRes.model;
     }
 
     let reply = content.trim();
