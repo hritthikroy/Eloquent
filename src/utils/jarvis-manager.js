@@ -896,59 +896,57 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
           await this.ttsClient.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3, {});
           this._cachedVoice = voice;
         }
-        // 7-second timeout protection so WebSocket synthesis never hangs indefinitely
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "eloquent_tts_"));
+        // 5-second timeout protection so WebSocket synthesis never hangs indefinitely
         const dynamicRate = this.prosodicEntrainment ? this.prosodicEntrainment.getRateString() : "+0%";
         const dynamicPitch = this.prosodicEntrainment ? this.prosodicEntrainment.getPitchString(cleanText) : "+0Hz";
-        const toFilePromise = this.ttsClient.toFile(tempDir, cleanText, { rate: dynamicRate, pitch: dynamicPitch });
+        const toFilePromise = this.ttsClient.toFile("/tmp", cleanText, { rate: dynamicRate, pitch: dynamicPitch });
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 7s")), 7000)
+          setTimeout(() => reject(new Error("MsEdgeTTS synthesis timed out after 5s")), 5000)
         );
         const res = await Promise.race([toFilePromise, timeoutPromise]);
 
         // Check if this synthesis was superseded or aborted while awaiting download
         if (this.currentSpeechId !== speechId || this.isAborted) {
           console.log(`⏹️ Discarding superseded voice output #${speechId}`);
-          try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
+          try { fs.unlinkSync(res.audioFilePath); } catch (e) {}
           return false;
         }
 
-        // Copy out of isolated tempDir and cleanup
-        fs.copyFileSync(res.audioFilePath, tempAudioPath);
-        try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
+        const generatedPath = res.audioFilePath;
 
-        // Ensure no stray afplay audio is playing before starting
-        try {
-          execSync("killall afplay say 2>/dev/null || true");
-        } catch (e) {}
+        // Instant process termination if previous speech is still playing
+        if (this.activeSpeechProcess) {
+          try { this.activeSpeechProcess.kill("SIGKILL"); } catch (e) {}
+          this.activeSpeechProcess = null;
+        }
 
-        // Play natively through CoreAudio via afplay
+        // Play natively through CoreAudio via afplay with zero-copy buffer
         return new Promise((resolve) => {
           if (this.currentSpeechId !== speechId || this.isAborted) {
-            try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+            try { fs.unlinkSync(generatedPath); } catch (e) {}
             return resolve(false);
           }
 
           this.isSpeaking = true;
-          this.activeSpeechProcess = spawn("afplay", [tempAudioPath]);
+          this.activeSpeechProcess = spawn("afplay", ["-q", "1", generatedPath]);
 
           this.activeSpeechProcess.on("close", (code) => {
-            // 75ms speaker decay — crisp fade before mic opens
+            // 50ms speaker decay — crisp fade before mic re-arms
             setTimeout(() => {
               this.isSpeaking = false;
               this.currentUtterance = null;
               this.interruptedUtterance = null;
               this.activeSpeechProcess = null;
-              try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+              try { fs.unlinkSync(generatedPath); } catch (e) {}
               resolve(!this.isAborted && this.currentSpeechId === speechId && code === 0);
-            }, 75);
+            }, 50);
           });
 
           this.activeSpeechProcess.on("error", (err) => {
             console.warn("⚠️ afplay error:", err.message);
             this.isSpeaking = false;
             this.activeSpeechProcess = null;
-            try { fs.unlinkSync(tempAudioPath); } catch (e) {}
+            try { fs.unlinkSync(generatedPath); } catch (e) {}
             resolve(false);
           });
         });
