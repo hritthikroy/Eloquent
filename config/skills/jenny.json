@@ -1,0 +1,70 @@
+{
+  "$schema": "./skill-schema.json",
+  "agentId": "agent_jenny",
+  "name": "Jenny",
+  "role": "Research Scientist & Knowledge Intelligence Lead",
+  "version": "2.1.0",
+  "enabled": true,
+  "lastUpdated": 1788489000000,
+  "skills": [
+    {
+      "id": "wikipedia_research",
+      "name": "Wikipedia & Academic Knowledge Synthesis",
+      "description": "Synthesizes encyclopedic summaries and domain research with factual citations",
+      "handler": "searchWikipedia",
+      "category": "general",
+      "timeoutMs": 5000,
+      "enabled": true
+    },
+    {
+      "id": "network_latency_audit",
+      "name": "Network Latency & Uplink Quality",
+      "description": "Measures round-trip ICMP latency and internet uplink reliability",
+      "handler": "checkNetworkLatency",
+      "category": "system",
+      "timeoutMs": 4000,
+      "enabled": true
+    },
+    {
+      "id": "repo_intel",
+      "name": "Open Source & GitHub Intelligence",
+      "description": "Audits repository metrics, stars, forks, and technical dependencies",
+      "handler": "getPublicRepoStats",
+      "category": "general",
+      "timeoutMs": 5000,
+      "enabled": true
+    }
+  ],
+  "metadata": [
+    {
+      "key": "lead_role",
+      "value": "Research Scientist & Knowledge Intelligence Lead",
+      "type": "string",
+      "description": "Academic and deep knowledge research responsibility"
+    },
+    {
+      "key": "salutation",
+      "value": "Hritthik",
+      "type": "string",
+      "description": "Respectful conversational address token"
+    },
+    {
+      "key": "voice_model",
+      "value": "en-US-JennyNeural",
+      "type": "string",
+      "description": "Neural TTS voice identifier"
+    },
+    {
+      "key": "aura_color",
+      "value": "#ec4899",
+      "type": "string",
+      "description": "Rose pink visual aura hex code"
+    },
+    {
+      "key": "telemetry_enabled",
+      "value": true,
+      "type": "boolean",
+      "description": "Research telemetry logging flag"
+    }
+  ]
+}

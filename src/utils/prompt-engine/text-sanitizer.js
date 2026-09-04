@@ -11,8 +11,9 @@ class TextSanitizer {
 
     // 1. Phonetic speech-to-text corrections
     text = text
-      .replace(/\band you\b(?=\s+(?:check|modify|write|tell|see|look|help|code|build|refactor|take|run|fix|draft|craft|inspect|smooth))/gi, "Andrew")
-      .replace(/\b(?:and\s*rew|an\s*drew)\b/gi, "Andrew")
+      .replace(/\band you\b(?=\s+(?:check|modify|write|tell|see|look|help|code|build|refactor|take|run|fix|draft|craft|inspect|smooth))/gi, "Vision")
+      .replace(/\b(?:and\s*rew|an\s*drew|andrew)\b/gi, "Vision")
+      .replace(/\b(?:vi\s*sion|vishon)\b/gi, "Vision")
       .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, "Antigravity")
       .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, "Tuk Tuk")
       .replace(/\b(?:on this course)\b/gi, "on this code")

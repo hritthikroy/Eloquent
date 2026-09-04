@@ -223,3 +223,340 @@ func (s *ServiceBridge) SetState(ctx context.Context, req *SetStateRequest) (*Se
 	}
 	return &SetStateResponse{Success: true}, nil
 }
+
+// ConversationPhase defines the active phase of the conversation turn.
+type ConversationPhase string
+
+const (
+	PhaseIdle        ConversationPhase = "idle"
+	PhaseListening   ConversationPhase = "listening"
+	PhaseThinking    ConversationPhase = "thinking"
+	PhaseSpeaking    ConversationPhase = "speaking"
+	PhaseError       ConversationPhase = "error"
+	PhaseRehydrating ConversationPhase = "rehydrating"
+)
+
+// AudioStreamState tracks the hardware and buffer state of the audio pipeline.
+type AudioStreamState string
+
+const (
+	AudioStreamInactive    AudioStreamState = "inactive"
+	AudioStreamCapturing   AudioStreamState = "capturing"
+	AudioStreamBuffering   AudioStreamState = "buffering"
+	AudioStreamProcessing  AudioStreamState = "processing"
+	AudioStreamSynthesizing AudioStreamState = "synthesizing"
+	AudioStreamDraining    AudioStreamState = "draining"
+)
+
+// StateChangeEvent represents an event broadcast to subscribers on state change.
+type StateChangeEvent struct {
+	SessionID   string            `json:"sessionId"`
+	PrevPhase   ConversationPhase `json:"prevPhase"`
+	NewPhase    ConversationPhase `json:"newPhase"`
+	Speaker     string            `json:"speaker"`
+	AudioState  AudioStreamState  `json:"audioState"`
+	Timestamp   int64             `json:"timestamp"`
+	TurnSeq     int64             `json:"turnSeq"`
+	RateLimited bool              `json:"rateLimited"`
+}
+
+var (
+	// ErrInvalidPhaseTransition indicates an illegal edge in the conversation FSM.
+	ErrInvalidPhaseTransition = errors.New("invalid conversation phase transition")
+)
+
+var validPhaseTransitions = map[ConversationPhase]map[ConversationPhase]bool{
+	PhaseIdle: {
+		PhaseListening:   true,
+		PhaseThinking:    true,
+		PhaseRehydrating: true,
+	},
+	PhaseListening: {
+		PhaseThinking: true,
+		PhaseIdle:     true,
+		PhaseError:    true,
+	},
+	PhaseThinking: {
+		PhaseSpeaking: true,
+		PhaseIdle:     true,
+		PhaseError:    true,
+	},
+	PhaseSpeaking: {
+		PhaseIdle:      true,
+		PhaseListening: true,
+		PhaseError:     true,
+	},
+	PhaseError: {
+		PhaseIdle: true,
+	},
+	PhaseRehydrating: {
+		PhaseIdle: true,
+	},
+}
+
+// SessionManager coordinates concurrency-safe conversation phases, audio stream states, and event broadcasting.
+type SessionManager struct {
+	mu            sync.RWMutex
+	sessionID     string
+	currentPhase  ConversationPhase
+	audioState    AudioStreamState
+	activeSpeaker string
+	turnSeq       int64
+	stateManager  *StateManager
+
+	subscribersMu sync.RWMutex
+	subscribers   map[chan StateChangeEvent]struct{}
+
+	// Rate limit exponential backoff
+	backoffMu     sync.RWMutex
+	attemptCount  int
+	baseBackoffMs int
+	maxBackoffMs  int
+	isThrottled   bool
+	resetTime     time.Time
+}
+
+// NewSessionManager creates a SessionManager initialized to PhaseIdle and AudioStreamInactive.
+func NewSessionManager(sessionID string, stateMgr *StateManager) *SessionManager {
+	if sessionID == "" {
+		sessionID = fmt.Sprintf("session-%d", time.Now().UnixMilli())
+	}
+
+	return &SessionManager{
+		sessionID:     sessionID,
+		currentPhase:  PhaseIdle,
+		audioState:    AudioStreamInactive,
+		activeSpeaker: "user",
+		turnSeq:       0,
+		stateManager:  stateMgr,
+		subscribers:   make(map[chan StateChangeEvent]struct{}),
+		baseBackoffMs: 500,
+		maxBackoffMs:  30000,
+		isThrottled:   false,
+		resetTime:     time.Now(),
+	}
+}
+
+// GetSessionID returns the unique session ID.
+func (sm *SessionManager) GetSessionID() string {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.sessionID
+}
+
+// GetCurrentPhase returns the active conversation phase.
+func (sm *SessionManager) GetCurrentPhase() ConversationPhase {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.currentPhase
+}
+
+// GetAudioStreamState returns the current audio stream state.
+func (sm *SessionManager) GetAudioStreamState() AudioStreamState {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.audioState
+}
+
+// GetActiveSpeaker returns the participant currently holding the floor.
+func (sm *SessionManager) GetActiveSpeaker() string {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.activeSpeaker
+}
+
+// GetTurnSequence returns the monotonic turn sequence number.
+func (sm *SessionManager) GetTurnSequence() int64 {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.turnSeq
+}
+
+// TransitionPhase validates the FSM transition and broadcasts the event to subscribers.
+func (sm *SessionManager) TransitionPhase(newPhase ConversationPhase) error {
+	sm.mu.Lock()
+	prev := sm.currentPhase
+	if prev == newPhase {
+		sm.mu.Unlock()
+		return nil
+	}
+
+	allowedTransitions, exists := validPhaseTransitions[prev]
+	if !exists || !allowedTransitions[newPhase] {
+		sm.mu.Unlock()
+		return fmt.Errorf("%w: cannot transition from %s to %s", ErrInvalidPhaseTransition, prev, newPhase)
+	}
+
+	sm.currentPhase = newPhase
+	event := StateChangeEvent{
+		SessionID:   sm.sessionID,
+		PrevPhase:   prev,
+		NewPhase:    newPhase,
+		Speaker:     sm.activeSpeaker,
+		AudioState:  sm.audioState,
+		Timestamp:   time.Now().UnixMilli(),
+		TurnSeq:     sm.turnSeq,
+		RateLimited: sm.isThrottledLocked(),
+	}
+	sm.mu.Unlock()
+
+	sm.broadcastEvent(event)
+	return nil
+}
+
+// SetAudioStreamState updates audio stream status and notifies subscribers.
+func (sm *SessionManager) SetAudioStreamState(newState AudioStreamState) {
+	sm.mu.Lock()
+	sm.audioState = newState
+	event := StateChangeEvent{
+		SessionID:   sm.sessionID,
+		PrevPhase:   sm.currentPhase,
+		NewPhase:    sm.currentPhase,
+		Speaker:     sm.activeSpeaker,
+		AudioState:  newState,
+		Timestamp:   time.Now().UnixMilli(),
+		TurnSeq:     sm.turnSeq,
+		RateLimited: sm.isThrottledLocked(),
+	}
+	sm.mu.Unlock()
+
+	sm.broadcastEvent(event)
+}
+
+// RecordTurn records an active conversational turn with sequential ordering and persistence.
+func (sm *SessionManager) RecordTurn(speaker, text string) (int64, error) {
+	sm.mu.Lock()
+	sm.turnSeq++
+	seq := sm.turnSeq
+	sm.activeSpeaker = speaker
+	sm.mu.Unlock()
+
+	turnCtx := TurnContext{
+		Speaker:   speaker,
+		Text:      text,
+		Timestamp: time.Now().UnixMilli(),
+		Metadata: map[string]interface{}{
+			"turnSeq": seq,
+		},
+	}
+
+	if sm.stateManager != nil {
+		if err := sm.stateManager.UpdateTurn(turnCtx); err != nil {
+			return seq, err
+		}
+	}
+
+	sm.mu.RLock()
+	event := StateChangeEvent{
+		SessionID:   sm.sessionID,
+		PrevPhase:   sm.currentPhase,
+		NewPhase:    sm.currentPhase,
+		Speaker:     speaker,
+		AudioState:  sm.audioState,
+		Timestamp:   turnCtx.Timestamp,
+		TurnSeq:     seq,
+		RateLimited: sm.isThrottledLocked(),
+	}
+	sm.mu.RUnlock()
+
+	sm.broadcastEvent(event)
+	return seq, nil
+}
+
+// SubscribeStateChanges returns a channel that receives state change events until ctx is cancelled.
+func (sm *SessionManager) SubscribeStateChanges(ctx context.Context, bufferSize int) <-chan StateChangeEvent {
+	if bufferSize <= 0 {
+		bufferSize = 16
+	}
+	ch := make(chan StateChangeEvent, bufferSize)
+
+	sm.subscribersMu.Lock()
+	sm.subscribers[ch] = struct{}{}
+	sm.subscribersMu.Unlock()
+
+	go func() {
+		<-ctx.Done()
+		sm.subscribersMu.Lock()
+		delete(sm.subscribers, ch)
+		close(ch)
+		sm.subscribersMu.Unlock()
+	}()
+
+	return ch
+}
+
+func (sm *SessionManager) broadcastEvent(event StateChangeEvent) {
+	sm.subscribersMu.RLock()
+	defer sm.subscribersMu.RUnlock()
+
+	for ch := range sm.subscribers {
+		select {
+		case ch <- event:
+		default:
+			// Non-blocking drop if consumer buffer is full
+		}
+	}
+}
+
+// RecordRateLimitHit calculates exponential backoff delay and flags throttling.
+func (sm *SessionManager) RecordRateLimitHit(_ error) time.Duration {
+	sm.backoffMu.Lock()
+	defer sm.backoffMu.Unlock()
+
+	sm.attemptCount++
+	multiplier := 1 << (sm.attemptCount - 1)
+	backoffMs := sm.baseBackoffMs * multiplier
+	if backoffMs > sm.maxBackoffMs {
+		backoffMs = sm.maxBackoffMs
+	}
+
+	duration := time.Duration(backoffMs) * time.Millisecond
+	sm.isThrottled = true
+	sm.resetTime = time.Now().Add(duration)
+
+	if sm.stateManager != nil {
+		st := sm.stateManager.GetState()
+		st.RateLimitInfo.IsThrottled = true
+		st.RateLimitInfo.BackoffMs = backoffMs
+		st.RateLimitInfo.ResetTimestamp = sm.resetTime.UnixMilli()
+		_ = sm.stateManager.SetState(st)
+	}
+
+	return duration
+}
+
+// ResetRateLimit clears rate-limit throttling after successful API responses.
+func (sm *SessionManager) ResetRateLimit() {
+	sm.backoffMu.Lock()
+	defer sm.backoffMu.Unlock()
+
+	sm.attemptCount = 0
+	sm.isThrottled = false
+	sm.resetTime = time.Now()
+
+	if sm.stateManager != nil {
+		st := sm.stateManager.GetState()
+		st.RateLimitInfo.IsThrottled = false
+		st.RateLimitInfo.BackoffMs = 0
+		_ = sm.stateManager.SetState(st)
+	}
+}
+
+// IsThrottled checks if rate-limiting is actively throttling requests.
+func (sm *SessionManager) IsThrottled() bool {
+	sm.backoffMu.RLock()
+	defer sm.backoffMu.RUnlock()
+	return sm.isThrottledLocked()
+}
+
+func (sm *SessionManager) isThrottledLocked() bool {
+	if !sm.isThrottled {
+		return false
+	}
+	if time.Now().After(sm.resetTime) {
+		sm.isThrottled = false
+		return false
+	}
+	return true
+}
+

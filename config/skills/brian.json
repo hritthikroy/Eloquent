@@ -1,0 +1,79 @@
+{
+  "$schema": "./skill-schema.json",
+  "agentId": "agent_brian",
+  "name": "Brian",
+  "role": "QA Architect & DevOps Infrastructure Lead",
+  "version": "2.1.0",
+  "enabled": true,
+  "lastUpdated": 1788489000000,
+  "skills": [
+    {
+      "id": "system_diagnostics",
+      "name": "System Health & Diagnostics",
+      "description": "Monitors CPU, RAM, battery, disk space, and network telemetry",
+      "handler": "getSystemHealthReport",
+      "category": "system",
+      "timeoutMs": 3000,
+      "enabled": true
+    },
+    {
+      "id": "harness_pipeline_status",
+      "name": "Harness Pipeline & Build Telemetry",
+      "description": "Inspects Harness CI/CD execution status and deployment health",
+      "handler": "getHarnessExecutionStatus",
+      "category": "automation",
+      "timeoutMs": 5000,
+      "enabled": true
+    },
+    {
+      "id": "port_health_check",
+      "name": "TCP Port & Connection Health",
+      "description": "Audits open socket ports, audio bridge connections, and local daemons",
+      "handler": "checkPort",
+      "category": "system",
+      "timeoutMs": 3000,
+      "enabled": true
+    },
+    {
+      "id": "test_suite_execution",
+      "name": "Automated Test Suite Runner",
+      "description": "Executes full regression, unit, and AST validation suites",
+      "handler": "runTests",
+      "category": "engineering",
+      "timeoutMs": 15000,
+      "enabled": true
+    }
+  ],
+  "metadata": [
+    {
+      "key": "lead_role",
+      "value": "QA Architect & DevOps Infrastructure Lead",
+      "type": "string",
+      "description": "Primary quality assurance and reliability responsibility"
+    },
+    {
+      "key": "salutation",
+      "value": "Hritthik",
+      "type": "string",
+      "description": "Direct professional respectful address token"
+    },
+    {
+      "key": "voice_model",
+      "value": "en-US-BrianNeural",
+      "type": "string",
+      "description": "Neural TTS voice identifier"
+    },
+    {
+      "key": "aura_color",
+      "value": "#10b981",
+      "type": "string",
+      "description": "Emerald green visual aura hex code"
+    },
+    {
+      "key": "telemetry_enabled",
+      "value": true,
+      "type": "boolean",
+      "description": "System health and telemetry logging flag"
+    }
+  ]
+}

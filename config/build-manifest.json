@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2026-09-04T06:31:13.778Z",
+  "algorithm": "sha256",
+  "binaries": {
+    "backend-go/eloquent-backend": {
+      "hash": "4ef6bdb7a68dca171eeae778e4bd313cffd31c536dfccc2116a56496dfb3c917",
+      "sizeBytes": 13365634,
+      "platform": "darwin",
+      "arch": "arm64",
+      "signature": "macho-64"
+    }
+  }
+}

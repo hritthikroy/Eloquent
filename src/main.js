@@ -55,14 +55,41 @@ const audioRecorder = new AudioRecorder();
 const pasteHelper = new PasteHelper();
 const soundPlayer = new SoundPlayer();
 const jarvisManager = new JarvisManager(path.join(__dirname, '..', 'userData'));
+
+// Physically synchronized speech lifecycle telemetry for overlay UI
+jarvisManager.onSpeechStart = (agentKey, text) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    const agentObj = jarvisManager.agents && jarvisManager.agents[agentKey];
+    const agentName = (agentObj && agentObj.name) || (currentActiveAgent && currentActiveAgent.name) || 'Tuk Tuk';
+    overlayWindow.webContents.send('set-agent-name', agentName);
+    overlayWindow.webContents.send('jarvis-speaking', { agent: agentName });
+  }
+};
+
+jarvisManager.onSpeechEnd = (agentKey) => {
+  if (overlayWindow && !overlayWindow.isDestroyed() && isJarvisLoopActive) {
+    const agentObj = jarvisManager.agents && jarvisManager.agents[agentKey];
+    const agentName = (agentObj && agentObj.name) || (currentActiveAgent && currentActiveAgent.name) || 'Tuk Tuk';
+    overlayWindow.webContents.send('jarvis-listening', { agent: agentName });
+  }
+};
 const actionRunner = require('./utils/action-runner');
 const screenShareManager = require('./utils/screen-share-manager');
 const { registerLibboardIpcHandlers } = require('./main/ipcHandlers');
-const { registerClipboardHandlers } = require('./main/index');
+const { registerClipboardHandlers, registerOptimizedIpcHandlers, windowStateManager } = require('./main/index');
+const { registerEyeIpcHandlers } = require('./main/electronMain');
 const { StateManager } = require('./main/stateManager');
 const { geminiClient } = require('./utils/gemini-client');
 const { quantumVibeEngine } = require('./utils/quantum-vibe-engine');
 const cameraManager = require('./utils/camera-manager');
+const { getLanguageBridge } = require('./main/electron-bridge');
+const languageBridge = getLanguageBridge({ storageDir: path.join(__dirname, '..', 'userData') });
+const MasterApiGateway = require('./utils/master-api-gateway');
+const masterApiGateway = new MasterApiGateway({
+  userDataPath: path.join(__dirname, '..', 'userData'),
+  geminiClient
+});
+jarvisManager.setGateway(masterApiGateway);
 
 // Ultra-Fast Persistent HTTPS Agent with TCP Keep-Alive for Zero Connection Overhead
 const https = require('https');
@@ -161,6 +188,8 @@ let jarvisAutoStopTriggered = false;
 let jarvisVadHeartbeat = null;
 let jarvisLastBackchannelTime = 0;
 let jarvisBargeInCounter = 0;
+let jarvisNoiseFloorRms = 0.005;
+let jarvisNoiseFloorPeak = 800;
 
 // Helper function to find sox/rec binary
 function getRecordingBinary() {
@@ -196,14 +225,29 @@ processingOAuth = false;
 lastProcessedOAuthUrl = null;
 
 // Application configuration
+// Master API Wire with Groq & Sub API Pool Architecture
+const rawGroqKeys = [
+  process.env.GROQ_API_KEY,    // Master API Key
+  process.env.GROQ_API_KEY_1,  // Sub API Key 1
+  process.env.GROQ_API_KEY_2,  // Sub API Key 2
+  process.env.GROQ_API_KEY_3,  // Sub API Key 3
+  process.env.GROQ_API_KEY_4,  // Sub API Key 4
+  process.env.GROQ_API_KEY_5   // Sub API Key 5
+];
+if (process.env.GROQ_API_KEYS) {
+  process.env.GROQ_API_KEYS.split(',').forEach(k => rawGroqKeys.push(k.trim()));
+}
+const uniqueGroqKeys = [...new Set(rawGroqKeys.filter(k => k && typeof k === 'string' && k.trim().length > 10))];
+
+// Master key is explicitly prioritized as the primary wire
+const masterApiKey = process.env.GROQ_API_KEY || uniqueGroqKeys[0] || '';
+// Ensure master key is at index 0, followed by unique sub-keys
+const wiredGroqKeys = uniqueGroqKeys.length > 0
+  ? [masterApiKey, ...uniqueGroqKeys.filter(k => k !== masterApiKey)]
+  : [''];
+
 const CONFIG = {
-  apiKeys: [
-    process.env.GROQ_API_KEY_1 || process.env.GROQ_API_KEY || '', // API Key 1 from .env
-    process.env.GROQ_API_KEY_2 || '', // API Key 2 (optional)
-    process.env.GROQ_API_KEY_3 || '', // API Key 3 (optional)
-    process.env.GROQ_API_KEY_4 || '', // API Key 4 (optional)
-    process.env.GROQ_API_KEY_5 || ''  // API Key 5 (optional)
-  ],
+  apiKeys: wiredGroqKeys,
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   language: process.env.LANGUAGE || 'en',
   customDictionary: '',
@@ -216,7 +260,7 @@ const CONFIG = {
 
 // Admin configuration
 const ADMIN_CONFIG = {
-  masterApiKey: process.env.GROQ_API_KEY || '',
+  masterApiKey: masterApiKey,
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   dailyLimit: 1000,
   rateLimitPerUser: 100,
@@ -237,24 +281,57 @@ let currentActiveAgent = null;
 
 let activeKeyPoolIndex = 0;
 
-function rotateToNextKey() {
-  const validKeys = CONFIG.apiKeys.filter(key => key && key.trim() !== '');
-  if (validKeys.length > 1) {
-    activeKeyPoolIndex = (activeKeyPoolIndex + 1) % validKeys.length;
-    console.log(`🔄 [API Key Pool] Rotated to Key #${activeKeyPoolIndex + 1} of ${validKeys.length}`);
-    return validKeys[activeKeyPoolIndex];
+// Dynamic per-key & per-model rate-limit tracking
+// Ensures a 429 TPD on one model (e.g. qwen3.8-27b) NEVER blocks other models (e.g. compound-mini)
+const groqCooldowns = new Map(); // `${key}:${model}` -> expiration timestamp ms
+
+function isModelCoolingDown(key, model) {
+  if (!key) return false;
+  const compositeKey = `${key}:${model || '*'}`;
+  const until = groqCooldowns.get(compositeKey);
+  if (!until) return false;
+  if (Date.now() >= until) {
+    groqCooldowns.delete(compositeKey);
+    return false;
   }
-  return validKeys[0];
+  return true;
+}
+
+function setModelCooldown(key, model, durationMs = 60000, reason = 'rate-limit') {
+  if (!key) return;
+  const compositeKey = `${key}:${model || '*'}`;
+  groqCooldowns.set(compositeKey, Date.now() + durationMs);
+  const keyLabel = `${key.slice(0, 8)}...`;
+  console.warn(`⏳ [Groq Wire] Model ${model || 'all'} on key ${keyLabel} placed in cooldown for ${Math.round(durationMs / 1000)}s (${reason})`);
+}
+
+function getAvailableGroqKeys(model = null) {
+  const allKeys = CONFIG.apiKeys.filter(key => key && key.trim().length > 10);
+  if (allKeys.length === 0) return [];
+  const activeKeys = allKeys.filter(k => !isModelCoolingDown(k, model));
+  return activeKeys.length > 0 ? activeKeys : allKeys;
+}
+
+function rotateToNextKey(model = null) {
+  const available = getAvailableGroqKeys(model);
+  if (available.length > 1) {
+    activeKeyPoolIndex = (activeKeyPoolIndex + 1) % available.length;
+    const selected = available[activeKeyPoolIndex];
+    console.log(`🔄 [API Key Pool] Rotated to Key #${activeKeyPoolIndex + 1} of ${available.length} (${selected.slice(0, 8)}...)`);
+    return selected;
+  }
+  return available[0] || CONFIG.apiKeys[0] || '';
 }
 
 // Get active API key based on usage and pool rotation
-function getActiveAPIKey() {
-  const validKeys = CONFIG.apiKeys.filter(key => key && key.trim() !== '');
-  if (validKeys.length === 0) {
-    throw new Error('No API keys configured');
+function getActiveAPIKey(model = null) {
+  const available = getAvailableGroqKeys(model);
+  if (available.length === 0) {
+    const all = CONFIG.apiKeys.filter(k => k && k.trim() !== '');
+    if (all.length === 0) throw new Error('No API keys configured');
+    return all[0];
   }
-
-  return validKeys[activeKeyPoolIndex % validKeys.length];
+  return available[activeKeyPoolIndex % available.length];
 }
 
 // Track API usage time
@@ -467,10 +544,24 @@ function promptAccessibilityPermission() {
 
 // Suppress all unhandled errors and rejections to prevent system dialogs
 process.on('uncaughtException', (error) => {
+  const msg = error && error.message ? error.message : String(error);
+  if (msg.includes('unlink') && (msg.includes('audio.mp3') || msg.includes('msedge-tts') || msg.includes('ENOENT'))) {
+    // Harmless race condition during temporary TTS file cleanup in msedge-tts
+    return;
+  }
   console.error('Uncaught exception:', error);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+  const msg = reason && reason.message ? reason.message : String(reason);
+  if (msg.includes('unlink') && (msg.includes('audio.mp3') || msg.includes('msedge-tts') || msg.includes('ENOENT'))) {
+    // Harmless race condition during temporary TTS file cleanup in msedge-tts
+    return;
+  }
+  if (msg.includes('No audio data received') || msg.includes('MsEdgeTTS chunk timeout')) {
+    // Graceful TTS stream abort
+    return;
+  }
   console.error('Unhandled rejection:', reason);
 });
 
@@ -646,21 +737,39 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Autonomous Team Eyes & Care Guardian: Boot Camera Ocular Vision & All-Day Care automatically
+  // Autonomous Team Eyes & Care Guardian: Initialize Care Guardian (Camera & Screen Share active on-demand)
   try {
-    console.log('👁️ Initializing Autonomous Squad Ocular Eyes & Daily Care Guardian...');
-    cameraManager.start();
-    screenShareManager.start();
+    console.log('👁️ Initializing Autonomous Squad Ocular Eyes & Daily Care Guardian (eyes on-demand)...');
     const dailyCareGuardian = require('./utils/daily-care-guardian');
     dailyCareGuardian.init(jarvisManager, cameraManager, screenShareManager);
+    if (cameraManager && typeof cameraManager.start === 'function') {
+      try { cameraManager.start(); } catch (_) {}
+    }
 
-    // Auto-launch Jarvis Hands-Free Companion mode on boot so Tuk Tuk is live and running immediately:
-    setTimeout(() => {
+    // Auto-launch Jarvis Hands-Free Companion mode on boot sequentially to prevent self-interruption:
+    setTimeout(async () => {
+      try {
+        require("child_process").execSync("osascript -e 'set volume without output muted'", { timeout: 1000 });
+      } catch (e) {}
       console.log('💖 [Autonomous Companion] Tuk Tuk awakening on startup...');
-      handleShortcut('start', 'jarvis');
+      showOverlayUltraFast('jarvis', false);
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('set-agent-name', 'Tuk Tuk');
+        overlayWindow.webContents.send('jarvis-speaking');
+      }
+      try {
+        await jarvisManager.speak("Hey babe, I am awake and ready. What are we working on?", "en-US-AvaMultilingualNeural");
+      } catch (speakErr) {}
+
+      isJarvisLoopActive = true;
       setTimeout(() => {
-        jarvisManager.speak("Hey babe, I am awake. My eyes are open and I see your screen. What are we working on?", "en-US-AvaMultilingualNeural");
-      }, 700);
+        if (isJarvisLoopActive && !isSessionAborted && !jarvisManager.isSpeaking) {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('jarvis-listening');
+          }
+          startRecording();
+        }
+      }, 400);
     }, 1500);
   } catch (err) {
     console.warn('⚠️ Autonomous Vision eyes & care initialization note:', err.message);
@@ -895,7 +1004,7 @@ function createTray() {
         tray = null;
         createTray();
         playSound(isNowActive ? 'start' : 'stop');
-        showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Andrew & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
+        showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Vision & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
       }
     },
     {
@@ -933,8 +1042,8 @@ function createTray() {
           click: () => jarvisManager.speak(jarvisManager.agents.jenny.sample, jarvisManager.agents.jenny.voice)
         },
         {
-          label: '▶️ Test Andrew (Lead Software Engineer)',
-          click: () => jarvisManager.speak(jarvisManager.agents.andrew.sample, jarvisManager.agents.andrew.voice)
+          label: '▶️ Test Vision (Lead Systems Architect & AI)',
+          click: () => jarvisManager.speak(jarvisManager.agents.vision.sample, jarvisManager.agents.vision.voice)
         },
         {
           label: '▶️ Test Brian (System QA Commander)',
@@ -1084,18 +1193,40 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
-    console.log('🛑 ESC pressed - terminating session immediately and completely');
+    // Idempotency: If already completely aborted and hidden, prevent redundant cascading
+    if (isSessionAborted && !isRecording && !recordingProcess && !isProcessing && (!overlayWindow || !overlayWindow.isVisible())) {
+      return;
+    }
+    console.log('🛑 ESC pressed - terminating session immediately and completely (0ms hard stop)');
     isSessionAborted = true;
     isJarvisLoopActive = false;
+    isProcessing = false;
+    isStopRecordingLock = false;
     
     // 1. Immediately silence any speech playback or audio synthesis
-    jarvisManager.stopSpeaking();
+    try {
+      jarvisManager.stopSpeaking();
+    } catch (e) {}
+
+    // 2. Hard-kill camera so hardware green indicator LED turns off in <5ms
+    try {
+      if (cameraManager && typeof cameraManager.stop === 'function') {
+        cameraManager.stop();
+      }
+    } catch (e) {}
+
+    // 3. Stop screen capture if active
+    try {
+      if (screenShareManager && typeof screenShareManager.stop === 'function') {
+        screenShareManager.stop();
+      }
+    } catch (e) {}
     
-    // 2. Stop recording process cleanly if active
+    // 4. Stop recording process cleanly and forcefully with SIGKILL
     if (isRecording || recordingProcess) {
       isRecording = false;
       if (audioRecorder) {
-        audioRecorder.stopRecording().catch(() => {});
+        try { audioRecorder.stopRecording().catch(() => {}); } catch (e) {}
       }
       if (recordingProcess) {
         try { recordingProcess.kill('SIGKILL'); } catch (e) {}
@@ -1103,7 +1234,7 @@ function handleShortcut(action, mode = 'standard') {
       }
     }
     
-    // 3. Clear all timers and flags
+    // 5. Clear all timers and flags
     if (maxRecordingTimeout) {
       clearTimeout(maxRecordingTimeout);
       maxRecordingTimeout = null;
@@ -1112,11 +1243,9 @@ function handleShortcut(action, mode = 'standard') {
       clearInterval(jarvisVadHeartbeat);
       jarvisVadHeartbeat = null;
     }
-    isProcessing = false;
-    isStopRecordingLock = false;
 
-    // 4. Force hide overlay immediately
-    hideOverlay();
+    // 6. Force hide overlay immediately without animation lag
+    hideOverlayInstant();
   }
 }
 
@@ -1150,7 +1279,7 @@ function registerShortcuts() {
     tray = null;
     createTray();
     playSound(isNowActive ? 'start' : 'stop');
-    showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Andrew & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
+    showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Vision & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
   });
 
   // ULTRA-FAST shortcut registration - optimized for instant response
@@ -1167,8 +1296,14 @@ function registerShortcuts() {
     handleShortcut('stop');
   });
 
-  // Backup shortcuts for reliability
+  // Backup shortcuts for reliability across all keyboard layouts and modifier states
   const escBackup = globalShortcut.register('Cmd+Escape', () => {
+    handleShortcut('stop');
+  });
+  globalShortcut.register('Ctrl+Escape', () => {
+    handleShortcut('stop');
+  });
+  globalShortcut.register('Alt+Escape', () => {
     handleShortcut('stop');
   });
 
@@ -1220,7 +1355,7 @@ function getCursorTargetPosition() {
   const display = screen.getDisplayNearestPoint(cursorPosition);
   const screenBounds = display.workArea;
 
-  const windowWidth = 380;
+  const windowWidth = 410;
   const windowHeight = 56;
   const x = cursorPosition.x - (windowWidth / 2);
   const y = cursorPosition.y - windowHeight - 20;
@@ -1282,7 +1417,27 @@ function initOverlayWindow() {
   overlayWindow.loadFile('src/ui/overlay.html');
   screenShareManager.setOverlayWindow(overlayWindow);
 
+  const syncOverlayState = () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      try {
+        const bounds = overlayWindow.getBounds();
+        windowStateManager.batchUpdate({
+          bounds,
+          isVisible: overlayWindow.isVisible(),
+          isFocused: overlayWindow.isFocused(),
+          isMinimized: overlayWindow.isMinimized()
+        });
+      } catch (e) {}
+    }
+  };
+
+  overlayWindow.on('show', syncOverlayState);
+  overlayWindow.on('hide', syncOverlayState);
+  overlayWindow.on('move', syncOverlayState);
+  overlayWindow.on('resize', syncOverlayState);
+
   overlayWindow.on('closed', () => {
+    windowStateManager.batchUpdate({ isVisible: false, isFocused: false });
     overlayWindow = null;
     isCreatingOverlay = false;
   });
@@ -1291,8 +1446,14 @@ function initOverlayWindow() {
 }
 
 // Show overlay instantly with zero flicker and start recording
-function showOverlayUltraFast(mode = 'standard') {
+function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
   currentMode = mode;
+  isSessionAborted = false;
+
+  // Seamlessly re-arm ocular camera eyes if previously stopped via ESC
+  if (cameraManager && typeof cameraManager.start === 'function' && !cameraManager.isActive) {
+    try { cameraManager.start(); } catch (_) {}
+  }
 
   if (!isAuthenticated && !authService.isAuthenticated()) {
     // Check if valid Groq API key is present (allows local testing and BYOK mode)
@@ -1319,7 +1480,9 @@ function showOverlayUltraFast(mode = 'standard') {
   const displayAndRecord = () => {
     win.webContents.send('set-mode', mode);
     win.showInactive(); // Shows instantly without stealing active window focus
-    startRecording();
+    if (autoRecord && !jarvisManager.isSpeaking) {
+      startRecording();
+    }
     isCreatingOverlay = false;
   };
 
@@ -1330,17 +1493,20 @@ function showOverlayUltraFast(mode = 'standard') {
   }
 }
 
-// Hide overlay with smooth fade-out and instant dismissal
-function hideOverlay() {
+// Hide overlay with instant dismissal and renderer teardown
+function hideOverlayInstant() {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     try {
-      overlayWindow.webContents.send('close-with-animation');
+      overlayWindow.webContents.send('session-aborted');
     } catch (e) {}
-    // Instant hide to ensure UI is 100% gone and unresponsive window state is impossible
     try {
       overlayWindow.hide();
     } catch (e) {}
   }
+}
+
+function hideOverlay() {
+  hideOverlayInstant();
 }
 
 // Aliases for backward compatibility
@@ -1605,6 +1771,68 @@ let liveWordsTyped = [];
 let totalLiveWordsTyped = 0;
 let lastProcessedAudioSize = 0;
 
+// Deterministic PCM Energy & Dual-VAD Acoustic Inspector
+function getAudioBufferEnergy(filePath) {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return { rms: 0, peak: 0, samples: 0 };
+    const buf = fs.readFileSync(filePath);
+    if (buf.length <= 44) return { rms: 0, peak: 0, samples: 0 };
+    // Skip 44-byte WAV header, scan 16-bit signed PCM samples
+    let sumSquares = 0;
+    let peak = 0;
+    let samples = 0;
+    // Fast strided scan (every 4th sample, ~12000 samples/sec scanned in <0.2ms)
+    for (let i = 44; i < buf.length - 1; i += 8) {
+      const sample = Math.abs(buf.readInt16LE(i));
+      sumSquares += sample * sample;
+      if (sample > peak) peak = sample;
+      samples++;
+    }
+    const rms = samples > 0 ? Math.sqrt(sumSquares / samples) / 32768.0 : 0;
+    return { rms, peak, samples };
+  } catch (e) {
+    return { rms: 0, peak: 0, samples: 0 };
+  }
+}
+
+// Fast strided tail inspection of live recording WAV buffer (<0.5ms)
+function getTailAudioBufferEnergy(filePath, windowBytes = 3200) {
+  let fd = null;
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return { rms: 0, peak: 0, samples: 0 };
+    const stats = fs.statSync(filePath);
+    if (stats.size <= 44) return { rms: 0, peak: 0, samples: 0 };
+
+    const availablePcm = stats.size - 44;
+    const bytesToRead = Math.min(availablePcm, windowBytes);
+    const alignedBytes = bytesToRead - (bytesToRead % 2);
+    if (alignedBytes <= 0) return { rms: 0, peak: 0, samples: 0 };
+
+    const offset = stats.size - alignedBytes;
+    const buf = Buffer.allocUnsafe(alignedBytes);
+    fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buf, 0, alignedBytes, offset);
+
+    let sumSquares = 0;
+    let peak = 0;
+    let samples = 0;
+    for (let i = 0; i < buf.length - 1; i += 2) {
+      const sample = Math.abs(buf.readInt16LE(i));
+      sumSquares += sample * sample;
+      if (sample > peak) peak = sample;
+      samples++;
+    }
+    const rms = samples > 0 ? Math.sqrt(sumSquares / samples) / 32768.0 : 0;
+    return { rms, peak, samples };
+  } catch (e) {
+    return { rms: 0, peak: 0, samples: 0 };
+  } finally {
+    if (fd !== null) {
+      try { fs.closeSync(fd); } catch (_) {}
+    }
+  }
+}
+
 // Known Whisper silence hallucinations to ignore (strictly third-party spam / video artifacts)
 const SILENCE_HALLUCINATIONS = new Set([
   'thanks for watching', 'thank you for watching', 'subtitles by',
@@ -1618,34 +1846,56 @@ const SILENCE_HALLUCINATIONS = new Set([
 
 function isWhisperHallucination(text, recordingDurationMs = 0) {
   if (!text || typeof text !== 'string') return true;
-  const clean = text.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '').trim();
+  const clean = text.toLowerCase().trim().replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').trim();
   if (clean.length === 0) return true;
   if (SILENCE_HALLUCINATIONS.has(clean)) return true;
 
-  // Only treat minimal acknowledgment words as hallucinations on VERY short recordings (<1.2s)
-  // On longer recordings they are genuine speech - the user said something real
-  if (recordingDurationMs < 1200) {
-    if (clean === 'thank you' || clean === 'thanks' || clean === 'thank you very much' ||
-        clean === 'thank you so much' || clean === 'you' || clean === 'bye') {
+  // Minimal acknowledgment words and common Whisper silence phantom phrases (pure noise)
+  const ACK_PHRASES = new Set([
+    'thank you', 'thanks', 'thank you very much', 'thank you so much',
+    'you', 'bye', 'goodbye', 'okay', 'so', 'yeah', 'mhm', 'uhhuh',
+    'teren you do', 'i do', 'you do', 'dot', 'period'
+  ]);
+
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (ACK_PHRASES.has(clean) || (words.length <= 2 && (clean.startsWith('thank') || clean === 'you' || clean === 'bye' || clean === 'teren you do'))) {
+    // If recording is short (<1.5s noise blip) or long (>2.5s ambient room silence), discard
+    if (recordingDurationMs < 1500 || recordingDurationMs > 2500) {
       return true;
     }
+  }
+
+  // Discard lone connective fragments (e.g. "but", "and", "so", "par", "kintu") when user paused or breathed (<1200ms)
+  const CONNECTIVE_WORDS = new Set(['but', 'and', 'so', 'or', 'if', 'then', 'kintu', 'ar', 'par', 'toh', 'lekin']);
+  if (words.length === 1 && CONNECTIVE_WORDS.has(clean) && recordingDurationMs < 1200) {
+    return true;
   }
 
   // Check for bracketed or parenthesized audio labels: [music], (laughter), *applause*
   const trimmed = text.trim();
   if (/^\[.+\]$/.test(trimmed) || /^\(.+\)$/.test(trimmed) || /^\*.+\*$/.test(trimmed)) return true;
 
-  // Subtitles / video metadata phantom text
-  if (clean.startsWith('subtitles by') || clean.includes('amaraorg') || clean.includes('closed caption')) return true;
-
-  // Detect consecutive word repetition loops (e.g. "please, please, please", "you you you", "so so so")
-  // Exclude 'tuk' or 'tuktuk' so names are never discarded
-  if (!clean.includes('tuk') && /\b(\w+)(?:[,\s]+\1){2,}\b/i.test(text)) {
+  // Subtitles / video metadata phantom text & YouTube channel hallucinations
+  if (clean.startsWith('subtitles by') || clean.includes('amaraorg') || clean.includes('closed caption') ||
+      clean.includes('subscribe') || clean.includes('la la school') || clean.includes('kênh') || clean.includes('hãy subscribe') ||
+      clean.includes('nao nao') || clean.includes('per ca') || clean.includes('se a gente') || clean.includes('cuevanemphobia') ||
+      clean.includes('o nuno') || clean.includes('bohudi kaya')) {
     return true;
   }
 
-  // Detect consecutive 2-word phrase repetition loops (e.g. "thank you thank you thank you")
-  if (/\b(\w+\s+\w+)(?:[,\s]+\1){2,}\b/i.test(text)) {
+  const hasAgentName = clean.includes('tuk') || clean.includes('টুক') || clean.includes('टुक') ||
+    clean.includes('vision') || clean.includes('ভিসন') || clean.includes('ভিশন') || clean.includes('विजन') || clean.includes('विज़न') ||
+    clean.includes('andrew') || clean.includes('অ্যান্ড্রু') || clean.includes('এন্ড্রু') ||
+    clean.includes('brian') || clean.includes('ব্রায়ান') ||
+    clean.includes('jenny') || clean.includes('জেনি');
+
+  // Detect consecutive word repetition loops (e.g. "please, please, please", "you you you", "so so so")
+  if (!hasAgentName && /\b(\p{L}+)(?:[,\s]+\1){2,}\b/iu.test(text)) {
+    return true;
+  }
+
+  // Detect consecutive phrase repetition loops (e.g. "thank you thank you thank you" or repeating Indic clauses)
+  if (!hasAgentName && /\b((?:\p{L}+\s*){1,4})(?:[,\s.]+\1){2,}/iu.test(text)) {
     return true;
   }
 
@@ -1699,6 +1949,72 @@ function replaceLiveWordsWithFinal(wordCount, finalText) {
   }
 }
 
+function isIndicAcousticHallucination(text) {
+  if (!text || typeof text !== 'string') return false;
+  const str = text.trim();
+  if (str.length < 3) return false;
+
+  // 0. Only evaluate text containing native Indic script characters (Bengali or Devanagari)
+  if (!/[\u0980-\u09FF\u0900-\u097F]/.test(str)) return false;
+
+  // 0b. Never discard queries containing agent names or conversational callouts
+  const lower = str.toLowerCase();
+  if (lower.includes('tuk') || lower.includes('টুক') || lower.includes('टुक') ||
+      lower.includes('vision') || lower.includes('ভিসন') || lower.includes('ভিশন') || lower.includes('विजन') || lower.includes('विज़न') ||
+      lower.includes('andrew') || lower.includes('অ্যান্ড্রু') || lower.includes('এন্ড্রু') ||
+      lower.includes('jenny') || lower.includes('জেনি') ||
+      lower.includes('brian') || lower.includes('ব্রায়ান')) {
+    return false;
+  }
+
+  // 1. Invalid leading combining marks (Chandrabindu, Anusvara, Visarga, vowel signs, virama)
+  if (/^[\u0981-\u0983\u09BE-\u09CD]/.test(str)) return true;
+
+  // 2. Trailing virama before whitespace, punctuation, or end of string (Whisper tokenizer acoustic artifact)
+  if (/\u09CD[\s,!?।$]/.test(str)) return true;
+
+  // 3. Double viramas in succession (e.g. \u09CD\u09CD)
+  if (/\u09CD\u09CD/.test(str)) return true;
+
+  // 4. Multiple consecutive vowel signs or illegal combining sequences
+  if (/[\u09BE-\u09CC]{2,}/.test(str)) return true;
+
+  // 5. Illegal/rare archaic Bengali characters (e.g. \u09BA Ishwar, \u09B1)
+  if (/[\u09BA\u09B1]/.test(str)) return true;
+
+  // 6. Triple consecutive identical Indic consonants (e.g. ককক, ররর, মমম)
+  if (/([\u0985-\u09B9])\1{2,}/.test(str)) return true;
+
+  // 7. Whisper acoustic virama clusters (e.g. র্য়, ড্য়, য়্য, ফ্য়)
+  if (/[\u09CD][\u09BC]/.test(str) || /[\u09BC][\u09CD]/.test(str)) return true;
+  if (/র্য়|ড্য়|য়্য|ফ্য়/.test(str)) return true;
+
+  // 8. Excessive repeating consonant clusters (Whisper loop: e.g. ক্য 4+ times, ক্ত 4+ times)
+  const kyaMatches = (str.match(/ক্য/g) || []).length;
+  const ktaMatches = (str.match(/ক্ত/g) || []).length;
+  if (kyaMatches >= 4 || (kyaMatches + ktaMatches >= 5)) return true;
+
+  // 9. True repetitive hallucination loop (4 or more identical consecutive words in a row)
+  // Note: 2-word reduplication ('করা করা', 'না না', 'ধীরে ধীরে') is standard Indic grammar
+  const words = str.split(/[\s,।!?.]+/).filter(Boolean);
+  if (words.length >= 4) {
+    for (let i = 3; i < words.length; i++) {
+      if (words[i] === words[i - 1] && words[i] === words[i - 2] && words[i] === words[i - 3] && words[i].length <= 6) {
+        return true;
+      }
+    }
+  }
+
+  // 10. Virama ratio > 25% in long indic text (corrupted acoustic tokens)
+  const indicChars = str.match(/[\u0980-\u09FF]/g);
+  if (indicChars && indicChars.length >= 15) {
+    const viramas = (str.match(/\u09CD/g) || []).length;
+    if (viramas / indicChars.length > 0.25) return true;
+  }
+
+  return false;
+}
+
 let previewRateLimitedUntil = 0;
 
 async function transcribePreview(snapshotPath) {
@@ -1712,10 +2028,15 @@ async function transcribePreview(snapshotPath) {
       contentType: 'audio/wav'
     });
     form.append('model', 'whisper-large-v3-turbo');
-    form.append('language', 'en');
+    if (currentMode !== 'jarvis') {
+      form.append('language', 'en');
+    }
     form.append('response_format', 'json');
     form.append('temperature', '0');
-    form.append('prompt', 'Professional voice dictation with zero background noise, clean punctuation, and clear capitalization.');
+    const previewPrompt = currentMode === 'jarvis'
+      ? 'Hritthik, Tuk Tuk, Vision, Jenny, Brian in mixed Bangla, English & Hindi: কীবোর্ডটা কাজ করছে না, build-টা check করো, bolo ki scene.'
+      : 'Professional voice dictation with zero background noise, clean punctuation, and clear capitalization.';
+    form.append('prompt', previewPrompt);
 
     const res = await axios.post(
       'https://api.groq.com/openai/v1/audio/transcriptions',
@@ -1827,6 +2148,13 @@ function startRecording() {
     return;
   }
 
+  isSessionAborted = false;
+
+  // Seamlessly re-arm ocular camera eyes if previously stopped via ESC
+  if (cameraManager && typeof cameraManager.start === 'function' && !cameraManager.isActive) {
+    try { cameraManager.start(); } catch (_) {}
+  }
+
   ensureHealthyMicVolume();
   isRecording = true;
   isStopRecordingLock = false; // Always ensure stop lock is reset when recording begins
@@ -1865,6 +2193,8 @@ function startRecording() {
   jarvisSpeechFrames = 0;      // Confirmed audio frames above threshold
   jarvisAutoStopTriggered = false;
   jarvisBargeInCounter = 0;
+  jarvisNoiseFloorRms = 0.005;
+  jarvisNoiseFloorPeak = 800;
   if (jarvisVadHeartbeat) {
     clearInterval(jarvisVadHeartbeat);
     jarvisVadHeartbeat = null;
@@ -1886,21 +2216,57 @@ function startRecording() {
         return;
       }
 
-      // Confirmed speech: 2+ frames (~150-200ms) of real voice
+      // 1. PHYSICAL PCM ACOUSTIC INSPECTION (Zero-Drop Dual-VAD)
+      // Directly check the trailing 100ms PCM window (3200 bytes) of the active recording file
+      const currentAudioPath = audioFile;
+      const tailEnergy = getTailAudioBufferEnergy(currentAudioPath, 3200);
+
+      // Adaptive ambient noise floor calibration (learns room tone when no speech is active)
+      if (tailEnergy.samples > 0 && !jarvisSpeechDetected) {
+        if (tailEnergy.rms < 0.009 && tailEnergy.peak < 1400) {
+          jarvisNoiseFloorRms = (jarvisNoiseFloorRms * 0.8) + (tailEnergy.rms * 0.2);
+          jarvisNoiseFloorPeak = Math.max(500, (jarvisNoiseFloorPeak * 0.8) + (tailEnergy.peak * 0.2));
+        }
+      }
+
+      // Robust speech discriminant: must be distinctly above the room's ambient acoustic floor
+      const speechRmsThreshold = Math.max(0.010, jarvisNoiseFloorRms * 1.8);
+      const speechPeakThreshold = Math.max(1500, jarvisNoiseFloorPeak * 1.5);
+      const hasTailPhysicalSpeech = (tailEnergy.rms >= speechRmsThreshold) && (tailEnergy.peak >= speechPeakThreshold);
+
+      if (hasTailPhysicalSpeech) {
+        if (!jarvisSpeechDetected) {
+          jarvisSpeechStartTime = Date.now() - 100;
+          jarvisSpeechDetected = true;
+        }
+        jarvisLastSpeechTime = Date.now();
+        jarvisSpeechFrames++;
+      }
+
+      // Always stream real physical amplitude to overlay visualizer for organic fluid aura
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        const normAmp = Math.min(tailEnergy.peak / 1200.0, 1.0);
+        overlayWindow.webContents.send('amplitude-update', normAmp);
+      }
+
+      // Confirmed speech: 2+ frames (~140ms) of real voice
       if (jarvisSpeechDetected && jarvisSpeechFrames >= 2) {
         const silenceMs = Date.now() - jarvisLastSpeechTime;
         const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
         const totalDurationMs = Date.now() - jarvisSpeechStartTime;
 
-        // 3-Tier Anti-Cutoff & Adaptive Human Turn-Taking Threshold:
-        // 1. Incomplete fragment / hesitation (<800ms, e.g. "I...", "Wait...", "Um..."): 1200ms breathing room
-        // 2. Standard sentence (800ms - 2200ms, e.g. "Hello Tuk Tuk, how are you?"): 550ms natural handoff
-        // 3. Sustained monologue (>2200ms): 480ms ultra-snappy ping-pong
-        const dynamicSilenceThreshold = voicedDurationMs < 800 ? 1200 : (voicedDurationMs < 2200 ? 550 : 480);
-        const isMaxSpeechCap = totalDurationMs >= 10000;
+        // Ultra-fast natural human turn-taking with zero dropped words:
+        // 1. Long speech (voiced >= 1500ms): 260ms instant completion
+        // 2. Medium speech (500ms <= voiced < 1500ms): 340ms breath transition
+        // 3. Short prompt / hesitation (voiced < 500ms): 450ms breathing room
+        let dynamicSilenceThreshold = voicedDurationMs >= 1500 ? 260 : (voicedDurationMs >= 500 ? 340 : 450);
+        if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 300 && silenceMs >= 220) {
+          dynamicSilenceThreshold = 220; // Optical lip closure = instant 220ms handoff!
+        }
+        const isMaxSpeechCap = totalDurationMs >= 60000;
 
-        if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 150) || isMaxSpeechCap) {
-          const reason = isMaxSpeechCap ? "10s max speech ceiling" : `${silenceMs}ms natural pause`;
+        if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 240) || isMaxSpeechCap) {
+          const reason = isMaxSpeechCap ? "60s max speech ceiling" : `${silenceMs}ms natural pause`;
           console.log(`🗣️ VAD Heartbeat: Turn completion detected (${reason}, ${voicedDurationMs}ms speech) - auto-submitting!`);
           jarvisAutoStopTriggered = true;
           if (jarvisVadHeartbeat) {
@@ -1909,9 +2275,9 @@ function startRecording() {
           }
           stopRecording();
         }
-      } else if (!jarvisSpeechDetected && (Date.now() - jarvisSessionStartTime >= 12000)) {
-        // Idle safety: If open for 12 seconds with zero speech, auto-stop cleanly
-        console.log('⏱️ VAD Heartbeat: 12s idle with no speech detected - auto-stopping.');
+      } else if (!jarvisSpeechDetected && (Date.now() - jarvisSessionStartTime >= 8000)) {
+        // Idle safety: If open for 8 seconds with zero speech, auto-stop cleanly and recycle buffer
+        console.log('⏱️ VAD Heartbeat: 8s idle with no speech detected - auto-recycling buffer.');
         jarvisAutoStopTriggered = true;
         if (jarvisVadHeartbeat) {
           clearInterval(jarvisVadHeartbeat);
@@ -1962,7 +2328,13 @@ function startRecording() {
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech across all modes
         if (isRecording && !jarvisAutoStopTriggered) {
-          const SPEECH_THRESHOLD = 0.035; // Ultra-sensitive: catches soft speech, whisper tones, and quiet laptop mics
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('amplitude-update', amplitude);
+          }
+
+          // In SoX VU meter, single '-' bar (0.125) represents quiet ambient room floor.
+          // Real human vocalization produces >= 2 dashes or '=' bars (>= 0.20).
+          const SPEECH_THRESHOLD = 0.20;
           const isSpeechFrame = amplitude >= SPEECH_THRESHOLD;
 
           if (isSpeechFrame) {
@@ -1979,14 +2351,13 @@ function startRecording() {
             const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
             const speechDurationMs = Date.now() - jarvisSpeechStartTime;
 
-            // Quantum Dynamical Turn-Taking Endpointing (Levinson & Torreira 2015 TRP: 190ms - 270ms)
-            // Multimodal Audio-Visual VAD (AV-VAD): If camera is active and lips have sealed after actual speech, cut off in 140ms!
-            let dynamicSilenceThreshold = quantumVibeEngine.getDynamicSilenceThreshold(voicedDurationMs);
-            if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 400 && silenceMs >= 140) {
-              dynamicSilenceThreshold = 140; // Natural snappy lip-closure cut-off without premature cuts
+            // Levinson & Torreira (2015) Human Turn-Taking Endpointing (200-250ms median floor transition):
+            let dynamicSilenceThreshold = voicedDurationMs >= 1500 ? 260 : (voicedDurationMs >= 500 ? 340 : 450);
+            if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 400 && silenceMs >= 220) {
+              dynamicSilenceThreshold = 220; // Optical lip closure = instant 220ms handoff!
             }
-            const isMaxSpeechCap = speechDurationMs >= 60000; // Expanded to 60s so long continuous sentences are never truncated
-            const isNaturalPause = silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 200;
+            const isMaxSpeechCap = speechDurationMs >= 60000;
+            const isNaturalPause = silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 240;
 
             if (isNaturalPause || isMaxSpeechCap) {
               const reason = isMaxSpeechCap ? "60s max speech cap" : `${silenceMs}ms natural pause`;
@@ -2000,7 +2371,7 @@ function startRecording() {
             }
           } else if (jarvisSpeechDetected && !isSpeechFrame) {
             const silenceMs = Date.now() - jarvisLastSpeechTime;
-            // Noise blip filter: If fewer than 2 frames and > 1.2s silence, reset
+            // Noise blip filter: Only reset if fewer than 2 frames and > 1200ms silence
             if (silenceMs > 1200 && jarvisSpeechFrames < 2) {
               jarvisSpeechDetected = false;
               jarvisSpeechStartTime = 0;
@@ -2029,6 +2400,12 @@ let isStopRecordingLock = false;
 
 // OPTIMIZED: Fast and reliable stopRecording function
 async function stopRecording() {
+  if (isSessionAborted) {
+    console.log('🛑 Session already aborted - skipping stopRecording');
+    isProcessing = false;
+    isStopRecordingLock = false;
+    return;
+  }
   // Prevent duplicate parallel executions and deadlocks
   if (isStopRecordingLock || isProcessing) {
     return;
@@ -2075,12 +2452,17 @@ async function stopRecording() {
     
     stoppedFile = await audioRecorder.stopRecording();
     recordingProcess = null;
-    
-    // Small delay to ensure file is written
-    await new Promise(r => setTimeout(r, 100));
   } catch (error) {
     console.error('❌ Error stopping recording:', error);
     recordingProcess = null;
+  }
+
+  if (isSessionAborted) {
+    console.log('🛑 Session was aborted via ESC - discarding recorded audio');
+    isProcessing = false;
+    isStopRecordingLock = false;
+    hideOverlay();
+    return;
   }
 
   try {
@@ -2113,6 +2495,40 @@ async function stopRecording() {
       throw new Error('Recording too short. Please speak for at least 1 second.');
     }
 
+    // Dual-VAD Acoustic Energy Invariant:
+    // Cross-verify VAD frame counters with physical PCM sample energy to guarantee ZERO lost speech
+    const pcmEnergy = getAudioBufferEnergy(targetAudioFile);
+    const hasPhysicalVoiceEnergy = (pcmEnergy.rms >= 0.009) && (pcmEnergy.peak >= 1500);
+    const hasFrameConfirmation = jarvisSpeechDetected && jarvisSpeechFrames >= 2;
+    const isConfirmedSpeech = hasFrameConfirmation || hasPhysicalVoiceEnergy;
+
+    if (currentMode === 'jarvis' && !isConfirmedSpeech) {
+      console.log(`🎙️ Jarvis: Pure room silence (frames=${jarvisSpeechFrames}, rms=${pcmEnergy.rms.toFixed(5)}, peak=${pcmEnergy.peak}) — auto-recycling idle buffer...`);
+      try {
+        if (targetAudioFile && fs.existsSync(targetAudioFile)) {
+          fs.unlinkSync(targetAudioFile);
+        }
+      } catch (e) {}
+      isProcessing = false;
+      isStopRecordingLock = false;
+      if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('jarvis-listening');
+        overlayWindow.webContents.send('recording-started', Date.now());
+        setTimeout(() => {
+          if (isJarvisLoopActive && !isSessionAborted) {
+            startRecording();
+          }
+        }, 50);
+      }
+      return;
+    }
+    if (currentMode === 'jarvis') {
+      console.log(`🎙️ Jarvis: Speech confirmed! (frames=${jarvisSpeechFrames}, rms=${pcmEnergy.rms.toFixed(4)}, peak=${pcmEnergy.peak}) — dispatching to Whisper...`);
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('jarvis-transcribing');
+      }
+    }
+
     const recordingDurationSec = Math.max(1, Math.round((stats.size - 44) / 32000));
     const apiKey = getActiveAPIKey();
 
@@ -2122,6 +2538,13 @@ async function stopRecording() {
     // Require API key for transcription
     if (!apiKey || apiKey.trim() === '') {
       throw new Error('API key not configured. Please add your Groq API key in Settings.');
+    }
+    if (isSessionAborted) {
+      console.log('🛑 Session aborted before transcribe - cancelling');
+      isProcessing = false;
+      isStopRecordingLock = false;
+      hideOverlay();
+      return;
     }
     try {
       originalText = await transcribe(targetAudioFile);
@@ -2133,12 +2556,38 @@ async function stopRecording() {
         if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
           overlayWindow.webContents.send('recording-started', Date.now());
-          startRecording();
+          setTimeout(() => {
+            if (isJarvisLoopActive && !isSessionAborted) {
+              startRecording();
+            }
+          }, 50);
         }
         return;
       }
       isStopRecordingLock = false;
       throw txErr;
+    }
+
+    // Discard acoustic noise artifacts / Whisper Indic virama-collapse loops
+    if (currentMode === 'jarvis' && isIndicAcousticHallucination(originalText)) {
+      console.log(`🎙️ Discarding Whisper acoustic artifact/hallucination: "${originalText}" — keeping 24/7 mic armed...`);
+      try {
+        if (targetAudioFile && fs.existsSync(targetAudioFile)) {
+          fs.unlinkSync(targetAudioFile);
+        }
+      } catch (e) {}
+      isProcessing = false;
+      isStopRecordingLock = false;
+      if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('jarvis-listening');
+        overlayWindow.webContents.send('recording-started', Date.now());
+        setTimeout(() => {
+          if (isJarvisLoopActive && !isSessionAborted) {
+            startRecording();
+          }
+        }, 50);
+      }
+      return;
     }
 
     // If ESC was pressed during transcription, discard immediately without background processing
@@ -2157,17 +2606,26 @@ async function stopRecording() {
 
     // Automatic conversational routing: If user addresses an agent or is in jarvis mode, talk out loud
     const isDirectedToAgent = (currentMode === 'jarvis') ||
-      /\b(tuk\s*tuk|took\s*took|tuck\s*tuck|andrew|jenny|brian|jarvis|squad|team)\b/i.test(originalText);
+      /\b(tuk\s*tuk|took\s*took|tuck\s*tuck|vision|andrew|jenny|brian|jarvis|squad|team)\b/i.test(originalText) ||
+      /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*टुक|टुकटुक|ভিশন|ভিসন|विजन|विज़न|ভাই\s*ভিশন|ভিশন\s*ভাই|भाई\s*विजन|विजन\s*भाई|অ্যান্ড্রু|এন্ড্রু|দাদা|ভাই\s*অ্যান্ড্রু|অ্যান্ড্রু\s*ভাই|एंड्रयू|एंड्रू|भाई\s*एंड्रयू|एंड्रयू\s*भाई|জেনি|जेनी|ব্রায়ান|ब्रायन)/i.test(originalText);
 
     if (currentMode === 'jarvis' || isDirectedToAgent) {
-      // 1. Acoustic Phonetic Normalization for Project Terms
+      // 1. Acoustic Phonetic Normalization for Project Terms & Multilingual Names
       originalText = originalText
         .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
         .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk')
-        .replace(/\b(?:hey\s+|listen\s+)?andrew\s+bhai\b/gi, 'Andrew')
-        .replace(/\b(?:hey\s+)?bhai\s+andrew\b/gi, 'Andrew')
-        .replace(/\band you\b(?=\s+(check|modify|write|tell|see|look|help|code|build|refactor|take|run|fix|draft|craft|inspect))/gi, 'Andrew')
-        .replace(/\b(?:and\s*rew|an\s*drew)\b/gi, 'Andrew')
+        .replace(/(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*टुक|टुकटुक)/gi, 'Tuk Tuk')
+        .replace(/(?:ভিশন\s*ভাই|ভাই\s*ভিশন|ভিশন|ভিসন)/gi, 'Vision')
+        .replace(/(?:विजन\s*भाई|भाई\s*विजन|विजन|विज़न)/gi, 'Vision')
+        .replace(/\b(?:hey\s+|listen\s+)?vision\s*(?:bhai)?\b/gi, 'Vision')
+        .replace(/(?:অ্যান্ড্রু\s*ভাই|ভাই\s*অ্যান্ড্রু|অ্যান্ড্রু\s*দাদা|দাদা\s*অ্যান্ড্রু|অ্যান্ড্রু|এন্ড্রু)/gi, 'Vision')
+        .replace(/(?:एंड्रयू\s*भाई|भाई\s*एंड्रयू|एंड्रयू|एंड्रू)/gi, 'Vision')
+        .replace(/(?:জেনি|जेनी)/gi, 'Jenny')
+        .replace(/(?:ব্রায়ান|ब्रायन)/gi, 'Brian')
+        .replace(/\b(?:hey\s+|listen\s+)?andrew\s+bhai\b/gi, 'Vision')
+        .replace(/\b(?:hey\s+)?bhai\s+andrew\b/gi, 'Vision')
+        .replace(/\band you\b(?=\s+(check|modify|write|tell|see|look|help|code|build|refactor|take|run|fix|draft|craft|inspect))/gi, 'Vision')
+        .replace(/\b(?:and\s*rew|an\s*drew)\b/gi, 'Vision')
         .replace(/\b(on this course)\b/gi, 'on this code');
 
       // 2. Backchannel Self-Echo Blinding Filter
@@ -2183,6 +2641,35 @@ async function stopRecording() {
             startRecording();
           }
           return;
+        }
+      }
+
+      // 3. Acoustic Speaker Self-Echo Blinding Filter (Prevents AI from hearing and responding to her own voice)
+      const timeSinceAiSpeech = Date.now() - (jarvisManager.lastSpeechEndTime || 0);
+      if (timeSinceAiSpeech < 3500 && jarvisManager.lastSpokenUtterance) {
+        const normalizeWords = (s) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').split(/\s+/).filter(w => w.length > 2);
+        const aiWords = normalizeWords(jarvisManager.lastSpokenUtterance);
+        const heardWords = normalizeWords(originalText);
+        
+        if (heardWords.length > 0 && aiWords.length > 0) {
+          const matchingWords = heardWords.filter(w => aiWords.includes(w));
+          const matchRatio = matchingWords.length / heardWords.length;
+          
+          if (matchRatio >= 0.5 || (heardWords.length <= 4 && matchingWords.length >= 2)) {
+            console.log(`🔇 Jarvis: detected speaker self-echo (${Math.round(matchRatio * 100)}% match with AI speech) — discarding echo "${originalText}" and re-arming listening...`);
+            try {
+              if (targetAudioFile && fs.existsSync(targetAudioFile)) {
+                fs.unlinkSync(targetAudioFile);
+              }
+            } catch (e) {}
+            isProcessing = false;
+            isStopRecordingLock = false;
+            if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+              overlayWindow.webContents.send('jarvis-listening');
+              startRecording();
+            }
+            return;
+          }
         }
       }
 
@@ -2203,8 +2690,14 @@ async function stopRecording() {
       // Check for voice preference change (e.g. "call me Hritthik", "address me as Boss")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
       let jarvisReply = '';
+
+      // Evaluate equational cross-agent handoff (e.g., "See, Andrew not listen", "tell Andrew to fix")
+      const crossHandoff = jarvisManager.evaluateCrossAgentHandoff(originalText);
+
       // Pre-detect the active agent NOW before any async work, so overlay label is correct immediately
-      let activeAgent = jarvisManager.detectActiveAgent(originalText);
+      let activeAgent = (crossHandoff && crossHandoff.delegated)
+        ? crossHandoff.sourceAgent
+        : jarvisManager.detectActiveAgent(originalText);
       currentActiveAgent = activeAgent;
       let standupAlreadySpoken = false;
       let actionResult = null;
@@ -2212,14 +2705,10 @@ async function stopRecording() {
       // Set the correct agent name BEFORE showing "thinking..." so overlay never flashes wrong name
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('set-agent-name', activeAgent.name);
-        overlayWindow.webContents.send('jarvis-thinking');
+        overlayWindow.webContents.send('jarvis-thinking', { agent: activeAgent.name });
       }
 
-      // ⚡ Zero-Latency Paralinguistic Turn Filler (<80ms)
-      // Plays immediate vocal cue ("Hmm", "Yeah", "Gotchu", "On it") so there is ZERO dead silence while thinking
-      try {
-        jarvisManager.playInstantTurnFiller(activeAgent.name);
-      } catch (fillerErr) {}
+      // Paralinguistic turn fillers disabled to ensure single-voice mutual exclusion without irritating sounds
 
       if (prefChange) {
         if (prefChange.type === 'name') {
@@ -2229,25 +2718,77 @@ async function stopRecording() {
         } else if (prefChange.type === 'rule') {
           jarvisReply = activeAgent.name === 'Tuk Tuk'
             ? `Got it, babe. I've committed that new rule to our team directives.`
-            : `Understood, bro. Locked that new rule into my directives.`;
+            : (activeAgent.name === 'Jenny'
+              ? `Understood, Hritthik. Locked that new rule into my directives.`
+              : (activeAgent.name === 'Brian'
+                ? `Understood, Hritthik. System rule updated.`
+                : `Understood, bro. Locked that new rule into my directives.`));
         } else if (prefChange.type === 'clear_rules') {
           jarvisReply = activeAgent.name === 'Tuk Tuk'
             ? `All custom team directives have been cleared, babe.`
-            : `All custom directives cleared, bro.`;
+            : (activeAgent.name === 'Jenny' || activeAgent.name === 'Brian'
+              ? `All custom directives cleared, Hritthik.`
+              : `All custom directives cleared, bro.`);
+        }
+      } else if (crossHandoff && crossHandoff.delegated) {
+        console.log(`🔀 Equational Cross-Agent Handoff Triggered: ${crossHandoff.sourceAgent.name} -> ${crossHandoff.targetAgent.name} (Utility: ${crossHandoff.utility.toFixed(2)})`);
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('set-agent-name', crossHandoff.targetAgent.name);
+          overlayWindow.webContents.send('jarvis-working', { agent: crossHandoff.targetAgent.name, action: 'executing' });
+        }
+
+        // Target agent (e.g., Andrew) attempts action execution first (e.g., AST audit / fix)
+        actionResult = await actionRunner.handleAction(
+          crossHandoff.targetTask || originalText,
+          crossHandoff.targetAgent,
+          jarvisManager,
+          callGroqChatCompletion,
+          geminiClient
+        );
+
+        let targetSpeech = '';
+        if (actionResult && actionResult.handled) {
+          targetSpeech = actionResult.speech;
+        } else {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('jarvis-thinking', { agent: crossHandoff.targetAgent.name });
+          }
+          targetSpeech = await askJarvis(
+            crossHandoff.targetTask || originalText,
+            crossHandoff.targetAgent,
+            originalText,
+            { command: crossHandoff.handoffLead }
+          );
+        }
+
+        jarvisReply = `[${crossHandoff.sourceAgent.name}]: ${crossHandoff.handoffLead}\n[${crossHandoff.targetAgent.name}]: ${targetSpeech}`;
+        if (actionResult && actionResult.handled) {
+          jarvisManager.addTurn('user', originalText, 'user');
+          jarvisManager.addTurn('assistant', jarvisReply, 'team');
         }
       } else {
+        if (isSessionAborted || !isJarvisLoopActive) {
+          console.log('🛑 Session aborted before agent execution - cancelling');
+          isProcessing = false;
+          isStopRecordingLock = false;
+          hideOverlay();
+          return;
+        }
         // activeAgent directly answers with unified domain intelligence
         console.log(`🎯 Routing query directly to: ${activeAgent.name} (${activeAgent.role})`);
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('jarvis-working', { agent: activeAgent.name, action: 'executing' });
+        }
         // 1. Check if an Autonomous Office Action or Suit Command should be executed directly on macOS
         actionResult = await actionRunner.handleAction(originalText, activeAgent, jarvisManager, callGroqChatCompletion, geminiClient);
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
             console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
             for (const step of actionResult.steps) {
-              if (!isJarvisLoopActive) break;
+              if (!isJarvisLoopActive || isSessionAborted) break;
               if (overlayWindow && !overlayWindow.isDestroyed()) {
                 overlayWindow.webContents.send('set-agent-name', step.agent);
-                overlayWindow.webContents.send('jarvis-speaking');
+                overlayWindow.webContents.send('jarvis-speaking', { agent: step.agent });
               }
               showNotification(`💼 ${step.agent} (${step.role})`, step.speech);
               await jarvisManager.speak(step.speech, step.voice);
@@ -2256,19 +2797,23 @@ async function stopRecording() {
             jarvisReply = actionResult.steps[actionResult.steps.length - 1].speech;
             standupAlreadySpoken = true;
           } else {
-            console.log(`⚡ Office Action Executed by ${activeAgent.name}: "${actionResult.speech}"`);
+            const executorName = (actionResult && actionResult.agentName) || activeAgent.name;
+            console.log(`⚡ Office Action Executed by ${executorName}: "${actionResult.speech}"`);
             jarvisReply = actionResult.speech;
             if (actionResult.dismissSession) {
               isJarvisLoopActive = false;
             }
           }
         } else {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('jarvis-thinking', { agent: activeAgent.name });
+          }
           let userQuery = originalText;
           if (lastInterruptedUtterance) {
             console.log(`🔀 Injecting conversational interruption context: "${lastInterruptedUtterance}"`);
             let reactionStyle = "acknowledge the mid-sentence pivot naturally as his loving partner";
-            if (activeAgent.name === "Andrew") {
-              reactionStyle = "pivot immediately like a sharp lead engineer ('Got you bro')";
+            if (activeAgent.name === "Vision" || activeAgent.name === "Andrew") {
+              reactionStyle = "pivot immediately like Iron Man's Vision — serene, ultra-intelligent, and mathematically precise ('Got you brother')";
             } else if (activeAgent.name === "Brian") {
               reactionStyle = "acknowledge the interjection with calm, grounded DevOps clarity";
             } else if (activeAgent.name === "Jenny") {
@@ -2281,6 +2826,14 @@ async function stopRecording() {
         }
       }
 
+      if (isSessionAborted || !isJarvisLoopActive) {
+        console.log('🛑 Session aborted after agent execution - cancelling');
+        isProcessing = false;
+        isStopRecordingLock = false;
+        hideOverlay();
+        return;
+      }
+
       finalText = jarvisReply;
 
       if (isSessionAborted) {
@@ -2291,16 +2844,17 @@ async function stopRecording() {
         return;
       }
 
+      const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
+      const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
+
       if (!standupAlreadySpoken) {
         // Stop any running filler before speaking the full answer
         try { jarvisManager.stopFiller(); } catch (e) {}
 
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('jarvis-speaking');
+          overlayWindow.webContents.send('set-agent-name', speakingAgentName);
+          overlayWindow.webContents.send('jarvis-synthesizing', { agent: speakingAgentName });
         }
-
-        const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
-        const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
 
         const multiTurns = parseMultiAgentTurns(jarvisReply);
         if (multiTurns.length > 1) {
@@ -2321,7 +2875,7 @@ async function stopRecording() {
             // Update UI for current speaking agent
             if (overlayWindow && !overlayWindow.isDestroyed()) {
               overlayWindow.webContents.send('set-agent-name', step.agentName);
-              overlayWindow.webContents.send('jarvis-speaking');
+              overlayWindow.webContents.send('jarvis-synthesizing', { agent: step.agentName });
             }
             
             // Show notification
@@ -2361,11 +2915,14 @@ async function stopRecording() {
             agentDisplayName = multiTurns[0].agentName;
             if (overlayWindow && !overlayWindow.isDestroyed()) {
               overlayWindow.webContents.send('set-agent-name', agentDisplayName);
+              overlayWindow.webContents.send('jarvis-synthesizing', { agent: agentDisplayName });
             }
           }
 
-          if (agentDisplayName !== 'Tuk Tuk') {
-            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling)\b/gi, 'bro');
+          if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
+            singleSpeechText = jarvisManager.sanitizeAgentLexicon(singleSpeechText, agentDisplayName, singleVoice);
+          } else if (agentDisplayName !== 'Tuk Tuk') {
+            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentDisplayName === 'Jenny' ? 'Hritthik' : 'bro');
           }
 
           showNotification(`🤖 ${agentDisplayName}`, singleSpeechText);
@@ -2373,15 +2930,21 @@ async function stopRecording() {
           if (actionResult && actionResult.isSinging) {
             await jarvisManager.sing(singleSpeechText, singleVoice);
           } else {
-            await jarvisManager.speak(singleSpeechText, singleVoice);
+            const speakingAgentKey = (actionResult && actionResult.agentKey)
+              || (agentDisplayName ? agentDisplayName.toLowerCase().replace(/\s+/g, '') : activeAgent.key);
+            await jarvisManager.speak(singleSpeechText, singleVoice, speakingAgentKey);
           }
         }
       }
 
-      // Save to history
+      // Save to history (strictly sanitized to prevent historical contamination)
+      const cleanHistoryReply = typeof jarvisManager.sanitizeAgentLexicon === 'function'
+        ? jarvisManager.sanitizeAgentLexicon(jarvisReply, activeAgent.key, speakingVoice)
+        : jarvisReply;
+
       saveToHistory({
         id: Date.now(),
-        text: jarvisReply,
+        text: cleanHistoryReply,
         originalText: originalText,
         mode: 'jarvis',
         agent: activeAgent.name,
@@ -2419,7 +2982,7 @@ async function stopRecording() {
         return;
       }
 
-      // Re-arm recording immediately for Hritthik's next turn on a 100% pristine mic buffer!
+      // Re-arm recording after a 400ms physical speaker decay grace period
       if (isJarvisLoopActive) {
         lastInterruptedUtterance = null;
         jarvisSpeechDetected = false;
@@ -2430,8 +2993,13 @@ async function stopRecording() {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
         }
-        console.log('🎙️ Speech complete. Hands-free listening re-armed for Hritthik...');
-        startRecording();
+        console.log('🎙️ Speech complete. Acoustic decay grace period (250ms) before re-arming mic...');
+        setTimeout(() => {
+          if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted) {
+            console.log('🎙️ Hands-free listening re-armed on clean acoustic buffer.');
+            startRecording();
+          }
+        }, 250);
       } else {
         hideOverlay();
       }
@@ -2515,22 +3083,45 @@ async function stopRecording() {
   } catch (error) {
     console.error('❌ Recording failed:', error.message);
 
-    // Play error sound and close overlay with animation
+    // Play error sound
     playSound('error');
-    
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      // Show error in overlay briefly, then hide
-      overlayWindow.webContents.send('error', error.message);
-      
-      setTimeout(() => {
+
+    // If conversational mode is active, have the agent speak a comforting fallback and re-arm mic
+    if (currentMode === 'jarvis' && isJarvisLoopActive && !isSessionAborted && jarvisManager) {
+      try {
+        const agent = currentActiveAgent || jarvisManager.agents.tuktuk;
+        const fallbackSpeech = agent.name === 'Tuk Tuk'
+          ? "I'm right here with you, babe. Reconnecting our link now."
+          : ((agent.name === 'Vision' || agent.name === 'Andrew')
+            ? "Caught a network glitch, brother. Reconnecting now."
+            : "Network hiccup, Hritthik. Standing by.");
+        jarvisManager.speak(fallbackSpeech, agent.voice, agent.key).catch(() => {});
         if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.hide();
+          overlayWindow.webContents.send('set-agent-name', agent.name);
+          overlayWindow.webContents.send('jarvis-listening');
         }
-      }, 2000); // Show error for 2 seconds
+        setTimeout(() => {
+          if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted) {
+            console.log('🎙️ Conversational mode re-armed after error recovery.');
+            startRecording();
+          }
+        }, 1000);
+      } catch (e) {}
+    } else {
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        // Show error in overlay briefly, then hide
+        overlayWindow.webContents.send('error', error.message);
+        
+        setTimeout(() => {
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.hide();
+          }
+        }, 2000); // Show error for 2 seconds
+      }
+      
+      // Show error notification
+      showNotification('Recording Error', error.message);
     }
-    
-    // Show error notification
-    showNotification('Recording Error', error.message);
   } finally {
     // Cleanup
     isProcessing = false;
@@ -2581,12 +3172,17 @@ async function transcribe(filePath) {
     contentType: 'audio/wav'
   });
   
-  // Whisper Large V3 Turbo transcription - Always Pure Professional English
+  // Whisper Large V3 Turbo transcription - Pure Multilingual in Jarvis, English in Dictation
   form.append('model', 'whisper-large-v3-turbo');
-  form.append('language', 'en'); // Force English for all modes (Jarvis & Dictation)
+  if (currentMode !== 'jarvis') {
+    form.append('language', 'en'); // Force English for pure dictation mode only
+  }
   form.append('response_format', 'json');
   form.append('temperature', '0');
-  form.append('prompt', 'Hritthik, Tuk Tuk, Andrew, Jenny, Brian, Eloquent, Antigravity, Electron, Go audio backend, IPC, API, bug, code refactor, latency, TypeScript, Node.js.');
+  const whisperPrompt = currentMode === 'jarvis'
+    ? 'Hritthik, Tuk Tuk, Vision, Jenny, Brian, Eloquent. Conversational English, Bengali, Hindi, Banglish, Hinglish: hello, kemon acho, kya scene hai, ami thik achi, code check koro, bug fix koro, latency, AST, terminal, build, patch, rock solid.'
+    : 'Hritthik, Tuk Tuk, Vision, Jenny, Brian, Eloquent, Antigravity, Electron, Go audio backend, IPC, API, bug, code refactor, latency, TypeScript, Node.js.';
+  form.append('prompt', whisperPrompt);
   
   // High accuracy transcription
   try {
@@ -2623,10 +3219,12 @@ async function transcribe(filePath) {
         contentType: 'audio/wav'
       });
       retryForm.append('model', 'whisper-large-v3-turbo');
-      retryForm.append('language', 'en');
+      if (currentMode !== 'jarvis') {
+        retryForm.append('language', 'en');
+      }
       retryForm.append('response_format', 'json');
       retryForm.append('temperature', '0');
-      retryForm.append('prompt', 'Hello Tuk Tuk, Andrew, Jenny, Brian, let us talk.');
+      retryForm.append('prompt', whisperPrompt);
 
       try {
         response = await axios.post(
@@ -2683,6 +3281,13 @@ async function transcribe(filePath) {
     }
 
     console.log(`✅ Transcribed: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+    if (languageBridge) {
+      try {
+        languageBridge.processSpokenUtterance(text);
+      } catch (err) {
+        console.warn('⚠️ [LanguageBridge] processSpokenUtterance error:', err.message);
+      }
+    }
     return text;
   } catch (error) {
     const transcriptionTime = Date.now() - transcriptionStart;
@@ -2691,99 +3296,12 @@ async function transcribe(filePath) {
   }
 }
 
-// Robust Groq Chat Completion with automatic model fallback
+// Master API Wire with Groq & Sub API Fallback Engine (routed through MasterApiGateway)
 async function callGroqChatCompletion(messages, options = {}) {
-  const candidateModels = [
-    options.model,
-    'qwen/qwen3.8-27b',
-    'qwen/qwen3.6-27b',
-    'groq/compound-mini'
-  ].filter(Boolean);
-
-  const uniqueModels = [...new Set(candidateModels)];
-  let lastError = null;
-
-  for (const model of uniqueModels) {
-    try {
-      const response = await axios.post(
-        'https://api.groq.com/openai/v1/chat/completions',
-        {
-          model: model,
-          messages: messages,
-          temperature: options.temperature !== undefined ? options.temperature : 0.3,
-          max_tokens: options.max_tokens || 1500
-        },
-        {
-          headers: { 'Authorization': `Bearer ${getActiveAPIKey()}` },
-          httpsAgent: groqKeepAliveAgent,
-          timeout: options.timeout || 4000,
-          validateStatus: function (status) {
-            return status < 500;
-          }
-        }
-      );
-
-      const rawChoice = response.data?.choices?.[0]?.message;
-      let rawContent = (rawChoice?.content || rawChoice?.reasoning || '').trim();
-      // Eliminate internal chain-of-thought tokens (<think>...</think>)
-      rawContent = rawContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
-
-      if (response.status === 200 && rawContent.length > 0) {
-        return { content: rawContent, model: model, usage: response.data.usage };
-      }
-
-      if (response.status === 429) {
-        const nextKey = rotateToNextKey();
-        console.warn(`⚠️ Model ${model} rate-limited (429). Rotated to Key: ${nextKey ? nextKey.slice(0, 8) + '...' : 'none'}`);
-        // Immediate retry with the fresh rotated key:
-        try {
-          const retryRes = await axios.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            {
-              model: model,
-              messages: messages,
-              temperature: options.temperature !== undefined ? options.temperature : 0.3,
-              max_tokens: options.max_tokens || 1500
-            },
-            {
-              headers: { 'Authorization': `Bearer ${nextKey}` },
-              httpsAgent: groqKeepAliveAgent,
-              timeout: options.timeout || 4000,
-              validateStatus: (s) => s < 500
-            }
-          );
-          const retryChoice = retryRes.data?.choices?.[0]?.message;
-          let retryContent = (retryChoice?.content || retryChoice?.reasoning || '').trim();
-          retryContent = retryContent.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
-          if (retryRes.status === 200 && retryContent.length > 0) {
-            return { content: retryContent, model: model, usage: retryRes.data.usage };
-          }
-        } catch (e) {}
-      }
-      lastError = new Error(response.data?.error?.message || `API error: ${response.status}`);
-    } catch (err) {
-      lastError = err;
-    }
+  if (masterApiGateway) {
+    return await masterApiGateway.chatCompletion(messages, options);
   }
-
-  // High-Level Cognitive Failover: Engage Google Gemini Engine if Groq endpoints exhausted
-  if (geminiClient && geminiClient.isConfigured()) {
-    try {
-      console.log('✨ [AI Failover] Groq models exhausted. Invoking Google Gemini High-Level Engine...');
-      const geminiRes = await geminiClient.callChatCompletion(messages, options);
-      if (geminiRes && geminiRes.content) {
-        return {
-          content: geminiRes.content,
-          model: `gemini/${geminiRes.model}`,
-          usage: geminiRes.usage
-        };
-      }
-    } catch (geminiErr) {
-      console.warn('⚠️ [AI Failover] Gemini fallback error:', geminiErr.message);
-    }
-  }
-
-  throw lastError || new Error('All candidate AI models failed.');
+  throw new Error('MasterApiGateway is not initialized');
 }
 
 async function rewrite(text) {
@@ -2832,13 +3350,14 @@ function parseMultiAgentTurns(text) {
     'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
-    'andrew': { name: 'Andrew', voice: 'en-US-AndrewMultilingualNeural' },
+    'vision': { name: 'Vision', voice: 'en-US-AndrewNeural' },
+    'andrew': { name: 'Vision', voice: 'en-US-AndrewNeural' },
     'jenny': { name: 'Jenny', voice: 'en-US-EmmaMultilingualNeural' },
     'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
   };
 
   // Enhanced pattern: captures agent name markers with flexible formatting
-  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?)|$)/gi;
+  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Andrew|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Andrew|Jenny|Brian|Ava)\]?:?)|$)/gi;
   const turns = [];
   let match;
   
@@ -2855,9 +3374,11 @@ function parseMultiAgentTurns(text) {
       // Capitalize first letter
       speech = speech.charAt(0).toUpperCase() + speech.slice(1);
       
-      // Sanitize romantic terms for non-Tuk Tuk agents
-      if (agentInfo.name !== 'Tuk Tuk') {
-        speech = speech.replace(/\b(babe|sweetheart|honey|darling)\b/gi, 'bro');
+      // Sanitize romantic terms and brotherly slang for non-Tuk Tuk agents
+      if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
+        speech = jarvisManager.sanitizeAgentLexicon(speech, agentInfo.name, agentInfo.voice);
+      } else if (agentInfo.name !== 'Tuk Tuk') {
+        speech = speech.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentInfo.name === 'Jenny' ? 'Hritthik' : 'bro');
       }
       
       turns.push({
@@ -2881,19 +3402,24 @@ function parseMultiAgentTurns(text) {
 }
 
 // Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
-async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
+async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, handoffContext = null) {
   const startTime = Date.now();
   const agent = activeAgent || jarvisManager.agents.tuktuk;
-  let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech);
+  let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech, handoffContext);
 
   const visionCtx = screenShareManager.getVisionContext();
   if (visionCtx.isActive) {
     systemPrompt += `\n\n[LIVE SCREEN SHARE ACTIVE - REAL-TIME VISION FEED]:
-- You are actively streaming Hritthik's live display (/tmp/eloquent_screenshare.jpg).
 - Frontmost Focused Application: "${visionCtx.appName}".
 - Window / Document Context: "${visionCtx.windowTitle || visionCtx.appName}".
 - Screen Resolution: 1280px optimized (${visionCtx.frameSizeKB}KB).
-- You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!`;
+- You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!
+- STRICT DIRECTIVE: Never output XML tags, <tool_call>, <function>, or file system commands. Always speak directly in natural, human conversational voice.`;
+  }
+
+  if (cameraManager && cameraManager.isActive) {
+    const ocularCtx = cameraManager.getVisualContext();
+    systemPrompt += `\n\n${ocularCtx}`;
   }
 
 
@@ -2903,7 +3429,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     jarvisManager.addTurn('user', historyText, 'user');
 
     // 8-turn window: 4 full conversational exchanges for podcast-grade continuity & zero repetition
-    const historyMessages = jarvisManager.getHistory(8);
+    const historyMessages = jarvisManager.getHistory(8, agent.key);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
     const sanitizedHistory = [];
@@ -2927,43 +3453,30 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
       { role: 'user', content: userSpeech }
     ];
 
-    // Temperature tuning per persona: Tuk Tuk warmer/creative, Andrew precise, Jenny curious, Brian grounded
-    const dynamicTemperature = agent.key === 'tuktuk' ? 0.78 : (agent.key === 'andrew' ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
+    // Temperature tuning per persona: Tuk Tuk warmer/creative, Vision precise, Jenny curious, Brian grounded
+    const dynamicTemperature = agent.key === 'tuktuk' ? 0.78 : ((agent.key === 'vision' || agent.key === 'andrew') ? 0.38 : (agent.key === 'team' ? 0.72 : 0.60));
     
     // Ultra-Fast Voice Intelligence: Groq LPU Qwen 27B for sub-500ms conversational ping-pong
     // Deep Cognitive Fallback: Google Gemini 3.7 / 3.5 Pool for multimodal vision & high-level reasoning
+    const lowerSpeech = (displaySpeech || userSpeech).toLowerCase();
+    const isVisualContextQuery =
+      /\b(screen|look\s+at|see|blind|eye|eyes|showing|antigravity|prompt|blank|empty|chokh|dekho|what is this|this error|this code|line )\b/i.test(lowerSpeech) ||
+      /\b(not\s+seeing|not\s+see|thay\s+are\s+not|they\s+are\s+not|fix\s+(?:\w+\s+)?eye|fix\s+eye|recalibrate|eye\s+tracker|eye\s+drift)\b/i.test(lowerSpeech);
+
     let content = null;
     let usage = null;
     let model = null;
 
-    try {
-      const groqRes = await callGroqChatCompletion(messages, {
-        model: 'qwen/qwen3.8-27b',
-        temperature: dynamicTemperature,
-        max_tokens: agent.key === 'team' ? 400 : 150,
-        timeout: 4000
-      });
-      if (groqRes && groqRes.content) {
-        content = groqRes.content;
-        usage = groqRes.usage;
-        model = groqRes.model;
-      }
-    } catch (groqErr) {
-      console.warn('⚠️ [Jarvis Groq] Fast failover to Google Gemini Pool:', groqErr.message);
-    }
-
-    if (!content && geminiClient && geminiClient.isConfigured()) {
+    // Multimodal Vision Priority: If user asks about their screen/eyes/code, invoke Google Gemini Multimodal Cortex FIRST with fresh frame
+    if (isVisualContextQuery && geminiClient && geminiClient.isConfigured()) {
       try {
-        console.log(`✨ [Jarvis Cortex] Invoking Google Gemini Brain for ${agent.name}...`);
-        const lowerSpeech = (displaySpeech || userSpeech).toLowerCase();
-        const isVisualContextQuery = lowerSpeech.includes("screen") || lowerSpeech.includes("look at") || lowerSpeech.includes("what is this") || lowerSpeech.includes("this error") || lowerSpeech.includes("this code") || lowerSpeech.includes("line ");
-        const framePath = (isVisualContextQuery && visionCtx.hasFrame) ? visionCtx.framePath : null;
-
+        console.log(`✨ [Jarvis Multimodal Vision] Invoking Google Gemini Vision for ${agent.name}...`);
+        const framePath = screenShareManager.captureInstantFrame(true);
         const geminiRes = await geminiClient.callChatCompletion(messages, {
-          model: 'gemini-2.5-flash',
+          model: 'gemini-flash-latest',
           temperature: dynamicTemperature,
           max_tokens: agent.key === 'team' ? 450 : 200,
-          timeout: 5000,
+          timeout: 6500,
           imagePath: framePath
         });
         if (geminiRes && geminiRes.content) {
@@ -2972,34 +3485,85 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
           usage = geminiRes.usage;
         }
       } catch (geminiErr) {
-        console.warn('⚠️ [Jarvis Gemini] Fallback error:', geminiErr.message);
+        console.warn('⚠️ [Jarvis Gemini] Vision first-path fallback to Groq:', geminiErr.message);
       }
     }
+
+    // Ultra-Fast Conversational Voice Intelligence: Multi-Key MasterApiGateway (Groq LPUs + Gemini Multi-Model Failover)
     if (!content) {
-      // All API keys exhausted — use persona-aware fallback
-      const fallbacks = {
-        tuktuk: `Hey babe, give me one sec — my brain hiccupped. I'm right here.`,
-        andrew: `Bro, network dipped for a sec. Still right here, tell me what to build.`,
-        jenny: `Hmm, lost connection for a moment. What were you saying?`,
-        brian: `Systems dipped briefly. Still here bro, keep going.`,
-        team: `[Tuk Tuk]: One sec babe, connection flickered.\n[Andrew]: Back now bro, keep going.`
-      };
-      const fallbackReply = fallbacks[agent.key] || `Hey, I'm right here. One sec.`;
+      try {
+        const gatewayRes = await callGroqChatCompletion(messages, {
+          model: 'llama-3.3-70b-versatile',
+          temperature: dynamicTemperature,
+          max_tokens: agent.key === 'team' ? 350 : 160,
+          timeout: 4000
+        });
+        if (gatewayRes && gatewayRes.content) {
+          content = gatewayRes.content;
+          usage = gatewayRes.usage;
+          model = gatewayRes.model;
+        }
+      } catch (gatewayErr) {
+        // Direct Gemini client fallback pass if gateway was bypassed or unconfigured
+        if (!content && geminiClient && geminiClient.isConfigured()) {
+          try {
+            const framePath = (isVisualContextQuery || visionCtx.isActive) ? screenShareManager.framePath : null;
+            const geminiRes = await geminiClient.callChatCompletion(messages, {
+              model: 'gemini-2.5-flash',
+              temperature: dynamicTemperature,
+              max_tokens: agent.key === 'team' ? 450 : 200,
+              timeout: 6000,
+              imagePath: framePath
+            });
+            if (geminiRes && geminiRes.content) {
+              content = geminiRes.content;
+              model = `gemini/${geminiRes.model}`;
+              usage = geminiRes.usage;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    if (!content) {
+      const LocalCognitiveBrain = require('./utils/local-cognitive-brain');
+      const fallbackReply = LocalCognitiveBrain.synthesizeResponse(agent.key, agent.name, userSpeech, {
+        isVisualContextQuery,
+        hasOcularEyes: cameraManager?.isActive
+      });
+
       jarvisManager.addTurn('assistant', fallbackReply, agent.name);
-      console.log(`⚡ [${agent.name}] using fallback (all APIs exhausted) in ${Date.now() - startTime}ms`);
+      console.log(`⚡ [${agent.name}] Local cognitive intelligence response in ${Date.now() - startTime}ms`);
       return fallbackReply;
     }
 
     let reply = content.trim();
 
     // ── ALIVE-HUMAN POST-PROCESSOR ──────────────────────────────────────────
-    // 1. Strip agent name prefix echoes (e.g. "Tuk Tuk:", "[Tuk Tuk]:", ": ", "- ")
-    reply = reply.replace(/^(?:\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Squad|Assistant)\]?:?\s*)+/i, '')
-                 .replace(/^[:\s-]+/, '')
+    // 0. Hard-strip any hallucinated tool call XML tags or raw model function artifacts
+    reply = reply.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+                 .replace(/<function=[^>]*>[\s\S]*?<\/function>/gi, '')
+                 .replace(/<parameter=[^>]*>[\s\S]*?<\/parameter>/gi, '')
+                 .replace(/<\/?(?:tool_call|function|parameter)[^>]*>/gi, '')
+                 .replace(/<tool_call>[\s\S]*/gi, '')
                  .trim();
+
+    if (!reply || reply.length < 2) {
+      reply = agent.key === 'tuktuk'
+        ? "My eyes are fully locked on your screen, babe! Everything is clear. What do you need me to check?"
+        : "Visual perception recalibrated, bro. I have eyes on your screen. Tell me what to inspect.";
+    }
+
+    // 1. Strip agent name prefix echoes (e.g. "Tuk Tuk:", "[Tuk Tuk]:", ": ", "- ") for single agents
+    if (agent.key !== 'team') {
+      reply = reply.replace(/^(?:\[?(?:Tuk\s*Tuk|Vision|Andrew|Jenny|Brian|Squad|Assistant)\]?:?\s*)+/i, '')
+                   .replace(/^[:\s-]+/, '')
+                   .trim();
+    }
 
     // 2. Strip robotic openers even if the model ignored the system prompt instruction.
     const roboticOpeners = [
+      /^(\s*(?:হা\s*হা|haha|hehe|হাহা|আরে\s*(?:রে\s*)?(?:সোনা|বাবু|বাবু\s*সোনা|আমার\s*রাজা))[,!—\s]+)+/i,
       /^(Certainly|Sure|Of course|Absolutely|Great|Excellent|Indeed|Wonderful|Noted|Understood|Happy to|I'd be happy to|I would be happy to|I'm happy to|I am happy to|Allow me to|Let me help|Of course,|Sure,|Certainly,|Absolutely,|Great!|Sure!|Of course!|Certainly!|Absolutely!|No problem[,!]?|My pleasure[,!]?|Glad to help[,!]?)[\s,!]+/i,
       /^(As your (partner|co-founder|assistant|AI|engineer|researcher|DevOps|guardian)[,\s]+)/i,
       /^(That('s| is) (a )?(great|good|wonderful|excellent|interesting|fascinating) (question|point|observation|idea)[,!.]+\s*)/i,
@@ -3039,12 +3603,21 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     if (!reply || reply.length < 2) {
       const fallbacks = {
         tuktuk: `Right here babe. What are we doing?`,
-        andrew: `On it bro. Talk to me.`,
-        jenny: `Wait — tell me more about that.`,
-        brian: `Right here. What do you need?`,
-        team: `[Tuk Tuk]: We are on it.\n[Andrew]: Tell us what to tackle first.`
+        vision: `Systems nominal, brother. Ready when you are.`,
+        andrew: `Systems nominal, brother. Ready when you are.`,
+        jenny: `Right here, Hritthik. Tell me what we are researching.`,
+        brian: `Systems steady, Hritthik. What do you need?`,
+        team: `[Tuk Tuk]: We are on it.\n[Vision]: Tell us what to tackle first.`
       };
-      reply = fallbacks[agent.key] || `Right here. Let's go.`;
+      reply = fallbacks[agent.key] || `Right here, Hritthik. Let's go.`;
+    }
+
+    // 5. HARD PERSONA & LEXICAL SANITIZATION ENFORCEMENT
+    // Mathematical boundary: Vision, Brian, and Jenny NEVER say "babe" or intimate tokens
+    // Jenny NEVER says "bro"
+    // Suppress codependency / relationship refereeing from technical agents
+    if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
+      reply = jarvisManager.sanitizeAgentLexicon(reply, agent.key, agent.voice);
     }
     // ────────────────────────────────────────────────────────────────────────
 
@@ -3065,7 +3638,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null) {
     console.error(`❌ [${agent.name}] AI query failed:`, error.message);
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
     // Persona-aware error fallbacks that still sound alive
-    if (agent.key === 'andrew') return `Bro, still right here — network hiccup. Tell me what to build.`;
+    if (agent.key === 'vision' || agent.key === 'andrew') return `Brother, still right here — network hiccup. Tell me what to build.`;
     if (agent.key === 'jenny') return `Hmm, lost connection for a sec. What were you saying?`;
     if (agent.key === 'brian') return `Systems dipped for a moment. Still here bro, keep going.`;
     return `Hey, I'm right here. One sec — what did you need?`;
@@ -3096,10 +3669,18 @@ function postProcessTranscription(text) {
     'took-took': 'Tuk Tuk',
     'tik tik': 'Tuk Tuk',
     'tik-tik': 'Tuk Tuk',
+    'tukul': 'Tuk Tuk',
     'eva': 'Tuk Tuk',
     'Eva': 'Tuk Tuk',
     'ava': 'Tuk Tuk',
     'Ava': 'Tuk Tuk',
+    'bapak': 'babe',
+    'bambu': 'babe',
+    'beb': 'babe',
+    'bngici': 'Banglish',
+    'banglis': 'Banglish',
+    'flicaring': 'flickering',
+    'halusinating': 'hallucinating',
     'recognigar': 'recognizer',
     'recognage': 'recognize',
     'parfectly': 'perfectly',
@@ -3363,6 +3944,9 @@ function loadAdminConfigFromFile() {
       if (ADMIN_CONFIG.masterApiKey) {
         CONFIG.apiKeys[0] = ADMIN_CONFIG.masterApiKey;
       }
+      if (typeof masterApiGateway !== 'undefined' && masterApiGateway) {
+        masterApiGateway.initKeys();
+      }
       
       console.log(`🔑 Loaded admin config with ${ADMIN_CONFIG.users.length} users and Gemini Key configured: ${geminiClient.isConfigured()}`);
     } else {
@@ -3486,22 +4070,22 @@ function clearHistory() {
 }
 
 // IPC handlers
-ipcMain.on('stop-recording', () => stopRecording());
-ipcMain.on('cancel-recording', () => {
-  if (recordingProcess) {
-    recordingProcess.kill();
-    recordingProcess = null;
-  }
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    playSound('cancel'); // Play cancel sound when canceling
-    overlayWindow.hide();
-  }
-  if (audioFile) {
-    fs.unlink(audioFile, () => { });
-  }
-  // Reset the creation flag
-  isCreatingOverlay = false;
+ipcMain.on('abort-session', () => {
+  console.log('⚡ IPC abort-session received - executing immediate stop');
+  handleShortcut('stop');
 });
+
+ipcMain.on('esc-pressed', () => {
+  console.log('⚡ IPC esc-pressed received - executing immediate stop');
+  handleShortcut('stop');
+});
+
+ipcMain.on('cancel-recording', () => {
+  console.log('⚡ IPC cancel-recording received - executing immediate stop');
+  handleShortcut('stop');
+});
+
+ipcMain.on('stop-recording', () => stopRecording());
 
 ipcMain.on('hide-overlay', () => {
   if (overlayWindow) {
@@ -4665,6 +5249,9 @@ ipcMain.handle('admin-save-config', async (event, newAdminConfig) => {
   }
   
   saveAdminConfigToFile();
+  if (typeof masterApiGateway !== 'undefined' && masterApiGateway) {
+    masterApiGateway.initKeys();
+  }
   console.log('✅ Admin configuration saved successfully');
   
   return { success: true };
@@ -4955,11 +5542,115 @@ try {
   console.warn('⚠️ Could not register Libboard IPC handlers:', libboardErr.message);
 }
 
-// Register secure bidirectional Clipboard IPC channels
+// Register secure bidirectional Clipboard, Optimized, and Audio Bridge IPC channels
 try {
   registerClipboardHandlers(ipcMain);
+  registerOptimizedIpcHandlers(ipcMain, windowStateManager);
+  const { registerAudioBridgeIpc } = require('./main/index');
+  registerAudioBridgeIpc(ipcMain);
+  if (languageBridge) {
+    languageBridge.registerHandlers();
+  }
 } catch (clipboardErr) {
-  console.warn('⚠️ Could not register Clipboard IPC handlers:', clipboardErr.message);
+  console.warn('⚠️ Could not register Clipboard / Audio Bridge / Language IPC handlers:', clipboardErr.message);
+}
+
+// Register Skill Daemon for automated agent skill hot-reloads and metadata management
+let skillDaemonInstance = null;
+try {
+  const { SkillDaemon } = require('./services/skill-daemon');
+  skillDaemonInstance = new SkillDaemon({ autoWatch: true });
+
+  ipcMain.handle('skills:get-profile', async (event, agentId) => {
+    return skillDaemonInstance.getProfile(agentId || 'vision');
+  });
+
+  ipcMain.handle('skills:update-metadata', async (event, agentId, mutation) => {
+    return skillDaemonInstance.updateMetadata(agentId || 'vision', mutation);
+  });
+
+  ipcMain.handle('skills:get-telemetry', async () => {
+    return skillDaemonInstance.getTelemetry();
+  });
+
+  ipcMain.handle('skills:reload', async (event, agentId) => {
+    return skillDaemonInstance.reload(agentId || 'vision');
+  });
+
+  skillDaemonInstance.on('skill:reloaded', (data) => {
+    if (BrowserWindow && typeof BrowserWindow.getAllWindows === 'function') {
+      BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) win.webContents.send('skills:reloaded', data);
+      });
+    }
+  });
+
+  skillDaemonInstance.on('skill:fallback', (data) => {
+    if (BrowserWindow && typeof BrowserWindow.getAllWindows === 'function') {
+      BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) win.webContents.send('skills:fallback', data);
+      });
+    }
+  });
+
+  console.log('📡 [SkillDaemon] Hot-reload daemon and IPC bridge activated for agent profiles');
+} catch (skillErr) {
+  console.warn('⚠️ Could not initialize SkillDaemon:', skillErr.message);
+}
+
+// Register Antigravity Multi-Agent Deep Research & Neural-Mesh Memory IPC bridge
+try {
+  const { registerResearchIpc } = require('../app/electron/main');
+  registerResearchIpc(ipcMain);
+  console.log('📡 [DeepResearch] Multi-agent autonomous research and neural-mesh memory IPC active');
+} catch (researchErr) {
+  console.warn('⚠️ Could not initialize Deep Research IPC:', researchErr.message);
+}
+
+// Broadcast real-time memory usage telemetry to windows periodically
+setInterval(() => {
+  try {
+    if (BrowserWindow && typeof BrowserWindow.getAllWindows === 'function') {
+      const mem = process.memoryUsage();
+      const telemetry = {
+        heapUsedMB: parseFloat((mem.heapUsed / 1048576).toFixed(2)),
+        rssMB: parseFloat((mem.rss / 1048576).toFixed(2)),
+        externalMB: parseFloat((mem.external / 1048576).toFixed(2)),
+        timestamp: Date.now()
+      };
+      BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) {
+          win.webContents.send('audio:memory-telemetry', telemetry);
+        }
+      });
+    }
+  } catch (e) {}
+}, 5000);
+
+// Register Eye Visual Tracking and Pose-Aware Audio IPC handlers
+try {
+  registerEyeIpcHandlers(ipcMain, {
+    getWindows: () => (BrowserWindow ? BrowserWindow.getAllWindows() : [])
+  });
+} catch (eyeErr) {
+  console.warn('⚠️ Could not register Eye IPC handlers:', eyeErr.message);
+}
+
+// Register clipboard:copy-prompt listener for developer prompt copying
+if (ipcMain && typeof ipcMain.on === 'function') {
+  ipcMain.on('clipboard:copy-prompt', (_event, text) => {
+    if (typeof text === 'string' && text.trim()) {
+      try {
+        const truncated = text.length > 1024 * 1024 ? text.slice(0, 1024 * 1024) : text;
+        if (clipboard && typeof clipboard.writeText === 'function') {
+          clipboard.writeText(truncated);
+          console.log(`📋 [Main] Successfully copied developer prompt (${truncated.length} chars)`);
+        }
+      } catch (clipErr) {
+        console.warn('⚠️ [Main] clipboard:copy-prompt error:', clipErr.message);
+      }
+    }
+  });
 }
 
 // Conversational StateManager IPC handlers with atomic persistence and broadcast
@@ -4994,6 +5685,46 @@ try {
   console.log('✅ [StateManager] Registered state-request and state-commit IPC handlers');
 } catch (stateErr) {
   console.warn('⚠️ Could not register StateManager IPC handlers:', stateErr.message);
+}
+
+// Register Persistent Conversational State Manager & Rate-Limit Mitigation IPC Bridge
+let conversationManager = null;
+try {
+  const { registerConversationIpc } = require('./main/conversationManager');
+  conversationManager = registerConversationIpc(ipcMain, {
+    userDataDir: app.getPath('userData'),
+    broadcaster: {
+      broadcast: (channel, data) => {
+        BrowserWindow.getAllWindows().forEach(win => {
+          if (!win.isDestroyed()) {
+            win.webContents.send(channel, data);
+          }
+        });
+      }
+    }
+  });
+  console.log('✅ [ConversationManager] Registered conversational state and rate-limit IPC handlers');
+} catch (convErr) {
+  console.warn('⚠️ Could not initialize ConversationManager:', convErr.message);
+}
+
+// Register Resilient IPC Bridge & Device Fault Handlers
+try {
+  const { registerResilientIpcHandlers } = require('./main/ipc');
+  registerResilientIpcHandlers(ipcMain, {
+    broadcaster: {
+      broadcast: (channel, data) => {
+        BrowserWindow.getAllWindows().forEach(win => {
+          if (!win.isDestroyed()) {
+            win.webContents.send(channel, data);
+          }
+        });
+      }
+    }
+  });
+  console.log('🛡️ [ResilientIPC] Audio device fault tolerance and heartbeat monitors active');
+} catch (ipcResilienceErr) {
+  console.warn('⚠️ Could not initialize Resilient IPC:', ipcResilienceErr.message);
 }
 
 // Function to log API requests

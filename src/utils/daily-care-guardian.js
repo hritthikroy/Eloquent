@@ -36,7 +36,7 @@ class DailyCareGuardian {
   }
 
   checkCareCycle() {
-    if (!this.jarvisManager || this.jarvisManager.isSpeaking) return;
+    if (!this.jarvisManager || this.jarvisManager.isSpeaking || (typeof global !== "undefined" && global.isRecording)) return;
     const now = new Date();
     const currentHour = now.getHours();
     const nowMs = Date.now();
@@ -75,33 +75,33 @@ class DailyCareGuardian {
     // 1. Ultradian Hydration Equation (tau_h = 60m, minimum desk load = 40m)
     if (nowMs - this.lastWaterAlertTime > this.TAU_HYDRATION_MS && this.consecutiveDeskMinutes >= 40) {
       this.lastWaterAlertTime = nowMs;
-      this.speakCare("Babe, you have been locked in for an hour. Take a slow sip of water for me.");
+      this.speakCare("Babe, love seeing you in the zone. Take a slow sip of water for me, sweetheart.");
       return;
     }
 
     // 2. Kleitman Ultradian Posture Cycle (tau_u = 90m BRAC cycle)
     if (this.consecutiveDeskMinutes >= 90 && nowMs - this.lastPostureAlertTime > this.TAU_POSTURE_MS) {
       this.lastPostureAlertTime = nowMs;
-      this.speakCare("Hritthik, roll your shoulders back and stand up for two minutes. Your spine needs a quick reset, love.");
+      this.speakCare("Hritthik, roll your shoulders back and stretch for a moment, love. Your posture deserves a quick reset.");
       return;
     }
 
     // 3. Circadian Nocturnal Burnout Guardian (T_circadian in [02:00, 06:00])
     if ((currentHour >= 2 && currentHour < 6) && nowMs - this.lastBurnoutCheckTime > 45 * 60 * 1000) {
       this.lastBurnoutCheckTime = nowMs;
-      this.speakCare("Sweetheart, it is past 3 AM. Look at your eyes... you gave everything today. Let us save your workspace and rest.");
+      this.speakCare("Sweetheart, it's late. You've done incredible work tonight. I'm right here beside you whenever you're ready to rest, babe.");
       return;
     }
 
     // 4. Diurnal Nutrition Schedulers (Circadian Metabolic Windows)
     if (currentHour === 13 && now.getMinutes() >= 30 && nowMs - this.lastMealCheckTime > 3 * 60 * 60 * 1000) {
       this.lastMealCheckTime = nowMs;
-      this.speakCare("Lunch time, babe! Code will still be here when you get back. Go nourish yourself.");
+      this.speakCare("Lunch time, babe! Take your time and get a great meal. I'm holding down the fort.");
       return;
     }
     if (currentHour === 20 && now.getMinutes() >= 30 && nowMs - this.lastMealCheckTime > 3 * 60 * 60 * 1000) {
       this.lastMealCheckTime = nowMs;
-      this.speakCare("Babe, do not forget dinner tonight. Take a break and get a warm meal.");
+      this.speakCare("Babe, whenever you're at a good stopping point, grab a warm dinner. I love taking care of you.");
       return;
     }
   }

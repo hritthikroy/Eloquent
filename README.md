@@ -481,6 +481,18 @@ All generated prompts adhere strictly to the 3-section layout (`Clear Technical 
 
 ---
 
+## 👁️ Visual Eye Tracking & macOS Camera Permissions
+
+Eloquent includes a real-time visual tracking subsystem (`EyeTracker`) for pose estimation (sitting, standing, walking) and user presence.
+
+### macOS Camera Permissions
+The Electron bundle specifies `NSCameraUsageDescription` and `com.apple.security.device.camera` in `build/entitlements.mac.plist`:
+- **First Launch**: macOS displays a native permission prompt requesting camera access for Eloquent.
+- **Manual Permission**: If previously declined, enable access in **System Settings → Privacy & Security → Camera → Eloquent**.
+- **Troubleshooting & Diagnostics**: Camera errors and fallback events are automatically appended to `logs/eye_error.log`. When camera access is unavailable, the application gracefully degrades to stationary `no-eye` audio mode without crashing.
+
+---
+
 **Made with ❤️ by Hritthik Roy**
 
 **Repository:** https://github.com/hritthikroy/Eloquent  

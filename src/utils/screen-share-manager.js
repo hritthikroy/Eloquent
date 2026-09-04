@@ -16,6 +16,7 @@ class ScreenShareManager {
     };
     this.overlayWindow = null;
     this.isCapturing = false;
+    this.consecutiveErrors = 0;
   }
 
   setOverlayWindow(win) {
@@ -27,6 +28,7 @@ class ScreenShareManager {
     if (this.isActive) return true;
 
     this.isActive = true;
+    this.consecutiveErrors = 0;
     console.log("🖥️ [Screen Share] Continuous Screen Share activated!");
 
     // Notify overlay UI
@@ -80,53 +82,70 @@ class ScreenShareManager {
     if (this.isCapturing || !this.isActive) return;
     this.isCapturing = true;
 
-    // Asynchronously capture screen to avoid blocking event loop
+    // Asynchronously capture screen with fallback if cursor capture flag (-C) is prohibited
     exec(`screencapture -x -C "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, (err) => {
-      this.isCapturing = false;
-      
       if (err) {
-        console.error('🖥️ [Screen Share] Capture error:', err.message);
+        // Fallback: try capturing without cursor flag
+        exec(`screencapture -x "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, (err2) => {
+          this.isCapturing = false;
+          if (err2) {
+            this.consecutiveErrors++;
+            if (this.consecutiveErrors === 1) {
+              console.warn('⚠️ [Screen Share] Display capture unavailable (macOS Screen Recording permission may be required for Electron in System Settings).');
+            } else if (this.consecutiveErrors >= 3) {
+              console.warn('⏸️ [Screen Share] Pausing continuous background screen capture.');
+              this.stop();
+            }
+            return;
+          }
+          this.consecutiveErrors = 0;
+          this._processCapturedFrame();
+        });
         return;
       }
 
-      try {
-        let appName = "";
-        let winTitle = "";
-        try {
-          const appOut = execSync(
-            `osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`,
-            { timeout: 1000 }
-          ).toString().trim();
-          if (appOut) appName = appOut;
-        } catch (e) {
-          console.warn('🖥️ [Screen Share] Could not get app name:', e.message);
-        }
-
-        const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
-        this.lastContext = {
-          appName: appName || "Active Workspace",
-          windowTitle: winTitle,
-          timestamp: Date.now(),
-          frameSizeKB: stats ? Math.round(stats.size / 1024) : 0
-        };
-
-        if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
-          try {
-            this.overlayWindow.webContents.send("screenshare-frame-updated", this.lastContext);
-          } catch (e) {
-            console.error('🖥️ [Screen Share] Failed to send frame update:', e.message);
-          }
-        }
-      } catch (e) {
-        console.error('🖥️ [Screen Share] Context extraction error:', e.message);
-      }
+      this.isCapturing = false;
+      this.consecutiveErrors = 0;
+      this._processCapturedFrame();
     });
+  }
+
+  _processCapturedFrame() {
+    try {
+      let appName = "";
+      let winTitle = "";
+      try {
+        const appOut = execSync(
+          `osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`,
+          { timeout: 1000 }
+        ).toString().trim();
+        if (appOut) appName = appOut;
+      } catch (e) {}
+
+      const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
+      this.lastContext = {
+        appName: appName || "Active Workspace",
+        windowTitle: winTitle,
+        timestamp: Date.now(),
+        frameSizeKB: stats ? Math.round(stats.size / 1024) : 0
+      };
+
+      if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
+        try {
+          this.overlayWindow.webContents.send("screenshare-frame-updated", this.lastContext);
+        } catch (e) {}
+      }
+    } catch (e) {}
   }
 
   captureInstantFrame(sync = false) {
     if (sync) {
       try {
-        execSync(`screencapture -x -C "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, { timeout: 2500 });
+        try {
+          execSync(`screencapture -x -C "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, { timeout: 2500 });
+        } catch (e1) {
+          execSync(`screencapture -x "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, { timeout: 2500 });
+        }
         let appName = "";
         try {
           appName = execSync(
@@ -150,36 +169,20 @@ class ScreenShareManager {
     if (this.isCapturing) return this.framePath;
     this.isCapturing = true;
 
-    // Fast non-blocking capture and resize to 1280px optimized
+    // Fast non-blocking capture and resize to 1280px optimized (with -x fallback)
     exec(`screencapture -x -C "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, (err) => {
+      if (err) {
+        exec(`screencapture -x "${this.framePath}" 2>/dev/null && sips -Z 1280 "${this.framePath}" 2>/dev/null`, (err2) => {
+          this.isCapturing = false;
+          if (err2) return;
+          this._processCapturedFrame();
+        });
+        return;
+      }
       this.isCapturing = false;
-      if (err) return;
-
-      try {
-        let appName = "";
-        try {
-          const appOut = execSync(
-            `osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`,
-            { timeout: 1000 }
-          ).toString().trim();
-          if (appOut) appName = appOut;
-        } catch (e) {}
-
-        const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
-        this.lastContext = {
-          appName: appName || "Active Workspace",
-          windowTitle: "",
-          timestamp: Date.now(),
-          frameSizeKB: stats ? Math.round(stats.size / 1024) : 0
-        };
-
-        if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
-          try {
-            this.overlayWindow.webContents.send("screenshare-frame-updated", this.lastContext);
-          } catch (e) {}
-        }
-      } catch (e) {}
+      this._processCapturedFrame();
     });
+    return this.framePath;
   }
 
   getVisionContext() {

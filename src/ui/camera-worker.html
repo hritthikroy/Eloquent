@@ -6,7 +6,7 @@
 </head>
 <body style="background: transparent; margin: 0; padding: 0; overflow: hidden;">
   <video id="videoElement" autoplay playsinline muted width="320" height="240" style="display: none;"></video>
-  <canvas id="canvasElement" width="320" height="240" style="display: none;"></canvas>
+  <canvas id="canvasElement" width="160" height="120" style="display: none;"></canvas>
 
   <script>
     const { ipcRenderer } = require("electron");
@@ -19,25 +19,53 @@
     let streamTrack = null;
     let processInterval = null;
 
+    // Zero-allocation reusable buffers
+    const MOUTH_W = 70, MOUTH_H = 45;
+    const EYE_W = 80, EYE_H = 45;
+    const FRAME_W = 160, FRAME_H = 120;
+
+    let prevMouthLuma = new Uint8Array(MOUTH_W * MOUTH_H);
+    let currMouthLuma = new Uint8Array(MOUTH_W * MOUTH_H);
+    let hasPrevMouth = false;
+
+    let prevEyeLuma = new Uint8Array(EYE_W * EYE_H);
+    let currEyeLuma = new Uint8Array(EYE_W * EYE_H);
+    let hasPrevEye = false;
+
     async function startCamera() {
+      if (isStreaming) return;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            frameRate: { ideal: 30 }
-          },
-          audio: false
-        });
+        let stream = null;
+        const constraints = [
+          { video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false },
+          { video: { width: { ideal: 320 }, height: { ideal: 240 }, frameRate: { ideal: 30 } }, audio: false },
+          { video: true, audio: false }
+        ];
+
+        for (const c of constraints) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(c);
+            if (stream) break;
+          } catch (e) {
+            // Try next constraint
+          }
+        }
+
+        if (!stream) {
+          throw new Error("Unable to acquire camera stream with available video constraints");
+        }
 
         video.srcObject = stream;
         streamTrack = stream.getVideoTracks()[0];
+        video.setAttribute("playsinline", "true");
+        video.muted = true;
         await video.play();
         isStreaming = true;
 
         ipcRenderer.send("camera-status-changed", { active: true });
 
-        // Continuous Ocular Eyes: 20 FPS (~1.5% CPU hardware accelerated)
+        // Continuous Ocular Eyes: 20 FPS (50ms interval)
+        if (processInterval) clearInterval(processInterval);
         processInterval = setInterval(processFrame, 50);
       } catch (err) {
         console.error("Camera access error:", err.message);
@@ -50,71 +78,102 @@
         clearInterval(processInterval);
         processInterval = null;
       }
-      if (streamTrack) {
-        streamTrack.stop();
-        streamTrack = null;
-      }
       if (video.srcObject) {
+        try {
+          const stream = video.srcObject;
+          if (stream && typeof stream.getTracks === "function") {
+            stream.getTracks().forEach(track => {
+              try { track.stop(); } catch (e) {}
+            });
+          }
+        } catch (e) {}
         video.srcObject = null;
       }
+      if (streamTrack) {
+        try { streamTrack.stop(); } catch (e) {}
+        streamTrack = null;
+      }
+      hasPrevMouth = false;
+      hasPrevEye = false;
       isStreaming = false;
       ipcRenderer.send("camera-status-changed", { active: false });
     }
-
-    let prevMouthData = null;
-    let prevEyesData = null;
 
     function processFrame() {
       if (!isStreaming || video.readyState < 2) return;
 
       try {
-        ctx.drawImage(video, 0, 0, 160, 120);
+        ctx.drawImage(video, 0, 0, FRAME_W, FRAME_H);
 
-        // 1. Mouth Region (Lower center: x:45-115, y:70-115)
-        const mouthW = 70, mouthH = 45;
-        const mouthImg = ctx.getImageData(45, 70, mouthW, mouthH);
+        // 1. Mouth Region Analysis (Lower center: x:45-115, y:70-115)
+        const mouthImg = ctx.getImageData(45, 70, MOUTH_W, MOUTH_H);
         const mouthData = mouthImg.data;
         let mouthDelta = 0;
-        const mouthPixels = mouthW * mouthH;
+        const totalMouthPixels = MOUTH_W * MOUTH_H;
 
-        for (let i = 0; i < mouthData.length; i += 4) {
-          const lum = 0.299 * mouthData[i] + 0.587 * mouthData[i + 1] + 0.114 * mouthData[i + 2];
-          if (prevMouthData) {
-            mouthDelta += Math.abs(lum - prevMouthData[i]);
+        for (let i = 0, p = 0; i < mouthData.length; i += 4, p++) {
+          const lum = (mouthData[i] * 299 + mouthData[i + 1] * 587 + mouthData[i + 2] * 114) / 1000;
+          currMouthLuma[p] = lum;
+          if (hasPrevMouth) {
+            mouthDelta += Math.abs(lum - prevMouthLuma[p]);
           }
         }
-        prevMouthData = new Uint8ClampedArray(mouthData);
-        const avgMouthDelta = prevMouthData ? (mouthDelta / mouthPixels) : 0;
+        prevMouthLuma.set(currMouthLuma);
+        hasPrevMouth = true;
+
+        const avgMouthDelta = mouthDelta / totalMouthPixels;
         const lipMotionEnergy = Math.min(1.0, avgMouthDelta / 12.0);
         const isLipsMoving = lipMotionEnergy > 0.10;
 
-        // 2. Eye & Upper Face Region (Center top: x:40-120, y:20-65) - Gaze, Blinking & Fatigue
-        const eyeW = 80, eyeH = 45;
-        const eyeImg = ctx.getImageData(40, 20, eyeW, eyeH);
+        // 2. Eye & Upper Face Region (Center top: x:40-120, y:20-65)
+        const eyeImg = ctx.getImageData(40, 20, EYE_W, EYE_H);
         const eyeData = eyeImg.data;
         let eyeDelta = 0;
         let eyeLuminanceSum = 0;
-        const eyePixels = eyeW * eyeH;
+        const totalEyePixels = EYE_W * EYE_H;
 
-        for (let i = 0; i < eyeData.length; i += 4) {
-          const lum = 0.299 * eyeData[i] + 0.587 * eyeData[i + 1] + 0.114 * eyeData[i + 2];
+        for (let i = 0, p = 0; i < eyeData.length; i += 4, p++) {
+          const lum = (eyeData[i] * 299 + eyeData[i + 1] * 587 + eyeData[i + 2] * 114) / 1000;
+          currEyeLuma[p] = lum;
           eyeLuminanceSum += lum;
-          if (prevEyesData) {
-            eyeDelta += Math.abs(lum - prevEyesData[i]);
+          if (hasPrevEye) {
+            eyeDelta += Math.abs(lum - prevEyeLuma[p]);
           }
         }
-        prevEyesData = new Uint8ClampedArray(eyeData);
-        const eyeMotion = eyeDelta / (eyeW * eyeH);
+        prevEyeLuma.set(currEyeLuma);
+        hasPrevEye = true;
 
-        // User is directly facing camera and present if luminance variance exists
-        const userPresent = (eyeLuminanceSum / (eyeW * eyeH)) > 15;
-        const isAttentive = userPresent && (eyeMotion < 18.0); // Stable gaze focused at monitor
+        const eyeMotion = eyeDelta / totalEyePixels;
+        const avgEyeLuma = eyeLuminanceSum / totalEyePixels;
+        const userPresent = avgEyeLuma > 15;
+        const isAttentive = userPresent && (eyeMotion < 18.0);
+
+        // 3. Posture & Elevation Analysis
+        const fullImg = ctx.getImageData(0, 0, FRAME_W, FRAME_H);
+        const fullData = fullImg.data;
+        let sumY = 0, count = 0;
+        for (let i = 0, p = 0; i < fullData.length; i += 4, p++) {
+          const lum = (fullData[i] * 299 + fullData[i + 1] * 587 + fullData[i + 2] * 114) / 1000;
+          if (lum > 30) {
+            sumY += Math.floor(p / FRAME_W);
+            count++;
+          }
+        }
+        const centroidY = count > 0 ? (sumY / count) : (FRAME_H / 2);
+        const elevationRatio = 1.0 - (centroidY / FRAME_H);
+        let posture = 'sitting';
+        if (elevationRatio >= 0.62) {
+          posture = 'standing';
+        }
 
         ipcRenderer.send("camera-telemetry", {
           lipMotionEnergy,
           isLipsMoving,
           userPresent,
           isAttentive,
+          posture,
+          elevationRatio: Math.round(elevationRatio * 100) / 100,
+          gaze: isAttentive ? 'focused' : (userPresent ? 'shifting' : 'away'),
           timestamp: Date.now()
         });
       } catch (e) {}
@@ -136,8 +195,6 @@
 
     ipcRenderer.on("start-camera", startCamera);
     ipcRenderer.on("stop-camera", stopCamera);
-
-    startCamera();
   </script>
 </body>
 </html>

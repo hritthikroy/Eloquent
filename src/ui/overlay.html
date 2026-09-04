@@ -116,13 +116,16 @@
       border-color: rgba(244, 63, 94, 0.3);
     }
 
+    .overlay.agent-vision .rec-ring,
     .overlay.agent-andrew .rec-ring {
       border-color: #06b6d4;
       box-shadow: 0 0 14px rgba(6, 182, 212, 0.6);
     }
+    .overlay.agent-vision .rec-dot,
     .overlay.agent-andrew .rec-dot {
       background: #06b6d4;
     }
+    .overlay.agent-vision,
     .overlay.agent-andrew {
       border-color: rgba(6, 182, 212, 0.3);
     }
@@ -149,14 +152,29 @@
       border-color: rgba(245, 158, 11, 0.3);
     }
 
-    /* Thinking Core Particle Orb Animation */
-    .overlay.thinking .rec-ring {
-      animation: thinkingOrb 0.8s ease-in-out infinite alternate;
+    /* Thinking / Working / Synthesizing / Transcribing Core Particle Orb Animation */
+    .overlay.thinking .rec-ring,
+    .overlay.working .rec-ring,
+    .overlay.transcribing .rec-ring,
+    .overlay.synthesizing .rec-ring {
+      animation: thinkingOrb 0.7s ease-in-out infinite alternate;
+    }
+
+    .overlay.thinking .rec-dot,
+    .overlay.working .rec-dot,
+    .overlay.transcribing .rec-dot,
+    .overlay.synthesizing .rec-dot {
+      animation: dotGlow 0.7s ease-in-out infinite alternate;
     }
 
     @keyframes thinkingOrb {
       0% { transform: scale(0.9); opacity: 0.6; filter: blur(0.5px); }
       100% { transform: scale(1.4); opacity: 1; filter: blur(0px); }
+    }
+
+    @keyframes dotGlow {
+      0% { transform: scale(0.85); opacity: 0.7; }
+      100% { transform: scale(1.25); opacity: 1; filter: drop-shadow(0 0 5px currentColor); }
     }
 
     @keyframes ringPulse {
@@ -170,7 +188,7 @@
       font-weight: 500;
       color: rgba(255, 255, 255, 0.9);
       white-space: nowrap;
-      max-width: 155px;
+      max-width: 190px;
       overflow: hidden;
       text-overflow: ellipsis;
     }

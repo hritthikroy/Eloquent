@@ -12,13 +12,16 @@ import {
 } from '../types/prompt-schema';
 import { PromptAstValidator } from '../utils/ast-validator';
 import { WorkspaceContext } from '../prompts/gap-resolver';
+import { PromptIntegration } from './prompt-integration';
 
 export class PromptEngineer {
   private static readonly DEFAULT_MAX_ATTEMPTS = 3;
+  private static readonly promptOptimizer = new PromptIntegration(256, false);
 
   /**
    * Generates an authoritative, 3-section structured developer prompt with
    * recursive self-correction to guarantee 100% adherence to schema.
+   * Now includes token optimization and validation.
    */
   public static async generateMetaPrompt(
     rawIntent: string,
@@ -36,6 +39,13 @@ export class PromptEngineer {
       currentPrompt = PromptAstValidator.stripPreambleAndPostamble(currentPrompt);
       currentPrompt = PromptAstValidator.stripCodeFences(currentPrompt);
 
+      // Token optimization pass
+      const optimizationResult = this.promptOptimizer.optimizeRawPrompt(currentPrompt);
+      if (optimizationResult.warnings.length > 0 && attempt === 1) {
+        console.warn('⚠️ [PromptEngineer] Token optimization warnings:', optimizationResult.warnings);
+      }
+      currentPrompt = optimizationResult.prompt;
+
       // Validate against AST schema
       const validation = PromptAstValidator.validate(currentPrompt, targetStack);
 
@@ -43,6 +53,13 @@ export class PromptEngineer {
         const ast = PromptAstValidator.parseToAst(currentPrompt);
         if (ast) {
           ast.iterationAttempts = attempt;
+          
+          // Final token validation
+          const tokenValidation = this.promptOptimizer.validatePrompt(currentPrompt);
+          if (!tokenValidation.withinLimit) {
+            console.warn(`⚠️ [PromptEngineer] Final prompt exceeds token limit: ${tokenValidation.tokenCount} tokens`);
+          }
+          
           return ast;
         }
       }
@@ -192,7 +209,7 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
         { path: 'src/utils/behavior-mode-engine.js', description: '24/7 circadian circadian rhythm and operating mode scheduler' }
       ],
       quality: [
-        'Enforce strict persona isolation: Tuk Tuk strictly addresses user as "babe", Andrew as "bro", Brian as "brother".',
+        'Enforce strict persona isolation: Tuk Tuk strictly addresses user as "babe", Andrew as "bro", Brian as "Hritthik", Jenny as "Hritthik". Intimate tokens strictly forbidden for all non-Tuk Tuk agents.',
         'Verify zero deadlocks during full-duplex turn transitions under simulated load.'
       ]
     };
@@ -225,5 +242,48 @@ ${files.map(f => `- \`${f.path}\`: ${f.description}`).join('\n')}
 
 Quality Requirements & AST Verification
 ${quality.map(q => `- ${q}`).join('\n')}`;
+  }
+
+  /**
+   * Generate token-optimized prompt directly (bypasses full validation loop)
+   * Useful for performance-critical scenarios where token efficiency is paramount
+   */
+  public static generateOptimizedPrompt(
+    rawIntent: string,
+    variables?: Record<string, any>,
+    options?: { maxTokens?: number; enforceLimit?: boolean }
+  ): { prompt: string; tokenCount: number; warnings: string[] } {
+    const optimizer = new PromptIntegration(
+      options?.maxTokens || 256,
+      options?.enforceLimit || false
+    );
+
+    const result = optimizer.optimizeRawPrompt(rawIntent, variables);
+    
+    return {
+      prompt: result.prompt,
+      tokenCount: result.tokenCount,
+      warnings: result.warnings,
+    };
+  }
+
+  /**
+   * Get token budget info for a prompt
+   */
+  public static getTokenInfo(prompt: string): { 
+    tokenCount: number; 
+    remaining: number; 
+    withinLimit: boolean;
+    maxTokens: number;
+  } {
+    const tokenCount = this.promptOptimizer.estimateTokens(prompt);
+    const maxTokens = 256;
+    
+    return {
+      tokenCount,
+      remaining: Math.max(0, maxTokens - tokenCount),
+      withinLimit: tokenCount <= maxTokens,
+      maxTokens,
+    };
   }
 }

@@ -1,0 +1,97 @@
+appId: com.eloquent.app
+productName: Eloquent
+copyright: Copyright © 2024 Eloquent
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - src/**/*
+  - assets/**/*
+  - package.json
+  - "!src/**/*.map"
+  - "!**/*.log"
+  - "!**/*.md"
+  - "!**/test/**"
+  - "!**/tests/**"
+  - "!**/__tests__/**"
+  - "!backend/**"
+  - "!backend-go/**"
+  - "!docs/**"
+  - "!scripts/**"
+  - "!webpack.config.js"
+  - "!.electronbuilderignore"
+  - "!node_modules/**/test/**"
+  - "!node_modules/**/tests/**"
+  - "!node_modules/**/*.md"
+  - "!node_modules/**/*.map"
+  - "!node_modules/**/LICENSE*"
+  - "!node_modules/**/CHANGELOG*"
+  - "!node_modules/**/*.d.ts"
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  minimumSystemVersion: 10.15.0
+  type: distribution
+  extendInfo:
+    NSCameraUsageDescription: "Eloquent requires camera access for real-time eye tracking, user presence, and visual pose estimation."
+    NSMicrophoneUsageDescription: "Eloquent requires microphone access for voice dictation and audio processing."
+
+dmg:
+  title: Eloquent ${version}
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  publisherName: Eloquent
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Eloquent
+
+compression: maximum
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+asar: true
+asarUnpack:
+  - "**/*.{node,dll}"
+
+electronDownload:
+  cache: ./electron-cache
+
+nodeGypRebuild: false
+buildDependenciesFromSource: false

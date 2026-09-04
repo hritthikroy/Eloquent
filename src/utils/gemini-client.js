@@ -8,11 +8,12 @@ const DEFAULT_GEMINI_API_KEYS = [];
 
 const CANDIDATE_MODELS = [
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
   "gemini-flash-latest",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-2.5-pro"
+  "gemini-2.5-pro",
+  "gemini-pro-latest"
 ];
 
 class GeminiClient {
@@ -26,6 +27,30 @@ class GeminiClient {
       maxSockets: 25,
       keepAliveMsecs: 30000
     });
+    this.keyCooldowns = new Map();
+  }
+
+  isKeyCoolingDown(key, model = null) {
+    const expiresAt = this.keyCooldowns.get(key) || 0;
+    if (Date.now() < expiresAt) return true;
+    if (model) {
+      const modelExpiresAt = this.keyCooldowns.get(`${key}:${model}`) || 0;
+      if (Date.now() < modelExpiresAt) return true;
+    }
+    return false;
+  }
+
+  setKeyCooldown(key, cooldownMs = 15000, model = null) {
+    const now = Date.now();
+    if (model) {
+      this.keyCooldowns.set(`${key}:${model}`, now + cooldownMs);
+    } else {
+      this.keyCooldowns.set(key, now + cooldownMs);
+    }
+  }
+
+  areAllKeysCoolingDown(model = null) {
+    return this.apiKeys.length > 0 && this.apiKeys.every(k => this.isKeyCoolingDown(k, model));
   }
 
   _normalizeKeys(keys) {
@@ -206,7 +231,7 @@ class GeminiClient {
   /**
    * Send single REST generateContent request to a specific Gemini model
    */
-  _requestGenerateContent(modelName, apiKey, payload, timeoutMs = 12000) {
+  _requestGenerateContent(modelName, apiKey, payload, timeoutMs = 6000) {
     return new Promise((resolve) => {
       // Clone payload and only attach thinkingConfig if model supports it (Gemini 3.7)
       const finalPayload = JSON.parse(JSON.stringify(payload));
@@ -234,6 +259,14 @@ class GeminiClient {
             if (res.statusCode === 200 && json.candidates && json.candidates[0]?.content) {
               const textParts = json.candidates[0].content.parts || [];
               const rawText = textParts.map(p => p.text).filter(Boolean).join("\n").trim();
+              if (!rawText || rawText.length === 0) {
+                resolve({
+                  status: 502,
+                  error: "Empty content received from Gemini model",
+                  model: modelName
+                });
+                return;
+              }
               const usage = json.usageMetadata || null;
               resolve({
                 status: 200,
@@ -244,14 +277,14 @@ class GeminiClient {
             } else {
               const errorMsg = json.error?.message || `HTTP ${res.statusCode}: ${responseBody.slice(0, 150)}`;
               resolve({
-                status: res.statusCode,
+                status: res.statusCode || 500,
                 error: errorMsg,
                 model: modelName
               });
             }
           } catch (parseErr) {
             resolve({
-              status: res.statusCode,
+              status: 500,
               error: `JSON parse error: ${parseErr.message}`,
               model: modelName
             });
@@ -296,10 +329,20 @@ class GeminiClient {
     let lastError = null;
     const initialKeyCount = this.apiKeys.length;
 
-    for (let k = 0; k < initialKeyCount; k++) {
-      const currentApiKey = this.getActiveKey();
+    if (this.areAllKeysCoolingDown()) {
+      throw new Error("All Gemini API keys are currently rate-limited (HTTP 429). Fast failover active.");
+    }
 
-      for (const modelName of uniqueModels) {
+    for (const modelName of uniqueModels) {
+      if (this.areAllKeysCoolingDown()) break;
+
+      for (let k = 0; k < initialKeyCount; k++) {
+        const currentApiKey = this.getActiveKey();
+        if (this.isKeyCoolingDown(currentApiKey)) {
+          this.rotateToNextKey();
+          continue;
+        }
+
         try {
           const finalPayload = JSON.parse(JSON.stringify(payload));
           if (!modelName.includes("3.7") && finalPayload.generationConfig && finalPayload.generationConfig.thinkingConfig) {
@@ -318,7 +361,7 @@ class GeminiClient {
                 "Content-Type": "application/json",
                 "Content-Length": Buffer.byteLength(postData)
               },
-              timeout: options.timeout || 12000
+              timeout: options.timeout || 6000
             }, (res) => {
               if (res.statusCode !== 200) {
                 let errBody = "";
@@ -367,8 +410,18 @@ class GeminiClient {
           }
 
           if (result.status === 429) {
+            this.setKeyCooldown(currentApiKey, 15000, modelName);
             this.rotateToNextKey();
-            break;
+            if (this.areAllKeysCoolingDown(modelName)) {
+              lastError = new Error("All Gemini API keys rate-limited (HTTP 429)");
+              break;
+            }
+            continue;
+          }
+
+          if (result.status === 408 || result.status >= 500 || result.status === 0) {
+            this.rotateToNextKey();
+            continue;
           }
 
           lastError = new Error(result.error || `Gemini status ${result.status}`);
@@ -396,13 +449,23 @@ class GeminiClient {
     let lastError = null;
     const initialKeyCount = this.apiKeys.length;
 
-    // Try keys in rotation
-    for (let k = 0; k < initialKeyCount; k++) {
-      const currentApiKey = this.getActiveKey();
+    if (this.areAllKeysCoolingDown()) {
+      throw new Error("All Gemini API keys are currently rate-limited (HTTP 429). Fast failover active.");
+    }
 
-      for (const modelName of uniqueModels) {
+    // Try each candidate model across rotated keys
+    for (const modelName of uniqueModels) {
+      if (this.areAllKeysCoolingDown()) break;
+
+      for (let k = 0; k < initialKeyCount; k++) {
+        const currentApiKey = this.getActiveKey();
+        if (this.isKeyCoolingDown(currentApiKey)) {
+          this.rotateToNextKey();
+          continue;
+        }
+
         try {
-          const result = await this._requestGenerateContent(modelName, currentApiKey, payload, options.timeout || 12000);
+          const result = await this._requestGenerateContent(modelName, currentApiKey, payload, options.timeout || 6000);
 
           if (result.status === 200 && result.content && result.content.length > 0) {
             return {
@@ -413,9 +476,23 @@ class GeminiClient {
           }
 
           if (result.status === 429) {
-            console.warn(`⚠️ [Gemini Key #${this.activeKeyIndex + 1}] Quota exceeded (429). Rotating to next fallback key...`);
+            this.setKeyCooldown(currentApiKey, 60000);
             this.rotateToNextKey();
-            break; // Break inner model loop to retry with new key
+            if (this.areAllKeysCoolingDown()) {
+              lastError = new Error("All Gemini API keys rate-limited (HTTP 429)");
+              break;
+            }
+            continue;
+          }
+
+          if (result.status === 408 || result.status >= 500 || result.status === 0) {
+            this.rotateToNextKey();
+            continue;
+          }
+
+          if (result.status === 404) {
+            lastError = new Error(result.error || `Model ${modelName} not available`);
+            break; // Skip remaining keys for this unavailable model, try next model
           }
 
           lastError = new Error(result.error || `Gemini status ${result.status}`);
@@ -440,7 +517,7 @@ You provide deep architectural analysis, high-speed coding solutions, and multi-
 Current Workspace Context:
 - Node.js & Electron Desktop Host
 - Go Audio Backend with Zero-Copy DSP & Geigel Double-Talk Cancellation
-- 4-Agent Co-Founder Suite: Tuk Tuk (Partner), Andrew (Lead Engineer), Jenny (Research), Brian (DevOps)
+- 4-Agent Co-Founder Suite: Tuk Tuk (Partner), Vision (Lead Engineer), Jenny (Research), Brian (DevOps)
 
 When executing tasks:
 1. Provide precise, production-grade solutions.
@@ -457,7 +534,7 @@ ${context.additionalContext ? `\nAdditional Context: ${context.additionalContext
     ];
 
     const res = await this.callChatCompletion(messages, {
-      model: options.model || "gemini-3.7-flash",
+      model: options.model || "gemini-3.6-flash",
       temperature: options.temperature !== undefined ? options.temperature : 0.2,
       max_tokens: options.max_tokens || 1200,
       imagePath: context.imagePath || null

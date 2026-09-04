@@ -13,7 +13,7 @@ const WORKING_MODES = {
   DEEP_BUILD: {
     key: "DEEP_BUILD",
     name: "Deep Build & System Architecture",
-    leadAgent: "Andrew",
+    leadAgent: "Vision",
     supportingAgent: "Tuk Tuk",
     pace: "+6%",
     prompt: "Lead Architect Mode: High-IQ senior developer co-pilot. Direct code solutions, AST precision, terminal command readiness, zero fluff.",
@@ -23,7 +23,7 @@ const WORKING_MODES = {
     key: "PROBLEM_TRIAGE",
     name: "Problem Solving & Error Triage",
     leadAgent: "Brian",
-    supportingAgent: "Andrew",
+    supportingAgent: "Vision",
     pace: "+4%",
     prompt: "Diagnostic Commander Mode: Systematic root-cause analysis, latency isolation, stack trace inspection, immediate fix implementation.",
     tools: ["process_health", "telemetry", "git", "screen"]

@@ -7,11 +7,12 @@ const path = require('path');
 const { exec } = require('child_process');
 
 class AudioRecorder {
-  constructor() {
+  constructor(options = {}) {
     this.platform = process.platform;
     this.recordingProcess = null;
     this.isRecording = false;
     this.audioFilePath = null;
+    this.bufferSize = options.bufferSize !== undefined ? options.bufferSize : (process.env.ELOQUENT_AUDIO_BUFFER_SIZE || 32);
   }
 
   /**
@@ -160,10 +161,16 @@ class AudioRecorder {
       throw new Error('Sox/rec not found. Please install: brew install sox (macOS) or sudo apt-get install sox (Linux)');
     }
     
-    console.log(`🎤 Using recording binary: ${recBinary}`);
+    // 0-buffer instant streaming: minimum hardware threshold 32 bytes (1ms at 16kHz mono)
+    const rawBuffer = this.bufferSize !== undefined ? this.bufferSize : (process.env.ELOQUENT_AUDIO_BUFFER_SIZE || 32);
+    const bufferBytes = Math.max(32, parseInt(rawBuffer, 10) || 32);
 
-    // Clean recording — no filters (Whisper is noise-robust; filters at 48kHz cause problems)
+    console.log(`🎤 Using recording binary: ${recBinary} (0-buffer mode: ${bufferBytes} bytes / instant streaming)`);
+
+    // Clean recording with explicit -S progress updates and 0-buffer instant streaming for real-time VAD
     this.recordingProcess = spawn(recBinary, [
+      '--buffer', String(bufferBytes), // 0-buffer / 32-byte 1ms instant audio pass-through
+      '-S',            // Force progress & VU meter bar output on stderr in non-TTY pipe
       '-r', '16000',   // Requested; CoreAudio may use 48000 — Whisper handles both
       '-c', '1',       // Mono
       '-b', '16',      // 16-bit
@@ -175,9 +182,10 @@ class AudioRecorder {
 
     this.recordingProcess.stderr.on('data', (data) => {
       const str = data.toString();
-      // Log useful lines only — suppress per-frame VU meter spam
-      if (str.includes('WARN') || str.includes('ERROR') || str.includes('Input File') ||
-          str.includes('Sample Rate') || str.includes('Channels') || str.includes('Aborted')) {
+      // Log useful lines only — suppress per-frame VU meter spam and hardware sample rate negotiation warnings
+      const isHarmlessRateWarn = str.includes("can't set sample rate");
+      if (!isHarmlessRateWarn && (str.includes('ERROR') || str.includes('Input File') ||
+          str.includes('Sample Rate') || str.includes('Channels') || str.includes('Aborted'))) {
         console.log('📊 Sox stderr:', str.trim());
       }
 
@@ -193,11 +201,12 @@ class AudioRecorder {
           if (ch === '-') voiceBars += 0.5; // Natural human speech energy in SoX
           else if (ch === '=') voiceBars += 1.0; // Medium/strong speech energy
           else if (ch === '#' || ch === '!') peakBars += 1.5;
+          else voiceBars += 0.5; // Any other non-whitespace active energy indicator
         }
         const totalBars = voiceBars + peakBars;
         let amplitude = 0.0;
-        if (totalBars >= 1.0) {
-          amplitude = Math.min(totalBars / 6.0, 1.0);
+        if (totalBars > 0) {
+          amplitude = Math.min(totalBars / 4.0, 1.0);
         }
         this.onAmplitude(amplitude);
       }
@@ -261,22 +270,28 @@ class AudioRecorder {
   }
 
   async stopUnixRecording() {
-    if (this.recordingProcess) {
+    const proc = this.recordingProcess;
+    if (proc) {
       try {
-        this.recordingProcess.kill('SIGTERM');
+        proc.kill('SIGTERM');
       } catch (e) {
-        try { this.recordingProcess.kill('SIGINT'); } catch (err) {}
+        try { proc.kill('SIGINT'); } catch (err) {}
       }
       console.log('✅ Unix recording stopped');
       
-      // Wait for process to exit with fast 90ms SIGKILL fallback (0ms hang)
+      // Wait for this specific process to exit with fast 90ms SIGKILL fallback
       await new Promise((resolve) => {
-        if (!this.recordingProcess) return resolve();
-        this.recordingProcess.on('close', resolve);
-        setTimeout(() => {
-          if (this.recordingProcess) {
-            try { this.recordingProcess.kill('SIGKILL'); } catch (e) {}
-          }
+        let timer = null;
+        const onClose = () => {
+          if (timer) clearTimeout(timer);
+          resolve();
+        };
+        proc.once('close', onClose);
+        proc.once('exit', onClose);
+        timer = setTimeout(() => {
+          try {
+            proc.kill('SIGKILL');
+          } catch (e) {}
           resolve();
         }, 90);
       });
@@ -326,6 +341,51 @@ class AudioRecorder {
       return 'Install sox for Linux: sudo apt-get install sox (Ubuntu/Debian) or sudo yum install sox (RedHat/CentOS)';
     }
   }
+
+  /**
+   * Fast strided tail inspection of live recording WAV buffer (<0.5ms)
+   * Reads only the most recent windowBytes of PCM audio to measure instantaneous acoustic energy
+   * @param {string} filePath - Target audio file path
+   * @param {number} windowBytes - Bytes to scan from the end of the file (default: 3200 = 100ms at 16kHz mono 16-bit)
+   * @returns {{ rms: number, peak: number, samples: number }}
+   */
+  static getTailAudioBufferEnergy(filePath, windowBytes = 3200) {
+    let fd = null;
+    try {
+      if (!filePath || !fs.existsSync(filePath)) return { rms: 0, peak: 0, samples: 0 };
+      const stats = fs.statSync(filePath);
+      if (stats.size <= 44) return { rms: 0, peak: 0, samples: 0 };
+
+      const availablePcm = stats.size - 44;
+      const bytesToRead = Math.min(availablePcm, windowBytes);
+      const alignedBytes = bytesToRead - (bytesToRead % 2);
+      if (alignedBytes <= 0) return { rms: 0, peak: 0, samples: 0 };
+
+      const offset = stats.size - alignedBytes;
+      const buf = Buffer.allocUnsafe(alignedBytes);
+      fd = fs.openSync(filePath, 'r');
+      fs.readSync(fd, buf, 0, alignedBytes, offset);
+
+      let sumSquares = 0;
+      let peak = 0;
+      let samples = 0;
+      for (let i = 0; i < buf.length - 1; i += 2) {
+        const sample = Math.abs(buf.readInt16LE(i));
+        sumSquares += sample * sample;
+        if (sample > peak) peak = sample;
+        samples++;
+      }
+      const rms = samples > 0 ? Math.sqrt(sumSquares / samples) / 32768.0 : 0;
+      return { rms, peak, samples };
+    } catch (e) {
+      return { rms: 0, peak: 0, samples: 0 };
+    } finally {
+      if (fd !== null) {
+        try { fs.closeSync(fd); } catch (_) {}
+      }
+    }
+  }
 }
 
+AudioRecorder.getTailAudioBufferEnergy = AudioRecorder.getTailAudioBufferEnergy;
 module.exports = AudioRecorder;

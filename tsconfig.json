@@ -10,12 +10,17 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "declaration": true,
+    "jsx": "react",
     "outDir": "./dist-ts",
     "rootDir": "./"
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts"
+    "src/**/*.tsx",
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.tsx",
+    "tests/**/*.ts",
+    "test/**/*.ts"
   ],
   "exclude": [
     "node_modules",

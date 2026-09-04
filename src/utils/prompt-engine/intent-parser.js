@@ -59,20 +59,25 @@ class IntentParser {
       }
     }
 
-    // 3. Prompt Refinement / Generation Intent Detection
+    // 3. Prompt Refinement / Generation Intent Detection (Tuk Tuk / Vision / Andrew Prompt Engineering)
     const promptPatterns = [
-      /\b(?:tell\s+andrew\s+to\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine)\s+(?:up\s+)?(?:a|the|my)?\s*(?:(?:high[- ]context|structured|master|developer|first|integrity)\s+)*prompt\b/i,
+      /\b(?:tell\s+(?:andrew|vision|tuk\s*tuk|tuktuk)\s+to\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*prompt\b/i,
+      /\b(?:vision|andrew|tuk\s*tuk|tuktuk)\s*[,:]?\s*(?:prompt|write\s+prompt|craft\s+prompt|prompt\s+in\s+antigravity|prompt\s+this|generate\s+prompt|give\s+prompt|copy\s+prompt)\b/i,
       /\b(?:prompt\s+for\s+(?:my\s+)?next\s+task)\b/i,
-      /\b(?:prompt\s+in\s+antigravity)\b/i,
-      /\b(?:turn\s+this\s+into\s+a\s+developer\s+prompt)\b/i,
-      /\b(?:refine\s+(?:this\s+into\s+a\s+)?prompt)\b/i
+      /\b(?:prompt\s+(?:this|it|for\s+this)?\s*(?:in|on|to|for)?\s*(?:antigravity|clipboard|ide))\b/i,
+      /\b(?:copy\s+(?:prompt|code)\s+to\s+clipboard\s+and\s+(?:execute|run|paste|fire))\b/i,
+      /\b(?:turn\s+(?:this|our\s+talk|our\s+chat)\s+into\s+a\s+(?:developer\s+)?prompt)\b/i,
+      /\b(?:refine\s+(?:this\s+into\s+a\s+)?prompt)\b/i,
+      /\b(?:generate\s+developer\s+prompt)\b/i,
+      /\b(?:antigravity\s+prompt)\b/i
     ];
 
     for (const pattern of promptPatterns) {
       if (pattern.test(lower)) {
         // Extract concept payload
         const cleanedTarget = rawText
-          .replace(/^(?:hey\s+)?(?:tuk\s*tuk|andrew)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:tell\s+andrew\s+to\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine)\s+(?:up\s+)?(?:a|the|my)?\s*(?:(?:high[- ]context|structured|master|developer|first|integrity)\s+)*prompt\s*(?:for|about|on)?\s*/i, "")
+          .replace(/^(?:hey\s+)?(?:tuk\s*tuk|tuktuk|andrew|vision)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:tell\s+(?:andrew|vision|tuk\s*tuk)\s+to\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|prompt)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*prompt\s*(?:for|about|on|in\s+antigravity|to\s+antigravity)?\s*/i, "")
+          .replace(/\s*(?:in|on|to|into)\s+antigravity\s*$/i, "")
           .trim();
 
         return {

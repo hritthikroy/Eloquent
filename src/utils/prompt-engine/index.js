@@ -14,6 +14,7 @@ class PromptEngine {
       jarvisManager = null,
       screenShareManager = null,
       callGroqChatCompletion = null,
+      geminiClient = null,
       projectDir = null
     } = options;
 
@@ -62,21 +63,31 @@ class PromptEngine {
     const assembledPrompt = await PromptAssembler.assemble({
       sanitizedText: promptConcept,
       enrichedContext,
-      callGroqChatCompletion
+      callGroqChatCompletion,
+      geminiClient
     });
 
-    // 5. Copy directly to macOS clipboard (pbcopy)
+    // 5. Copy directly to macOS clipboard (Electron clipboard + pbcopy fallback)
     try {
-      if (process.platform === "darwin") {
+      let copied = false;
+      try {
+        const { clipboard } = require("electron");
+        if (clipboard && typeof clipboard.writeText === "function") {
+          clipboard.writeText(assembledPrompt);
+          copied = true;
+        }
+      } catch (e) {}
+
+      if (!copied && process.platform === "darwin") {
         const cp = require("child_process").spawn("pbcopy");
         cp.stdin.write(assembledPrompt);
         cp.stdin.end();
       }
     } catch (e) {
-      console.warn("⚠️ [PromptEngine] pbcopy failed:", e.message);
+      console.warn("⚠️ [PromptEngine] clipboard copy failed:", e.message);
     }
 
-    // 6. Return response payload for Andrew
+    // 6. Return response payload for Vision
     const speechConfirmation = intent === INTENTS.SMOOTH_CONVERSATION
       ? "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's injected into your chat window and ready to fire."
       : "I crafted the developer prompt with continuation ideas and injected it directly into Antigravity, bro! You can press Enter or tell me 'fire prompt' to execute it now.";

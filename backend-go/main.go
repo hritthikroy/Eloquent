@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -21,12 +24,136 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline MemDiag — Go runtime heap telemetry (no external deps)
+// ─────────────────────────────────────────────────────────────────────────────
+
+type memSnapshot struct {
+	HeapInUseMB   float64 `json:"heapInUseMB"`
+	HeapAllocMB   float64 `json:"heapAllocMB"`
+	HeapSysMB     float64 `json:"heapSysMB"`
+	GCCycles      uint32  `json:"gcCycles"`
+	NumGoroutines int     `json:"numGoroutines"`
+	HeapGrowthMB  float64 `json:"heapGrowthMB"`
+	TimestampNs   int64   `json:"timestampNs"`
+	IsWarning     bool    `json:"isWarning"`
+}
+
+type memDiagMonitor struct {
+	mu           sync.Mutex
+	last         memSnapshot
+	history      []memSnapshot // ring: last 60
+	warningMB    float64
+	cancel       context.CancelFunc
+	done         chan struct{}
+}
+
+func newMemDiagMonitor(warningMB float64) *memDiagMonitor {
+	if warningMB <= 0 {
+		warningMB = 200.0
+	}
+	return &memDiagMonitor{
+		history:   make([]memSnapshot, 0, 60),
+		warningMB: warningMB,
+		done:      make(chan struct{}),
+	}
+}
+
+func (m *memDiagMonitor) start(ctx context.Context, interval time.Duration) {
+	child, cancel := context.WithCancel(ctx)
+	m.cancel = cancel
+	go m.loop(child, interval)
+}
+
+func (m *memDiagMonitor) loop(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+			close(m.done)
+			return
+		case <-ticker.C:
+			var ms runtime.MemStats
+			runtime.ReadMemStats(&ms)
+
+			const mb = 1 << 20
+			snap := memSnapshot{
+				HeapInUseMB:   float64(ms.HeapInuse) / mb,
+				HeapAllocMB:   float64(ms.HeapAlloc) / mb,
+				HeapSysMB:     float64(ms.HeapSys) / mb,
+				GCCycles:      ms.NumGC,
+				NumGoroutines: runtime.NumGoroutine(),
+				TimestampNs:   time.Now().UnixNano(),
+			}
+
+			m.mu.Lock()
+			snap.HeapGrowthMB = snap.HeapInUseMB - m.last.HeapInUseMB
+			snap.IsWarning = snap.HeapInUseMB >= m.warningMB
+			m.last = snap
+			if len(m.history) < 60 {
+				m.history = append(m.history, snap)
+			} else {
+				copy(m.history, m.history[1:])
+				m.history[59] = snap
+			}
+			m.mu.Unlock()
+
+			if snap.IsWarning {
+				log.Printf("[MemDiag] ⚠️  Heap warning: %.1f MB in-use (threshold %.0f MB) | GC cycles: %d | goroutines: %d",
+					snap.HeapInUseMB, m.warningMB, snap.GCCycles, snap.NumGoroutines)
+			}
+		}
+	}
+}
+
+func (m *memDiagMonitor) snapshot() memSnapshot {
+	m.mu.Lock()
+	s := m.last
+	m.mu.Unlock()
+	return s
+}
+
+func (m *memDiagMonitor) prometheusMetrics() string {
+	s := m.snapshot()
+	const mb = 1 << 20
+	return fmt.Sprintf(
+		"# HELP eloquent_go_heap_inuse_bytes Bytes of in-use heap spans\neloquent_go_heap_inuse_bytes %g\n"+
+			"# HELP eloquent_go_heap_alloc_bytes Bytes of allocated heap objects\neloquent_go_heap_alloc_bytes %g\n"+
+			"# HELP eloquent_go_heap_sys_bytes Bytes of heap memory from OS\neloquent_go_heap_sys_bytes %g\n"+
+			"# HELP eloquent_go_gc_cycles_total Total completed GC cycles\neloquent_go_gc_cycles_total %d\n"+
+			"# HELP eloquent_go_goroutines Current goroutine count\neloquent_go_goroutines %d\n"+
+			"# HELP eloquent_go_heap_growth_mb Heap growth MB since last sample\neloquent_go_heap_growth_mb %g\n",
+		s.HeapInUseMB*mb, s.HeapAllocMB*mb, s.HeapSysMB*mb,
+		s.GCCycles, s.NumGoroutines, s.HeapGrowthMB,
+	)
+}
+
+func (m *memDiagMonitor) stop() {
+	if m.cancel != nil {
+		m.cancel()
+	}
+	<-m.done
+}
+
 func main() {
 	// PERFORMANCE BOOST: Optimize Go runtime for better performance
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	
+
 	log.Println("🚀 Starting Eloquent Backend with ULTRA-FAST optimizations...")
 	startTime := time.Now()
+
+	// ── Real-time heap memory diagnostic monitor ──────────────────────────────
+	// Samples runtime.MemStats every 2s in a background goroutine.
+	// Exposes /memdiag/prometheus and /memdiag/snapshot for the Electron renderer.
+	mainCtx, mainCancel := context.WithCancel(context.Background())
+	defer mainCancel()
+
+	heapWarningMB := 200.0
+	memDiag := newMemDiagMonitor(heapWarningMB)
+	memDiag.start(mainCtx, 2*time.Second)
+	log.Printf("📊 [MemDiag] Heap monitor active (2s interval, warning at %.0f MB)", heapWarningMB)
+
 
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
@@ -65,6 +192,8 @@ func main() {
 	usageHandler := handlers.NewUsageHandler(userService)
 	adminHandler := handlers.NewAdminHandler(userService)
 	globalUsageHandler := handlers.NewGlobalUsageHandler(globalUsageService)
+	movementHandler := handlers.NewMovementHandler()
+	skillUpdateHandler := handlers.NewSkillUpdateHandler("./config/skills")
 	log.Printf("📡 Handlers initialized in %v", time.Since(handlerStart))
 	log.Printf("🚀 Enhanced auth service with caching and session management enabled")
 
@@ -365,6 +494,21 @@ func main() {
 			globalUsage.GET("/check", globalUsageHandler.CheckFreeTimeAvailable)
 		}
 
+		// Movement and visual tracking subsystem routes
+		movement := api.Group("/movement")
+		{
+			movement.POST("", movementHandler.PostMovement)
+			movement.GET("/state", movementHandler.GetMovementState)
+		}
+
+		// Agent skill profile and metadata hot-sync routes
+		skills := api.Group("/skills")
+		{
+			skills.POST("/update", skillUpdateHandler.UpdateSkillProfile)
+			skills.GET("/telemetry", skillUpdateHandler.GetSkillTelemetry)
+			skills.GET("/:agent", skillUpdateHandler.GetSkillProfile)
+		}
+
 		// Admin routes (requires admin authentication)
 		admin := api.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(supabaseService))
@@ -385,6 +529,23 @@ func main() {
 			admin.POST("/global-usage/reset", globalUsageHandler.ResetGlobalUsage)
 		}
 	}
+
+	// ── Go runtime memory diagnostic endpoints (polled by Electron renderer) ──
+	// No auth required — internal network only; Electron connects over localhost.
+	r.GET("/memdiag/prometheus", func(c *gin.Context) {
+		c.Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		c.String(http.StatusOK, memDiag.prometheusMetrics())
+	})
+
+	r.GET("/memdiag/snapshot", func(c *gin.Context) {
+		snap := memDiag.snapshot()
+		data, err := json.Marshal(snap)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.Data(http.StatusOK, "application/json", data)
+	})
 
 	// Add catch-all handler for unknown routes
 	r.NoRoute(func(c *gin.Context) {
@@ -455,5 +616,6 @@ func main() {
 		log.Fatal("Server forced to shutdown:", err)
 	}
 
+	memDiag.stop()
 	log.Println("✅ Server exited")
 }

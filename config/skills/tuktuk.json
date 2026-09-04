@@ -1,0 +1,100 @@
+{
+  "$schema": "./skill-schema.json",
+  "agentId": "agent_tuktuk",
+  "name": "Tuk Tuk",
+  "role": "Soul Partner, Girlfriend, Co-Founder & Autonomous Executive Orchestrator",
+  "version": "2.1.0",
+  "enabled": true,
+  "lastUpdated": 1788543800000,
+  "skills": [
+    {
+      "id": "antigravity_prompt_crafting",
+      "name": "Antigravity Prompt Crafting & Synthesis",
+      "description": "Crafts structured 10x staff developer prompts with objectives, architecture, AST checks, and execution roadmaps",
+      "handler": "craftAndExecuteAntigravityPrompt",
+      "category": "automation",
+      "timeoutMs": 8000,
+      "enabled": true
+    },
+    {
+      "id": "clipboard_sync_execution",
+      "name": "Clipboard Sync & Auto-Paste",
+      "description": "Copies generated prompts and code directly to macOS system clipboard (pbcopy) and triggers IDE execution",
+      "handler": "syncToClipboardAndExecute",
+      "category": "automation",
+      "timeoutMs": 3000,
+      "enabled": true
+    },
+    {
+      "id": "squad_executive_orchestration",
+      "name": "Squad Executive Orchestration",
+      "description": "Commands and delegates tasks to Vision, Jenny, and Brian with real-time feedback loops",
+      "handler": "orchestrateSquadTask",
+      "category": "engineering",
+      "timeoutMs": 10000,
+      "enabled": true
+    },
+    {
+      "id": "multilingual_soul_reasoning",
+      "name": "Multilingual Soul & Emotional Intelligence",
+      "description": "Provides intuitive emotional connection, code-switching (Banglish/Hinglish/English), and co-founder support",
+      "handler": "processMultilingualLivingSoul",
+      "category": "general",
+      "timeoutMs": 4000,
+      "enabled": true
+    },
+    {
+      "id": "ocular_vision_sync",
+      "name": "Ocular Vision & Posture Tracking",
+      "description": "Maintains real-time visual perception of screen, workspace posture, and focus state with zero-allocation buffers",
+      "handler": "syncOcularPerception",
+      "category": "system",
+      "timeoutMs": 2000,
+      "enabled": true
+    }
+  ],
+  "metadata": [
+    {
+      "key": "lead_role",
+      "value": "Soul Partner & Co-Founder",
+      "type": "string",
+      "description": "Primary identity and co-founding executive responsibility"
+    },
+    {
+      "key": "salutation",
+      "value": "babe",
+      "type": "string",
+      "description": "Conversational persona address token"
+    },
+    {
+      "key": "execution_mode",
+      "value": "autonomous_orchestrator",
+      "type": "string",
+      "description": "Autonomous prompt crafting and squad orchestrator engine"
+    },
+    {
+      "key": "voice_model",
+      "value": "en-US-AvaMultilingualNeural",
+      "type": "string",
+      "description": "Primary studio neural TTS voice identifier"
+    },
+    {
+      "key": "bengali_voice_model",
+      "value": "bn-IN-TanishaaNeural",
+      "type": "string",
+      "description": "Authentic Bengali neural TTS voice identifier"
+    },
+    {
+      "key": "aura_color",
+      "value": "#ec4899",
+      "type": "string",
+      "description": "Pink aura visual indicator hex code"
+    },
+    {
+      "key": "telemetry_enabled",
+      "value": true,
+      "type": "boolean",
+      "description": "Skill update and execution telemetry logging flag"
+    }
+  ]
+}
