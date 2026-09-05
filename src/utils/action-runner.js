@@ -2216,7 +2216,7 @@ Your task:
   }
 
   // -------------------------------------------------------------
-  // SKILL: BRIAN - Disk Storage Capacity & Port Checker
+  // SKILL: DD - Disk Storage Capacity & Port Checker
   // -------------------------------------------------------------
   getDiskSpaceReport() {
     try {
@@ -2427,7 +2427,7 @@ Your task:
   }
 
   // -------------------------------------------------------------
-  // PHASE 2 SKILLS: BRIAN - System Uptime & Wi-Fi Diagnostic
+  // PHASE 2 SKILLS: DD - System Uptime & Wi-Fi Diagnostic
   // -------------------------------------------------------------
   getSystemUptime() {
     try {
