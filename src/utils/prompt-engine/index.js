@@ -22,14 +22,14 @@ class PromptEngine {
     const sanitized = TextSanitizer.sanitize(rawSpeech);
 
     // 2. Parse Intent
-    const { intent, target } = IntentParser.parse(sanitized);
+    const { intent, target, agentDirective = "vision", useConversationContext = false } = IntentParser.parse(sanitized);
 
     // If standard query, let regular conversational loop handle it
     if (intent === INTENTS.STANDARD_QUERY) {
       return { handled: false, intent, sanitized };
     }
 
-    console.log(`🚀 [PromptEngine] Triggered intent: ${intent} with target: "${target}"`);
+    console.log(`🚀 [PromptEngine] Triggered intent: ${intent} with target: "${target}" (agent: ${agentDirective})`);
 
     // Handle immediate execution / firing of pending prompt into Antigravity
     if (intent === INTENTS.EXECUTE_PROMPT) {
@@ -58,7 +58,7 @@ class PromptEngine {
     // 4. Assemble high-fidelity developer prompt
     const promptConcept = intent === INTENTS.SMOOTH_CONVERSATION
       ? "Implement a persistent conversational state management system to ensure ultra-smooth turn-taking, flawless multi-turn context retention, and zero rate-limit glitches."
-      : (target || sanitized);
+      : (target || (useConversationContext ? "" : sanitized));
 
     const assembledPrompt = await PromptAssembler.assemble({
       sanitizedText: promptConcept,
@@ -87,10 +87,17 @@ class PromptEngine {
       console.warn("⚠️ [PromptEngine] clipboard copy failed:", e.message);
     }
 
-    // 6. Return response payload for Vision
-    const speechConfirmation = intent === INTENTS.SMOOTH_CONVERSATION
-      ? "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's injected into your chat window and ready to fire."
-      : "I crafted the developer prompt with continuation ideas and injected it directly into Antigravity, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
+    // 6. Return response payload according to active agent persona
+    let speechConfirmation = "I crafted the developer prompt with continuation ideas and injected it directly into Antigravity, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
+    if (intent === INTENTS.SMOOTH_CONVERSATION) {
+      speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's injected into your chat window and ready to fire.";
+    } else if (agentDirective === "tuktuk") {
+      speechConfirmation = "I've structured the full Antigravity prompt, babe! It's copied to your clipboard and pasted into Antigravity right now.";
+    } else if (agentDirective === "friday") {
+      speechConfirmation = "Executive developer prompt synthesized and copied to clipboard, Chief. Ready for deployment.";
+    } else if (agentDirective === "dd") {
+      speechConfirmation = "DevOps prompt locked in and synced to clipboard, bro. Ready to execute.";
+    }
 
     return {
       handled: true,

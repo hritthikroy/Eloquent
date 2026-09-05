@@ -11,6 +11,7 @@ export interface WorkspaceContext {
   activeApp?: string;
   projectDir?: string;
   activeDomain?: 'audio_backend' | 'electron_ui' | 'agent_brain' | 'general';
+  activeTask?: string;
   recentMilestones?: string[];
   mentionedEntities?: string[];
 }

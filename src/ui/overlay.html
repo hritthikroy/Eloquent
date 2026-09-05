@@ -97,8 +97,21 @@
     }
 
     .overlay.rewrite {
+      --aura-r: 168;
+      --aura-g: 85;
+      --aura-b: 247;
+      --aura-hex: #a855f7;
       border-color: rgba(168, 85, 247, 0.35);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(168, 85, 247, 0.25);
+    }
+
+    .overlay.jarvis {
+      --aura-r: 56;
+      --aura-g: 189;
+      --aura-b: 248;
+      --aura-hex: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(56, 189, 248, 0.25);
     }
 
     .overlay.jarvis .rec-ring {
@@ -110,12 +123,147 @@
       background: #38bdf8;
     }
 
-    .overlay.jarvis {
-      border-color: rgba(56, 189, 248, 0.35);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(56, 189, 248, 0.25);
+    /* ═══════════════════════════════════════════════════════════════════
+       2070 Left-to-Right Talking Vibe Sweep & Dynamic Agent Aura
+       ═══════════════════════════════════════════════════════════════════ */
+    :root {
+      --aura-r: 244;
+      --aura-g: 63;
+      --aura-b: 94;
+      --aura-hex: #f43f5e;
+    }
+
+    /* All interactive pill content stays cleanly above the background sweep */
+    .overlay > *:not(.bg-sweep) {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Dynamic Left-to-Right Background Sweep Capsule (2070 Hardware Accelerated) */
+    .bg-sweep {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      background: radial-gradient(ellipse 90% 90% at 50% 50%, rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.10) 0%, transparent 80%);
+      transform: translateZ(0);
+      will-change: opacity;
+    }
+
+    .bg-sweep::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -140%;
+      width: 140%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.04) 20%,
+        rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.26) 48%,
+        rgba(255, 255, 255, 0.42) 52%,
+        rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.26) 56%,
+        rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.04) 80%,
+        transparent 100%
+      );
+      filter: blur(2px);
+      transform: translateZ(0);
+      will-change: transform, opacity;
+    }
+
+    .bg-sweep::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -140%;
+      width: 90%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.16) 25%,
+        rgba(255, 255, 255, 0.50) 50%,
+        rgba(var(--aura-r), var(--aura-g), var(--aura-b), 0.16) 75%,
+        transparent 100%
+      );
+      filter: blur(1px);
+      transform: translateZ(0);
+      will-change: transform, opacity;
+    }
+
+    /* Active Left-to-Right Talking / Speaking Sweep */
+    .overlay.speaking .bg-sweep,
+    .overlay.talking .bg-sweep {
+      opacity: 1;
+    }
+
+    .overlay.speaking .bg-sweep::before,
+    .overlay.talking .bg-sweep::before {
+      animation: auraSweep 1.8s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+    }
+
+    .overlay.speaking .bg-sweep::after,
+    .overlay.talking .bg-sweep::after {
+      animation: auraSweepSpecular 1.8s cubic-bezier(0.25, 0.1, 0.25, 1) 0.14s infinite;
+    }
+
+    @keyframes auraSweep {
+      0% {
+        transform: translateX(0);
+        opacity: 0;
+      }
+      15% {
+        opacity: 1;
+      }
+      85% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateX(270%);
+        opacity: 0;
+      }
+    }
+
+    @keyframes auraSweepSpecular {
+      0% {
+        transform: translateX(0);
+        opacity: 0;
+      }
+      20% {
+        opacity: 0.92;
+      }
+      80% {
+        opacity: 0.92;
+      }
+      100% {
+        transform: translateX(320%);
+        opacity: 0;
+      }
+    }
+
+    /* Fast Working & Thinking: Immediate clean clear, solid dark pill with zero residue */
+    .overlay.working .bg-sweep,
+    .overlay.thinking .bg-sweep,
+    .overlay.transcribing .bg-sweep,
+    .overlay.synthesizing .bg-sweep {
+      opacity: 0 !important;
+      transition: opacity 0.18s ease-out;
     }
 
     /* Stonic-Grade Agent Telemetry & Personality Auras */
+    .overlay.agent-tuktuk {
+      --aura-r: 244;
+      --aura-g: 63;
+      --aura-b: 94;
+      --aura-hex: #f43f5e;
+      border-color: rgba(244, 63, 94, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(244, 63, 94, 0.25);
+    }
     .overlay.agent-tuktuk .rec-ring {
       border-color: #f43f5e;
       box-shadow: 0 0 14px rgba(244, 63, 94, 0.6);
@@ -123,11 +271,16 @@
     .overlay.agent-tuktuk .rec-dot {
       background: #f43f5e;
     }
-    .overlay.agent-tuktuk {
-      border-color: rgba(244, 63, 94, 0.35);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(244, 63, 94, 0.25);
-    }
 
+    .overlay.agent-vision,
+    .overlay.agent-andrew {
+      --aura-r: 6;
+      --aura-g: 182;
+      --aura-b: 212;
+      --aura-hex: #06b6d4;
+      border-color: rgba(6, 182, 212, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(6, 182, 212, 0.25);
+    }
     .overlay.agent-vision .rec-ring,
     .overlay.agent-andrew .rec-ring {
       border-color: #06b6d4;
@@ -137,12 +290,15 @@
     .overlay.agent-andrew .rec-dot {
       background: #06b6d4;
     }
-    .overlay.agent-vision,
-    .overlay.agent-andrew {
-      border-color: rgba(6, 182, 212, 0.35);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(6, 182, 212, 0.25);
-    }
 
+    .overlay.agent-friday {
+      --aura-r: 16;
+      --aura-g: 185;
+      --aura-b: 129;
+      --aura-hex: #10b981;
+      border-color: rgba(16, 185, 129, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(16, 185, 129, 0.25);
+    }
     .overlay.agent-friday .rec-ring {
       border-color: #10b981;
       box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
@@ -150,11 +306,16 @@
     .overlay.agent-friday .rec-dot {
       background: #10b981;
     }
-    .overlay.agent-friday {
-      border-color: rgba(16, 185, 129, 0.35);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(16, 185, 129, 0.25);
-    }
 
+    .overlay.agent-dd,
+    .overlay.agent-brian {
+      --aura-r: 245;
+      --aura-g: 158;
+      --aura-b: 11;
+      --aura-hex: #f59e0b;
+      border-color: rgba(245, 158, 11, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(245, 158, 11, 0.25);
+    }
     .overlay.agent-dd .rec-ring,
     .overlay.agent-brian .rec-ring {
       border-color: #f59e0b;
@@ -163,11 +324,6 @@
     .overlay.agent-dd .rec-dot,
     .overlay.agent-brian .rec-dot {
       background: #f59e0b;
-    }
-    .overlay.agent-dd,
-    .overlay.agent-brian {
-      border-color: rgba(245, 158, 11, 0.35);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(245, 158, 11, 0.25);
     }
 
     /* Thinking / Working / Synthesizing / Transcribing Core Particle Orb Animation */
@@ -320,6 +476,7 @@
 
 <body>
   <div class="overlay" id="overlay">
+    <div class="bg-sweep" id="bgSweep"></div>
     <div class="rec-indicator">
       <div class="rec-ring"></div>
       <div class="rec-dot"></div>

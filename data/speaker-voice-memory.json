@@ -1,0 +1,345 @@
+{
+  "updatedAt": "2026-09-05T22:03:39.222Z",
+  "profiles": {
+    "hritthik": {
+      "id": "hritthik",
+      "name": "Hritthik",
+      "role": "creator_partner",
+      "category": "primary_creator",
+      "prior": 0.7,
+      "acoustics": {
+        "f0Mean": 233.3471516840215,
+        "f0Variance": 18.5,
+        "harmonicity": 0.19906901402610355,
+        "spectralCentroid": 1596.2318005219179,
+        "cadenceWpm": 155
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0.82,
+          -0.15,
+          0.33,
+          0.71,
+          -0.22,
+          0.45,
+          0.19,
+          -0.08
+        ],
+        "confidence": 0.95
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.92,
+        "prosodicEntropy": 0.68,
+        "microExpressionScore": 0.95
+      },
+      "personality": {
+        "style": "visionary_tech_creator",
+        "formality": "intimate_direct",
+        "honorificPreference": "babe_exclusive",
+        "keywords": [
+          "tuktuk",
+          "tuk tuk",
+          "vision",
+          "friday",
+          "dd",
+          "babe",
+          "architecture",
+          "arcitecture",
+          "fix",
+          "code",
+          "run",
+          "test",
+          "build",
+          "pipeline",
+          "terminal",
+          "system",
+          "dekho",
+          "koro",
+          "bolo",
+          "thik",
+          "shono",
+          "amar",
+          "tomra",
+          "amader",
+          "status",
+          "screen"
+        ]
+      },
+      "permissions": {
+        "allowPetNames": true,
+        "preferredPetName": "babe",
+        "bannedPetNames": [
+          "shona",
+          "sona",
+          "bro",
+          "brother",
+          "bhai",
+          "sir"
+        ]
+      }
+    },
+    "vision": {
+      "id": "vision",
+      "name": "Vision",
+      "role": "squad_agent",
+      "category": "squad_agent",
+      "prior": 0.1,
+      "acoustics": {
+        "f0Mean": 104,
+        "f0Variance": 12,
+        "harmonicity": 0.88,
+        "spectralCentroid": 1280,
+        "cadenceWpm": 140
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0.45,
+          0.72,
+          -0.18,
+          0.55,
+          0.33,
+          -0.41,
+          0.28,
+          0.15
+        ],
+        "confidence": 0.9
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.95,
+        "prosodicEntropy": 0.42,
+        "microExpressionScore": 0.88
+      },
+      "personality": {
+        "style": "lead_systems_architect",
+        "formality": "brotherly_engineering",
+        "honorificPreference": "brother",
+        "keywords": [
+          "brother",
+          "bhai",
+          "bro",
+          "go",
+          "ast",
+          "compiler",
+          "daemon",
+          "ipc",
+          "zero-copy",
+          "ringbuffer",
+          "socket",
+          "backend",
+          "concurrency",
+          "mutex",
+          "systems",
+          "blueprint"
+        ]
+      },
+      "permissions": {
+        "allowPetNames": false,
+        "preferredPetName": null,
+        "bannedPetNames": [
+          "babe",
+          "sweetheart",
+          "darling",
+          "honey",
+          "jaan",
+          "baby"
+        ]
+      }
+    },
+    "friday": {
+      "id": "friday",
+      "name": "Friday",
+      "role": "squad_agent",
+      "category": "squad_agent",
+      "prior": 0.08,
+      "acoustics": {
+        "f0Mean": 215,
+        "f0Variance": 16,
+        "harmonicity": 0.9,
+        "spectralCentroid": 1820,
+        "cadenceWpm": 165
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          -0.3,
+          0.55,
+          0.68,
+          -0.12,
+          0.48,
+          0.22,
+          -0.35,
+          0.6
+        ],
+        "confidence": 0.88
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.9,
+        "prosodicEntropy": 0.55,
+        "microExpressionScore": 0.92
+      },
+      "personality": {
+        "style": "head_of_research",
+        "formality": "refined_analytical",
+        "honorificPreference": "Chief",
+        "keywords": [
+          "chief",
+          "research",
+          "matrix",
+          "analysis",
+          "empirical",
+          "benchmark",
+          "telemetry",
+          "dataset",
+          "retrieval",
+          "vector",
+          "state",
+          "optimization",
+          "intelligence"
+        ]
+      },
+      "permissions": {
+        "allowPetNames": false,
+        "preferredPetName": null,
+        "bannedPetNames": [
+          "babe",
+          "sweetheart",
+          "darling",
+          "honey",
+          "jaan",
+          "baby",
+          "bro",
+          "bhai"
+        ]
+      }
+    },
+    "dd": {
+      "id": "dd",
+      "name": "DD",
+      "role": "squad_agent",
+      "category": "squad_agent",
+      "prior": 0.07,
+      "acoustics": {
+        "f0Mean": 126,
+        "f0Variance": 14.5,
+        "harmonicity": 0.84,
+        "spectralCentroid": 1420,
+        "cadenceWpm": 150
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0.6,
+          0.1,
+          -0.45,
+          0.38,
+          -0.55,
+          0.7,
+          0.12,
+          -0.28
+        ],
+        "confidence": 0.85
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.88,
+        "prosodicEntropy": 0.38,
+        "microExpressionScore": 0.85
+      },
+      "personality": {
+        "style": "devops_sentinel",
+        "formality": "upbeat_devops_slang",
+        "honorificPreference": "bro",
+        "keywords": [
+          "bro",
+          "uptime",
+          "telemetry",
+          "sentinel",
+          "devops",
+          "cloud",
+          "socket",
+          "nominal",
+          "steady",
+          "server",
+          "cluster",
+          "daemon",
+          "rock solid",
+          "defense"
+        ]
+      },
+      "permissions": {
+        "allowPetNames": false,
+        "preferredPetName": null,
+        "bannedPetNames": [
+          "babe",
+          "sweetheart",
+          "darling",
+          "honey",
+          "jaan",
+          "baby"
+        ]
+      }
+    },
+    "room_guest": {
+      "id": "room_guest",
+      "name": "Room Guest / Visitor",
+      "role": "room_guest",
+      "category": "external_person",
+      "prior": 0.05,
+      "acoustics": {
+        "f0Mean": 160,
+        "f0Variance": 25,
+        "harmonicity": 0.65,
+        "spectralCentroid": 1550,
+        "cadenceWpm": 130
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "confidence": 0
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.5,
+        "prosodicEntropy": 0.8,
+        "microExpressionScore": 0.6
+      },
+      "personality": {
+        "style": "guest_visitor",
+        "formality": "conversational_external",
+        "honorificPreference": "none",
+        "keywords": [
+          "hello",
+          "hi",
+          "excuse me",
+          "hritthik",
+          "is hritthik here",
+          "who are you",
+          "what is this",
+          "hey",
+          "can i speak",
+          "meeting",
+          "room",
+          "namoshkar",
+          "bhaia"
+        ]
+      },
+      "permissions": {
+        "allowPetNames": false,
+        "preferredPetName": null,
+        "bannedPetNames": [
+          "babe",
+          "sweetheart",
+          "darling",
+          "honey",
+          "jaan",
+          "baby",
+          "shona"
+        ]
+      }
+    }
+  }
+}

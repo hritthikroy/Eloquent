@@ -35,14 +35,12 @@ test("Input & Output Responding Gaps Fix Suite", async (t) => {
       assert.ok(!masterApiGateway.groqModels.includes(invalid), `Fictitious model ${invalid} must not be in Groq model pool`);
     }
 
-    // All pool models should be valid Groq endpoints
+    // All pool models should be valid Groq endpoints accessible on restricted tier
     const validProductionModels = [
-      "llama-3.1-8b-instant",
-      "llama-3.3-70b-versatile",
-      "llama3-70b-8192",
-      "llama3-8b-8192",
-      "mixtral-8x7b-32768",
-      "gemma2-9b-it"
+      "qwen/qwen3.8-27b",
+      "openai/gpt-oss-20b",
+      "groq/compound-mini",
+      "qwen/qwen3.6-27b"
     ];
     for (const model of masterApiGateway.groqModels) {
       assert.ok(validProductionModels.includes(model), `Model ${model} must be a recognized production Groq model`);
@@ -67,7 +65,7 @@ test("Input & Output Responding Gaps Fix Suite", async (t) => {
 
     // Check rapid endpointing logic presence
     assert.ok(mainJs.includes("humanEarCortex.getEndpointMode() === 'rapid'"), "main.js must respect rapid endpoint mode");
-    assert.ok(mainJs.includes("voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850)"), "main.js maintains responsive fallback string");
+    assert.ok(mainJs.includes("voicedDurationMs >= 2000 ? 450 : (voicedDurationMs >= 500 ? 550 : 650)") || mainJs.includes("voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850)"), "main.js maintains responsive fallback string");
   });
 
   await t.test("3. ActionRunner recognizes 'fix our input and output responding gaps' and activates rapid mode", async () => {

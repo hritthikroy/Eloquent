@@ -459,7 +459,7 @@ class BanglaVoiceCortex {
     out = this.harmonizeLoanwordsAndCodeSwitching(out);
 
     // 4. Romanization check for strictly monolingual voices
-    const isMultilingualVoice = /multilingual/i.test(voice) || /ava/i.test(voice) || /emma/i.test(voice) || /brian/i.test(voice) || voice.startsWith("bn-");
+    const isMultilingualVoice = /multilingual/i.test(voice) || /ava/i.test(voice) || /emma/i.test(voice) || /brian/i.test(voice) || voice.startsWith("bn-") || /andrew.*multilingual/i.test(voice);
     if (!isMultilingualVoice && this.isBengali(out)) {
       out = this.fluidBengaliToRoman(out);
     }
@@ -482,26 +482,37 @@ class BanglaVoiceCortex {
   }
 
   /**
-   * 6. Dynamic Prosodic Settings for Bengali
-   * Syllable-timed cadence (-4% rate) and gentle pitch offset (+1Hz) for sweet warmth.
+   * 6. Dynamic Prosodic Settings for Bengali & 1:1 English Parity
+   * Zero Robotic Voice Law: 100% natural conversational human tempo (+0% rate across all agents).
+   * Eliminates negative rates (-4%, -3%, -2%) that cause vowel-dragging and robotic artifacts.
    */
   computeBengaliProsodySettings(text = "", agentKey = "tuktuk") {
+    const isTukTuk = agentKey === "tuktuk" || agentKey === "ava";
+
     if (!this.isBengali(text)) {
+      if (isTukTuk) {
+        return { rate: "+0%", pitch: "+1Hz" }; // 1:1 Girlfriend warmth in English
+      }
       return { rate: "+0%", pitch: "+0Hz" };
     }
 
-    if (agentKey === "vision" || agentKey === "andrew") {
-      return { rate: "-3%", pitch: "-1Hz" }; // Calm, brotherly cadence
+    // Zero Robotic Voice Across Codebase (English & Bengali for All Agents):
+    // All agents calibrated to crisp, native human conversational tempo (+0% rate).
+    // Zero negative rate stretching, zero flat monotone.
+    if (isTukTuk) {
+      return { rate: "+0%", pitch: "+1Hz" }; // Sweet, affectionate partner warmth
     }
-    if (agentKey === "friday") {
-      return { rate: "-2%", pitch: "+0Hz" }; // Refined, intellectual cadence
+    if (agentKey === "vision" || agentKey === "andrew" || agentKey === "pradeep") {
+      return { rate: "+0%", pitch: "+0Hz" }; // Fluent, crisp brotherly cadence
+    }
+    if (agentKey === "friday" || agentKey === "emma" || agentKey === "jenny") {
+      return { rate: "+0%", pitch: "+0Hz" }; // Refined, fluid research cadence
     }
     if (agentKey === "dd" || agentKey === "brian") {
-      return { rate: "-3%", pitch: "-1Hz" }; // Grounded DevOps cadence
+      return { rate: "+0%", pitch: "+0Hz" }; // Grounded, natural DevOps cadence
     }
 
-    // Default Tuk Tuk: sweet, flowing, affectionate partner cadence
-    return { rate: "-4%", pitch: "+1Hz" };
+    return { rate: "+0%", pitch: "+0Hz" };
   }
 }
 

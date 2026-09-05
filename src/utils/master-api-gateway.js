@@ -42,14 +42,15 @@ class MasterApiGateway {
     this.backgroundQueue = [];
     this.isProcessingBackgroundQueue = false;
 
-    // Default Preferred Models in Hierarchy Order (Prioritize sub-150ms instant voice models)
+    // Default Preferred Models in Hierarchy Order — user's Groq keys are on restricted tier
+    // Available confirmed: qwen/qwen3.8-27b (487ms), openai/gpt-oss-20b (387ms),
+    //   groq/compound-mini (824ms), qwen/qwen3.6-27b (136ms, emits <think> tags — stripped below)
+    // NOT available: llama-3.x-*, mixtral-*, gemma-* (return "model does not exist")
     this.groqModels = [
-      "llama-3.1-8b-instant",
-      "llama-3.3-70b-versatile",
-      "qwen/qwen3.8-27b",
-      "groq/compound-mini",
-      "groq/compound",
-      "qwen/qwen3.6-27b"
+      "qwen/qwen3.8-27b",      // 487ms — reliable primary
+      "openai/gpt-oss-20b",    // 387ms — reliable secondary
+      "groq/compound-mini",    // 824ms — slower fallback
+      "qwen/qwen3.6-27b"       // 136ms — fastest but emits <think> tags (stripped at lines 344-354)
     ];
 
     this.geminiModels = [
@@ -296,8 +297,18 @@ class MasterApiGateway {
     const startTime = Date.now();
 
     try {
+      const normalizeModel = (m) => {
+        if (!m) return this.groqModels[0];
+        const mLower = m.toLowerCase();
+        if (mLower.includes("llama") || mLower.includes("mixtral") || mLower.includes("gemma")) {
+          return mLower.includes("70b") ? "openai/gpt-oss-20b" : "qwen/qwen3.8-27b";
+        }
+        return m;
+      };
+
+      const normalizedModel = normalizeModel(options.model);
       const candidateModels = [
-        options.model,
+        normalizedModel,
         ...this.groqModels
       ].filter(Boolean);
       const uniqueModels = [...new Set(candidateModels)];
@@ -321,9 +332,8 @@ class MasterApiGateway {
               presence_penalty: options.presence_penalty !== undefined ? options.presence_penalty : 0.6,
               frequency_penalty: options.frequency_penalty !== undefined ? options.frequency_penalty : 0.5
             };
-            if (model.includes("qwen") || model.includes("deepseek") || model.includes("gpt-oss") || model.includes("compound")) {
-              payload.reasoning_effort = "none";
-            }
+            // NOTE: reasoning_effort is NOT supported on restricted-tier models (qwen/gpt-oss/compound).
+            // <think> tag stripping below handles chain-of-thought output without this parameter.
 
             const reqStart = Date.now();
             const response = await axios.post(

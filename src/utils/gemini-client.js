@@ -6,15 +6,17 @@ const https = require("https");
 // API keys must be loaded from environment variables only for security
 const DEFAULT_GEMINI_API_KEYS = [];
 
+// Models confirmed working on user's key tier (gemini-2.5-* return 404 for new users)
 const CANDIDATE_MODELS = [
-  "gemini-3.6-flash",
-  "gemini-3.7-flash",
-  "gemini-3.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash",
-  "gemini-flash-latest",
-  "gemini-2.5-pro",
-  "gemini-pro-latest"
+  "gemini-3.6-flash",         // Primary — confirmed working
+  "gemini-3.7-flash",         // Secondary
+  "gemini-3.5-flash",         // Confirmed working
+  "gemini-3.1-flash-lite",    // Confirmed working, lightweight
+  "gemini-flash-latest",      // Alias — confirmed working
+  "gemini-flash-lite-latest", // Lightweight alias — confirmed working
+  "gemini-pro-latest"         // Heavy fallback
+  // REMOVED: "gemini-2.5-flash" — 404 for new-tier users
+  // REMOVED: "gemini-2.5-pro"   — 404 for new-tier users
 ];
 
 class GeminiClient {

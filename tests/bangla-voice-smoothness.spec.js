@@ -94,12 +94,12 @@ test("Bangla Voice Smoothness & Prosodic Cadence Suite", async (t) => {
 
   await t.test("5. Dynamic Syllable-Timed Prosodic Pacing", () => {
     const tuktukProsody = banglaVoiceCortex.computeBengaliProsodySettings("আমি একদম ঠিক আছি babe", "tuktuk");
-    assert.strictEqual(tuktukProsody.rate, "-4%", "Tuk Tuk Bengali rate must be slightly relaxed (-4%) for sweet clarity");
+    assert.strictEqual(tuktukProsody.rate, "+0%", "Tuk Tuk Bengali rate must be +0% for natural non-robotic clarity");
     assert.strictEqual(tuktukProsody.pitch, "+1Hz", "Tuk Tuk Bengali pitch must have warm affectionate lift (+1Hz)");
 
     const visionProsody = banglaVoiceCortex.computeBengaliProsodySettings("ভাই, কোড ক্লিন আছে", "vision");
-    assert.strictEqual(visionProsody.rate, "-3%", "Vision Bengali rate must be -3% for brotherly calm");
-    assert.strictEqual(visionProsody.pitch, "-1Hz", "Vision Bengali pitch must be -1Hz for grounded resonance");
+    assert.strictEqual(visionProsody.rate, "+0%", "Vision Bengali rate must be +0% for natural brotherly calm");
+    assert.strictEqual(visionProsody.pitch, "+0Hz", "Vision Bengali pitch must be +0Hz for natural resonance");
 
     const englishProsody = banglaVoiceCortex.computeBengaliProsodySettings("Codebase is green brother", "vision");
     assert.strictEqual(englishProsody.rate, "+0%", "English text must remain at baseline rate");

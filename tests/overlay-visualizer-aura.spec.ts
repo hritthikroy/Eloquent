@@ -246,6 +246,51 @@ async function runOverlayVisualizerTests() {
     assert(maxCompute >= 6.0, `Compute wave peak (${maxCompute.toFixed(2)}px) shows energetic algorithmic processing`);
   }
 
+  // --------------------------------------------------------------------------
+  // TEST GROUP 7: 2070 Left-to-Right Talking Vibe Sweep & Fast Working Clear
+  // --------------------------------------------------------------------------
+  console.log('\n--- 7. 2070 Left-to-Right Talking Vibe Sweep & Fast Working Clear ---');
+  {
+    const rootDir = fs.existsSync(path.resolve(__dirname, '../../src/main.js'))
+      ? path.resolve(__dirname, '../..')
+      : path.resolve(__dirname, '..');
+    const overlayHtmlContent = fs.readFileSync(path.resolve(rootDir, 'src/ui/overlay.html'), 'utf8');
+    const overlayJsContent = fs.readFileSync(path.resolve(rootDir, 'src/ui/overlay.js'), 'utf8');
+
+    // 1. Sweep element & hardware acceleration containment
+    assert(overlayHtmlContent.includes('<div class="bg-sweep" id="bgSweep"></div>'), 'overlay.html includes .bg-sweep element inside capsule');
+    assert(overlayHtmlContent.includes('.bg-sweep {'), 'overlay.html declares .bg-sweep base container styles');
+    assert(overlayHtmlContent.includes('border-radius: inherit;'), 'overlay.html .bg-sweep inherits pill capsule border-radius');
+    assert(overlayHtmlContent.includes('overflow: hidden;'), 'overlay.html .bg-sweep clips light sweep neatly inside capsule');
+
+    // 2. Dynamic Agent Aura CSS Variables
+    assert(overlayHtmlContent.includes('--aura-r: 244;') && overlayHtmlContent.includes('--aura-g: 63;'), 'overlay.html defines Tuk Tuk rose aura CSS variables');
+    assert(overlayHtmlContent.includes('--aura-r: 6;') && overlayHtmlContent.includes('--aura-g: 182;'), 'overlay.html defines Vision/Andrew cyan aura CSS variables');
+    assert(overlayHtmlContent.includes('--aura-r: 16;') && overlayHtmlContent.includes('--aura-g: 185;'), 'overlay.html defines Friday emerald aura CSS variables');
+    assert(overlayHtmlContent.includes('--aura-r: 245;') && overlayHtmlContent.includes('--aura-g: 158;'), 'overlay.html defines DD/Brian amber aura CSS variables');
+    assert(overlayHtmlContent.includes('--aura-r: 168;') && overlayHtmlContent.includes('--aura-g: 85;'), 'overlay.html defines Rewrite violet aura CSS variables');
+
+    // 3. 2070 Left-to-Right Keyframe Animations
+    assert(overlayHtmlContent.includes('@keyframes auraSweep {'), 'overlay.html defines auraSweep left-to-right keyframe animation');
+    assert(overlayHtmlContent.includes('@keyframes auraSweepSpecular {'), 'overlay.html defines auraSweepSpecular secondary sheen keyframe animation');
+    assert(overlayHtmlContent.includes('transform: translateX(270%);'), 'auraSweep translates through full pill width to 270%');
+    assert(overlayHtmlContent.includes('transform: translateX(320%);'), 'auraSweepSpecular translates through full pill width to 320%');
+
+    // 4. Fast Working & Thinking Instant Clean Clear (Zero Residue)
+    assert(overlayHtmlContent.includes('.overlay.working .bg-sweep') && overlayHtmlContent.includes('opacity: 0 !important;'), 'overlay.html enforces opacity: 0 !important on .bg-sweep in working state');
+    assert(overlayHtmlContent.includes('.overlay.thinking .bg-sweep') && overlayHtmlContent.includes('opacity: 0 !important;'), 'overlay.html enforces opacity: 0 !important on .bg-sweep in thinking state');
+    assert(overlayHtmlContent.includes('transition: opacity 0.18s ease-out;'), 'overlay.html clears sweep with ultra-fast 0.18s ease-out transition');
+
+    // 5. JavaScript State Management & Vibe Synchronization
+    assert(overlayJsContent.includes('syncAuraVariables()'), 'overlay.js includes syncAuraVariables() to push active aura RGB to CSS variables');
+    assert(overlayJsContent.includes("overlay.classList.add('talking')"), 'overlay.js activates talking sweep when audio amplitude detected');
+    assert(overlayJsContent.includes("overlay.classList.remove('talking')"), 'overlay.js deactivates talking sweep in silence');
+    assert(overlayJsContent.includes("overlay.classList.remove('thinking', 'working', 'transcribing', 'synthesizing', 'speaking', 'talking')"), 'setOverlayStateClass cleanly strips all prior state classes including speaking and talking');
+
+    // 6. Pill Content Z-Index Elevation
+    assert(overlayHtmlContent.includes('.overlay > *:not(.bg-sweep) {') && overlayHtmlContent.includes('z-index: 1;'), 'overlay.html elevates interactive pill elements above the background sweep');
+  }
+
   console.log('\n================================================================');
   console.log(`🎉 ALL ${passed}/${total} OVERLAY PERSISTENT VISUALIZER TESTS PASSED!`);
   console.log('================================================================\n');

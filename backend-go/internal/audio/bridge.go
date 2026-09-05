@@ -5,6 +5,7 @@ package audio
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -103,12 +104,15 @@ func (zc *ZeroCopyBridge) verifyAlignment(b []byte) error {
 	return nil
 }
 
-// acquireFlag performs a compare-and-swap on the shared flag word.
+// acquireFlag performs a compare-and-swap on the shared flag word with a bounded micro-spin.
 func (zc *ZeroCopyBridge) acquireFlag(flag uint32) bool {
-	if atomic.CompareAndSwapUint32(&zc.flagWord, FlagFree, flag) {
-		return true
+	for spin := 0; spin < 5; spin++ {
+		if atomic.CompareAndSwapUint32(&zc.flagWord, FlagFree, flag) {
+			return true
+		}
+		runtime.Gosched()
 	}
-	// Contention encountered: mark contention flag and record metric
+	// Contention encountered after micro-spin: mark contention flag and record metric
 	atomic.OrUint32(&zc.flagWord, FlagContention)
 	zc.contention.Add(1)
 	return false

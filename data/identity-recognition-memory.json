@@ -1,0 +1,280 @@
+{
+  "updatedAt": "2026-09-05T22:03:57.761Z",
+  "profiles": {
+    "hritthik": {
+      "id": "hritthik",
+      "name": "Hritthik",
+      "role": "creator_partner",
+      "category": "primary_creator",
+      "prior": 0.7,
+      "voiceprint": {
+        "f0Mean": 129.29488369419826,
+        "f0Variance": 18.5,
+        "harmonicity": 0.8164744184709913,
+        "spectralCentroid": 1459.1186046177481,
+        "cadenceWpm": 155,
+        "mfcc": [
+          12.5,
+          -1.2,
+          3.8,
+          -0.5,
+          1.9,
+          -0.3,
+          0.8,
+          -0.2,
+          0.5,
+          -0.1,
+          0.3,
+          -0.05,
+          0.15
+        ]
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0.82,
+          -0.15,
+          0.33,
+          0.71,
+          -0.22,
+          0.45,
+          0.19,
+          -0.08
+        ],
+        "confidence": 0.95,
+        "lastUpdated": "2026-09-05T22:03:57.761Z"
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.92,
+        "prosodicEntropy": 0.68,
+        "microExpressionScore": 0.95,
+        "emotionalValenceEntropy": 0.72,
+        "responseLatencyMs": 340
+      },
+      "livenessBaseline": {
+        "blinkRateBpm": 15.5,
+        "voiceReplayScore": 0,
+        "interactionConsistency": 0.96
+      }
+    },
+    "vision": {
+      "id": "vision",
+      "name": "Vision",
+      "role": "squad_agent",
+      "category": "squad_agent",
+      "prior": 0.1,
+      "voiceprint": {
+        "f0Mean": 104,
+        "f0Variance": 12,
+        "harmonicity": 0.88,
+        "spectralCentroid": 1280,
+        "cadenceWpm": 140,
+        "mfcc": [
+          14.2,
+          -2.1,
+          4.5,
+          -1,
+          2.5,
+          -0.8,
+          1.2,
+          -0.6,
+          0.9,
+          -0.4,
+          0.6,
+          -0.2,
+          0.3
+        ]
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0.45,
+          0.72,
+          -0.18,
+          0.55,
+          0.33,
+          -0.41,
+          0.28,
+          0.15
+        ],
+        "confidence": 0.9,
+        "lastUpdated": null
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.95,
+        "prosodicEntropy": 0.42,
+        "microExpressionScore": 0.88,
+        "emotionalValenceEntropy": 0.35,
+        "responseLatencyMs": 280
+      },
+      "livenessBaseline": {
+        "blinkRateBpm": 14,
+        "voiceReplayScore": 0,
+        "interactionConsistency": 0.94
+      }
+    },
+    "friday": {
+      "id": "friday",
+      "name": "Friday",
+      "role": "squad_agent",
+      "category": "squad_agent",
+      "prior": 0.08,
+      "voiceprint": {
+        "f0Mean": 215,
+        "f0Variance": 16,
+        "harmonicity": 0.9,
+        "spectralCentroid": 1820,
+        "cadenceWpm": 165,
+        "mfcc": [
+          11,
+          -0.8,
+          3.2,
+          0.2,
+          1.4,
+          0.5,
+          0.6,
+          0.3,
+          0.4,
+          0.1,
+          0.2,
+          0.05,
+          0.1
+        ]
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          -0.3,
+          0.55,
+          0.68,
+          -0.12,
+          0.48,
+          0.22,
+          -0.35,
+          0.6
+        ],
+        "confidence": 0.88,
+        "lastUpdated": null
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.9,
+        "prosodicEntropy": 0.55,
+        "microExpressionScore": 0.92,
+        "emotionalValenceEntropy": 0.48,
+        "responseLatencyMs": 250
+      },
+      "livenessBaseline": {
+        "blinkRateBpm": 16,
+        "voiceReplayScore": 0,
+        "interactionConsistency": 0.92
+      }
+    },
+    "dd": {
+      "id": "dd",
+      "name": "DD",
+      "role": "squad_agent",
+      "category": "squad_agent",
+      "prior": 0.07,
+      "voiceprint": {
+        "f0Mean": 126,
+        "f0Variance": 14.5,
+        "harmonicity": 0.84,
+        "spectralCentroid": 1420,
+        "cadenceWpm": 150,
+        "mfcc": [
+          13,
+          -1.5,
+          4,
+          -0.7,
+          2,
+          -0.5,
+          1,
+          -0.3,
+          0.7,
+          -0.2,
+          0.4,
+          -0.1,
+          0.2
+        ]
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0.6,
+          0.1,
+          -0.45,
+          0.38,
+          -0.55,
+          0.7,
+          0.12,
+          -0.28
+        ],
+        "confidence": 0.85,
+        "lastUpdated": null
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.88,
+        "prosodicEntropy": 0.38,
+        "microExpressionScore": 0.85,
+        "emotionalValenceEntropy": 0.3,
+        "responseLatencyMs": 310
+      },
+      "livenessBaseline": {
+        "blinkRateBpm": 13.5,
+        "voiceReplayScore": 0,
+        "interactionConsistency": 0.9
+      }
+    },
+    "room_guest": {
+      "id": "room_guest",
+      "name": "Room Guest / Visitor",
+      "role": "room_guest",
+      "category": "external_person",
+      "prior": 0.05,
+      "voiceprint": {
+        "f0Mean": 160,
+        "f0Variance": 25,
+        "harmonicity": 0.65,
+        "spectralCentroid": 1550,
+        "cadenceWpm": 130,
+        "mfcc": [
+          10,
+          0,
+          2,
+          0,
+          1,
+          0,
+          0.5,
+          0,
+          0.3,
+          0,
+          0.2,
+          0,
+          0.1
+        ]
+      },
+      "faceEmbedding": {
+        "eigenCoeffs": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "confidence": 0,
+        "lastUpdated": null
+      },
+      "energySignature": {
+        "cadenceConsistency": 0.5,
+        "prosodicEntropy": 0.8,
+        "microExpressionScore": 0.6,
+        "emotionalValenceEntropy": 0.75,
+        "responseLatencyMs": 500
+      },
+      "livenessBaseline": {
+        "blinkRateBpm": 15,
+        "voiceReplayScore": 0,
+        "interactionConsistency": 0.5
+      }
+    }
+  }
+}

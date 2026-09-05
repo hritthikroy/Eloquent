@@ -84,7 +84,11 @@ export class PromptEngineer {
     context?: WorkspaceContext,
     targetStack?: string
   ): string {
-    const sanitizedIntent = (rawIntent || 'Enhance system performance and architecture').trim();
+    let sanitizedIntent = (rawIntent || 'Enhance system performance and architecture').trim();
+    const cleanCheck = sanitizedIntent.toLowerCase().replace(/[\p{P}\p{S}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanCheck || /^(?:so|well|now|okay|ok|and|then)?\s*(?:i|we)?\s*(?:am|m|are|re|will|ll)?\s*(?:going|about|trying|planning|ready)?\s*(?:to)?$/i.test(cleanCheck)) {
+      sanitizedIntent = context?.activeTask || 'Expand multi-agent directives, prompt engineering resilience, and AST schema compliance';
+    }
     const domain = this.detectPrimaryDomain(sanitizedIntent, context);
 
     const { objective, files, quality } = this.resolveDomainDirectives(sanitizedIntent, domain, targetStack);
@@ -141,8 +145,11 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
   private static detectPrimaryDomain(
     intent: string,
     context?: WorkspaceContext
-  ): 'audio_backend' | 'electron_ipc' | 'agent_brain' | 'general' {
+  ): 'audio_backend' | 'electron_ipc' | 'agent_brain' | 'prompt_engine' | 'general' {
     const combined = `${intent} ${context?.stack || ''} ${context?.activeDomain || ''}`.toLowerCase();
+    if (combined.includes('prompt') || combined.includes('antigravity') || combined.includes('intent') || combined.includes('kana') || combined.includes('wohndraja') || combined.includes('ondhoraja') || (combined.includes('reading') && combined.includes('fix'))) {
+      return 'prompt_engine';
+    }
     if (combined.includes('audio') || combined.includes('go') || combined.includes('vad') || combined.includes('recorder') || combined.includes('mic')) {
       return 'audio_backend';
     }
@@ -160,13 +167,31 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
    */
   private static resolveDomainDirectives(
     intent: string,
-    domain: 'audio_backend' | 'electron_ipc' | 'agent_brain' | 'general',
+    domain: 'audio_backend' | 'electron_ipc' | 'agent_brain' | 'prompt_engine' | 'general',
     stack?: string
   ): {
     objective: string;
     files: KeyFileArchitectureEntry[];
     quality: string[];
   } {
+    if (domain === 'prompt_engine') {
+      return {
+        objective: `Architect and harden the prompt engineering, reading comprehension, and issue remediation engine for Eloquent. Address: "${intent}". Guarantee zero conversational filler, 100% AST schema compliance, token budget optimization, and robust multi-agent directive routing.`,
+        files: [
+          { path: 'src/utils/prompt-engine/intent-parser.js', description: 'Multi-agent directive routing, suffix pattern extraction, and compound intent parsing' },
+          { path: 'src/utils/prompt-engine/prompt-assembler.js', description: 'Senior-developer prompt generation with strict 4-section schema compliance' },
+          { path: 'src/core/prompt-engineer.ts', description: 'AST compliance, recursive self-correction loop, and token boundary verification' },
+          { path: 'src/utils/prompt-engine/text-sanitizer.js', description: 'Phonetic STT normalizer for multilingual speech and folklore terminology' }
+        ],
+        quality: [
+          'Enforce strict 100% AST schema compliance with zero markdown wrappers or conversational preambles.',
+          'Validate token budget constraints using PromptOptimizer within 256-token boundaries.',
+          'Verify that all modified JavaScript files pass AST validation via node -c.',
+          'Ensure all automated test suites pass without regressions.'
+        ]
+      };
+    }
+
     if (domain === 'audio_backend') {
       return {
         objective: `Implement high-throughput audio backend service and DSP pipeline for Eloquent. Address: "${intent}". Ensure native 16kHz PCM audio streaming, on-device double-talk cancellation (Geigel DTD), and zero-copy ring buffers.`,
@@ -231,8 +256,13 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
     context?: WorkspaceContext,
     targetStack?: string
   ): string {
-    const domain = this.detectPrimaryDomain(rawIntent, context);
-    const { objective, files, quality } = this.resolveDomainDirectives(rawIntent, domain, targetStack);
+    let sanitizedIntent = (rawIntent || 'Enhance system performance and architecture').trim();
+    const cleanCheck = sanitizedIntent.toLowerCase().replace(/[\p{P}\p{S}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanCheck || /^(?:so|well|now|okay|ok|and|then)?\s*(?:i|we)?\s*(?:am|m|are|re|will|ll)?\s*(?:going|about|trying|planning|ready)?\s*(?:to)?$/i.test(cleanCheck)) {
+      sanitizedIntent = context?.activeTask || 'Expand multi-agent directives, prompt engineering resilience, and AST schema compliance';
+    }
+    const domain = this.detectPrimaryDomain(sanitizedIntent, context);
+    const { objective, files, quality } = this.resolveDomainDirectives(sanitizedIntent, domain, targetStack);
 
     return `Clear Technical Objective
 ${objective}

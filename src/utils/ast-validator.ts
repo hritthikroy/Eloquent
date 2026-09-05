@@ -36,7 +36,9 @@ export class PromptAstValidator {
   // Valid Eloquent stack prefixes to prevent out-of-domain hallucinations
   private static readonly VALID_STACK_PREFIXES = [
     'src/',
+    'backend/',
     'backend-go/',
+    'electron/',
     'tests/',
     'userData/',
     'scripts/',

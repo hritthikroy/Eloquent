@@ -155,6 +155,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.removeListener('locale:changed', subscription);
       };
     }
+  },
+
+  // Bengali / Bangla Text Normalization API
+  validateBanglaText: (payload) => ipcRenderer.invoke('validate-bangla-text', payload),
+
+  // ── Audio Bridge IPC — Go backend lifecycle & streaming ─────────────────────
+  // Connects the renderer directly to AudioBridgeManager (src/main/ipc/audio-bridge.ts).
+  // Graceful degradation: rejects are caught and returned as { ok: false, error } objects.
+  audioBridge: {
+    /** Start audio streaming pipeline (optionally with config overrides). */
+    start: (config) => ipcRenderer.invoke('audio:start-stream', config).catch((e) => ({ ok: false, error: e.message })),
+    /** Canonical alias used by overlay / VoiceOverlay components. */
+    startStream: (config) => ipcRenderer.invoke('audio:start-stream', config).catch((e) => ({ ok: false, error: e.message })),
+
+    /** Stop audio streaming pipeline. */
+    stop: () => ipcRenderer.invoke('audio:stop-stream').catch((e) => ({ ok: false, error: e.message })),
+    /** Canonical alias. */
+    stopStream: () => ipcRenderer.invoke('audio:stop-stream').catch((e) => ({ ok: false, error: e.message })),
+
+    /** Update live audio parameters (volume, VAD sensitivity, noise suppression, etc.). */
+    updateParameters: (params) => ipcRenderer.invoke('audio:update-parameters', params).catch((e) => ({ ok: false, error: e.message })),
+
+    /** Fetch full audio engine status snapshot. */
+    getStatus: () => ipcRenderer.invoke('audio:get-status').catch((e) => ({ ok: false, error: e.message })),
+
+    /** Fetch health check (ping) from Go backend. */
+    getHealth: () => ipcRenderer.invoke('audio:get-health').catch((e) => ({ ok: false, error: e.message })),
+
+    /** Manually trigger Go backend reconnect / re-init. */
+    reconnect: () => ipcRenderer.invoke('audio:reconnect').catch((e) => ({ ok: false, error: e.message })),
   }
 });
 
@@ -293,7 +323,8 @@ contextBridge.exposeInMainWorld('electronInvoke', {
       'locale:set-preference',
       'locale:get-telemetry',
       'clear-app-cache',
-      'clear-go-cache'
+      'clear-go-cache',
+      'validate-bangla-text'
     ];
     
     if (validChannels.includes(channel)) {
@@ -307,7 +338,8 @@ contextBridge.exposeInMainWorld('electronInvoke', {
 // Expose safe cache API via window.api
 contextBridge.exposeInMainWorld('api', {
   clearCache: (options = {}) => ipcRenderer.invoke('clear-app-cache', options),
-  clearGoCache: (options = {}) => ipcRenderer.invoke('clear-go-cache', options)
+  clearGoCache: (options = {}) => ipcRenderer.invoke('clear-go-cache', options),
+  validateBanglaText: (payload) => ipcRenderer.invoke('validate-bangla-text', payload)
 });
 
 // Expose secure clipboard API bridge
@@ -409,6 +441,21 @@ contextBridge.exposeInMainWorld('audioBridge', {
 
 // Expose dedicated, type-safe Audio API for control signals & real-time streaming
 contextBridge.exposeInMainWorld('audioAPI', {
+  play: (payload) => {
+    return ipcRenderer.invoke('audio:play', payload).catch((err) => {
+      return Promise.reject(new Error(err && err.message ? err.message : 'Audio playback failed'));
+    });
+  },
+  stop: () => {
+    return ipcRenderer.invoke('audio:stop').catch((err) => {
+      return Promise.reject(new Error(err && err.message ? err.message : 'Audio stop failed'));
+    });
+  },
+  status: () => {
+    return ipcRenderer.invoke('audio:status').catch((err) => {
+      return Promise.reject(new Error(err && err.message ? err.message : 'Audio status check failed'));
+    });
+  },
   startStream: (config) => ipcRenderer.invoke('audio:start-stream', config),
   stopStream: () => ipcRenderer.invoke('audio:stop-stream'),
   updateParameters: (params) => {

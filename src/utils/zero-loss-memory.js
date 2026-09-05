@@ -45,14 +45,37 @@ class ZeroLossMemoryEngine {
    * 1. Deterministic Write-Ahead Log (WAL) - Zero-Loss Turn Commitment
    */
   logTurnWAL(role, content, agent = null, metadata = {}) {
-    if (!content || typeof content !== "string" || !content.trim()) return;
+    if (!content || typeof content !== "string" || !content.trim()) return null;
     if (process.env.NODE_ENV === "test" || metadata.isTest) return null;
-    const entry = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
+
+    const trimmedContent = content.trim();
+    const agentName = agent || "Tuk Tuk";
+    const now = Date.now();
+
+    // Deduplicate identical consecutive entries within 3000ms window to prevent WAL duplication
+    if (
+      this._lastLoggedTurn &&
+      this._lastLoggedTurn.role === role &&
+      this._lastLoggedTurn.content === trimmedContent &&
+      this._lastLoggedTurn.agent === agentName &&
+      now - this._lastLoggedTurn.time < 3000
+    ) {
+      return null;
+    }
+
+    this._lastLoggedTurn = {
       role,
-      content: content.trim(),
-      agent: agent || "Tuk Tuk",
+      content: trimmedContent,
+      agent: agentName,
+      time: now
+    };
+
+    const entry = {
+      id: now,
+      timestamp: new Date(now).toISOString(),
+      role,
+      content: trimmedContent,
+      agent: agentName,
       ...metadata
     };
 
@@ -77,9 +100,19 @@ class ZeroLossMemoryEngine {
     const extracted = [];
 
     // Rule A: Dynamic Team Directives & Rules ("always ...", "never ...", "remember to ...")
-    const directiveStoplist = ["know", "think", "mind", "care", "worry", "drink", "matter", "understand", "remember", "have", "see"];
+    const directiveStoplist = [
+      "know", "think", "mind", "care", "worry", "drink", "matter", "understand", "remember", 
+      "have", "see", "need", "do", "want", "even", "just", "get", "exist", "look", "say", 
+      "tell", "ask", "feel", "let", "make", "mean", "seem", "take", "heard", "known", "hard"
+    ];
+
+    const isExplicitDirective = 
+      /^(?:from now on\s+)?(?:always|never|shob shomoy|kokhono)\s+(?:use|prefer|set|keep|write|run|build|speak|reply|respond|give|code|deploy)\b/i.test(lower) ||
+      /^(?:from now on\s+)?(?:don't|do not|kabhi mat)\s+(?:use|say|speak|give|add|write|make|set|deploy)\b/i.test(lower) ||
+      /\b(?:remember to|make sure to)\s+/i.test(lower);
+
     const dirMatch = lower.match(/(?:always|never|from now on|remember to)\s+([^.,?!]+)/i);
-    if (dirMatch && dirMatch[1] && dirMatch[1].trim().length > 3) {
+    if (dirMatch && dirMatch[1] && dirMatch[1].trim().length > 3 && isExplicitDirective) {
       const rawTarget = dirMatch[1].trim();
       const firstWord = rawTarget.split(" ")[0].toLowerCase();
       if (!directiveStoplist.includes(firstWord)) {
@@ -89,10 +122,14 @@ class ZeroLossMemoryEngine {
     }
 
     // Rule B: Personal Preferences ("I like ...", "I love ...", "I prefer ...")
-    const prefMatch = lower.match(/(?:i like|i love|i prefer|my favorite is|my favorite)\s+([^.,?!]+)/i);
+    const prefMatch = lower.match(/(?:i like|i love|i prefer|my favorite is|my favorite|amar pochondo|amar bhalo lage)\s+([^.,?!]+)/i);
     if (prefMatch && prefMatch[1] && prefMatch[1].trim().length > 2) {
-      const pref = `Prefers ${prefMatch[1].trim()}`;
-      extracted.push({ topic: "Preference", insight: pref, salience: 0.88 });
+      const rawPref = prefMatch[1].trim();
+      const nonPrefs = ["you", "it", "this", "that", "them", "babe", "bro", "brother", "her", "him"];
+      if (!nonPrefs.includes(rawPref.toLowerCase())) {
+        const pref = `Prefers ${rawPref}`;
+        extracted.push({ topic: "Preference", insight: pref, salience: 0.88 });
+      }
     }
 
     // Rule C: Active Project Updates ("building ...", "working on ...", "project ...")
@@ -302,6 +339,13 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
               }
             }
           } catch (err) {
+            // Track attempt count to prevent head-of-line blocking by malformed/poison items
+            item.attempts = (item.attempts || 0) + 1;
+            if (item.attempts >= 3 || (item.userSpeech && item.userSpeech.length > 300)) {
+              console.warn(`⚠️ [ZeroLossMemory] Dropping failing backlog item ${item.id} after ${item.attempts} attempts to unblock queue.`);
+              this.backlog.shift();
+              this.saveBacklog();
+            }
             // If rate-limited or failed, pause drainage and keep in backlog for next cycle
             break;
           }
@@ -314,6 +358,22 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     } finally {
       this.isDrainingBacklog = false;
     }
+  }
+
+  unblockAndDrainBacklog(gateway = null, jarvisManager = null) {
+    const beforeCount = this.backlog.length;
+    const now = Date.now();
+    this.backlog = this.backlog.filter(item => {
+      if (!item || !item.userSpeech) return false;
+      if (item.queuedAt && (now - new Date(item.queuedAt).getTime() > 48 * 3600 * 1000)) return false;
+      if ((item.attempts || 0) >= 3) return false;
+      return true;
+    });
+    if (this.backlog.length !== beforeCount) {
+      this.saveBacklog();
+      console.log(`🧹 [ZeroLossMemory] Backlog unblocked: pruned ${beforeCount - this.backlog.length} stalled items.`);
+    }
+    return this.drainBacklog(gateway, jarvisManager).catch(() => {});
   }
 
   destroy() {

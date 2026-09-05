@@ -115,7 +115,7 @@ test("Fast Conversational Issues Fix Suite", async (t) => {
     // Vision
     const visionReply = LocalCognitiveBrain.synthesizeResponse("vision", "Vision", prompt, {}, "en");
     assert.match(visionReply, /brother|bro/i);
-    assert.match(visionReply, /Fast conversational|Zero latency|Instant response/i);
+    assert.match(visionReply, /Fast conversational|Zero latency|Instant response|instant replies/i);
 
     // Friday
     const fridayReply = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", prompt, {}, "en");

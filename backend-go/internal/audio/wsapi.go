@@ -479,6 +479,12 @@ func (api *AudioAPIServer) broadcastFrame(frame *ProcessedFrame) {
 		if err == nil {
 			client.flusher.Flush()
 			api.framesFwd.Add(1)
+		} else {
+			select {
+			case <-client.done:
+			default:
+				close(client.done)
+			}
 		}
 		client.mu.Unlock()
 	}

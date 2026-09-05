@@ -28,9 +28,9 @@ const AGENTS = [
     sample: "I looked at the research and benchmark data, Hritthik — here is what matters."
   },
   {
-    key: "brian",
+    key: "dd",
     alias: "brian",
-    name: "Brian",
+    name: "DD (Brian)",
     role: "Head of DevOps & Reliability",
     voice: "en-US-BrianMultilingualNeural",
     sample: "Systems are steady, Hritthik. Audio buffer and memory heap are completely rock solid."

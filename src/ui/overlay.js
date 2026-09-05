@@ -1,12 +1,13 @@
 const { ipcRenderer } = require('electron');
 
 // DOM Element References
-let canvas, ctx, timer, overlay;
+let canvas, ctx, timer, overlay, bgSweep;
 
 function initializeElements() {
   canvas = document.getElementById('waveCanvas');
   timer = document.getElementById('timer');
   overlay = document.getElementById('overlay');
+  bgSweep = document.getElementById('bgSweep');
 
   if (!canvas) {
     console.error('Canvas element not found!');
@@ -24,7 +25,8 @@ function initializeElements() {
     canvas: !!canvas,
     ctx: !!ctx,
     timer: !!timer,
-    overlay: !!overlay
+    overlay: !!overlay,
+    bgSweep: !!bgSweep
   });
   return true;
 }
@@ -45,6 +47,8 @@ let currentState = 'listening';
 let currentAgentName = 'Tuk Tuk';
 let ipcAmplitude = 0;
 let lastIpcTime = 0;
+let isTalkingActive = false;
+let lastTalkingTimestamp = 0;
 
 // Agent Aura Colors matching UI design system
 const AGENT_COLORS = {
@@ -69,6 +73,22 @@ function getActiveColor() {
   if (name.includes('dd') || name.includes('brian') || name.includes('brayn')) return AGENT_COLORS.dd;
 
   return AGENT_COLORS.tuktuk; // Default to vibrant Tuk Tuk rose
+}
+
+// Synchronize CSS custom properties for 2070 left-to-right sweep animations
+function syncAuraVariables() {
+  if (!overlay) return;
+  const color = getActiveColor();
+  let r = 244, g = 63, b = 94;
+  if (color && color.startsWith('#') && color.length === 7) {
+    r = parseInt(color.slice(1, 3), 16);
+    g = parseInt(color.slice(3, 5), 16);
+    b = parseInt(color.slice(5, 7), 16);
+  }
+  overlay.style.setProperty('--aura-r', r.toString());
+  overlay.style.setProperty('--aura-g', g.toString());
+  overlay.style.setProperty('--aura-b', b.toString());
+  overlay.style.setProperty('--aura-hex', color);
 }
 
 // Smooth Equalizer Bars (6 bars mirrored to make 12)
@@ -102,39 +122,9 @@ function ensureAnimating() {
 let micStream = null;
 
 async function initAudio() {
-  try {
-    if (micStream) {
-      try { micStream.getTracks().forEach(t => t.stop()); } catch (e) {}
-      micStream = null;
-    }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-    micStream = stream;
-
-    audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume();
-    }
-
-    const source = audioContext.createMediaStreamSource(stream);
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.5;
-    analyser.minDecibels = -85;
-    analyser.maxDecibels = -10;
-    source.connect(analyser);
-
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-    console.log('✅ Real mic audio captured for visualizer');
-  } catch (err) {
-    console.log('⚠️ Mic stream not directly available for visualizer (using synthesized/IPC audio):', err.message);
-  }
-
+  // Rely on high-performance IPC amplitude updates from main process SoX VAD stream.
+  // This completely eliminates redundant getUserMedia calls in Electron renderer,
+  // preventing macOS CoreAudio device re-negotiations and audio buffer glitches.
   ensureAnimating();
 }
 
@@ -223,9 +213,24 @@ function animate() {
       hasRealAudio = true;
       const targetBase = ipcAmplitude * 15.0;
       for (let i = 0; i < HALF_BARS; i++) {
-        const jitter = Math.sin(now * 0.01 + i) * 2.0;
-        const target = Math.max(2.5, Math.min(16.0, targetBase + jitter));
-        barHeights[i] = barHeights[i] * 0.5 + target * 0.5;
+        // Butter-smooth harmonic bell curve scaling across bars without synthetic flicker
+        const taper = 1.0 - Math.pow((i - (HALF_BARS - 1) * 0.5) / (HALF_BARS * 0.5), 2) * 0.3;
+        const target = Math.max(2.5, Math.min(16.0, targetBase * taper));
+        barHeights[i] = barHeights[i] * 0.65 + target * 0.35;
+      }
+    }
+
+    // Dynamic 2070 background sweep activation with 350ms speech hangover (eliminates 60 FPS class thrashing flicker)
+    if (overlay && currentState !== 'speaking') {
+      if (hasRealAudio) {
+        lastTalkingTimestamp = now;
+        if (!isTalkingActive) {
+          isTalkingActive = true;
+          overlay.classList.add('talking');
+        }
+      } else if (isTalkingActive && (now - lastTalkingTimestamp > 350)) {
+        isTalkingActive = false;
+        overlay.classList.remove('talking');
       }
     }
 
@@ -310,6 +315,7 @@ ipcRenderer.on('set-mode', (_, m) => {
     overlay.classList.remove('fade-out', 'error');
     overlay.classList.toggle('rewrite', m === 'rewrite');
     overlay.classList.toggle('jarvis', m === 'jarvis');
+    syncAuraVariables();
   }
 
   const recLabel = document.querySelector('.rec-label');
@@ -338,6 +344,7 @@ ipcRenderer.on('set-agent-name', (_, agentName) => {
       else if (lower.includes('vision') || lower.includes('vison') || lower.includes('andrew')) overlay.classList.add('agent-vision');
       else if (lower.includes('friday') || lower.includes('fry day') || lower.includes('fryday')) overlay.classList.add('agent-friday');
       else if (lower.includes('dd') || lower.includes('brian') || lower.includes('brayn')) overlay.classList.add('agent-dd');
+      syncAuraVariables();
     }
 
     const recLabel = document.querySelector('.rec-label');
@@ -365,8 +372,8 @@ ipcRenderer.on('set-agent-name', (_, agentName) => {
 // Helper to switch overlay CSS states cleanly
 function setOverlayStateClass(stateName) {
   if (!overlay) return;
-  overlay.classList.remove('thinking', 'working', 'transcribing', 'synthesizing');
-  if (stateName === 'thinking' || stateName === 'working' || stateName === 'transcribing' || stateName === 'synthesizing') {
+  overlay.classList.remove('thinking', 'working', 'transcribing', 'synthesizing', 'speaking', 'talking');
+  if (stateName && ['thinking', 'working', 'transcribing', 'synthesizing', 'speaking', 'talking'].includes(stateName)) {
     overlay.classList.add(stateName);
   }
 }
@@ -374,6 +381,7 @@ function setOverlayStateClass(stateName) {
 // Jarvis / Agent Lifecycle Events
 ipcRenderer.on('jarvis-transcribing', () => {
   currentState = 'transcribing';
+  syncAuraVariables();
   setOverlayStateClass('transcribing');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = 'Hearing you...';
@@ -383,6 +391,7 @@ ipcRenderer.on('jarvis-transcribing', () => {
 ipcRenderer.on('jarvis-thinking', (_, data) => {
   currentState = 'thinking';
   if (data && data.agent) currentAgentName = data.agent;
+  syncAuraVariables();
   setOverlayStateClass('thinking');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} thinking...`;
@@ -393,6 +402,7 @@ ipcRenderer.on('jarvis-working', (_, data) => {
   currentState = 'working';
   if (data && data.agent) currentAgentName = data.agent;
   const action = (data && data.action) ? data.action : 'working';
+  syncAuraVariables();
   setOverlayStateClass('working');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} ${action}...`;
@@ -402,6 +412,7 @@ ipcRenderer.on('jarvis-working', (_, data) => {
 ipcRenderer.on('jarvis-synthesizing', (_, data) => {
   currentState = 'synthesizing';
   if (data && data.agent) currentAgentName = data.agent;
+  syncAuraVariables();
   setOverlayStateClass('synthesizing');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} readying voice...`;
@@ -411,6 +422,7 @@ ipcRenderer.on('jarvis-synthesizing', (_, data) => {
 ipcRenderer.on('jarvis-speaking', (_, data) => {
   currentState = 'speaking';
   if (data && data.agent) currentAgentName = data.agent;
+  syncAuraVariables();
   setOverlayStateClass('speaking');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} speaking...`;
@@ -420,6 +432,7 @@ ipcRenderer.on('jarvis-speaking', (_, data) => {
 ipcRenderer.on('jarvis-listening', (_, data) => {
   currentState = 'listening';
   if (data && data.agent) currentAgentName = data.agent;
+  syncAuraVariables();
   setOverlayStateClass('listening');
   const recLabel = document.querySelector('.rec-label');
   if (recLabel) recLabel.textContent = `${currentAgentName} listening...`;
@@ -427,7 +440,9 @@ ipcRenderer.on('jarvis-listening', (_, data) => {
 });
 
 ipcRenderer.on('amplitude-update', (_, amp) => {
-  ipcAmplitude = Math.max(0, Math.min(1.0, amp || 0));
+  const rawAmp = Math.max(0, Math.min(1.0, amp || 0));
+  // Apply biophysical low-pass IIR filter (alpha = 0.70) to eliminate acoustic transient clicks & frame jitter
+  ipcAmplitude = (ipcAmplitude * 0.30) + (rawAmp * 0.70);
   lastIpcTime = performance.now();
   ensureAnimating();
 });
@@ -453,6 +468,7 @@ ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   if (overlay) {
     overlay.style.display = '';
     overlay.classList.remove('fade-out', 'error', 'thinking');
+    syncAuraVariables();
   }
 
   const recLabel = document.querySelector('.rec-label');
@@ -587,6 +603,7 @@ function initialize() {
 
   setupCanvas();
   updateTimer();
+  syncAuraVariables();
   initAudio();
 
   console.log('✅ Overlay initialized successfully');

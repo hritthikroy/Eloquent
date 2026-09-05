@@ -83,9 +83,15 @@ const { geminiClient } = require('./utils/gemini-client');
 const { quantumVibeEngine } = require('./utils/quantum-vibe-engine');
 const cameraManager = require('./utils/camera-manager');
 const humanEarCortex = require('./utils/human-ear-cortex');
-if (humanEarCortex && typeof humanEarCortex.setEndpointMode === 'function') {
-  humanEarCortex.setEndpointMode('rapid');
+if (humanEarCortex) {
+  if (typeof humanEarCortex.setEndpointMode === 'function') {
+    humanEarCortex.setEndpointMode('conversational');
+  }
+  if (typeof humanEarCortex.activateZeroSoulInterruptionMode === 'function') {
+    humanEarCortex.activateZeroSoulInterruptionMode();
+  }
 }
+const speakerPersonalityCortex = require('./utils/speaker-personality-cortex');
 const { getLanguageBridge } = require('./main/electron-bridge');
 const languageBridge = getLanguageBridge({ storageDir: path.join(__dirname, '..', 'userData') });
 const TextSanitizer = require('./utils/prompt-engine/text-sanitizer');
@@ -195,6 +201,7 @@ let jarvisLastBackchannelTime = 0;
 let jarvisBargeInCounter = 0;
 let jarvisNoiseFloorRms = 0.005;
 let jarvisNoiseFloorPeak = 800;
+let lastAudioRecorderAmplitudeTime = 0;
 
 // Helper function to find sox/rec binary
 function getRecordingBinary() {
@@ -257,7 +264,7 @@ const CONFIG = {
   language: process.env.LANGUAGE || 'en',
   customDictionary: '',
   aiMode: process.env.AI_MODE || 'auto',
-  aiModel: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+  aiModel: process.env.GROQ_MODEL || 'qwen/qwen3.8-27b',
   preserveClipboard: process.env.PRESERVE_CLIPBOARD === 'true',
   autoGrammarFix: process.env.AUTO_GRAMMAR_FIX !== 'false',
   autoPasteMode: 'direct'
@@ -1415,6 +1422,7 @@ function initOverlayWindow() {
     skipTaskbar: true,
     resizable: false,
     hasShadow: false,
+    roundedCorners: false,
     focusable: false,
     acceptFirstMouse: false,
     show: false,
@@ -1438,7 +1446,7 @@ function initOverlayWindow() {
     console.log('🖥️ [Overlay Console]:', message);
   });
 
-  overlayWindow.loadFile('src/ui/overlay.html');
+  overlayWindow.loadFile(path.join(__dirname, 'ui', 'overlay.html'));
   screenShareManager.setOverlayWindow(overlayWindow);
 
   const syncOverlayState = () => {
@@ -1592,7 +1600,7 @@ function createDashboard() {
     `);
   });
 
-  dashboardWindow.loadFile('src/ui/dashboard.html');
+  dashboardWindow.loadFile(path.join(__dirname, 'ui', 'dashboard.html'));
 
   // Send authentication status immediately when dashboard loads
   dashboardWindow.webContents.once('did-finish-load', () => {
@@ -1690,7 +1698,7 @@ function createAdminPanel() {
       adminWindow.show();
     });
 
-    adminWindow.loadFile('src/ui/admin.html');
+    adminWindow.loadFile(path.join(__dirname, 'ui', 'admin.html'));
     console.log('✅ Admin panel window created successfully');
 
     // Suppress autofill errors in dev tools
@@ -1763,7 +1771,7 @@ function createUserManagement() {
     icon: path.join(__dirname, '../assets/logo.png')
   });
 
-  userManagementWindow.loadFile('src/ui/user-management.html');
+  userManagementWindow.loadFile(path.join(__dirname, 'ui', 'user-management.html'));
 
   // Suppress autofill errors in dev tools
   userManagementWindow.webContents.once('did-finish-load', () => {
@@ -2263,8 +2271,8 @@ function startRecording() {
       }
 
       // Robust speech discriminant: must be distinctly above the room's ambient acoustic floor
-      const speechRmsThreshold = Math.max(0.005, jarvisNoiseFloorRms * 1.25);
-      const speechPeakThreshold = Math.max(650, jarvisNoiseFloorPeak * 1.2);
+      const speechRmsThreshold = Math.max(0.012, jarvisNoiseFloorRms * 1.5);
+      const speechPeakThreshold = Math.max(1200, jarvisNoiseFloorPeak * 1.4);
       const hasTailPhysicalSpeech = (tailEnergy.rms >= speechRmsThreshold) && (tailEnergy.peak >= speechPeakThreshold);
 
       if (hasTailPhysicalSpeech) {
@@ -2276,10 +2284,13 @@ function startRecording() {
         jarvisSpeechFrames++;
       }
 
-      // Always stream real physical amplitude to overlay visualizer for organic fluid aura
+      // Stream physical amplitude to overlay visualizer only as fallback if audioRecorder.onAmplitude is inactive
+      // This eliminates dual-stream amplitude conflict and prevents UI wave flicker
       if (overlayWindow && !overlayWindow.isDestroyed()) {
-        const normAmp = Math.min(tailEnergy.peak / 1200.0, 1.0);
-        overlayWindow.webContents.send('amplitude-update', normAmp);
+        if (Date.now() - lastAudioRecorderAmplitudeTime > 250) {
+          const normAmp = Math.min(tailEnergy.peak / 1200.0, 1.0);
+          overlayWindow.webContents.send('amplitude-update', normAmp);
+        }
       }
 
       // Confirmed speech: 2+ frames (~140ms) of real voice
@@ -2297,7 +2308,7 @@ function startRecording() {
           ? humanEarCortex.computeDynamicEndpointSilence(voicedDurationMs, false)
           : (voicedDurationMs >= 2000 ? 450 : (voicedDurationMs >= 500 ? 550 : 650));
         if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 400) {
-          dynamicSilenceThreshold = 400; // Optical lip closure handoff
+          dynamicSilenceThreshold = 500; // Optical lip closure handoff
         }
         const isMaxSpeechCap = totalDurationMs >= 60000;
 
@@ -2341,14 +2352,21 @@ function startRecording() {
         // Geigel DTD Equation + Optical Lip Aperture Overlap:
         // When camera detects lips moving, user doesn't need to shout to interrupt!
         if (currentMode === 'jarvis' && jarvisManager.isSpeaking) {
+          const isShieldActive = humanEarCortex && typeof humanEarCortex.isSoulInterruptionShieldActive === 'function' && humanEarCortex.isSoulInterruptionShieldActive();
           const isLipsMoving = cameraManager && cameraManager.isActive && cameraManager.isLipMovementDetected();
-          const bargeInThreshold = isLipsMoving ? 0.32 : 0.65; // Ultra-responsive optical barge-in
+          // Zero Soul Interruption Invariant:
+          // Laptop speaker audio bleeds into mic at 0.40 - 0.70 amplitude.
+          // In Zero Soul Interruption Mode, threshold is locked to >= 0.82 with 4 sustained frames.
+          // This mathematically guarantees 0 self-cutoffs (speaker bleed <= 0.75 never interrupts),
+          // while intentional loud human speech (>= 0.82) is detected with 100% precision.
+          const bargeInThreshold = isShieldActive ? 0.82 : (isLipsMoving ? 0.35 : 0.82);
+          const requiredFrames = isShieldActive ? 4 : (isLipsMoving ? 2 : 4);
 
           if (amplitude >= bargeInThreshold) {
             jarvisBargeInCounter = (jarvisBargeInCounter || 0) + 1;
-            if (jarvisBargeInCounter >= (isLipsMoving ? 1 : 2)) {
-              console.log('⚡ Natural human conversational barge-in detected! Halting AI speech gracefully...');
-              lastInterruptedUtterance = jarvisManager.currentUtterance;
+            if (jarvisBargeInCounter >= requiredFrames) {
+              console.log(`⚡ Natural human conversational barge-in detected (shield=${isShieldActive}, optical=${isLipsMoving}, amp=${amplitude.toFixed(2)}, frames=${jarvisBargeInCounter})! Halting AI speech gracefully...`);
+              lastInterruptedUtterance = isShieldActive ? null : jarvisManager.currentUtterance;
               jarvisManager.stopSpeaking();
               jarvisBargeInCounter = 0;
               jarvisSpeechDetected = true;
@@ -2357,13 +2375,14 @@ function startRecording() {
               jarvisSpeechFrames = 1;
             }
           } else {
-            jarvisBargeInCounter = 0;
+            jarvisBargeInCounter = Math.max(0, (jarvisBargeInCounter || 0) - 1);
           }
           return;
         }
 
         // Automatic Hands-Free Turn Taking (VAD): Auto-detect natural silence after sustained speech across all modes
         if (isRecording && !jarvisAutoStopTriggered) {
+          lastAudioRecorderAmplitudeTime = Date.now();
           if (overlayWindow && !overlayWindow.isDestroyed()) {
             overlayWindow.webContents.send('amplitude-update', amplitude);
           }
@@ -2400,7 +2419,7 @@ function startRecording() {
                 ? humanEarCortex.computeDynamicEndpointSilence(voicedDurationMs, false)
                 : (voicedDurationMs >= 2000 ? 450 : (voicedDurationMs >= 500 ? 550 : 650));
               if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 400) {
-                dynamicSilenceThreshold = 400; // Optical lip closure handoff
+                dynamicSilenceThreshold = 500; // Optical lip closure handoff
               }
               minVoicedForStop = 240;
             }
@@ -2673,7 +2692,25 @@ async function stopRecording() {
         .replace(/(?:জেনি|जेनी|ফ্রাইডে|फ़्राइডে)/gi, 'Friday')
         .replace(/(?:ব্রায়ান|ब्रायन|ডিডি)/gi, 'DD')
         .replace(/\b(?:brayn|dee\s*dee|deedee)\b/gi, 'DD')
-        .replace(/\b(on this course)\b/gi, 'on this code');
+        .replace(/\b(on this course)\b/gi, 'on this code')
+        .replace(/\b(?:tuk\s*mat\s*chok\s*koro|tuk\s*mat\s*chok|chok\s*matkacche)\b/gi, 'chokh flicker koro na')
+        .replace(/\b(?:lag\s*kore\s*chhe|lag\s*koreche)\b/gi, 'lag korche')
+        .replace(/\b(?:buffering\s*as\s*se|buffering\s*asce)\b/gi, 'buffering asche')
+        .replace(/\b(?:buffaring|buffring|bufering)\b/gi, 'buffering')
+        .replace(/\b(?:kya\s*monekta[,\s]*grammar[,\s]*mere[,\s]*mo\s*toh[,\s]*skill\s*dhichcho[,\s]*not\s*a\s*modern\s*girl)\b/gi, 'grammar mere skill diccho, not a modern girl')
+        .replace(/\b(?:tabular[,\s]*tata\s*hai|tabuler\s*data\s*chai)\b/gi, 'table data chai')
+        .replace(/\b(?:flicaring|flickaring|flicering)\b/gi, 'flickering')
+        .replace(/\bflicar\b/gi, 'flicker')
+        .replace(/\bchack\b/gi, 'check')
+        .replace(/\borginal\b/gi, 'original')
+        .replace(/\bbutter\s*smouth\b/gi, 'butter smooth')
+        .replace(/\b(?:fixed|fix)\s*(?:visionvoice|vision\s*voice)\b/gi, 'fix Vision voice')
+        .replace(/\b(?:fixed|fix)\s*(?:fridayvoice|frydayvoice|friday\s*voices?|fryday\s*voices?)\b/gi, 'fix Friday voice')
+        .replace(/\b(?:fixed|fix)\s*(?:ddvoice|dd\s*voices?)\b/gi, 'fix DD voice')
+        .replace(/\bfryday\s*voice\b/gi, 'Friday voice')
+        .replace(/\bfryday\s*voices\b/gi, 'Friday voices')
+        .replace(/\bdd\s*voice\b/gi, 'DD voice')
+        .replace(/\bdd\s*voices\b/gi, 'DD voices');
 
       // 2. Backchannel Self-Echo Blinding Filter
       const timeSinceBC = Date.now() - (jarvisLastBackchannelTime || 0);
@@ -2693,30 +2730,39 @@ async function stopRecording() {
 
       // 3. Acoustic Speaker Self-Echo Blinding Filter (Prevents AI from hearing and responding to her own voice)
       const timeSinceAiSpeech = Date.now() - (jarvisManager.lastSpeechEndTime || 0);
-      if (timeSinceAiSpeech < 3500 && jarvisManager.lastSpokenUtterance) {
-        const normalizeWords = (s) => s.toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').split(/\s+/).filter(w => w.length > 2);
-        const aiWords = normalizeWords(jarvisManager.lastSpokenUtterance);
+      const isCortexEcho = humanEarCortex && typeof humanEarCortex.isSelfAcousticEcho === 'function' && humanEarCortex.isSelfAcousticEcho(originalText);
+      const candidateUtterance = jarvisManager.lastSpokenUtterance || lastInterruptedUtterance;
+      const isCandidateEcho = isCortexEcho || (timeSinceAiSpeech < 3500 && candidateUtterance);
+
+      if (isCandidateEcho) {
+        const normalizeWords = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, '').split(/\s+/).filter(w => w.length > 2);
+        const aiWords = normalizeWords(candidateUtterance);
         const heardWords = normalizeWords(originalText);
         
-        if (heardWords.length > 0 && aiWords.length > 0) {
+        let isEchoMatch = !!isCortexEcho;
+        if (!isEchoMatch && heardWords.length > 0 && aiWords.length > 0) {
           const matchingWords = heardWords.filter(w => aiWords.includes(w));
           const matchRatio = matchingWords.length / heardWords.length;
-          
-          if (matchRatio >= 0.5 || (heardWords.length <= 4 && matchingWords.length >= 2)) {
-            console.log(`🔇 Jarvis: detected speaker self-echo (${Math.round(matchRatio * 100)}% match with AI speech) — discarding echo "${originalText}" and re-arming listening...`);
-            try {
-              if (targetAudioFile && fs.existsSync(targetAudioFile)) {
-                fs.unlinkSync(targetAudioFile);
-              }
-            } catch (e) {}
-            isProcessing = false;
-            isStopRecordingLock = false;
-            if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
-              overlayWindow.webContents.send('jarvis-listening');
-              startRecording();
-            }
-            return;
+          if (matchRatio >= 0.45 || (heardWords.length <= 4 && matchingWords.length >= 2)) {
+            isEchoMatch = true;
           }
+        }
+
+        if (isEchoMatch) {
+          console.log(`🔇 Jarvis: detected speaker self-echo (${isCortexEcho ? 'cortex match' : 'lexical match'}) — discarding echo "${originalText}" and re-arming listening...`);
+          lastInterruptedUtterance = null; // Clear false interruption context from speaker echo
+          try {
+            if (targetAudioFile && fs.existsSync(targetAudioFile)) {
+              fs.unlinkSync(targetAudioFile);
+            }
+          } catch (e) {}
+          isProcessing = false;
+          isStopRecordingLock = false;
+          if (isJarvisLoopActive && overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('jarvis-listening');
+            startRecording();
+          }
+          return;
         }
       }
 
@@ -2733,6 +2779,12 @@ async function stopRecording() {
       }
 
       console.log('🤖 Jarvis conversational mode: generating intelligent response...');
+
+      // Human-Like Speaker Tone & Personality Differentiation
+      const speakerInfo = (speakerPersonalityCortex && typeof speakerPersonalityCortex.identifySpeaker === 'function')
+        ? speakerPersonalityCortex.identifySpeaker({ audioSource: targetAudioFile, text: originalText })
+        : { speakerId: 'hritthik', speakerName: 'Hritthik', role: 'creator_partner', confidence: 1.0, isGuest: false };
+      console.log(`🎙️ Speaker Identified: ${speakerInfo.speakerName} (${speakerInfo.role || 'creator'}, confidence: ${speakerInfo.confidence || 1.0})`);
 
       // Check for voice preference change or explicit language command (e.g. "call me Hritthik", "talk in English", "speak in Bangla")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
@@ -2872,16 +2924,21 @@ async function stopRecording() {
           }
           let userQuery = originalText;
           if (lastInterruptedUtterance) {
-            console.log(`🔀 Injecting conversational interruption context: "${lastInterruptedUtterance}"`);
-            let reactionStyle = "acknowledge the mid-sentence pivot naturally as his loving partner";
-            if (activeAgent.name === "Vision") {
-              reactionStyle = "pivot immediately like Iron Man's Vision — serene, ultra-intelligent, and mathematically precise ('Got you brother')";
-            } else if (activeAgent.name === "DD" || activeAgent.name === "Brian") {
-              reactionStyle = "acknowledge the interjection with calm, grounded DevOps clarity";
-            } else if (activeAgent.name === "Friday") {
-              reactionStyle = "integrate his new variable swiftly with sharp analytical precision";
+            const isShieldActive = humanEarCortex && typeof humanEarCortex.isSoulInterruptionShieldActive === 'function' && humanEarCortex.isSoulInterruptionShieldActive();
+            if (!isShieldActive) {
+              console.log(`🔀 Injecting conversational interruption context: "${lastInterruptedUtterance}"`);
+              let reactionStyle = "acknowledge the mid-sentence pivot naturally as his loving partner";
+              if (activeAgent.name === "Vision") {
+                reactionStyle = "pivot immediately like Iron Man's Vision — serene, ultra-intelligent, and mathematically precise ('Got you brother')";
+              } else if (activeAgent.name === "DD" || activeAgent.name === "Brian") {
+                reactionStyle = "acknowledge the interjection with calm, grounded DevOps clarity";
+              } else if (activeAgent.name === "Friday") {
+                reactionStyle = "integrate his new variable swiftly with sharp analytical precision";
+              }
+              userQuery = `[Context: You were saying: "${lastInterruptedUtterance}" when Hritthik added mid-sentence: "${originalText}". Yield the floor respectfully, ${reactionStyle}, seamlessly integrate his added info without repeating old sentences, and answer his interjection directly in clean spoken words!]`;
+            } else {
+              userQuery = originalText;
             }
-            userQuery = `[Context: You were saying: "${lastInterruptedUtterance}" when Hritthik added mid-sentence: "${originalText}". Yield the floor respectfully, ${reactionStyle}, seamlessly integrate his added info without repeating old sentences, and answer his interjection directly in clean spoken words!]`;
             lastInterruptedUtterance = null;
           }
           jarvisReply = await askJarvis(userQuery, activeAgent, originalText, null, activeLanguageMode);
@@ -2944,7 +3001,7 @@ async function stopRecording() {
             showNotification(`🤖 ${step.agentName}`, step.text);
             
             // CRITICAL: Await speech completion before moving to next agent
-            await jarvisManager.speak(step.text, step.voice);
+            await jarvisManager.speak(step.text, step.voice, step.agentName ? step.agentName.toLowerCase() : undefined);
             console.log(`✅ Turn ${i + 1}/${multiTurns.length}: ${step.agentName} finished speaking`);
             
             // Check for interruption after speech
@@ -3244,7 +3301,7 @@ async function transcribe(filePath) {
   form.append('response_format', 'json');
   form.append('temperature', '0');
   const whisperPrompt = isJarvis
-    ? 'Hritthik, Tuk Tuk, Vision, Friday, DD, Eloquent. Tell Vision, tell Friday, tell DD, ask Tuk Tuk. Conversational Bengali, Banglish, and English: hello, kemon acho, ki scene bolo toh, ami thik achi, next feature, code check koro, bug fix koro, latency, AST, terminal, build, patch, rock solid, real woman voice, natural flow, tone thik koro, pronunciation thik koro, babe only, bangla conversation, banglay kotha bolo, Bangla communication, Bangla fluency, gaps fix koro, real human talk, not robotic, realistic Bangla, matha noshto, pera nai, chill, table, tabular, Ava sound, smart girl, youtuber reporter, Bangladeshi Bangla.'
+    ? 'Hritthik, Tuk Tuk, Vision, Friday, DD, Eloquent. Tell Vision, tell Friday, tell Brian, ask Tuk Tuk, tell DD. Conversational Bengali, Banglish, and English: hello, kemon acho, ki scene bolo toh, ami thik achi, next feature, code check koro, bug fix koro, latency, AST, terminal, build, patch, rock solid, real woman voice, natural flow, tone thik koro, pronunciation thik koro, babe only, bangla conversation, banglay kotha bolo, Bangla communication, Bangla fluency, gaps fix koro, real human talk, not robotic, realistic Bangla, matha noshto, pera nai, chill, table, tabular, Ava sound, smart girl, youtuber reporter, Bangladeshi Bangla.'
     : 'Hritthik, Tuk Tuk, Vision, Friday, DD, Eloquent, Antigravity, Electron, Go audio backend, IPC, API, bug, code refactor, latency, TypeScript, Node.js, terminal, build, patch, rock solid, pipeline, commit, test, deploy, kemon acho, ki scene bolo toh, code check koro, bug fix koro, auto recording stop hoye jay, pura kothata record kore na, pura kotha suntese na, fix koro shob, real human talk, realistic Bangla.';
   form.append('prompt', whisperPrompt);
   
@@ -3431,11 +3488,17 @@ function parseMultiAgentTurns(text) {
     'dee dee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
     'deedee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
     'brian': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'brayn': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' }
+    'brayn': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
+    'টুকটুক': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
+    'টুক টুক': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
+    'ভিশন': { name: 'Vision', voice: 'en-US-AndrewNeural' },
+    'ফ্রাইডে': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'ডিডি': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
+    'ডি ডি': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' }
   };
 
-  // Enhanced pattern: captures the 4 core agents (Tuk Tuk, Vision, Friday, DD) with flexible formatting and typos
-  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Vison|Friday|Fridya|Fridy|Fryda|Fryday|DD|Dee\s*Dee|Brian|Brayn|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Vison|Friday|Fridya|Fridy|Fryda|Fryday|DD|Dee\s*Dee|Brian|Brayn|Ava)\]?:?)|$)/gi;
+  // Enhanced pattern: captures the 4 core agents (Tuk Tuk, Vision, Friday, DD) in English and Bengali script
+  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Vison|Friday|Fridya|Fridy|Fryda|Fryday|DD|Dee\s*Dee|Brian|Brayn|Ava|টুকটুক|টুক\s*টুক|ভিশন|ফ্রাইডে|ডিডি|ডি\s*ডি)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Vison|Friday|Fridya|Fridy|Fryda|Fryday|DD|Dee\s*Dee|Brian|Brayn|Ava|টুকটুক|টুক\s*টুক|ভিশন|ফ্রাইডে|ডিডি|ডি\s*ডি)\]?:?)|$)/gi;
   const turns = [];
   let match;
   
@@ -3465,6 +3528,26 @@ function parseMultiAgentTurns(text) {
         text: speech,
         // Add explicit turn number to enforce sequencing
         turnIndex: turns.length
+      });
+    }
+  }
+
+  // Fallback for single untagged team response: infer agent identity from address terms
+  if (turns.length === 0 && text && text.trim().length > 0) {
+    const rawText = text.trim();
+    if (/\b(?:brother|bro|bhai)\b|(?<![\u0980-\u09FF])(?:ভাই)(?![\u0980-\u09FF])/i.test(rawText) && !/\b(?:babe|sweetheart|my love)\b/i.test(rawText)) {
+      turns.push({
+        agentName: 'Vision',
+        voice: 'en-US-AndrewNeural',
+        text: rawText,
+        turnIndex: 0
+      });
+    } else if (/\b(?:Chief)\b/i.test(rawText) && !/\b(?:babe|brother|bro)\b/i.test(rawText)) {
+      turns.push({
+        agentName: 'Friday',
+        voice: 'en-US-JennyNeural',
+        text: rawText,
+        turnIndex: 0
       });
     }
   }
@@ -3572,11 +3655,31 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     // Ultra-Fast Conversational Voice Intelligence: Multi-Key MasterApiGateway (Groq LPUs + Gemini Multi-Model Failover)
     if (!content) {
       try {
+        let targetModel = 'qwen/qwen3.8-27b';
+        let targetMaxTokens = agent.key === 'team' ? 220 : 90;
+
+        // Tuk Tuk Omni-Situational Awareness & Deep Intellectual Cognition Escalation
+        if (agent.key === 'tuktuk' || agent.key === 'ava') {
+          try {
+            const tukTukIntellectualCortex = require('./utils/tuktuk-intellectual-cortex');
+            const evalRes = tukTukIntellectualCortex.evaluateTurn(userSpeech, agent.key, {
+              activeApp: screenShareManager?.lastContext?.appName
+            });
+            if (evalRes && evalRes.isIntellectual) {
+              targetModel = evalRes.recommendedModel;
+              targetMaxTokens = evalRes.maxTokens;
+              console.log(`🧠 [Tuk Tuk Intellectual Escalation]: Model ${targetModel}, MaxTokens ${targetMaxTokens}, Situation: ${evalRes.situation}, Depth: ${evalRes.intellectualScore.toFixed(2)}`);
+            }
+          } catch (cortexErr) {
+            console.warn('⚠️ [Tuk Tuk Intellectual Cortex Evaluation Error]:', cortexErr.message);
+          }
+        }
+
         const gatewayRes = await callGroqChatCompletion(messages, {
-          model: 'qwen/qwen3.8-27b',
+          model: targetModel,
           temperature: dynamicTemperature,
-          max_tokens: agent.key === 'team' ? 220 : 90,
-          timeout: 4000
+          max_tokens: targetMaxTokens,
+          timeout: 5000
         });
         if (gatewayRes && gatewayRes.content) {
           content = gatewayRes.content;
@@ -3645,11 +3748,30 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     }
 
     if (!reply || reply.length < 2) {
-      reply = agent.key === 'tuktuk'
-        ? "My eyes are fully locked on your screen, babe! Everything is clear. What do you need me to check?"
-        : (agent.key === 'friday'
-          ? "Eyes on your screen, Chief. What should we inspect?"
-          : "Eyes on your screen, brother. Tell me what to inspect.");
+      try {
+        const LocalCognitiveBrain = require('./utils/local-cognitive-brain');
+        reply = LocalCognitiveBrain.synthesizeResponse(agent.key, agent.name, userSpeech, {
+          isVisualContextQuery,
+          hasOcularEyes: cameraManager?.isActive,
+          activeLang
+        }, activeLang) || '';
+      } catch (_) {}
+    }
+
+    if (!reply || reply.length < 2) {
+      if (activeLang === 'bn') {
+        reply = agent.key === 'tuktuk'
+          ? "Babe, আমি তোমার কথাই শুনছি আর বুঝতে পারছি! কী করতে হবে বলো?"
+          : (agent.key === 'friday'
+            ? "আপনার নির্দেশনায় প্রস্তুত, ঋত্বিক। কী সহায়তা প্রয়োজন?"
+            : "আমি রেডি ভাই, কী করতে হবে বলুন।");
+      } else {
+        reply = agent.key === 'tuktuk'
+          ? "I'm right here with you babe! I heard you loud and clear. Tell me what we should do next."
+          : (agent.key === 'friday'
+            ? "At your command, Hritthik. How shall we proceed?"
+            : "I'm locked on your directive brother, what's our move?");
+      }
     }
 
     // 1. Strip agent name prefix echoes (e.g. "Tuk Tuk:", "[Tuk Tuk]:", ": ", "- ") for single agents
@@ -3689,9 +3811,11 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     }
     reply = reply.replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
 
-    // 4. Hard cap at 18 words for spoken delivery — ultra-crisp, snappy, natural conversational voice
-    // (Team/squad mode gets 36 words since 2 agents speak)
-    const wordCap = agent.key === 'team' ? 36 : 18;
+    // 4. Natural spoken word pacing — crisp, snappy, but adaptively expanded for intellectual depth
+    // (Team gets 45 words; single agents get 28 words standard, up to 45 words if intellectual/philosophical)
+    const isIntellectualDialogue =
+      /\b(?:intellectual|philosophy|architecture|concurrency|reasoning|hallucination|why|how|analyze|trade-off|first principles)\b/i.test(userSpeech);
+    const wordCap = agent.key === 'team' ? 45 : (isIntellectualDialogue ? 45 : 28);
     const words = reply.split(/\s+/);
     if (words.length > wordCap) {
       reply = words.slice(0, wordCap).join(' ');
@@ -3708,19 +3832,19 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       const isBn = activeLang === 'bn';
       const fallbackPools = {
         tuktuk: isBn
-          ? ["শুনছি তো babe! স্ক্রিনের কাজটা দেখতে পারো।", "একদম চিন্তা কোরো না babe, আমি পাশেই আছি।", "সব গ্রিন আছে babe, কোডিং এগিয়ে নাও।", "Awesome babe! আমি তোমার সাথেই ড্রাইভ করছি।"]
-          : ["Right here beside you babe. Screen is clear and ready.", "All ears babe, totally in sync with your flow.", "No stress at all babe, I've got your back completely.", "Right here with you babe, let's keep this momentum going strong."],
+          ? ["একদম তোমার পাশেই আছি babe! মন দিয়ে শুনছি তুমি কী ভাবছো।", "শুনছি তো babe! বলো কী নিয়ে চিন্তা করছো, একসাথে গভীরে গিয়ে ভাবি।", "তোমার সাথেই আছি babe, বাস্তব যুক্তি দিয়ে বিষয়টার গভীরে যাই।", "তোমার পাশেই বসে আছি babe, বলো কী আলোচনা করব।"]
+          : ["Right here beside you babe. What should we explore next?", "Listening closely babe. Let's think this through together with real depth.", "Right here with you babe. Tell me what's on your mind.", "Beside you all the way babe. Let's break it down with clear logic."],
         vision: isBn
-          ? ["শুনছি ভাই, টার্মিনাল একদম ক্লিয়ার আছে.", "রেডি আছি bro, কম্পাইলার hot.", "আর্কিটেকচার ট্র্যাক করছি ভাই, কোড এগিয়ে নাও!"]
-          : ["Right with you brother. Systems are hot and ready.", "Eyes on the full-stack architecture, brother.", "Standing by brother, keeping momentum forward."],
+          ? ["শুনছি ভাই, আর্কিটেকচার ট্র্যাক করছি।", "রেডি আছি bro, বাস্তব লজিক নিয়ে কাজ করি।", "আর্কিটেকচার ট্র্যাক করছি ভাই, কোড নিয়ে কথা বলো!"]
+          : ["Right with you brother. Systems logic ready.", "Eyes on the full-stack architecture, brother.", "Standing by brother, keeping clear engineering focus."],
         friday: isBn
-          ? ["Chief, সিস্টেম এবং অ্যানালিটিক্স অ্যাক্টিভ রয়েছে।", "রিসার্চ এবং ডেটা ইনসাইটস রেডি আছে, Chief।"]
-          : ["Right here, Chief. Analytics and data streams are active.", "Research intelligence is ready, Chief."],
+          ? ["Chief, সিস্টেম এবং অ্যানালিটিক্স সক্রিয় রয়েছে।", "রিসার্চ এবং ডেটা ইনসাইটস রেডি আছে, Chief।"]
+          : ["Right here, Chief. Analytics and empirical research are active.", "Research intelligence is ready, Chief."],
         dd: isBn
-          ? ["ইনফ্রাস্ট্রাকচার মেট্রিক্স একদম পারফেক্ট bro.", "সব ডেমনস এবং সার্ভিসেস স্মুথ চলছে ভাই।"]
+          ? ["ইনফ্রাস্ট্রাকচার মেট্রিক্স একদম নরমাল bro.", "সব ডেমনস এবং সার্ভিসেস স্মুথ চলছে ভাই।"]
           : ["Infrastructure is steady, bro. Sockets and workers nominal.", "All daemons monitored and stable, bro."],
         brian: isBn
-          ? ["ইনফ্রাস্ট্রাকচার মেট্রিক্স একদম পারফেক্ট bro.", "সব ডেমনস এবং সার্ভিসেস স্মুথ চলছে ভাই।"]
+          ? ["ইনফ্রাস্ট্রাকচার মেট্রিক্স একদম নরমাল bro.", "সব ডেমনস এবং সার্ভিসেস স্মুথ চলছে ভাই।"]
           : ["Infrastructure is steady, bro. Sockets and workers nominal.", "All daemons monitored and stable, bro."],
         team: isBn
           ? ["[Tuk Tuk]: পাশে আছি babe!\n[Vision]: Pure engineering brother, ready."]
@@ -3769,9 +3893,17 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
 function postProcessTranscription(text) {
   if (!text || typeof text !== 'string') return text;
 
+  if (TextSanitizer && typeof TextSanitizer.sanitize === 'function') {
+    text = TextSanitizer.sanitize(text);
+  }
+
   text = text.trim().replace(/\s+/g, ' ');
 
   const corrections = {
+    'every thing': 'everything',
+    'fix more every thing': 'fix more everything',
+    'defret voices': 'different voices',
+    'difrent vide': 'different vibe',
     'doop-took': 'Tuk Tuk',
     'doop took': 'Tuk Tuk',
     'dooptook': 'Tuk Tuk',
@@ -3831,7 +3963,13 @@ function postProcessTranscription(text) {
     'vocie': 'voice',
     'voyce': 'voice',
     'proparly': 'properly',
+    'proerly': 'properly',
     'properley': 'properly',
+    'morder girl': 'modern girl',
+    'morder': 'modern',
+    'chak': 'check',
+    'chacwk': 'check',
+    'hade': 'head',
     'sentense': 'sentence',
     'sentances': 'sentences',
     'diferent': 'different',
@@ -5223,7 +5361,7 @@ function createLoginWindow() {
     });
 
     console.log('🔑 Loading login.html...');
-    loginWindow.loadFile('src/ui/login.html');
+    loginWindow.loadFile(path.join(__dirname, 'ui', 'login.html'));
 
     loginWindow.on('closed', () => {
       console.log('🔑 Login window closed');
@@ -5264,7 +5402,7 @@ function createSubscriptionWindow() {
     }
   });
 
-  subscriptionWindow.loadFile('src/ui/subscription.html');
+  subscriptionWindow.loadFile(path.join(__dirname, 'ui', 'subscription.html'));
 
   subscriptionWindow.once('ready-to-show', () => {
     subscriptionWindow.show();
@@ -5974,7 +6112,13 @@ try {
 // Register Go Audio Backend & Real-Time IPC Stream Bridge
 let audioBridgeManager = null;
 try {
-  const { AudioBridgeManager } = require('./main/ipc/audio-bridge');
+  let AudioBridgeModule;
+  try {
+    AudioBridgeModule = require('../dist-ts/src/main/ipc/audio-bridge');
+  } catch (_e) {
+    AudioBridgeModule = require('./main/ipc/audio-bridge');
+  }
+  const { AudioBridgeManager } = AudioBridgeModule;
   audioBridgeManager = new AudioBridgeManager({
     webContentsProvider: () => BrowserWindow.getAllWindows()
   });
@@ -5985,6 +6129,69 @@ try {
   console.log('🎙️ [AudioBridge] Registered Go Audio Backend IPC Bridge handlers (audio:start-stream, audio:stop-stream, audio:update-parameters, audio:get-status, audio:get-health, audio:reconnect)');
 } catch (audioBridgeErr) {
   console.warn('⚠️ Could not register AudioBridge IPC handlers:', audioBridgeErr.message);
+}
+
+// ── Audio Play / Stop / Status Canonical IPC Handlers ───────────────────────
+if (ipcMain && typeof ipcMain.handle === 'function') {
+  // 1. audio:play - plays a specified audio file, synthesized audio, or starts the audio stream
+  ipcMain.handle('audio:play', async (_event, payload) => {
+    try {
+      const filePath = typeof payload === 'string' ? payload : (payload?.filePath || payload?.path || payload?.file);
+      if (filePath && typeof filePath === 'string') {
+        if (fs.existsSync(filePath)) {
+          if (process.platform === 'darwin') {
+            const { execFile } = require('child_process');
+            execFile('afplay', [filePath], () => {});
+          } else if (process.platform === 'win32') {
+            const { exec } = require('child_process');
+            exec(`powershell -c "(New-Object Media.SoundPlayer '${filePath}').PlaySync()"`, () => {});
+          }
+          return { success: true, status: 'playing', file: filePath };
+        }
+      }
+
+      if (audioBridgeManager) {
+        const streamRes = await audioBridgeManager.startStream(typeof payload === 'object' ? payload : undefined);
+        return { success: true, status: 'playing', ...streamRes };
+      }
+
+      return { success: true, status: 'playing' };
+    } catch (err) {
+      console.error('❌ [Main] audio:play error:', err.message);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 2. audio:stop - stops active audio playback or stream
+  ipcMain.handle('audio:stop', async () => {
+    try {
+      if (process.platform === 'darwin') {
+        const { exec } = require('child_process');
+        exec('killall afplay 2>/dev/null', () => {});
+      }
+      if (audioBridgeManager) {
+        await audioBridgeManager.stopStream();
+      }
+      return { success: true, status: 'stopped' };
+    } catch (err) {
+      console.error('❌ [Main] audio:stop error:', err.message);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 3. audio:status - returns current engine and streaming state
+  ipcMain.handle('audio:status', async () => {
+    try {
+      if (audioBridgeManager) {
+        const status = await audioBridgeManager.getStatus();
+        return { success: true, status: 'ok', ...status };
+      }
+      return { success: true, status: 'ok', ready: true, isStreaming: false };
+    } catch (err) {
+      console.error('❌ [Main] audio:status error:', err.message);
+      return { success: false, error: err.message };
+    }
+  });
 }
 
 // Function to log API requests

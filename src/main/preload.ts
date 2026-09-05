@@ -73,6 +73,9 @@ export interface AudioError {
 }
 
 export interface AudioAPI {
+  play: (payload?: any) => Promise<any>;
+  stop: () => Promise<any>;
+  status: () => Promise<any>;
   startStream: (config?: Partial<AudioParameters>) => Promise<AudioStreamResponse>;
   stopStream: () => Promise<AudioStreamResponse>;
   updateParameters: (params: Partial<AudioParameters>) => Promise<AudioStreamResponse>;
@@ -86,6 +89,24 @@ export interface AudioAPI {
 }
 
 export const audioAPI: AudioAPI = {
+  play: (payload?: any) => {
+    return ipcRenderer.invoke('audio:play', payload).catch((err) => {
+      return Promise.reject(new Error(err && err.message ? err.message : 'Audio playback failed'));
+    });
+  },
+
+  stop: () => {
+    return ipcRenderer.invoke('audio:stop').catch((err) => {
+      return Promise.reject(new Error(err && err.message ? err.message : 'Audio stop failed'));
+    });
+  },
+
+  status: () => {
+    return ipcRenderer.invoke('audio:status').catch((err) => {
+      return Promise.reject(new Error(err && err.message ? err.message : 'Audio status check failed'));
+    });
+  },
+
   startStream: (config?: Partial<AudioParameters>) => {
     return ipcRenderer.invoke('audio:start-stream', config);
   },

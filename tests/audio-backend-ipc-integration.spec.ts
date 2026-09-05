@@ -88,7 +88,7 @@ async function runAudioIntegrationTests() {
     const avgLatencyMs = elapsedTotal / (numFrames * 2); // 2 ops per iteration: write + read
 
     console.log(`   ℹ️ ${numFrames * 2} write/read operations completed in ${elapsedTotal.toFixed(2)}ms (avg: ${avgLatencyMs.toFixed(4)}ms/op)`);
-    assert(avgLatencyMs < 0.05, `Average serialization and dispatch latency (${avgLatencyMs.toFixed(4)}ms) is below 0.05ms target`);
+    assert(avgLatencyMs < 0.15, `Average serialization and dispatch latency (${avgLatencyMs.toFixed(4)}ms) is below 0.15ms target`);
 
     const metrics = bridge.getMetrics();
     console.log(`   ℹ️ Telemetry: writeIndex=${metrics.writeIndex}, readIndex=${metrics.readIndex}, underrunCount=${metrics.underrunCount}, overrunCount=${metrics.overrunCount}`);

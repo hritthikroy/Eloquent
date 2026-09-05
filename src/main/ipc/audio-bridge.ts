@@ -625,8 +625,18 @@ export class AudioBridgeManager extends EventEmitter {
       return this.startStream(config);
     });
 
+    // 1b. Canonical audio:play alias
+    ipcMain.handle('audio:play', async (_event: any, config?: any) => {
+      return this.startStream(typeof config === 'object' ? config : undefined);
+    });
+
     // 2. Stop Audio Stream
     ipcMain.handle('audio:stop-stream', async () => {
+      return this.stopStream();
+    });
+
+    // 2b. Canonical audio:stop alias
+    ipcMain.handle('audio:stop', async () => {
       return this.stopStream();
     });
 
@@ -637,6 +647,11 @@ export class AudioBridgeManager extends EventEmitter {
 
     // 4. Get Audio Status
     ipcMain.handle('audio:get-status', async () => {
+      return this.getStatus();
+    });
+
+    // 4b. Canonical audio:status alias
+    ipcMain.handle('audio:status', async () => {
       return this.getStatus();
     });
 
@@ -655,9 +670,12 @@ export class AudioBridgeManager extends EventEmitter {
     return {
       unregister: () => {
         ipcMain.removeHandler('audio:start-stream');
+        ipcMain.removeHandler('audio:play');
         ipcMain.removeHandler('audio:stop-stream');
+        ipcMain.removeHandler('audio:stop');
         ipcMain.removeHandler('audio:update-parameters');
         ipcMain.removeHandler('audio:get-status');
+        ipcMain.removeHandler('audio:status');
         ipcMain.removeHandler('audio:get-health');
         ipcMain.removeHandler('audio:reconnect');
       }

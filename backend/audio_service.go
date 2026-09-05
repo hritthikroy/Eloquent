@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	state "eloquent-audio-backend/audio"
 )
 
 var (
@@ -216,3 +218,19 @@ func (s *AudioService) Close() error {
 	}
 	return nil
 }
+
+// NormalizeBanglaText provides root-level access to the Bengali text normalization engine.
+func NormalizeBanglaText(input string) string {
+	return state.NormalizeBanglaText(input)
+}
+
+// ProcessTranscription normalizes transcription text through the Bengali normalization pipeline.
+func (s *AudioService) ProcessTranscription(rawTranscript string) string {
+	return state.ProcessTranscription(rawTranscript)
+}
+
+// ProcessTTSInput normalizes TTS synthesis input through the Bengali normalization pipeline.
+func (s *AudioService) ProcessTTSInput(rawInput string) string {
+	return state.ProcessTTSInput(rawInput)
+}
+

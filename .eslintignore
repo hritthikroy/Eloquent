@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-ts/
+dist-webpack/
+build/
+assets/
+userData/
+logs/
+generated-websites/
+backend/
+backend-go/
+coverage/
+*.d.ts
+*.min.js
