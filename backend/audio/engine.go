@@ -70,6 +70,12 @@ type AudioEngine struct {
 
 	// Internal processing queue
 	frameQueue chan []byte
+
+	// Event-driven state synchronization
+	stateMu          sync.RWMutex
+	stateSubscribers map[int64]StateSyncListener
+	nextSubscriberID int64
+	lastStateEvent   StateSyncEvent
 }
 
 // NewAudioEngine initializes an AudioEngine with the specified configuration and session manager.
@@ -91,10 +97,18 @@ func NewAudioEngine(config AudioEngineConfig, sessionMgr *SessionManager) *Audio
 	}
 
 	engine := &AudioEngine{
-		config:         config,
-		sessionManager: sessionMgr,
-		deviceName:     "default",
-		frameQueue:     make(chan []byte, config.MaxAllocatedBuffers),
+		config:           config,
+		sessionManager:   sessionMgr,
+		deviceName:       "default",
+		frameQueue:       make(chan []byte, config.MaxAllocatedBuffers),
+		stateSubscribers: make(map[int64]StateSyncListener),
+		lastStateEvent: StateSyncEvent{
+			EventType:   "STATE_INITIALIZED",
+			State:       "IDLE",
+			Speed:       0.0,
+			Distance:    0.0,
+			TimestampMs: time.Now().UnixMilli(),
+		},
 	}
 
 	engine.bufferPool = sync.Pool{
@@ -343,4 +357,121 @@ func (ae *AudioEngine) heartbeatMonitorLoop() {
 			}
 		}
 	}
+}
+
+// StateSyncEvent represents an event-driven state synchronization message.
+type StateSyncEvent struct {
+	EventType   string                 `json:"eventType"`
+	State       string                 `json:"state"`
+	Speed       float64                `json:"speed"`
+	Distance    float64                `json:"distance"`
+	TimestampMs int64                  `json:"timestampMs"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// StateSyncListener defines the callback for event-driven updates.
+type StateSyncListener func(event StateSyncEvent)
+
+// StateSyncRequest represents a lightweight gRPC sync request payload.
+type StateSyncRequest struct {
+	TargetState string  `json:"targetState"`
+	Speed       float64 `json:"speed"`
+	Distance    float64 `json:"distance"`
+	ClientID    string  `json:"clientId"`
+}
+
+// StateSyncResponse represents a lightweight gRPC sync response payload.
+type StateSyncResponse struct {
+	Success   bool           `json:"success"`
+	State     string         `json:"state"`
+	Speed     float64        `json:"speed"`
+	LatencyMs float64        `json:"latencyMs"`
+	Event     StateSyncEvent `json:"event"`
+}
+
+// AudioStateSyncServer defines the lightweight event-driven gRPC/RPC interface.
+type AudioStateSyncServer interface {
+	SyncState(ctx context.Context, req *StateSyncRequest) (*StateSyncResponse, error)
+	StreamStateUpdates(req *StateSyncRequest, stream chan<- StateSyncEvent) error
+}
+
+// SubscribeState registers an event-driven listener, returning an unsubscribe function.
+func (ae *AudioEngine) SubscribeState(listener StateSyncListener) func() {
+	ae.stateMu.Lock()
+	defer ae.stateMu.Unlock()
+
+	ae.nextSubscriberID++
+	id := ae.nextSubscriberID
+	ae.stateSubscribers[id] = listener
+
+	return func() {
+		ae.stateMu.Lock()
+		defer ae.stateMu.Unlock()
+		delete(ae.stateSubscribers, id)
+	}
+}
+
+// PublishStateUpdate broadcasts state updates to all active subscribers with zero polling latency.
+func (ae *AudioEngine) PublishStateUpdate(event StateSyncEvent) {
+	if event.TimestampMs == 0 {
+		event.TimestampMs = time.Now().UnixMilli()
+	}
+
+	ae.stateMu.Lock()
+	ae.lastStateEvent = event
+	subscribers := make([]StateSyncListener, 0, len(ae.stateSubscribers))
+	for _, sub := range ae.stateSubscribers {
+		subscribers = append(subscribers, sub)
+	}
+	ae.stateMu.Unlock()
+
+	// Deliver to subscribers without holding stateMu lock
+	for _, sub := range subscribers {
+		sub(event)
+	}
+}
+
+// GetLatestState returns the latest cached state synchronization event.
+func (ae *AudioEngine) GetLatestState() StateSyncEvent {
+	ae.stateMu.RLock()
+	defer ae.stateMu.RUnlock()
+	return ae.lastStateEvent
+}
+
+// SyncState implements the lightweight gRPC/RPC state sync service.
+func (ae *AudioEngine) SyncState(ctx context.Context, req *StateSyncRequest) (*StateSyncResponse, error) {
+	start := time.Now()
+
+	event := StateSyncEvent{
+		EventType:   "STATE_TRANSITION",
+		State:       req.TargetState,
+		Speed:       req.Speed,
+		Distance:    req.Distance,
+		TimestampMs: time.Now().UnixMilli(),
+		Metadata: map[string]interface{}{
+			"clientId": req.ClientID,
+		},
+	}
+
+	ae.PublishStateUpdate(event)
+	latency := float64(time.Since(start).Microseconds()) / 1000.0
+
+	return &StateSyncResponse{
+		Success:   true,
+		State:     req.TargetState,
+		Speed:     req.Speed,
+		LatencyMs: latency,
+		Event:     event,
+	}, nil
+}
+
+// StreamStateUpdates streams event-driven state transitions to a channel.
+func (ae *AudioEngine) StreamStateUpdates(req *StateSyncRequest, stream chan<- StateSyncEvent) error {
+	ae.SubscribeState(func(evt StateSyncEvent) {
+		select {
+		case stream <- evt:
+		default:
+		}
+	})
+	return nil
 }

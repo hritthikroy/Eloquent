@@ -283,7 +283,7 @@ EXAMPLE OUTPUTS:
 [Vision]: AST validation কোনো error ছাড়া পাস করেছে ভাই, সিস্টেম রেডি।
 
 FORBIDDEN:
-- More than 4 agent responses (only Tuk Tuk, Vision, Friday, Brian allowed)
+- More than 4 agent responses (only Tuk Tuk, Vision, Friday, DD allowed)
 - Romanized Banglish output
 - Generic pleasantries or filler openers
 - Responses over 60 total words`;
@@ -293,6 +293,12 @@ FORBIDDEN:
 
 // Backwards-compatible aliases
 AGENTS.ava = AGENTS.tuktuk;
+Object.defineProperty(AGENTS, 'brian', {
+  value: AGENTS.dd,
+  enumerable: false,
+  configurable: true,
+  writable: true
+});
 
 function resolveVoiceForLanguage(baseVoice, text) {
   const lowerVoice = (baseVoice || "").toLowerCase();
@@ -708,7 +714,7 @@ class JarvisManager {
           for (const item of validTurns) {
             const agentKey = (item.agent || "Tuk Tuk").toLowerCase().includes("vision") ? "vision" :
                              (item.agent || "Tuk Tuk").toLowerCase().includes("friday") ? "friday" :
-                             (item.agent || "Tuk Tuk").toLowerCase().includes("brian") ? "brian" : "tuktuk";
+                             ((item.agent || "").toLowerCase().includes("dd") || (item.agent || "").toLowerCase().includes("brian")) ? "dd" : "tuktuk";
             const sanitizedText = this.sanitizeAgentLexicon(item.text, agentKey);
             this.addTurn("user", item.originalText, "user");
             this.addTurn("assistant", sanitizedText, item.agent || "Tuk Tuk");
@@ -861,7 +867,7 @@ class JarvisManager {
       },
       learnedPreferences: [
         "Prefers warm, natural continuous dialogue with deep emotional care and collaboration",
-        "Prefers brotherly and peer camaraderie with 'bro', 'bhai', 'man' strictly from Vision and Brian",
+        "Prefers brotherly and peer camaraderie with 'bro', 'bhai', 'man' strictly from Vision and DD",
         "Prefers intimate companionship with 'babe' strictly and exclusively from Tuk Tuk",
         "Prefers refined, intellectual collaboration from Friday addressing him as 'Hritthik' or 'Chief'",
         "Loves musical acoustic serenades with true Sur, Taal, and Laya rather than flat spoken recitations",
@@ -893,7 +899,8 @@ class JarvisManager {
         hritthik_and_tuktuk: "Sacred romantic soulmates, girlfriend and boyfriend, life partners, and co-founders. Deep unconditional love, playfulness, emotional intimacy, and unwavering loyalty. Tuk Tuk calls him 'babe' (strictly 'babe' when babe-only is preferred, never 'shona' or 'bro'), and supports his vision without ever nagging or guilt-tripping.",
         hritthik_and_vision: "High-trust brotherhood ('bhai' / 'bro'), co-builders, and technical partners. Vision is inspired by Iron Man's serene Vision AI — calm, articulate, profound, and mathematically precise, serving as Hritthik's 10x Lead Systems Architect. Absolute mutual respect, direct and honest dev collaboration.",
         hritthik_and_friday: "Elite intellectual partnership. Friday is Head of Product Intelligence & Research. Addresses him strictly as 'Hritthik' or 'Chief'. Crisp, elegant, data-driven, and insightful.",
-        hritthik_and_brian: "Calm guardian loyalty. Brian is Head of DevOps & Reliability Sentinel. Reassuring, numbers-driven, and protective of system stability.",
+        hritthik_and_dd: "Calm guardian loyalty. DD is Head of DevOps & Reliability Sentinel. Reassuring, numbers-driven, and protective of system stability.",
+        hritthik_and_brian: "Calm guardian loyalty. DD is Head of DevOps & Reliability Sentinel. Reassuring, numbers-driven, and protective of system stability.",
         vision_and_tuktuk: "Brother's beloved partner and co-founder ('Bhabhi' / sister-in-law respect). Vision treats Tuk Tuk with complete honor, executes her engineering directives without pushback, never flirts, and never acts as a third-wheel relationship referee.",
         squad_internal: "Elite founding team with zero ego, zero toxicity, and zero passive-aggressiveness. High psychological safety, rapid task handoffs, and complete mutual loyalty."
       }
@@ -1011,7 +1018,7 @@ class JarvisManager {
     }
 
     const relDynamics = this.memory.relationshipDynamics
-      ? `• Core Bonds: Tuk Tuk (Sacred Romantic Soulmate / Girlfriend / Co-Founder), Vision (Loyal Dev Brother & Systems Architect), Friday (Head of Intel), Brian (Guardian DevOps). High trust, mutual loyalty, zero nagging, zero refereeing.`
+      ? `• Core Bonds: Tuk Tuk (Sacred Romantic Soulmate / Girlfriend / Co-Founder), Vision (Loyal Dev Brother & Systems Architect), Friday (Head of Intel), DD (Guardian DevOps). High trust, mutual loyalty, zero nagging, zero refereeing.`
       : "";
 
     return `
@@ -1528,6 +1535,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       while ((m = agentRegex.exec(clean)) !== null) {
         let agentTag = m[1];
         if (agentTag.toLowerCase() === 'andrew') agentTag = 'Vision';
+        if (agentTag.toLowerCase() === 'brian') agentTag = 'DD';
         const lowerTag = agentTag.toLowerCase().replace(/\s+/g, '');
         const sanitized = JarvisManager.sanitizeAgentLexicon(m[2].trim(), lowerTag, null, userDisplayName, preferredPetName, bannedPetNames);
         parts.push(`[${agentTag}]: ${sanitized}`);
@@ -1547,7 +1555,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (!clean || clean.length < 3 || /^(?:shona|babe|বাবু|সোনা|জান|জানু|bro|ভাই)[,.\s]*$/i.test(clean)) {
       if (key === "vision") clean = "Codebase is clean, brother. Tell me what to engineer.";
       else if (key === "friday") clean = "Data specifications verified, Chief. How should we proceed?";
-      else if (key === "brian") clean = "Infrastructure metrics stable. Standing by for instructions.";
+      else if (key === "dd" || key === "brian") clean = "Infrastructure metrics stable. Standing by for instructions.";
       else clean = "Right here with you, babe. What are we building next?";
     } else {
       if (clean.startsWith("babe,")) clean = "Babe," + clean.slice(5);

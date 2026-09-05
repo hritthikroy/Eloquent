@@ -1258,7 +1258,7 @@ Your task:
           ? "বুঝেছি, রোবোটিক স্ক্রিনশট বাদ দিয়ে মানুষের চোখের মতো বায়োলজিক্যাল ভিজ্যুয়াল কর্টেক্স সক্রিয় করলাম।"
           : "Understood. Visual cortex shifted from static capture to biological human saccadic attention and fixational drift. Looking naturally alongside you.";
       } else {
-        // Squad / Brian / Team
+        // Squad / DD / Team
         replySpeech = isBn
           ? "পুরো স্কোয়াডের ভিজ্যুয়াল কর্টেক্স আপডেট করা হয়েছে ভাই। রোবোটিক স্ট্যাটিক তাকানো বন্ধ, মানুষের মতো বায়োলজিক্যাল ফোভিয়েশন চালু।"
           : "Visual subsystem updated across the squad, brother. Zero static robotic staring — full biological foveation, smooth pursuit, and natural joint attention online.";
@@ -1718,7 +1718,8 @@ Your task:
       return { handled: true, speech: "Tiled active window to the right." };
     }
 
-    if (lower.includes("minimize window") || lower.includes("hide window") || lower.includes("window minimize kor")) {
+    // 4. Quick App Minimizer ("minimize active app", "hide current window", "screen hide", "window minimize")
+    if (lower.includes("minimize window") || lower.includes("minimize app") || lower.includes("hide active app") || lower.includes("hide current window") || lower.includes("screen hide") || lower.includes("window minimize kor") || lower.includes("window choto kor")) {
       try {
         exec(`osascript -e 'tell application "System Events" to set miniaturized of first window of (first application process whose frontmost is true) to true' 2>/dev/null || true`);
       } catch (e) {}
@@ -1732,9 +1733,9 @@ Your task:
       const usedGB = (totalGB - freeGB).toFixed(1);
       return {
         handled: true,
-        agentName: "Brian",
+        agentName: "DD",
         agentVoice: "en-US-BrianMultilingualNeural",
-        speech: `Brian here. Total RAM usage is ${usedGB} out of ${totalGB} gigabytes, with ${freeGB} gigabytes free. Memory headroom is stable.`
+        speech: `DD here. Total RAM usage is ${usedGB} out of ${totalGB} gigabytes, with ${freeGB} gigabytes free. Memory headroom is stable.`
       };
     }
 
@@ -1843,10 +1844,10 @@ Your task:
             speech: "ফ্রাইডে বলছি, হৃত্তিক। রিসার্চ বেঞ্চমার্ক আর আর্কিটেকচার পাইপলাইন সম্পূর্ণ সিঙ্কড এবং অপটিমাল পারফর্ম করছে।"
           },
           {
-            agent: "Brian",
+            agent: "DD",
             role: "Head of DevOps & Reliability",
             voice: "en-US-BrianMultilingualNeural",
-            speech: `ব্রায়ান বলছি bro। পাওয়ার ${battPct} পার্সেন্ট, মেমরি লোড ${usedGB} আউট অফ ${totalGB} গিগাবাইট across ${cpuCount} CPU cores। টেলিমেট্রি একদম রকবটম সলিড।`
+            speech: `ডিডি বলছি bro। পাওয়ার ${battPct} পার্সেন্ট, মেমরি লোড ${usedGB} আউট অফ ${totalGB} গিগাবাইট across ${cpuCount} CPU cores। টেলিমেট্রি একদম রকবটম সলিড।`
           },
           {
             agent: "Tuk Tuk",
@@ -1881,10 +1882,10 @@ Your task:
           speech: "Friday here, Hritthik. Research benchmarks and architecture pipelines are fully synced and ready."
         },
         {
-          agent: "Brian",
+          agent: "DD",
           role: "Head of DevOps & Reliability",
           voice: "en-US-BrianMultilingualNeural",
-          speech: `Brian here bro. Power is at ${battPct} percent, memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} CPU cores. Telemetry is rock solid.`
+          speech: `DD here bro. Power is at ${battPct} percent, memory load is ${usedGB} out of ${totalGB} gigabytes across ${cpuCount} CPU cores. Telemetry is rock solid.`
         },
         {
           agent: "Tuk Tuk",
