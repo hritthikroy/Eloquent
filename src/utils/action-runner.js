@@ -414,8 +414,12 @@ class OfficeActionRunner {
         }
       }
 
-      let agentName = "Tuk Tuk";
-      let agentVoice = "en-US-AvaMultilingualNeural";
+      const isBengali = (activeAgent && (activeAgent.language === "bn" || activeAgent.lang === "bn")) ||
+        /[\u0980-\u09FF]/.test(speechText) ||
+        /\b(?:kemon|sathe|koro|shono|bol|amader|shob|manusher|moto|dorkar|lagbe|chai|bhai|aro|thik)\b/i.test(speechText);
+      const agentKey = activeAgent?.key || "tuktuk";
+      let agentName = activeAgent?.name || "Tuk Tuk";
+      let agentVoice = activeAgent?.voice || "en-US-AvaMultilingualNeural";
       let speech = "";
 
       if (agentKey === "vision" || agentKey === "andrew") {

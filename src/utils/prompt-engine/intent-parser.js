@@ -267,9 +267,9 @@ class IntentParser {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
     return (
-      (/\bself\s*learning\b/i.test(lower) &&
+      (/\bself[\s\-]*learning\b/i.test(lower) &&
        /\b(?:loop|loops|looping|creat|create|creates|creating|issue|issues|broken|heal|purge|clean|fix)\b/i.test(lower)) ||
-      /\b(?:fix\s+(?:all\s+)?self\s*learning|self\s*learning\s+(?:creates?|creating)\s+loops?|self\s*learning\s+loops?|heal\s+self\s*learning|clean\s+self\s*learning)\b/i.test(lower) ||
+      /\b(?:fix\s+(?:all\s+)?self[\s\-]*learning|self[\s\-]*learning\s+(?:creates?|creating)\s+loops?|self[\s\-]*learning\s+loops?|heal\s+self[\s\-]*learning|clean\s+self[\s\-]*learning)\b/i.test(lower) ||
       /(?:সেলফ\s*লার্নিং|লার্নিং\s*লুপ|সেলফ\s*লার্নিং\s*লুপ)/u.test(lower)
     );
   }
