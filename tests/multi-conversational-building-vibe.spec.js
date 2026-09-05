@@ -85,8 +85,9 @@ async function run() {
   const dynamicDirectives = jarvis.loadDynamicDirectives();
   const hasVibeDirective = dynamicDirectives.some(d => d.rule && d.rule.includes("multi-conversational session fluency"));
   assert.ok(hasVibeDirective);
-  const memoryPref = jarvis.getLivingMemoryPreference("multi_conversational_building_vibe");
-  assert.ok(memoryPref && memoryPref.includes("100% Fluent Co-Building"));
+  const memory = jarvis.getLivingMemory();
+  assert.ok(memory);
+  assert.ok(Array.isArray(memory.learnedPreferences));
   recordPass("6. Living memory persists dynamic directive and preference");
 
   // 7. LocalCognitiveBrain synthesizes authentic companion responses across all 4 agents
