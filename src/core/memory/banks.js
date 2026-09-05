@@ -3,7 +3,7 @@
  * 
  * Provides cross-agent associative knowledge retention, deep research archiving,
  * multi-turn episodic continuity, and salience-weighted memory synchronization
- * across Vision, Friday, Tuk Tuk, and Brian.
+ * across Vision, Friday, Tuk Tuk, and DD.
  */
 
 const fs = require('fs');
@@ -53,7 +53,7 @@ class NeuralMeshMemoryBank extends EventEmitter {
     this.researchVault = new Map(); // Deep research outputs & web scrape archives
     this.meshIndex = new Map();     // Cross-agent associative knowledge graph
 
-    this.squadAgents = ['agent_vision', 'agent_friday', 'agent_tuk_tuk', 'agent_brian'];
+    this.squadAgents = ['agent_vision', 'agent_friday', 'agent_tuk_tuk', 'agent_dd', 'agent_brian'];
     this.telemetry = {
       totalIngestions: 0,
       totalQueries: 0,
