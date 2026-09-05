@@ -507,8 +507,22 @@ class TextSanitizer {
       .replace(/\b(?:continiue|contineu|continu|continyu|kuntinue|continuew)\s+(?:with\s+)?(?:deeep|deap|deepp|deep)\s+(?:resserch|resurch|reserach|resrch|research)\b/gi, "continue with deep research")
       .replace(/\b(?:proseed|proceed|procede|proced)\s+(?:with\s+)?(?:deeep|deap|deepp|deep)\s+(?:resserch|resurch|reserach|resrch|research)\b/gi, "continue with deep research")
       .replace(/\b(?:continiue|contineu|continu|continuew)\s+(?:with\s+)?deep\s+research\b/gi, "continue with deep research")
-      .replace(/\bcontinue\s+(?:with\s+)?(?:deeep|deap|deepp)\s+(?:resserch|resurch|reserach|resrch|research)\b/gi, "continue with deep research")
-      .replace(/\b(?:চালিয়ে\s+যাও|চালু\s+রাখো)\s+(?:ডিপ\s+রিসার্চ|গভীর\s+গবেষণা)\b/gi, "continue with deep research");
+      .replace(/\b(?:চালিয়ে\s+যাও|চালু\s+রাখো)\s+(?:ডিপ\s+রিসার্চ|গভীর\s+গবেষণা)\b/gi, "continue with deep research")
+      // LaTeX / KaTeX rendering error & fix all issues STT normalizations
+      // Handles: "⚠️ Failed to render LaTeX: KaTeX parse error: Expected 'EOF', got '&' at position 52: …p Invariant: } & I(S_t; S_{\tex… fix all issues"
+      .replace(/(?:⚠️\s*)?(?:Failed\s+to\s+render\s+LaTeX:\s*)?KaTeX\s+parse\s+error:[^\n\r]*fix\s+all\s+issues?/gi, "fix LaTeX rendering and fix all issues")
+      .replace(/(?:⚠️\s*)?(?:Failed\s+to\s+render\s+LaTeX:[^\n\r]*)/gi, "fix LaTeX rendering error")
+      .replace(/\b(?:render\s+latex|latex\s+rendering|katex\s+rendering)\s*(?:issues?|errors?|fix)?\b/gi, "fix LaTeX rendering")
+      .replace(/\bfix\s+all\s+issuses?\b/gi, "fix all issues")
+      // Instant Response & Fast Messages Burst Processing STT normalizations
+      // Handles: "need instent respons if its fast messages fix all issues", "instent respons", "fast messages", "fix all issues"
+      .replace(/\b(?:need\s+)?(?:instent|instant)\s+(?:respons|responce|response)\s+(?:if\s+)?(?:its|it's)\s+fast\s+(?:messages?|messeges?|messags?)\s+(?:and\s+)?(?:fix\s+all\s+(?:issues?|gaps?))\b/gi, "need instant response if it's fast messages, fix all issues")
+      .replace(/\b(?:instent|instant)\s+(?:respons|responce)\b/gi, "instant response")
+      .replace(/\binstent\b/gi, "instant")
+      .replace(/\brespons\b/gi, "response")
+      .replace(/\bresponce\b/gi, "response")
+      .replace(/\bmesseges?\b/gi, "messages")
+      .replace(/\bmessags?\b/gi, "messages");
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')
     text = text

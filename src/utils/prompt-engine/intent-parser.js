@@ -47,6 +47,38 @@ class IntentParser {
       }
     }
 
+    // 2.2 Instant Response on Fast Messages & Burst Processing Directive
+    if (IntentParser.isInstantResponseFastMessagesDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "instant_response_fast_messages",
+        agentDirective
+      };
+    }
+
+    // 2.25 LaTeX Render Failure & Fix All Issues Directive
+    if (IntentParser.isLatexFixOrAllIssuesDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_latex_and_all_issues",
+        agentDirective
+      };
+    }
+
     // 2.3 Deep Research & Equational Fix Directive
     if (IntentParser.isDeepResearchEquationalFixDirective(lower)) {
       let agentDirective = "team";
@@ -486,6 +518,50 @@ class IntentParser {
       (lower.includes("researchand fix all") || lower.includes("academic resaserch"))
     );
   }
+
+  /**
+   * Centralized detector for LaTeX Render Failure, KaTeX Parse Errors & General Fix All Issues Directive
+   * Handles: "⚠️ Failed to render LaTeX: KaTeX parse error: Expected 'EOF', got '&' at position 52: … fix all issues",
+   * "fix latex rendering error", "fix latex rendering and fix all issues", "fix all issues"
+   */
+  static isLatexFixOrAllIssuesDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    if (
+      (lower.includes("latex") || lower.includes("katex") || lower.includes("লেটেক") ||
+       (lower.includes("render") && (lower.includes("latex") || lower.includes("katex") || lower.includes("equation") || lower.includes("math")))) &&
+      (lower.includes("fix") || lower.includes("error") || lower.includes("issue") || lower.includes("failed") || lower.includes("parse") ||
+       lower.includes("ফিক্স") || lower.includes("এরর") || lower.includes("সমস্যা") || lower.includes("ত্রুটি"))
+    ) {
+      return true;
+    }
+    if (
+      (/^\s*(?:please\s+)?(?:fix|solve|resolve)\s+(?:all\s+)?(?:the\s+)?issues?\s*$/i.test(lower) ||
+       /^\s*(?:সব\s*(?:সমস্যা|ইস্যু|ত্রুটি)\s*ফিক্স\s*করো?)\s*$/u.test(lower)) &&
+      !/\b(?:code|bug|css|html|ui\s+card|voice|robotic|vision|tuktuk|friday|dd|audio|sound|fast|message|gap|research|learning)\b/i.test(lower)
+    ) {
+      return true;
+    }
+    return false;
+  }
+  /**
+   * Centralized detector for Instant Response on Fast Messages Directive
+   * Handles: "need instent respons if its fast messages fix all issues",
+   * "need instant response if it's fast messages fix all issues",
+   * "instant response on fast messages", "fast messages instant response",
+   * "need instant response for fast messages", "fast messages rapid response",
+   * "দ্রুত মেসেজে সাথে সাথে রেসপন্স করো", "ফাস্ট মেসেজে ইনস্ট্যান্ট রেসপন্স দাও"
+   */
+  static isInstantResponseFastMessagesDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:instent|instant)\s+(?:respons|responce|response)\b/i.test(lower) && /\b(?:fast\s+messages?|rapid\s+messages?|short\s+messages?|fast\s+msg|burst)\b/i.test(lower)) ||
+      (/\b(?:fast\s+messages?|rapid\s+messages?|short\s+messages?)\b/i.test(lower) && /\b(?:instent|instant|quick|zero\s+delay|fast\s+response|respons|responce)\b/i.test(lower)) ||
+      (/\b(?:need\s+)?(?:instent|instant)\s+(?:respons|responce|response)\s+(?:if\s+)?(?:its|it's)\s+fast\s+messages?\b/i.test(lower)) ||
+      (/(?:ফাস্ট\s*মেসেজ|দ্রুত\s*বার্তা|দ্রুত\s*মেসেজ).*(?:ইনস্ট্যান্ট\s*রেসপন্স|তাৎক্ষণিক|সাথে\s*সাথে\s*রেসপন্স)/u.test(lower))
+    );
+  }
 }
 
 module.exports = {
@@ -503,5 +579,7 @@ module.exports = {
   isContinueDeepResearchDirective: IntentParser.isContinueDeepResearchDirective,
   isDeepResearchEquationalFixDirective: IntentParser.isDeepResearchEquationalFixDirective,
   isFuturistic2070HumanEmbodimentDirective: IntentParser.isFuturistic2070HumanEmbodimentDirective,
-  isAcademic2070HumanGapDirective: IntentParser.isAcademic2070HumanGapDirective
+  isAcademic2070HumanGapDirective: IntentParser.isAcademic2070HumanGapDirective,
+  isLatexFixOrAllIssuesDirective: IntentParser.isLatexFixOrAllIssuesDirective,
+  isInstantResponseFastMessagesDirective: IntentParser.isInstantResponseFastMessagesDirective
 };
