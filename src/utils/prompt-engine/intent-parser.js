@@ -471,6 +471,21 @@ class IntentParser {
       (lower.includes("2070 humans") || lower.includes("2070 humens"))
     );
   }
+  /**
+   * Centralized detector for Deep Academic Research & 2070 Human-Agent Gap Elimination Directive
+   * Handles: "fix every gap a 2070 humen and our agents gap do deep researchand fix all equationaly with deep academic resaserch read after"
+   */
+  static isAcademic2070HumanGapDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:fix\s+every\s+gap|2070\s+(?:humen|human)|academic\s+(?:research|resaserch))\b/i.test(lower) &&
+       /\b(?:academic|resaserch|researchand|equationaly|equationally|gap)\b/i.test(lower)) ||
+      (lower.includes("academic") && lower.includes("2070")) ||
+      (lower.includes("fix every gap") && (lower.includes("2070") || lower.includes("academic") || lower.includes("read after"))) ||
+      (lower.includes("researchand fix all") || lower.includes("academic resaserch"))
+    );
+  }
 }
 
 module.exports = {
@@ -487,5 +502,6 @@ module.exports = {
   isDeepResearchTestAndUpdateDirective: IntentParser.isDeepResearchTestAndUpdateDirective,
   isContinueDeepResearchDirective: IntentParser.isContinueDeepResearchDirective,
   isDeepResearchEquationalFixDirective: IntentParser.isDeepResearchEquationalFixDirective,
-  isFuturistic2070HumanEmbodimentDirective: IntentParser.isFuturistic2070HumanEmbodimentDirective
+  isFuturistic2070HumanEmbodimentDirective: IntentParser.isFuturistic2070HumanEmbodimentDirective,
+  isAcademic2070HumanGapDirective: IntentParser.isAcademic2070HumanGapDirective
 };
