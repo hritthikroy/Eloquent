@@ -1,7 +1,7 @@
 /**
  * AgentStateRegistry - Centralized registry for agent state management
  * 
- * Maps agent identifiers (Andrew, Tuk Tuk, Friday, Brian) to memory slots
+ * Maps agent identifiers (Vision, Tuk Tuk, Friday, DD) to memory slots
  * within the shared buffer, ensuring isolated but accessible state for each persona.
  */
 
