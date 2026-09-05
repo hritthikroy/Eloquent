@@ -48,6 +48,21 @@ class IntentParser {
     }
 
     // 2.5 Smooth Conversation Intent Detection
+    if (IntentParser.isMultiConversationalBuildingVibeDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.98,
+        target: "multi_conversational_building_vibe",
+        agentDirective
+      };
+    }
+
     const smoothPatterns = [
       /\b(?:make|get)\s+(?:our\s+|the\s+)?conversation\s+(?:smooth|smoother|flow)\b/i,
       /\b(?:smooth|fix)\s+(?:our\s+|the\s+)?(?:conversation|interaction)\s+(?:flow|state|glitches)?\b/i,
@@ -156,9 +171,155 @@ class IntentParser {
       target: rawText
     };
   }
+
+  /**
+   * Centralized detector for City Modern Girl Tone vs Village Girl Directive
+   * Handles: "do deep research, need Bangla tone like a city modern girl not village girl, remove all the village girl habits and tone and word punctuation, fix all issues equationally and remove all duplicate code"
+   */
+  static isCityModernGirlToneDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      lower.includes("village girl") ||
+      lower.includes("vilage girl") ||
+      lower.includes("city modern girl") ||
+      lower.includes("city mordern girl") ||
+      lower.includes("city mordan girl") ||
+      (lower.includes("modern girl") && (lower.includes("village") || lower.includes("vilage") || lower.includes("habit") || lower.includes("punctuation") || lower.includes("duplicate"))) ||
+      (lower.includes("village") && (lower.includes("habit") || lower.includes("tone") || lower.includes("remove") || lower.includes("bangla"))) ||
+      (lower.includes("bangla tone") && (lower.includes("city") || lower.includes("modern girl") || lower.includes("village") || lower.includes("punctuation"))) ||
+      (lower.includes("word punctuation") && (lower.includes("bangla") || lower.includes("girl") || lower.includes("tone") || lower.includes("duplicate"))) ||
+      (lower.includes("remove all duplicate code") && (lower.includes("tone") || lower.includes("bangla") || lower.includes("girl") || lower.includes("punctuation")))
+    );
+  }
+
+  /**
+   * Centralized detector for Tuk Tuk Modern Girl & 1:1 Bilingual Parity Directive
+   */
+  static isTukTukModernGirlBilingualParityDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      lower.includes("khet") ||
+      lower.includes("khet girl") ||
+      lower.includes("not like modern girl") ||
+      lower.includes("not like mordan garl") ||
+      lower.includes("morder girl") ||
+      lower.includes("not a modern girl tone") ||
+      lower.includes("not a morder girl tone") ||
+      lower.includes("not a mordern girl tone") ||
+      ((lower.includes("modern girl") || lower.includes("mordern girl") || lower.includes("morder girl") || lower.includes("modern bangla tone") || lower.includes("mordern girl like")) &&
+       (lower.includes("tuk") || lower.includes("bangla") || lower.includes("bangal") || lower.includes("tone") || lower.includes("voice"))) ||
+      ((lower.includes("not match") || lower.includes("dont match") || lower.includes("same person") || lower.includes("are same")) &&
+       (lower.includes("english tuk") || lower.includes("english tuktuk")) &&
+       (lower.includes("bangal tuk") || lower.includes("bangla tuk") || lower.includes("bangal tuktuk") || lower.includes("bangla tuktuk") || lower.includes("bangal") || lower.includes("bangla"))) ||
+      (lower.includes("modern girl") && (lower.includes("tuk tuk") || lower.includes("tuktuk"))) ||
+      (lower.includes("english tuktuk and bangal tuk tuk are same") || lower.includes("english tuktuk and bangla tuk tuk are same")) ||
+      ((lower.includes("english tuktuk voice") || lower.includes("english tuk tuk voice")) &&
+       (lower.includes("bangal tuktuk voice") || lower.includes("bangla tuktuk voice") || lower.includes("bangal tuk tuk voice") || lower.includes("bangla tuk tuk voice") || lower.includes("bangal") || lower.includes("bangla"))) ||
+      ((lower.includes("tuk tuk") || lower.includes("tuktuk")) &&
+       (lower.includes("voice tone") || lower.includes("voice") || lower.includes("tone")) &&
+       (lower.includes("modern girl") || lower.includes("morder girl") || lower.includes("mordern girl") || lower.includes("mordan girl") || lower.includes("morder") || lower.includes("modern") || lower.includes("mordern")))
+    );
+  }
+
+  /**
+   * Centralized detector for Model-Independent Tone & Voice Proficiency Directive
+   */
+  static isModelToneAndVoiceProficiencyDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (lower.includes("model voice and tone") && lower.includes("language proficiency")) ||
+      (lower.includes("change the model") && (lower.includes("voice") || lower.includes("tone") || lower.includes("proficiency") || lower.includes("language"))) ||
+      (lower.includes("when we change the model") && (lower.includes("voice") || lower.includes("tone") || lower.includes("language proficiency") || lower.includes("clearest modern voice"))) ||
+      (lower.includes("test the best model") && (lower.includes("clear modern voice") || lower.includes("clearest modern voice") || lower.includes("voice and tone"))) ||
+      (lower.includes("model") && lower.includes("proficiency") && (lower.includes("tone") || lower.includes("voice")))
+    );
+  }
+
+  /**
+   * Centralized detector for Universal Cross-Agent Bilingual Identity Parity & Modern Girl Tone Harmonization Directive
+   * Handles: "fix english tuk tuk and bangal. tuktuk every side need same person english tone with bangal for mordern girl style bangal test cahc klisten and fix every gap of all the agents same rule"
+   */
+  static isUniversalBilingualIdentityParityDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      ((lower.includes("english tuk") || lower.includes("english tuktuk")) &&
+       (lower.includes("bangal") || lower.includes("bangla")) &&
+       (lower.includes("every side") || lower.includes("same person") || lower.includes("modern girl style") || lower.includes("mordern girl style") || lower.includes("same rule"))) ||
+      (lower.includes("every side need same person") || lower.includes("every side needs same person")) ||
+      ((lower.includes("english tone with bangal") || lower.includes("english tone with bangla")) && (lower.includes("modern girl") || lower.includes("mordern girl") || lower.includes("style"))) ||
+      (lower.includes("modern girl style") && (lower.includes("bangla") || lower.includes("bangal")) && (lower.includes("same person") || lower.includes("gap") || lower.includes("listen") || lower.includes("test"))) ||
+      ((lower.includes("fix every gap") || lower.includes("every gap")) && lower.includes("all the agents") && (lower.includes("same rule") || lower.includes("rule"))) ||
+      ((lower.includes("cahc") || lower.includes("check")) && (lower.includes("klisten") || lower.includes("listen")) && (lower.includes("every gap") || lower.includes("same rule") || lower.includes("tuk tuk") || lower.includes("tuktuk")))
+    );
+  }
+
+  /**
+   * Centralized detector for Self-Learning Loop Purge & Memory Healing Directive
+   * Handles: "Fix all self-learning issues, sometimes it creates loops, check and fix every issue",
+   * "fix the self learning all issues some time its creat loop chac kand fix everyissues",
+   * "self learning creates loops", "fix self learning loop", "clean self learning memory", etc.
+   */
+  static isSelfLearningLoopDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bself\s*learning\b/i.test(lower) &&
+       /\b(?:loop|loops|looping|creat|create|creates|creating|issue|issues|broken|heal|purge|clean|fix)\b/i.test(lower)) ||
+      /\b(?:fix\s+(?:all\s+)?self\s*learning|self\s*learning\s+(?:creates?|creating)\s+loops?|self\s*learning\s+loops?|heal\s+self\s*learning|clean\s+self\s*learning)\b/i.test(lower) ||
+      /(?:সেলফ\s*লার্নিং|লার্নিং\s*লুপ|সেলফ\s*লার্নিং\s*লুপ)/u.test(lower)
+    );
+  }
+
+  /**
+   * Centralized detector for Multi-Conversational Session Fluency & Active Co-Building Vibe
+   * Handles: "fix every agent malti conversational sation need fully fluent vibe for working building and updateing anything need real human behabeior on every side",
+   * "multi conversational session", "fluent vibe for working building and updating",
+   * "real human behavior on every side", "fix every agent multi conversational session"
+   */
+  static isMultiConversationalBuildingVibeDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:malti|multi)[-\s]*conversational\s+(?:sation|session)s?\b/i.test(lower)) ||
+      (/\b(?:fluent\s+vibe|co-?building\s+vibe)\b/i.test(lower) && /\b(?:working|building|updating|updateing)\b/i.test(lower)) ||
+      (/\breal\s+human\s+(?:behabeior|behavior)\s+on\s+every\s+side\b/i.test(lower)) ||
+      (lower.includes("multi conversational") && (lower.includes("fluent") || lower.includes("vibe") || lower.includes("human"))) ||
+      (lower.includes("working building") && (lower.includes("updating") || lower.includes("updateing") || lower.includes("human") || lower.includes("fluent"))) ||
+      (lower.includes("every agent") && (lower.includes("conversational session") || lower.includes("conversational sation") || lower.includes("fluent vibe")))
+    );
+  }
+
+  /**
+   * Centralized detector for Tuk Tuk Team Leader Personality, Real English Pronunciation & Talking Communication Directive
+   * Handles: "see fix every pronunciation he is not real english like tuk tuk fix her personalty and. tone and all update it fully perfect in taliking comunication team leader and all"
+   */
+  static isTukTukTeamLeaderCommunicationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (lower.includes("pronunciation") && (lower.includes("tuk") || lower.includes("english") || lower.includes("personality") || lower.includes("leader") || lower.includes("every"))) ||
+      (lower.includes("not real english") && (lower.includes("tuk") || lower.includes("tone") || lower.includes("pronunciation"))) ||
+      (lower.includes("team leader") && (lower.includes("communication") || lower.includes("talking") || lower.includes("tuk") || lower.includes("personality") || lower.includes("perfect") || lower.includes("comunication"))) ||
+      (lower.includes("talking communication") || lower.includes("taliking comunication")) ||
+      (lower.includes("fix her personality") || lower.includes("fix her personalty")) ||
+      (lower.includes("fix every pronunciation") && (lower.includes("team leader") || lower.includes("tone") || lower.includes("personality") || lower.includes("english")))
+    );
+  }
 }
 
 module.exports = {
   IntentParser,
-  INTENTS
+  INTENTS,
+  isCityModernGirlToneDirective: IntentParser.isCityModernGirlToneDirective,
+  isTukTukModernGirlBilingualParityDirective: IntentParser.isTukTukModernGirlBilingualParityDirective,
+  isModelToneAndVoiceProficiencyDirective: IntentParser.isModelToneAndVoiceProficiencyDirective,
+  isUniversalBilingualIdentityParityDirective: IntentParser.isUniversalBilingualIdentityParityDirective,
+  isSelfLearningLoopDirective: IntentParser.isSelfLearningLoopDirective,
+  isMultiConversationalBuildingVibeDirective: IntentParser.isMultiConversationalBuildingVibeDirective,
+  isTukTukTeamLeaderCommunicationDirective: IntentParser.isTukTukTeamLeaderCommunicationDirective
 };
+

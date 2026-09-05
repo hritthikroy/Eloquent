@@ -80,8 +80,8 @@ class TukTukIntellectualCortex {
 
     // 6. Philosophical & High Intellectual Thinking
     if (
-      /\b(first\s*principles|philosophy|consciousness|intelligence|ethics|reasoning|abstraction|why\s+do\s+we|meaning|future\s+of\s+ai|singularity|epistemology|ontology|trade-offs?|paradox|intellectual\s*thinking|without\s*hallucination|hallucination|hallucinating|halusination|critical\s*thinking)\b/i.test(raw) ||
-      /(?:ফার্স্ট\s*প্রিন্সিপাল|দর্শন|যুক্তিবোধ|চেতনা|ভবিষ্যৎ|বুদ্ধিবৃত্তিক|হ্যালুসিনেশন)/iu.test(raw)
+      /\b(first\s*principles|philosophy|consciousness|intelligence|ethics|reasoning|abstraction|why\s+do\s+we|meaning|future\s+of\s+ai|singularity|epistemology|ontology|trade-offs?|paradox|intellectual\s*thinking|without\s*hallucination|hallucination|hallucinating|halusination|halucinate|critical\s*thinking|loop|looping|loop\s*ing|canned\s*loop|all\s*day\s*in\s*loop)\b/i.test(raw) ||
+      /(?:ফার্স্ট\s*প্রিন্সিপাল|দর্শন|যুক্তিবোধ|চেতনা|ভবিষ্যৎ|বুদ্ধিবৃত্তিক|হ্যালুসিনেশন|এক\s*কথা\s*বার\s*বার|লুপ)/iu.test(raw)
     ) {
       return "PHILOSOPHICAL_INTELLECT";
     }
@@ -133,7 +133,8 @@ class TukTukIntellectualCortex {
       "algorithm", "complexity", "design pattern", "state machine", "heuristics", "epistemology",
       "philosophical", "strategic", "paradigm", "abstraction", "intellectual", "co-founder",
       "hallucination", "intellectual thinking", "without hallucination", "first-principles", "grounded",
-      "আর্কিটেকচার", "কনকারেন্সি", "মেমোরি", "ফার্স্ট প্রিন্সিপাল", "স্ট্র্যাটেজি", "অপটিমাইজেশন", "বুদ্ধিবৃত্তিক"
+      "looping", "anti-loop", "loop breaker", "repetitive", "hallucinate", "halusinate",
+      "আর্কিটেকচার", "কনকারেন্সি", "মেমোরি", "ফার্স্ট প্রিন্সিপাল", "স্ট্র্যাটেজি", "অপটিমাইজেশন", "বুদ্ধিবৃত্তিক", "লুপ"
     ];
 
     for (const kw of intellectualKeywords) {

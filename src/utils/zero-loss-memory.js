@@ -99,6 +99,13 @@ class ZeroLossMemoryEngine {
     const lower = text.toLowerCase();
     const extracted = [];
 
+    // Anti-Loop & Anti-Meta-Critique Guard:
+    // If the user's speech is a complaint about loops, repetition, hallucination, or bug reports,
+    // NEVER extract any projects, preferences, or directives from this turn!
+    if (/\b(loop|looping|repetitive|repeat|repet|hallucinate|halusinate|canned|self\s*learning|fix\s+all|bug|issue|broken|problem|why\s+they|why\s+thay)\b/i.test(lower)) {
+      return [];
+    }
+
     // Rule A: Dynamic Team Directives & Rules ("always ...", "never ...", "remember to ...")
     const directiveStoplist = [
       "know", "think", "mind", "care", "worry", "drink", "matter", "understand", "remember", 
@@ -136,7 +143,11 @@ class ZeroLossMemoryEngine {
     const projMatch = lower.match(/(?:working on|building|developing|coding on|project)\s+([a-zA-Z0-9_\-\.]+)/i);
     if (projMatch && projMatch[1] && projMatch[1].trim().length > 2) {
       const projName = projMatch[1].trim();
-      const disallowed = ["a", "an", "the", "this", "that", "some", "my", "new", "our"];
+      const disallowed = [
+        "a", "an", "the", "this", "that", "some", "my", "new", "our", "next", "together", 
+        "something", "stuff", "issues", "bugs", "loop", "work", "chat", "code", "things", 
+        "now", "directions", "country", "park", "all", "more", "better"
+      ];
       if (!disallowed.includes(projName.toLowerCase())) {
         extracted.push({ topic: "Project", insight: `Building ${projName}`, salience: 0.90 });
       }

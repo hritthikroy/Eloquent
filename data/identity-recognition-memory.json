@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-05T22:03:57.761Z",
+  "updatedAt": "2026-09-05T22:28:01.820Z",
   "profiles": {
     "hritthik": {
       "id": "hritthik",
@@ -8,10 +8,10 @@
       "category": "primary_creator",
       "prior": 0.7,
       "voiceprint": {
-        "f0Mean": 129.29488369419826,
+        "f0Mean": 129.45395793278715,
         "f0Variance": 18.5,
-        "harmonicity": 0.8164744184709913,
-        "spectralCentroid": 1459.1186046177481,
+        "harmonicity": 0.8172697896639356,
+        "spectralCentroid": 1459.3174474159841,
         "cadenceWpm": 155,
         "mfcc": [
           12.5,
@@ -41,7 +41,7 @@
           -0.08
         ],
         "confidence": 0.95,
-        "lastUpdated": "2026-09-05T22:03:57.761Z"
+        "lastUpdated": "2026-09-05T22:28:01.820Z"
       },
       "energySignature": {
         "cadenceConsistency": 0.92,

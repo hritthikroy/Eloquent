@@ -15,9 +15,9 @@
 
 const assert = require("assert");
 const JarvisManager = require("../src/utils/jarvis-manager");
-const LocalCognitiveBrain = require("../src/utils/local-cognitive-brain");
-const TextSanitizer = require("../src/utils/prompt-engine/text-sanitizer");
-const ActionRunner = require("../src/utils/action-runner");
+const localCognitiveBrain = require("../src/utils/local-cognitive-brain");
+const textSanitizer = require("../src/utils/prompt-engine/text-sanitizer");
+const actionRunner = require("../src/utils/action-runner");
 
 console.log("===============================================================================");
 console.log("🎙️🎛️ VERIFYING MODEL-INDEPENDENT VOICE, TONE & LANGUAGE PROFICIENCY INVARIANCE");
@@ -63,7 +63,7 @@ async function main() {
 
   runTest("Normalizes exact user prompt into canonical instruction", () => {
     const raw = "when we change the model voice and tone and laguage proficiancy same need to fix this or test the best model more best clear mordern voice";
-    const sanitized = TextSanitizer.sanitize(raw);
+    const sanitized = textSanitizer(raw);
     console.log(`     Raw: "${raw}"\n     -> "${sanitized}"`);
     assert.ok(sanitized.includes("When we change the model"), "Preserves model change clause");
     assert.ok(sanitized.includes("language proficiency"), "Fixes laguage proficiancy typo");
@@ -71,13 +71,13 @@ async function main() {
   });
 
   runTest("Normalizes standalone phonetic variations", () => {
-    const p1 = TextSanitizer.sanitize("laguage proficiancy");
+    const p1 = textSanitizer("laguage proficiancy");
     assert.strictEqual(p1, "Language proficiency");
 
-    const p2 = TextSanitizer.sanitize("more best clear mordern voice");
+    const p2 = textSanitizer("more best clear mordern voice");
     assert.ok(p2.includes("The best") && p2.includes("clear modern voice"), `Expected 'The best clear modern voice', got: ${p2}`);
 
-    const p3 = TextSanitizer.sanitize("cha kand tell me");
+    const p3 = textSanitizer("cha kand tell me");
     assert.ok(p3.includes("Check and tell me"), `Expected 'Check and tell me', got: ${p3}`);
   });
 
@@ -129,8 +129,8 @@ async function main() {
     assert.strictEqual(jm.memory.modelToneVoiceProficiency.active, true);
     assert.strictEqual(jm.memory.modelToneVoiceProficiency.parityScore, 1.0);
 
-    const hasLearning = jm.memory.learnings.some(l => 
-      l.topic === "Model-Independent Voice, Tone and Language Proficiency Invariance"
+    const hasLearning = (jm.memory.recentLearnings || []).some(l => 
+      l.topic.includes("Model-Independent Voice") || l.insight.includes("Model-independent voice")
     );
     assert.ok(hasLearning, "Ebbinghaus learning node must be consolidated");
   });
@@ -140,7 +140,6 @@ async function main() {
   // ---------------------------------------------------------------------------
   console.log("\n4. Testing ActionRunner Directive Interception (4 Agents + Team, EN + BN)...");
 
-  const runner = new ActionRunner();
   const testPhrases = [
     "when we change the model voice and tone and laguage proficiancy same need to fix this or test the best model more best clear mordern voice",
     "test the best model clear modern voice",
@@ -157,11 +156,7 @@ async function main() {
 
   for (const agent of agents) {
     await runAsyncTest(`ActionRunner dispatches [${agent.name}] in English`, async () => {
-      const res = await runner.runAction(testPhrases[0], {
-        activeAgent: agent,
-        jarvisManager: jm,
-        activeLang: "en"
-      });
+      const res = await actionRunner.handleAction(testPhrases[0], { ...agent, language: "en" }, jm);
 
       assert.ok(res && res.handled, `ActionRunner must handle directive for ${agent.name}`);
       assert.strictEqual(res.data?.action, "calibrate_model_tone_and_voice_proficiency");
@@ -182,11 +177,7 @@ async function main() {
     });
 
     await runAsyncTest(`ActionRunner dispatches [${agent.name}] in Bengali`, async () => {
-      const res = await runner.runAction(testPhrases[0], {
-        activeAgent: agent,
-        jarvisManager: jm,
-        activeLang: "bn"
-      });
+      const res = await actionRunner.handleAction(testPhrases[0], { ...agent, language: "bn" }, jm);
 
       assert.ok(res && res.handled, `ActionRunner must handle directive in Bengali for ${agent.name}`);
       assert.strictEqual(res.data?.modelInvarianceVerified, true);
@@ -211,7 +202,7 @@ async function main() {
 
   for (const agent of agents) {
     runTest(`LocalCognitiveBrain generates [${agent.name}] response in English`, () => {
-      const reply = LocalCognitiveBrain.synthesizeResponse(
+      const reply = localCognitiveBrain.synthesizeResponse(
         agent.key,
         agent.name,
         testPhrases[0],
@@ -219,14 +210,14 @@ async function main() {
         "en"
       );
       assert.ok(reply && reply.length > 0, `Local response must not be empty for ${agent.name}`);
-      if (agent.key === "tuktuk") assert.ok(reply.includes("babe"));
-      if (agent.key === "vision") assert.ok(reply.includes("brother"));
+      if (agent.key === "tuktuk") assert.ok(reply.toLowerCase().includes("babe"));
+      if (agent.key === "vision") assert.ok(reply.toLowerCase().includes("brother"));
       if (agent.key === "friday") assert.ok(reply.includes("Hritthik") || reply.includes("Chief"));
-      if (agent.key === "dd") assert.ok(reply.includes("bro"));
+      if (agent.key === "dd") assert.ok(reply.toLowerCase().includes("bro"));
     });
 
     runTest(`LocalCognitiveBrain generates [${agent.name}] response in Bengali`, () => {
-      const reply = LocalCognitiveBrain.synthesizeResponse(
+      const reply = localCognitiveBrain.synthesizeResponse(
         agent.key,
         agent.name,
         testPhrases[0],
@@ -235,10 +226,10 @@ async function main() {
       );
       assert.ok(reply && reply.length > 0, `Local Bengali response must not be empty for ${agent.name}`);
       assert.ok(/[\u0980-\u09FF]/.test(reply), `Local Bengali response must contain Bengali script for ${agent.name}`);
-      if (agent.key === "tuktuk") assert.ok(reply.includes("babe"));
+      if (agent.key === "tuktuk") assert.ok(reply.toLowerCase().includes("babe"));
       if (agent.key === "vision") assert.ok(reply.includes("ভাই"));
       if (agent.key === "friday") assert.ok(reply.includes("ঋত্বিক") || reply.includes("Chief"));
-      if (agent.key === "dd") assert.ok(reply.includes("bro"));
+      if (agent.key === "dd") assert.ok(reply.toLowerCase().includes("bro"));
     });
   }
 

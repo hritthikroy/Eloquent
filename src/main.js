@@ -92,6 +92,7 @@ if (humanEarCortex) {
   }
 }
 const speakerPersonalityCortex = require('./utils/speaker-personality-cortex');
+const antiLoopEquationalCortex = require('./utils/anti-loop-equational-cortex');
 const { getLanguageBridge } = require('./main/electron-bridge');
 const languageBridge = getLanguageBridge({ storageDir: path.join(__dirname, '..', 'userData') });
 const TextSanitizer = require('./utils/prompt-engine/text-sanitizer');
@@ -2682,35 +2683,6 @@ async function stopRecording() {
     if (currentMode === 'jarvis' || isDirectedToAgent) {
       // 1. Acoustic Phonetic Normalization for Project Terms, Agent Names, and Bayesian STT Collisions
       originalText = TextSanitizer.sanitize(originalText);
-      originalText = originalText
-        .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
-        .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk')
-        .replace(/(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|টুকটুক)/gi, 'Tuk Tuk')
-        .replace(/(?:ভিশন\s*ভাই|ভাই\s*ভিশন|ভিশন|ভিসন)/gi, 'Vision')
-        .replace(/(?:विजन\s*भाई|भाई\s*विजन|विजन|विज़न)/gi, 'Vision')
-        .replace(/\b(?:hey\s+|listen\s+)?vision\s*(?:bhai)?\b/gi, 'Vision')
-        .replace(/(?:জেনি|जेनी|ফ্রাইডে|फ़्राइডে)/gi, 'Friday')
-        .replace(/(?:ব্রায়ান|ब्रायन|ডিডি)/gi, 'DD')
-        .replace(/\b(?:brayn|dee\s*dee|deedee)\b/gi, 'DD')
-        .replace(/\b(on this course)\b/gi, 'on this code')
-        .replace(/\b(?:tuk\s*mat\s*chok\s*koro|tuk\s*mat\s*chok|chok\s*matkacche)\b/gi, 'chokh flicker koro na')
-        .replace(/\b(?:lag\s*kore\s*chhe|lag\s*koreche)\b/gi, 'lag korche')
-        .replace(/\b(?:buffering\s*as\s*se|buffering\s*asce)\b/gi, 'buffering asche')
-        .replace(/\b(?:buffaring|buffring|bufering)\b/gi, 'buffering')
-        .replace(/\b(?:kya\s*monekta[,\s]*grammar[,\s]*mere[,\s]*mo\s*toh[,\s]*skill\s*dhichcho[,\s]*not\s*a\s*modern\s*girl)\b/gi, 'grammar mere skill diccho, not a modern girl')
-        .replace(/\b(?:tabular[,\s]*tata\s*hai|tabuler\s*data\s*chai)\b/gi, 'table data chai')
-        .replace(/\b(?:flicaring|flickaring|flicering)\b/gi, 'flickering')
-        .replace(/\bflicar\b/gi, 'flicker')
-        .replace(/\bchack\b/gi, 'check')
-        .replace(/\borginal\b/gi, 'original')
-        .replace(/\bbutter\s*smouth\b/gi, 'butter smooth')
-        .replace(/\b(?:fixed|fix)\s*(?:visionvoice|vision\s*voice)\b/gi, 'fix Vision voice')
-        .replace(/\b(?:fixed|fix)\s*(?:fridayvoice|frydayvoice|friday\s*voices?|fryday\s*voices?)\b/gi, 'fix Friday voice')
-        .replace(/\b(?:fixed|fix)\s*(?:ddvoice|dd\s*voices?)\b/gi, 'fix DD voice')
-        .replace(/\bfryday\s*voice\b/gi, 'Friday voice')
-        .replace(/\bfryday\s*voices\b/gi, 'Friday voices')
-        .replace(/\bdd\s*voice\b/gi, 'DD voice')
-        .replace(/\bdd\s*voices\b/gi, 'DD voices');
 
       // 2. Backchannel Self-Echo Blinding Filter
       const timeSinceBC = Date.now() - (jarvisLastBackchannelTime || 0);
@@ -3804,12 +3776,13 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
 
     // 3. Strip repetitive generic chatbot trailing questions
     const genericTrailerQuestions = [
-      /\s*(?:what('s| is) on your mind(?:\s+right now|\s+today)?\??|how (?:is|are) you feeling(?:\s+right now|\s+today)?\??|how('s| is) (?:your\s+focus|the\s+energy)(?:\s+holding\s+up|\s+feeling)?\??|what are we tackling(?:\s+next|\s+right now|\s+today)?\??|what do you want to (?:work on|build|code|tackle)(?:\s+next|\s+today)?\??|what('s| is) on your agenda(?:\s+today)?\??|what('s| is) going on in that brilliant head of yours\??)$/i
+      /\s*(?:what('s| is) on your mind(?:\s+right now|\s+today)?\??|how (?:is|are) you feeling(?:\s+right now|\s+today)?\??|how('s| is) (?:your\s+focus|the\s+energy)(?:\s+holding\s+up|\s+feeling)?\??|what are we (?:tackling|building|coding|shipping|working\s+on|diving\s+into|exploring)(?:\s+next|\s+right now|\s+today)?(?:\s+together)?(?:\s+babe|\s+brother|\s+bro|\s+chief)?\??|what do you want to (?:work on|build|code|tackle|explore|ship)(?:\s+next|\s+today|\s+together)?(?:\s+babe|\s+brother|\s+bro|\s+chief)?\??|what should we (?:build|code|ship|explore|tackle|work\s+on)(?:\s+next|\s+today|\s+together)?(?:\s+babe|\s+brother|\s+bro|\s+chief)?\??|what('s| is) on your agenda(?:\s+today)?\??|what('s| is) going on in that brilliant head of yours\??|tell me what('s| is) on your mind\??|tell me what we(?:'re| are) working on(?:\s+together)?(?:\s+babe|\s+brother|\s+bro)?\??|let(?:'s|s) build something(?:\s+huge|\s+great)?(?:\s+together)?(?:\s+babe|\s+brother|\s+bro)?\??|what('s| is) on your screen\??|ready to (?:build|code|dive in)(?:\s+babe|\s+brother)?\??)$/i,
+      /\s*(?:বলো\s+কী\s+(?:করব|করতে\s+হবে|আলোচনা\s+করব|নিয়ে\s+ভাবছ|নিয়ে\s+চিন্তা\s+করছ|শুরু\s+করব)\??|কী\s+(?:করব|করতে\s+হবে|বানাব|কোড\s+করব)\s+বলো\??|কী\s+ভাবছো\s+বলো\??|বলো\s+কী\s+করতে\s+হবে\??|বলো\s+শুনছি\??)$/u
     ];
     for (const qPattern of genericTrailerQuestions) {
       reply = reply.replace(qPattern, '.');
     }
-    reply = reply.replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
+    reply = reply.replace(/[,\s—–:-]+\./g, '.').replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
 
     // 4. Natural spoken word pacing — crisp, snappy, but adaptively expanded for intellectual depth
     // (Team gets 45 words; single agents get 28 words standard, up to 45 words if intellectual/philosophical)
@@ -3832,8 +3805,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       const isBn = activeLang === 'bn';
       const fallbackPools = {
         tuktuk: isBn
-          ? ["একদম তোমার পাশেই আছি babe! মন দিয়ে শুনছি তুমি কী ভাবছো।", "শুনছি তো babe! বলো কী নিয়ে চিন্তা করছো, একসাথে গভীরে গিয়ে ভাবি।", "তোমার সাথেই আছি babe, বাস্তব যুক্তি দিয়ে বিষয়টার গভীরে যাই।", "তোমার পাশেই বসে আছি babe, বলো কী আলোচনা করব।"]
-          : ["Right here beside you babe. What should we explore next?", "Listening closely babe. Let's think this through together with real depth.", "Right here with you babe. Tell me what's on your mind.", "Beside you all the way babe. Let's break it down with clear logic."],
+          ? ["একদম তোমার পাশেই আছি babe, মন দিয়ে শুনছি তুমি কী ভাবছো।", "তোমার সাথেই আছি babe, বাস্তব যুক্তি দিয়ে বিষয়টার গভীরে যাই।", "মন দিয়ে শুনছি babe, পুরো মনোযোগ তোমার দিকে।", "তোমার পাশেই বসে আছি babe, গভীর বুদ্ধিবৃত্তিক চিন্তায় তোমার সাথে আছি।"]
+          : ["Right here beside you babe, listening with full attention.", "Listening closely babe, grounded in facts and clear reasoning.", "Right here with you babe, thinking through this with real intellectual depth.", "Beside you all the way babe, focused completely on what matters."],
         vision: isBn
           ? ["শুনছি ভাই, আর্কিটেকচার ট্র্যাক করছি।", "রেডি আছি bro, বাস্তব লজিক নিয়ে কাজ করি।", "আর্কিটেকচার ট্র্যাক করছি ভাই, কোড নিয়ে কথা বলো!"]
           : ["Right with you brother. Systems logic ready.", "Eyes on the full-stack architecture, brother.", "Standing by brother, keeping clear engineering focus."],
@@ -3854,6 +3827,24 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       reply = (typeof LocalCognitiveBrain._pickUnique === 'function')
         ? LocalCognitiveBrain._pickUnique(agent.key, agentPool)
         : agentPool[Math.floor(Math.random() * agentPool.length)];
+    }
+
+    // 4b. 0-Loop, 0-Repetition, 0-Duplicate & Equational Anti-Loop Engine
+    // Mathematical invariants: Normalized Shannon entropy H_norm >= 0.65, Jaccard < 0.20, trigram collision = 0
+    if (antiLoopEquationalCortex && typeof antiLoopEquationalCortex.auditAndEnforce === 'function') {
+      const historyContext = (jarvisManager && Array.isArray(jarvisManager.conversationHistory))
+        ? jarvisManager.conversationHistory
+            .filter(t => t.role === 'assistant')
+            .slice(-10)
+        : null;
+      reply = antiLoopEquationalCortex.auditAndEnforce(
+        reply,
+        agent,
+        activeLang,
+        displaySpeech || userSpeech,
+        { activeApp: activeContext?.activeApp, windowTitle: activeContext?.windowTitle },
+        historyContext
+      );
     }
 
     // 5. HARD PERSONA & LEXICAL SANITIZATION ENFORCEMENT
@@ -3897,115 +3888,18 @@ function postProcessTranscription(text) {
     text = TextSanitizer.sanitize(text);
   }
 
-  text = text.trim().replace(/\s+/g, ' ');
-
-  const corrections = {
-    'every thing': 'everything',
-    'fix more every thing': 'fix more everything',
-    'defret voices': 'different voices',
-    'difrent vide': 'different vibe',
-    'doop-took': 'Tuk Tuk',
-    'doop took': 'Tuk Tuk',
-    'dooptook': 'Tuk Tuk',
-    'dup took': 'Tuk Tuk',
-    'duptook': 'Tuk Tuk',
-    'dook took': 'Tuk Tuk',
-    'dooktook': 'Tuk Tuk',
-    'tuk-tuk': 'Tuk Tuk',
-    'tuktuk': 'Tuk Tuk',
-    'tuk tuk': 'Tuk Tuk',
-    'Tuktuk': 'Tuk Tuk',
-    'tok tok': 'Tuk Tuk',
-    'took took': 'Tuk Tuk',
-    'tok-tok': 'Tuk Tuk',
-    'took-took': 'Tuk Tuk',
-    'tik tik': 'Tuk Tuk',
-    'tik-tik': 'Tuk Tuk',
-    'tukul': 'Tuk Tuk',
-    'eva': 'Tuk Tuk',
-    'Eva': 'Tuk Tuk',
-    'ava': 'Tuk Tuk',
-    'Ava': 'Tuk Tuk',
-    'bapak': 'babe',
-    'bambu': 'babe',
-    'beb': 'babe',
-    'bablo': 'babe',
-    'naprononcio siya': 'pronunciation',
-    'Bang naprononcio siya, Tikoro': 'Bangla pronunciation thik koro',
-    'unicorius': 'unicode use',
-    'tonta tiko': 'tone-ta thik',
-    'chou na sound': 'shona sound',
-    'bep bang lego': 'babe bangla-te',
-    'komenemoto': 'konobhabei',
-    'tummar boi': 'tomar voice',
-    'thik la chena': 'thik lagche na',
-    'bngici': 'Banglish',
-    'banglis': 'Banglish',
-    'flicaring': 'flickering',
-    'halusinating': 'hallucinating',
-    'recognigar': 'recognizer',
-    'recognage': 'recognize',
-    'parfectly': 'perfectly',
-    'smouther': 'smoother',
-    'sentance': 'sentence',
-    'vary': 'very',
-    'tha ': 'the ',
-    'approch': 'approach',
-    'ifferent': 'different',
-    'recognise': 'recognize',
-    'recogniser': 'recognizer',
-    'recognation': 'recognition',
-    'profesional': 'professional',
-    'professionaly': 'professionally',
-    'profesionally': 'professionally',
-    'dictashun': 'dictation',
-    'dictatation': 'dictation',
-    'vocie': 'voice',
-    'voyce': 'voice',
-    'proparly': 'properly',
-    'proerly': 'properly',
-    'properley': 'properly',
-    'morder girl': 'modern girl',
-    'morder': 'modern',
-    'chak': 'check',
-    'chacwk': 'check',
-    'hade': 'head',
-    'sentense': 'sentence',
-    'sentances': 'sentences',
-    'diferent': 'different',
-    'diference': 'difference',
-    'smoth': 'smooth',
-    'smoothe': 'smooth',
-    'writting': 'writing',
-    'writeing': 'writing',
-    'texting': 'text',
-    'pased': 'pasted',
-    'pasteing': 'pasting',
-    ' ,': ',',
-    ' .': '.',
-    ' ?': '?',
-    ' !': '!',
-    ' ;': ';',
-    ' :': ':',
-    '( ': '(',
-    ' )': ')'
-  };
-
-  // Apply corrections (case-insensitive for most, case-sensitive for some)
-  for (const [wrong, right] of Object.entries(corrections)) {
-    // Escape special regex characters in the search string
-    const escapedWrong = wrong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    
-    // Use case-insensitive for word corrections
-    if (wrong.includes(' ')) {
-      // For phrases with spaces, use case-sensitive to avoid over-correction
-      text = text.replace(new RegExp(escapedWrong, 'g'), right);
-    } else {
-      // For single words, use case-insensitive
-      const regex = new RegExp('\\b' + escapedWrong + '\\b', 'gi');
-      text = text.replace(regex, right);
-    }
-  }
+  // Punctuation and spacing cleanup
+  text = text
+    .replace(/\s*,\s*/g, ', ')
+    .replace(/\s*\.\s*/g, '. ')
+    .replace(/\s*\?\s*/g, '? ')
+    .replace(/\s*!\s*/g, '! ')
+    .replace(/\s*;\s*/g, '; ')
+    .replace(/\s*:\s*/g, ': ')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   // Ensure first letter is capitalized
   if (text.length > 0) {
@@ -4015,11 +3909,8 @@ function postProcessTranscription(text) {
   // Capitalize after sentence endings
   text = text.replace(/([.!?]\s+)([a-z])/g, (match, p1, p2) => p1 + p2.toUpperCase());
 
-  // Fix multiple spaces
-  text = text.replace(/\s+/g, ' ');
-
   // Ensure proper ending punctuation if missing
-  if (text.length > 0 && !/[.!?]$/.test(text)) {
+  if (text.length > 0 && !/[.!?।]$/.test(text)) {
     text += '.';
   }
 
