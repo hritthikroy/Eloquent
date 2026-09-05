@@ -52,7 +52,8 @@ const AGENT_COLORS = {
   vision: '#06b6d4',   // Vision Cyan
   andrew: '#06b6d4',   // Andrew Cyan (alias)
   friday: '#10b981',   // Friday Emerald
-  brian: '#f59e0b',    // Brian Amber
+  dd: '#f59e0b',       // DD Amber
+  brian: '#f59e0b',    // Brian Amber (alias)
   rewrite: '#a855f7',  // AI Rewriter Purple
   standard: '#22c55e'  // Standard Recording Green
 };
@@ -63,9 +64,9 @@ function getActiveColor() {
 
   const name = (currentAgentName || '').toLowerCase().trim();
   if (name.includes('tuk')) return AGENT_COLORS.tuktuk;
-  if (name.includes('vision') || name.includes('andrew')) return AGENT_COLORS.vision;
-  if (name.includes('friday') || name.includes('fry day')) return AGENT_COLORS.friday;
-  if (name.includes('brian')) return AGENT_COLORS.brian;
+  if (name.includes('vision') || name.includes('vison') || name.includes('andrew')) return AGENT_COLORS.vision;
+  if (name.includes('friday') || name.includes('fry day') || name.includes('fryday')) return AGENT_COLORS.friday;
+  if (name.includes('dd') || name.includes('brian') || name.includes('brayn')) return AGENT_COLORS.dd;
 
   return AGENT_COLORS.tuktuk; // Default to vibrant Tuk Tuk rose
 }
@@ -332,11 +333,11 @@ ipcRenderer.on('set-agent-name', (_, agentName) => {
     currentAgentName = agentName;
     const lower = agentName.toLowerCase();
     if (overlay) {
-      overlay.classList.remove('agent-tuktuk', 'agent-vision', 'agent-andrew', 'agent-friday', 'agent-brian');
+      overlay.classList.remove('agent-tuktuk', 'agent-vision', 'agent-andrew', 'agent-friday', 'agent-dd', 'agent-brian');
       if (lower.includes('tuk')) overlay.classList.add('agent-tuktuk');
-      else if (lower.includes('vision') || lower.includes('andrew')) overlay.classList.add('agent-vision');
-      else if (lower.includes('friday') || lower.includes('fry day')) overlay.classList.add('agent-friday');
-      else if (lower.includes('brian')) overlay.classList.add('agent-brian');
+      else if (lower.includes('vision') || lower.includes('vison') || lower.includes('andrew')) overlay.classList.add('agent-vision');
+      else if (lower.includes('friday') || lower.includes('fry day') || lower.includes('fryday')) overlay.classList.add('agent-friday');
+      else if (lower.includes('dd') || lower.includes('brian') || lower.includes('brayn')) overlay.classList.add('agent-dd');
     }
 
     const recLabel = document.querySelector('.rec-label');
