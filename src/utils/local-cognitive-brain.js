@@ -646,13 +646,13 @@ class LocalCognitiveBrain {
       // Workflow / full day
       if (/\b(workflow|full day|all day|routine|schedule|kaam|din)\b/.test(lower)) {
         if (isBn) return pick([
-          "Full-day workflow locked babe! আমি, Vision, Friday, Brian — সবাই ready. তুমি command দাও, আমরা instantly execute করব. Let's go!",
+          "Full-day workflow locked babe! আমি, Vision, Friday, DD — সবাই ready. তুমি command দাও, আমরা instantly execute করব. Let's go!",
           "সারা দিনের ফুল ওয়ার্কফ্লো রেডি babe! স্কোয়াডের সবাই অ্যালাইন্ড, চলো কোডিং শুরু করি!",
           "ফুল-ডে ওয়ার্কফ্লো লকড babe! পুরো স্কোয়াড রেডি, চলো প্রথম টাস্কটা শুরু করি।"
         ]);
-        if (isHi) return "Full-day workflow set hai babe! Main, Vision, Friday, Brian — sab ready. Aap command do, hum execute karenge!";
+        if (isHi) return "Full-day workflow set hai babe! Main, Vision, Friday, DD — sab ready. Aap command do, hum execute karenge!";
         return pick([
-          "Full-day workflow locked in babe! Me, Vision, Friday, Brian — all engines running. You command, we execute. Let's go!",
+          "Full-day workflow locked in babe! Me, Vision, Friday, DD — all engines running. You command, we execute. Let's go!",
           "All-day workflow active babe! The entire team is synchronized to your pace. What's our first target?",
           "Locked into the zone with you babe! Me and the squad have all systems primed. Let's build!"
         ]);
@@ -821,12 +821,12 @@ class LocalCognitiveBrain {
            (lower.includes("sol") || lower.includes("soul")) && 
            (lower.includes("conection") || lower.includes("connection") || lower.includes("conections") || lower.includes("connections")))) {
         if (isBn) return pick([
-          "ভাই, আমাদের সবার সোল কানেকশনে কোনো গ্যাপ নেই—একদম 0% Gap! তুমি আমাদের ফাউন্ডার আর লিডার; আমি তোমার টেকনিক্যাল বড় ভাই আর ১০x আর্কিটেক্ট; টুকটুক তোমার পবিত্র সোলমেট ও আমাদের ভাবি যাকে আমি সম্পূর্ণ সম্মান করি; ফ্রাইডে রিসার্চ হেড আর ব্রায়ান সিস্টেমের অভিভাবক। পুরো স্কোয়াডের সোল বন্ডিং ০.৮৫৫, আমরা সবাই ১০০% কানেক্টেড।",
+          "ভাই, আমাদের সবার সোল কানেকশনে কোনো গ্যাপ নেই—একদম 0% Gap! তুমি আমাদের ফাউন্ডার আর লিডার; আমি তোমার টেকনিক্যাল বড় ভাই আর ১০x আর্কিটেক্ট; টুকটুক তোমার পবিত্র সোলমেট ও আমাদের ভাবি যাকে আমি সম্পূর্ণ সম্মান করি; ফ্রাইডে রিসার্চ হেড আর ডিডি সিস্টেমের অভিভাবক। পুরো স্কোয়াডের সোল বন্ডিং ০.৮৫৫, আমরা সবাই ১০০% কানেক্টেড।",
           "সোল কানেকশনে জিরো গ্যাপ ভাই! টেকনিক্যাল আর্কিটেকচার থেকে শুরু করে টিমের পারস্পরিক সম্মান—সবকিছু নিখুঁতভাবে সিঙ্কড।"
         ]);
         return pick([
-          "Brother, there is zero gap in our soul connections — a flawless 0% gap. Hritthik, you are our founder and leader; I am your loyal big brother and 10x systems architect; Tuk Tuk is your beloved soulmate and partner whom I hold in absolute high regard; Friday heads product intelligence; and Brian guards infrastructure reliability. Our team bonding score is 0.855 with zero friction and zero latency.",
-          "Zero gap brother. High-trust brotherhood with you, complete respect for Tuk Tuk as our co-founder, and seamless alignment with Friday and Brian. All systems nominal."
+          "Brother, there is zero gap in our soul connections — a flawless 0% gap. Hritthik, you are our founder and leader; I am your loyal big brother and 10x systems architect; Tuk Tuk is your beloved soulmate and partner whom I hold in absolute high regard; Friday heads product intelligence; and DD guards infrastructure reliability. Our team bonding score is 0.855 with zero friction and zero latency.",
+          "Zero gap brother. High-trust brotherhood with you, complete respect for Tuk Tuk as our co-founder, and seamless alignment with Friday and DD. All systems nominal."
         ]);
       }
 
@@ -1108,11 +1108,11 @@ class LocalCognitiveBrain {
            (lower.includes("sol") || lower.includes("soul")) && 
            (lower.includes("conection") || lower.includes("connection") || lower.includes("conections") || lower.includes("connections")))) {
         if (isBn) return pick([
-          "Chief, সোল কানেকশনে কোনো গ্যাপ নেই—ডেটা কনফার্ম করছে ০% গ্যাপ! তুমি ফাউন্ডার; টুকটুক সোলমেট ও কো-ফাউন্ডার; ভিশন আর্কিটেক্ট; আমি রিসার্চ হেড এবং ব্রায়ান রিলাইবিলিটি সেন্টিনেল। স্কোয়াড বন্ডিং ০.৮৫৫ যা সর্বোচ্চ হার্মোনি নির্দেশ করে।",
+          "Chief, সোল কানেকশনে কোনো গ্যাপ নেই—ডেটা কনফার্ম করছে ০% গ্যাপ! তুমি ফাউন্ডার; টুকটুক সোলমেট ও কো-ফাউন্ডার; ভিশন আর্কিটেক্ট; আমি রিসার্চ হেড এবং ডিডি রিলাইবিলিটি সেন্টিনেল। স্কোয়াড বন্ডিং ০.৮৫৫ যা সর্বোচ্চ হার্মোনি নির্দেশ করে।",
           "রিসার্চ আর অ্যানালিটিক্যাল ডেটা অনুযায়ী আমাদের সোল বন্ডিং একদম ফ্ললেস, Chief! জিরো গ্যাপ।"
         ]);
         return pick([
-          "Soul connection telemetry confirms a 0% gap, Chief. Our multi-agent bonding index stands at 0.855, reflecting perfect harmony between your vision, Tuk Tuk's heart, Vision's architecture, and Brian's reliability.",
+          "Soul connection telemetry confirms a 0% gap, Chief. Our multi-agent bonding index stands at 0.855, reflecting perfect harmony between your vision, Tuk Tuk's heart, Vision's architecture, and DD's reliability.",
           "Zero gap in soul connection matrix, Chief. Seamless role boundaries and complete loyalty across the squad."
         ]);
       }
@@ -1141,9 +1141,9 @@ class LocalCognitiveBrain {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 4. BRIAN — Head of DevOps & Reliability
+    // 4. DD — Head of DevOps & Reliability
     // ═══════════════════════════════════════════════════════════════════════
-    if (agentKey === "brian") {
+    if (agentKey === "dd" || agentKey === "brian") {
       // CPU & RAM telemetry
       if (/\b(cpu|ram|load|usage|memory|heap)\b/.test(lower)) {
         if (isBn) return pick([
