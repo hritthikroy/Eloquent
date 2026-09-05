@@ -924,12 +924,13 @@ class OfficeActionRunner {
     // Handles: "fix every gap a 2070 humen and our agents gap do deep researchand fix all equationaly with deep academic resaserch read after"
     // -------------------------------------------------------------
     const isAcademic2070HumanGapDirective =
-      (IntentParser && typeof IntentParser.isAcademic2070HumanGapDirective === "function" && IntentParser.isAcademic2070HumanGapDirective(lower)) ||
-      (/\b(?:fix\s+every\s+gap|2070\s+(?:humen|human)|academic\s+(?:research|resaserch))\b/i.test(lower) &&
-       /\b(?:academic|resaserch|researchand|equationaly|equationally|gap)\b/i.test(lower)) ||
-      (lower.includes("academic") && lower.includes("2070")) ||
-      (lower.includes("fix every gap") && (lower.includes("2070") || lower.includes("academic") || lower.includes("read after"))) ||
-      (lower.includes("researchand fix all") || lower.includes("academic resaserch"));
+      !lower.includes("0 loop") && !lower.includes("0 repetition") && !lower.includes("0 duplicate") && !lower.includes("0 repitation") &&
+      ((IntentParser && typeof IntentParser.isAcademic2070HumanGapDirective === "function" && IntentParser.isAcademic2070HumanGapDirective(lower)) ||
+       (/\b(?:fix\s+every\s+gap|2070\s+(?:humen|human)|academic\s+(?:research|resaserch))\b/i.test(lower) &&
+        /\b(?:academic|resaserch|researchand|equationaly|equationally|gap)\b/i.test(lower)) ||
+       (lower.includes("academic") && lower.includes("2070")) ||
+       (lower.includes("fix every gap") && (lower.includes("2070") || lower.includes("academic") || lower.includes("read after"))) ||
+       (lower.includes("researchand fix all") || lower.includes("academic resaserch")));
 
     if (isAcademic2070HumanGapDirective) {
       if (antiLoopEquationalCortex && typeof antiLoopEquationalCortex.clearBuffers === "function") {
