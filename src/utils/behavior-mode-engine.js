@@ -32,7 +32,7 @@ const WORKING_MODES = {
     key: "PRODUCT_STRATEGY",
     name: "Creative Product & Feature Strategy",
     leadAgent: "Tuk Tuk",
-    supportingAgent: "Jenny",
+    supportingAgent: "Friday",
     pace: "+0%",
     prompt: "Visionary Co-Founder Mode: Expansive creative brainstorming, UI/UX refinement, product positioning, discover unsaid possibilities.",
     tools: ["screen", "notes"]
@@ -40,7 +40,7 @@ const WORKING_MODES = {
   KNOWLEDGE_RESEARCH: {
     key: "KNOWLEDGE_RESEARCH",
     name: "Deep Knowledge & Paper Exploration",
-    leadAgent: "Jenny",
+    leadAgent: "Friday",
     supportingAgent: "Tuk Tuk",
     pace: "+2%",
     prompt: "Chief Intelligence Mode: Academic rigor, cutting-edge papers, mathematical equations, competitive analysis, trend synthesis.",
@@ -243,8 +243,9 @@ class BehaviorModeEngine {
     const focusWeight = (this.state.focusScore || 0.8) * 0.45;
     const brevityWeight = (1 / Math.max(1, wordCount)) * 0.35;
     const stressWeight = (this.state.stressScore || 0.1) * 0.20;
+    const ideBoost = isIDEActive ? 0.08 : 0.0;
 
-    const cli = Math.min(1.0, Math.max(0.0, focusWeight + brevityWeight + stressWeight));
+    const cli = Math.min(1.0, Math.max(0.0, focusWeight + brevityWeight + stressWeight + ideBoost));
     
     // Calculate target word limit (Deep Flow strictly clamped to 6-14 words)
     const targetWords = cli >= 0.70

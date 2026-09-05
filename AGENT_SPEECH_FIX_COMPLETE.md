@@ -3,7 +3,7 @@
 ## Status: READY FOR TESTING
 
 ## Summary
-Fixed the critical bug where multiple agents (Andrew, Jenny, Brian, Tuk Tuk) would speak simultaneously in team/squad mode, creating unintelligible audio chaos.
+Fixed the critical bug where multiple agents (Andrew, Friday, Brian, Tuk Tuk) would speak simultaneously in team/squad mode, creating unintelligible audio chaos.
 
 ## What Was Fixed
 

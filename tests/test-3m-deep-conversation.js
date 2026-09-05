@@ -62,10 +62,10 @@ function parseMultiAgentTurns(text) {
     "tuktuk": { name: "Tuk Tuk", voice: "en-US-AvaNeural" },
     "ava": { name: "Tuk Tuk", voice: "en-US-AvaNeural" },
     "andrew": { name: "Andrew", voice: "en-US-AndrewNeural" },
-    "jenny": { name: "Jenny", voice: "en-US-JennyNeural" },
+    "friday": { name: "Friday", voice: "en-US-JennyNeural" },
     "brian": { name: "Brian", voice: "en-US-BrianNeural" }
   };
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const regex = /\[(Tuk Tuk|Andrew|Vision|Friday|Brian|Ava)\]:\s*([^\[]+)/gi;
   const turns = [];
   let match;
   while ((match = regex.exec(text)) !== null) {

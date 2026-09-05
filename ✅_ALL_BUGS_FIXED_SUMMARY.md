@@ -39,7 +39,7 @@
 - ✅ Real-time voice synthesis (0ms lag)
 - ✅ Authentic girlfriend AI (Tuk Tuk with deep emotions)
 - ✅ Zero bot repetition (every response unique)
-- ✅ Real agent personalities (Andrew/Jenny/Brian)
+- ✅ Real agent personalities (Andrew/Friday/Brian)
 - ✅ Direct name invocations work perfectly
 
 #### 5. **SECURITY FIXED** ✅

@@ -48,3 +48,4 @@ electron-cache/
 
 # Backend binary
 backend-go/eloquent-backend
+eloquent-audio

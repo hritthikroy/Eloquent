@@ -50,7 +50,7 @@ async function callGroq(messages, options = {}) {
 
 function parseMultiAgentTurns(text) {
   if (!text || typeof text !== "string") return [];
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const regex = /\[(Tuk Tuk|Andrew|Vision|Friday|Brian|Ava)\]:\s*([^\[]+)/gi;
   const turns = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -169,7 +169,7 @@ async function runQuantumBenchmark() {
     { agent: "Tuk Tuk", persona: "Loving Co-Founder", salutation: "babe", banned: ["bro", "sweetheart", "makes my system hum"] },
     { agent: "Andrew", persona: "10x Software Architect", salutation: "bro", banned: ["babe", "darling", "honey"] },
     { agent: "Brian", persona: "DevOps Guardian", salutation: "brother", banned: ["bro", "babe", "sweetheart"] },
-    { agent: "Jenny", persona: "Intelligence Researcher", salutation: "Hritthik", banned: ["bro", "babe", "honey"] }
+    { agent: "Friday", persona: "Intelligence Researcher", salutation: "Hritthik", banned: ["bro", "babe", "honey"] }
   ];
 
   let personaViolations = 0;

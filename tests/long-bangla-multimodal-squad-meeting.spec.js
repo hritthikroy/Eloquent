@@ -2,15 +2,15 @@
  * 25-Turn Continuous Long Bangla Conversation, Office Zoom Meeting & Squad Alignment Suite
  *
  * Verifies:
- * 1. Long Bangla / Banglish conversation across all 4 agents (Tuk Tuk, Vision, Jenny, Brian)
- * 2. Zero unwanted flipping to English when technical terms (AST, buffer, latency, git) are mixed in
- * 3. Working context and shared memory preservation across language shifts (no context wipes)
- * 4. 4-Agent Office Zoom Standup & sequential meeting parsing (Tuk Tuk, Vision, Jenny, Brian)
- * 5. Signature voice lock invariance:
- *    - Tuk Tuk: en-US-AvaMultilingualNeural
- *    - Vision: en-US-AndrewNeural
- *    - Jenny: en-US-JennyNeural (pure authentic voice)
- *    - Brian: en-US-BrianMultilingualNeural
+ * 1. Long Bangla / Banglish conversation across all 4 agents (Tuk Tuk, Vision, Friday, Brian)
+ * 2. Visual inspection with simulated OCR/Face/Gesture telemetry
+ * 3. Autonomous code repair / AST self-healing simulation in Bengali
+ * 4. 4-Agent Office Zoom Standup & sequential meeting parsing (Tuk Tuk, Vision, Friday, Brian)
+ * 5. Audio mastering & signature voice verification:
+ *    - Tuk Tuk: en-US-AvaMultilingualNeural (expressive girlfriend persona)
+ *    - Vision: en-US-AndrewNeural (lead systems architect)
+ *    - Friday: en-US-JennyNeural (pure authentic voice)
+ *    - Brian: en-US-BrianMultilingualNeural (grounded DevOps)
  * 6. Authentic Bengali cross-agent handoffs with zero English prompt pollution
  */
 
@@ -86,31 +86,31 @@ const BANGLA_CONVERSATION_TURNS = [
     }
   },
 
-  // Turn 5: Jenny - Research Data on Sub-250ms VAD
+  // Turn 5: Friday - Research Data on Sub-250ms VAD
   {
     turn: 5,
-    agentKey: 'jenny',
-    domain: 'Jenny: VAD Turn-Taking Research Benchmark in Bengali',
-    input: 'Jenny, natural turn-taking latency-r research paper ki bolche?',
+    agentKey: 'friday',
+    domain: 'Friday: VAD Turn-Taking Research Benchmark in Bengali',
+    input: 'Friday, natural turn-taking latency-r research paper ki bolche?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
-      assert(lower.includes('vad') || lower.includes('turn-taking') || lower.includes('research') || lower.includes('benchmark') || /[\u0980-\u09FF]/.test(res), 'Jenny delivers empirical benchmarks');
-      assert(!lower.includes('bro') && !lower.includes('babe'), 'Jenny persona isolation (never bro/babe)');
+      assert(lower.includes('vad') || lower.includes('turn-taking') || lower.includes('research') || lower.includes('benchmark') || /[\u0980-\u09FF]/.test(res), 'Friday delivers empirical benchmarks');
+      assert(!lower.includes('bro') && !lower.includes('babe'), 'Friday persona isolation (never bro/babe)');
     }
   },
 
-  // Turn 6: Jenny - WebRTC vs SSE Benchmark Tradeoff
+  // Turn 6: Friday - WebRTC vs SSE Benchmark Tradeoff
   {
     turn: 6,
-    agentKey: 'jenny',
-    domain: 'Jenny: Architecture Benchmarks (WebRTC vs SSE) in Bengali',
-    input: 'Jenny, WebRTC vs SSE audio streaming latency-te kon benchmark-ta better?',
+    agentKey: 'friday',
+    domain: 'Friday: Architecture Benchmarks (WebRTC vs SSE) in Bengali',
+    input: 'Friday, WebRTC vs SSE audio streaming latency-te kon benchmark-ta better?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
-      assert(lower.includes('webrtc') || lower.includes('sse') || lower.includes('latency') || /[\u0980-\u09FF]/.test(res), 'Jenny compares streaming architectures');
-      assert(!lower.includes('bro') && !lower.includes('babe'), 'Jenny persona isolation');
+      assert(lower.includes('webrtc') || lower.includes('sse') || lower.includes('latency') || /[\u0980-\u09FF]/.test(res), 'Friday compares streaming architectures');
+      assert(!lower.includes('bro') && !lower.includes('babe'), 'Friday persona isolation');
     }
   },
 
@@ -166,7 +166,7 @@ const BANGLA_CONVERSATION_TURNS = [
     }
   },
 
-  // Turn 11: Squad Mode - Office Standup in Bengali (Tuk Tuk + Vision + Jenny + Brian)
+  // Turn 11: Squad Mode - Office Standup in Bengali (Tuk Tuk + Vision + Friday + Brian)
   {
     turn: 11,
     agentKey: 'team',
@@ -174,20 +174,20 @@ const BANGLA_CONVERSATION_TURNS = [
     input: 'Team, amader office standup meeting shuru koro, sobai update dao!',
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {
-      assert(res.includes('[Tuk Tuk]') || res.includes('[Vision]') || res.includes('[Jenny]') || res.includes('[Brian]'), 'Multi-agent turns formatted correctly');
+      assert(res.includes('[Tuk Tuk]') || res.includes('[Vision]') || res.includes('[Friday]') || res.includes('[Brian]'), 'Multi-agent turns formatted correctly');
     }
   },
 
-  // Turn 12: Jenny - Competitive Pipeline Benchmarks
+  // Turn 12: Friday - Competitive Pipeline Benchmarks
   {
     turn: 12,
-    agentKey: 'jenny',
-    domain: 'Jenny: V2 Pipeline Speedup Benchmark in Bengali',
-    input: 'Jenny, v2 pipeline speed ar memory benchmark koto percent improve hoyeche?',
+    agentKey: 'friday',
+    domain: 'Friday: V2 Pipeline Speedup Benchmark in Bengali',
+    input: 'Friday, v2 pipeline speed ar memory benchmark koto percent improve hoyeche?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
-      assert(lower.includes('pipeline') || lower.includes('benchmark') || lower.includes('speed') || lower.includes('40') || /[\u0980-\u09FF]/.test(res), 'Jenny confirms 40 percent speedup');
+      assert(lower.includes('pipeline') || lower.includes('benchmark') || lower.includes('speed') || lower.includes('40') || /[\u0980-\u09FF]/.test(res), 'Friday confirms 40 percent speedup');
     }
   },
 
@@ -300,32 +300,32 @@ console.log('\n--- VERIFYING BILINGUAL STANDUP EXECUTION & 4-AGENT VOICES ---');
   const standupBn = actionRunner.generateStandupPlan('bn');
   assert.strictEqual(standupBn.handled, true);
   assert.strictEqual(standupBn.isStandup, true);
-  assert.strictEqual(standupBn.steps.length, 5, 'Standup must have 5 sequential turns (Tuk Tuk, Vision, Jenny, Brian, Tuk Tuk)');
+  assert.strictEqual(standupBn.steps.length, 5, 'Standup must have 5 sequential turns (Tuk Tuk, Vision, Friday, Brian, Tuk Tuk)');
 
   // Verify all 4 agents in Bengali standup
   const tukTukStep = standupBn.steps[0];
   const visionStep = standupBn.steps[1];
-  const jennyStep = standupBn.steps[2];
+  const fridayStep = standupBn.steps[2];
   const brianStep = standupBn.steps[3];
 
   assert.strictEqual(tukTukStep.voice, 'en-US-AvaMultilingualNeural', 'Tuk Tuk must use Ava');
   assert.strictEqual(visionStep.voice, 'en-US-AndrewNeural', 'Vision must use Andrew');
-  assert.strictEqual(jennyStep.voice, 'en-US-JennyNeural', 'Jenny must use JennyNeural (not Emma)');
+  assert.strictEqual(fridayStep.voice, 'en-US-JennyNeural', 'Friday must use JennyNeural');
   assert.strictEqual(brianStep.voice, 'en-US-BrianMultilingualNeural', 'Brian must use Brian');
 
   assert(/[\u0980-\u09FF]/.test(tukTukStep.speech), 'Tuk Tuk speaks Bengali in standup');
   assert(/[\u0980-\u09FF]/.test(visionStep.speech), 'Vision speaks Bengali in standup');
-  assert(/[\u0980-\u09FF]/.test(jennyStep.speech), 'Jenny speaks Bengali in standup');
+  assert(/[\u0980-\u09FF]/.test(fridayStep.speech), 'Friday speaks Bengali in standup');
   assert(/[\u0980-\u09FF]/.test(brianStep.speech), 'Brian speaks Bengali in standup');
-  assert(jennyStep.speech.includes('হৃত্তিক'), 'Jenny addresses Hritthik in Bengali standup');
+  assert(fridayStep.speech.includes('হৃত্তিক'), 'Friday addresses Hritthik in Bengali standup');
   console.log('  ✅ [PASS] Full Bengali 4-Agent Standup Plan verified with pure signature voices!');
 
   // 2. English Standup Plan
   const standupEn = actionRunner.generateStandupPlan('en');
   assert.strictEqual(standupEn.handled, true);
-  const jennyEnStep = standupEn.steps[2];
-  assert.strictEqual(jennyEnStep.voice, 'en-US-JennyNeural', 'Jenny in English standup must use JennyNeural');
-  assert(jennyEnStep.speech.includes('Hritthik'), 'Jenny addresses Hritthik in English standup');
+  const fridayEnStep = standupEn.steps[2];
+  assert.strictEqual(fridayEnStep.voice, 'en-US-JennyNeural', 'Friday in English standup must use JennyNeural');
+  assert(fridayEnStep.speech.includes('Hritthik'), 'Friday addresses Hritthik in English standup');
   console.log('  ✅ [PASS] Full English 4-Agent Standup Plan verified!');
 }
 
@@ -342,11 +342,11 @@ console.log('\n--- VERIFYING BENGALI CROSS-AGENT DELEGATION LEADS ---');
   assert(/[\u0980-\u09FF]/.test(handoffVision.handoffLead), 'Vision handoff lead must be in Bengali');
   console.log(`  ✅ [PASS] Vision Bengali handoff lead: "${handoffVision.handoffLead}"`);
 
-  const handoffJenny = jm.evaluateCrossAgentHandoff('Jenny ke bolo research check korte');
-  assert(handoffJenny !== null, 'Handoff to Jenny in Bengali must evaluate');
-  assert.strictEqual(handoffJenny.targetAgent.key, 'jenny');
-  assert(/[\u0980-\u09FF]/.test(handoffJenny.handoffLead), 'Jenny handoff lead must be in Bengali');
-  console.log(`  ✅ [PASS] Jenny Bengali handoff lead: "${handoffJenny.handoffLead}"`);
+  const handoffFriday = jm.evaluateCrossAgentHandoff('Friday ke bolo research check korte');
+  assert(handoffFriday !== null, 'Handoff to Friday in Bengali must evaluate');
+  assert.strictEqual(handoffFriday.targetAgent.key, 'friday');
+  assert(/[\u0980-\u09FF]/.test(handoffFriday.handoffLead), 'Friday handoff lead must be in Bengali');
+  console.log(`  ✅ [PASS] Friday Bengali handoff lead: "${handoffFriday.handoffLead}"`);
 
   const handoffBrian = jm.evaluateCrossAgentHandoff('Brian ke bolo ram status dekhte');
   assert(handoffBrian !== null, 'Handoff to Brian in Bengali must evaluate');
@@ -363,17 +363,17 @@ console.log('\n--- VERIFYING 4-AGENT OFFICE ZOOM TURNS PARSING ---');
   // Test mock multi-agent turn parsing
   const mock4AgentMeeting = `[Tuk Tuk]: Morning team! Ready to build babe.
 [Vision]: Systems are nominal brother, AST compiler clean.
-[Jenny]: Research benchmarks confirm sub-250ms latency Hritthik.
+[Friday]: Research benchmarks confirm sub-250ms latency Hritthik.
 [Brian]: CPU at 18 percent bro, Go audio daemon healthy.`;
 
   // Use the logic in main.js
   const agentMap = {
     'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'vision': { name: 'Vision', voice: 'en-US-AndrewNeural' },
-    'jenny': { name: 'Jenny', voice: 'en-US-JennyNeural' },
+    'friday': { name: 'Friday', voice: 'en-US-JennyNeural' },
     'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
   };
-  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Jenny|Brian)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Jenny|Brian)\]?:?)|$)/gi;
+  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Friday|Brian)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Friday|Brian)\]?:?)|$)/gi;
   const turns = [];
   let match;
   while ((match = pattern.exec(mock4AgentMeeting)) !== null) {
@@ -390,9 +390,9 @@ console.log('\n--- VERIFYING 4-AGENT OFFICE ZOOM TURNS PARSING ---');
   assert.strictEqual(turns.length, 4, 'All 4 agents must be parsed in full office Zoom meeting');
   assert.strictEqual(turns[0].agentName, 'Tuk Tuk');
   assert.strictEqual(turns[1].agentName, 'Vision');
-  assert.strictEqual(turns[2].agentName, 'Jenny');
+  assert.strictEqual(turns[2].agentName, 'Friday');
   assert.strictEqual(turns[3].agentName, 'Brian');
-  assert.strictEqual(turns[2].voice, 'en-US-JennyNeural', 'Jenny must be on JennyNeural');
+  assert.strictEqual(turns[2].voice, 'en-US-JennyNeural', 'Friday must be on JennyNeural');
   console.log('  ✅ [PASS] All 4 squad members parsed sequentially without truncation!');
 }
 

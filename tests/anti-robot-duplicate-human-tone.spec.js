@@ -8,7 +8,7 @@
  * 3. Native Bangla/Banglish Natural Fluency across all 4 agents:
  *    - Tuk Tuk: Warm, spontaneous, loving Bengali girlfriend & co-founder.
  *    - Vision: 10x Bengali dev brother, natural tech slang.
- *    - Jenny: Sharp, articulate female researcher, respectful to Chief.
+ *    - Friday: Sharp, articulate female researcher, respectful to Chief.
  *    - Brian: Steady, calm infrastructure engineer, zero drama.
  *    - Team: Collaborative multi-agent live standup.
  */
@@ -62,8 +62,8 @@ test("Anti-Robot Duplicate Elimination & Real Human Bangla Tone Suite", async (t
       ["vision", "terminal error ta dekho"],
       ["vision", "git diff dekho"],
       ["vision", "build check koro"],
-      ["jenny", "vad latency paper bolo"],
-      ["jenny", "benchmark kemon"],
+      ["friday", "vad latency paper bolo"],
+      ["friday", "benchmark kemon"],
       ["brian", "cpu load koto"],
       ["brian", "daemon status dao"],
       ["team", "standup shuru koro"]
@@ -101,10 +101,10 @@ test("Anti-Robot Duplicate Elimination & Real Human Bangla Tone Suite", async (t
     assert.ok(astRes.includes("AST") || astRes.includes("ক্লিন") || astRes.includes("clean"), "Confirms code clean");
   });
 
-  // ── 6. Jenny: Articulate Female Research Lead in Bangla ───────────────────
-  await t.test("6. Jenny: Analytical rigor and respectful Chief address", () => {
-    const vadRes = LCB.synthesizeResponse("jenny", "Jenny", "vad turn taking latency koto?");
-    console.log("  📊 Jenny VAD:", vadRes);
+  // ── 6. Friday: Articulate Female Research Lead in Bangla ───────────────────
+  await t.test("6. Friday: Analytical rigor and respectful Chief address", () => {
+    const vadRes = LCB.synthesizeResponse("friday", "Friday", "vad turn taking latency koto?");
+    console.log("  📊 Friday VAD:", vadRes);
     assert.ok(vadRes.includes("Chief") || vadRes.includes("হৃত্তিক") || vadRes.includes("Hritthik"), "Respectful address");
     assert.ok(vadRes.includes("২৫০") || vadRes.includes("250") || vadRes.includes("VAD"), "Contains data metric");
     assert.ok(!vadRes.toLowerCase().includes("bro") && !vadRes.toLowerCase().includes("babe"), "Strict persona boundaries");
@@ -129,7 +129,7 @@ test("Anti-Robot Duplicate Elimination & Real Human Bangla Tone Suite", async (t
 
   // ── 9. Original Human Thinker in Bangla across All Agents ───────────────────
   await t.test("9. Original Human Thinker: All agents respond with real human thought when asked about robot tone", () => {
-    const agents = ["tuktuk", "vision", "jenny", "brian", "team"];
+    const agents = ["tuktuk", "vision", "friday", "brian", "team"];
     const input = "all agents talk like a robot in bangla language not like humen orginal thinker";
 
     for (const ag of agents) {

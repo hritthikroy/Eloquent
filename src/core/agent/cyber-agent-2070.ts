@@ -160,7 +160,7 @@ export class CyberAgent2070Engine extends EventEmitter {
         const sampleMemories = [
           { key: 'user_identity', value: 'Hritthik (Creator & Lead Architect)', relevance: 0.99 },
           { key: 'project_architecture', value: 'Eloquent 2.0 / Go-backend + Electron + 2070 Cyber Agent', relevance: 0.98 },
-          { key: 'active_squad', value: 'Tuk Tuk (Soulmate/Co-Founder), Vision (Lead Systems Architect), Jenny, Brian', relevance: 0.97 },
+          { key: 'active_squad', value: 'Tuk Tuk (Soulmate/Co-Founder), Vision (Lead Systems Architect), Friday, Brian', relevance: 0.97 },
           { key: 'vad_turn_taking', value: 'Sub-250ms zero-latency conversational streaming with DTD', relevance: 0.95 },
           { key: 'openclaw_benchmark_status', value: 'Beaten on all 7 dimensions with 100% win-rate', relevance: 0.99 },
         ];
@@ -606,7 +606,7 @@ export class CyberAgent2070Engine extends EventEmitter {
         openClawScore: 0.20,
         eloquentScore: 0.88,
         unit: 'coordination index [0-1]',
-        eloquentAdvantage: '4-Agent Synchronous Harmony (Vision, Tuk Tuk, Jenny, Brian)',
+        eloquentAdvantage: '4-Agent Synchronous Harmony (Vision, Tuk Tuk, Friday, Brian)',
         verdict: 'DOMINATING',
       },
       {

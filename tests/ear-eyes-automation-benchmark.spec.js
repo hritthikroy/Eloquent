@@ -271,6 +271,8 @@ async function runBenchmark() {
 
   // V6. Cognitive Pupillometry & Autonomic Workload Index
   const intensePupil = humanEyeCortex.updatePupillometry(0.5, 0.9, 0.8);
+  behaviorEngine.state.focusScore = 0.85;
+  behaviorEngine.state.stressScore = 0.10;
   const flow = behaviorEngine.computeCognitiveLoadIndex("fix", true);
   recordTest(
     "Eyes",
@@ -320,7 +322,7 @@ async function runBenchmark() {
     agentStates: {
       agent_andrew: { emotionalState: { mood: "focused", intensity: 0.85 } },
       agent_tuk_tuk: { emotionalState: { mood: "affectionate", intensity: 0.95 } },
-      agent_jenny: { emotionalState: { mood: "enthusiastic", intensity: 0.8 } },
+      agent_friday: { emotionalState: { mood: "enthusiastic", intensity: 0.8 } },
       agent_brian: { emotionalState: { mood: "analytical", intensity: 0.8 } }
     },
     interactions: [

@@ -97,17 +97,17 @@ test("Real Banglish Tuk Tuk — Natural Girl Conversation Tests", async (t) => {
     assert.ok(!r1.includes("undefined") && !r2.includes("undefined"));
   });
 
-  await t.test("12. No 'babe' leaking into Vision/Jenny/Brian", () => {
+  await t.test("12. No 'babe' leaking into Vision/Friday/Brian", () => {
     const vision = LCB.synthesizeResponse("vision", "Vision", "dekho screen ta");
-    const jenny  = LCB.synthesizeResponse("jenny", "Jenny", "latency paper bolo");
-    const brian  = LCB.synthesizeResponse("brian", "Brian", "cpu load koto");
+    const friday = LCB.synthesizeResponse("friday", "Friday", "latency paper bolo");
+    const brian = LCB.synthesizeResponse("brian", "Brian", "cpu load koto");
     console.log("  🔵 Vision:", vision);
-    console.log("  🟣 Jenny:", jenny);
+    console.log("  🟣 Friday:", friday);
     console.log("  🔴 Brian:", brian);
-    // Babe should NOT appear in Vision/Jenny/Brian responses
+    // Babe should NOT appear in Vision/Friday/Brian responses
     assert.ok(!vision.toLowerCase().startsWith("babe"), "Vision should not say babe");
-    assert.ok(!jenny.toLowerCase().startsWith("babe"), "Jenny should not say babe");
-    assert.ok(vision.length > 10 && jenny.length > 10 && brian.length > 10);
+    assert.ok(!friday.toLowerCase().startsWith("babe"), "Friday should not say babe");
+    assert.ok(vision.length > 10 && friday.length > 10 && brian.length > 10);
   });
 
 });

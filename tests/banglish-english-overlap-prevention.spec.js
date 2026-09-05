@@ -111,7 +111,7 @@ test('Sanitizer translates leaked Romanized Banglish to Bengali Unicode script i
 // 3. LOCAL COGNITIVE BRAIN LANGUAGE ISOLATION
 // ─────────────────────────────────────────────────────────────────────────────
 test('LocalCognitiveBrain outputs 100% English across all agents when activeLang="en"', () => {
-  const agents = ['tuktuk', 'vision', 'jenny', 'brian', 'team'];
+  const agents = ['tuktuk', 'vision', 'friday', 'brian', 'team'];
   const queries = [
     'How are you doing?',
     'What is the scene today?', // previously collided on "scene"

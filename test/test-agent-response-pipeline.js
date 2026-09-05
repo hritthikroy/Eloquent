@@ -83,7 +83,7 @@ async function runTests() {
     { key: "tuktuk", name: "Tuk Tuk", expectedVoice: "en-US-AvaMultilingualNeural" },
     { key: "vision", name: "Vision", expectedVoice: "en-US-AndrewNeural" },
     { key: "brian", name: "Brian", expectedVoice: "en-US-BrianMultilingualNeural" },
-    { key: "jenny", name: "Jenny", expectedVoice: "en-US-JennyNeural" }
+    { key: "friday", name: "Friday", expectedVoice: "en-US-JennyNeural" }
   ];
 
   for (const agent of agentsToTest) {

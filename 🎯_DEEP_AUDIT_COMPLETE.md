@@ -23,7 +23,7 @@
 - **Filler Playback:** ✅ CLEAN (removed debug logging)
 
 ### ✅ Agent Routing Audit
-- **Direct Name Priority:** ✅ HIGHEST (Andrew/Jenny/Brian/Tuk Tuk)
+- **Direct Name Priority:** ✅ HIGHEST (Andrew/Friday/Brian/Tuk Tuk)
 - **Multi-Agent Detection:** ✅ CLEAN (single implementation, no duplication)
 - **Team Mode Trigger:** ✅ PRECISE (2+ names or explicit phrases only)
 - **Default to Tuk Tuk:** ✅ STABLE (girlfriend always present)

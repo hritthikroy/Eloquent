@@ -3,7 +3,7 @@
  * 
  * Provides cross-agent associative knowledge retention, deep research archiving,
  * multi-turn episodic continuity, and salience-weighted memory synchronization
- * across Vision, Jenny, Tuk Tuk, and Brian.
+ * across Vision, Friday, Tuk Tuk, and Brian.
  */
 
 const fs = require('fs');
@@ -53,7 +53,7 @@ class NeuralMeshMemoryBank extends EventEmitter {
     this.researchVault = new Map(); // Deep research outputs & web scrape archives
     this.meshIndex = new Map();     // Cross-agent associative knowledge graph
 
-    this.squadAgents = ['agent_vision', 'agent_jenny', 'agent_tuk_tuk', 'agent_brian'];
+    this.squadAgents = ['agent_vision', 'agent_friday', 'agent_tuk_tuk', 'agent_brian'];
     this.telemetry = {
       totalIngestions: 0,
       totalQueries: 0,
@@ -196,7 +196,9 @@ class NeuralMeshMemoryBank extends EventEmitter {
    */
   getAgentMemory(agentId) {
     const normalizedAgent = agentId.startsWith('agent_') ? agentId : `agent_${agentId}`;
-    const linkedNodeIds = this.meshIndex.get(normalizedAgent) || new Set();
+    let lookupAgent = normalizedAgent;
+    if (normalizedAgent === 'agent_andrew') lookupAgent = 'agent_vision';
+    const linkedNodeIds = this.meshIndex.get(lookupAgent) || this.meshIndex.get(normalizedAgent) || new Set();
     const vaultEntries = [];
 
     for (const id of linkedNodeIds) {
@@ -210,7 +212,7 @@ class NeuralMeshMemoryBank extends EventEmitter {
       linkedResearchCount: vaultEntries.length,
       recentResearch: vaultEntries.slice(-5),
       recentEpisodes: this.episodicBank.slice(-5),
-      activeWorkingTopic: this.workingMemory.get(normalizedAgent) || null
+      activeWorkingTopic: this.workingMemory.get(lookupAgent) || this.workingMemory.get(normalizedAgent) || null
     };
   }
 

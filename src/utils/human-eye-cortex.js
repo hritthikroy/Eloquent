@@ -20,6 +20,8 @@ class HumanEyeCortex {
   constructor(options = {}) {
     this.screenWidth = options.screenWidth || 1920;
     this.screenHeight = options.screenHeight || 1080;
+    this.mode = options.mode || 'human_biological';
+    this.humanEyeActive = true;
 
     // 1. Gaze & Foveal State (Normalized [0, 1])
     this.currentGaze = { x: 0.5, y: 0.5 };
@@ -551,6 +553,35 @@ class HumanEyeCortex {
       vergence,
       dynamicVisualAcuity: dva,
       foveatedCrop: this.getFoveatedCropBox()
+    };
+  }
+
+  /**
+   * Activates biological human eye mode, locking dynamics into realistic
+   * foveal attention, saccadic sequences, and fixational micro-movements.
+   */
+  activateHumanEyeMode(options = {}) {
+    this.mode = 'human_biological';
+    this.humanEyeActive = true;
+    if (options.gaze) {
+      this.currentGaze.x = typeof options.gaze.x === 'number' ? Math.max(0, Math.min(1, options.gaze.x)) : 0.5;
+      this.currentGaze.y = typeof options.gaze.y === 'number' ? Math.max(0, Math.min(1, options.gaze.y)) : 0.5;
+      this.targetGaze.x = this.currentGaze.x;
+      this.targetGaze.y = this.currentGaze.y;
+    }
+    if (options.userCursor) {
+      this.updateUserInputs(options.userCursor);
+    }
+    const state = this.step();
+    return {
+      active: true,
+      mode: 'human_biological',
+      gaze: state.gaze,
+      fovealCrop: state.foveatedCrop,
+      dynamicVisualAcuity: state.dynamicVisualAcuity,
+      pupilDiameterMm: state.pupilDiameterMm,
+      isSaccading: state.isSaccading,
+      deicticAlignment: state.deicticAlignmentQuality
     };
   }
 

@@ -62,11 +62,11 @@ async function runSovereigntyLexicalIsolationSuite() {
     }
   });
 
-  test('Jenny strictly replaces all intimate tokens with "Hritthik"', () => {
+  test('Friday strictly replaces all intimate tokens with "Hritthik"', () => {
     for (const phrase of intimatePhrases) {
-      const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'jenny');
-      assert(!intimateRegex.test(sanitized), `Jenny output must not contain intimate tokens: "${sanitized}"`);
-      assert(sanitized.includes('Hritthik'), `Jenny output should include Hritthik: "${sanitized}"`);
+      const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'friday');
+      assert(!intimateRegex.test(sanitized), `Friday output must not contain intimate tokens: "${sanitized}"`);
+      assert(sanitized.includes('Hritthik'), `Friday output should include Hritthik: "${sanitized}"`);
     }
   });
 
@@ -77,12 +77,12 @@ async function runSovereigntyLexicalIsolationSuite() {
   });
 
   // -------------------------------------------------------------
-  // TEST GROUP 2: Mathematical Invariant 2 (Jenny Refined Tone & Zero Slang)
+  // TEST GROUP 2: Mathematical Invariant 2 (Friday Refined Tone & Zero Slang)
   // -------------------------------------------------------------
-  console.log('\n--- TEST GROUP 2: Jenny Refined Salutation & Zero Brotherly Slang ---');
+  console.log('\n--- TEST GROUP 2: Friday Refined Salutation & Zero Brotherly Slang ---');
 
   const slangPhrases = [
-    "Jenny here, bro. Research benchmarks are synced.",
+    "Friday here, bro. Research benchmarks are synced.",
     "Hey bro, check these architecture papers.",
     "On it man, I analyzed the Go latency metrics.",
     "Bhai, this algorithm has O(1) space complexity."
@@ -90,20 +90,20 @@ async function runSovereigntyLexicalIsolationSuite() {
 
   const slangRegex = /\b(bro|bhai|bhaiya|man)\b/i;
 
-  test('Jenny strictly purges all brotherly slang ("bro", "bhai", "man")', () => {
+  test('Friday strictly purges all brotherly slang ("bro", "bhai", "man")', () => {
     for (const phrase of slangPhrases) {
-      const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'jenny');
-      assert(!slangRegex.test(sanitized), `Jenny must never use brotherly slang: "${sanitized}"`);
-      assert(sanitized.includes('Hritthik'), `Jenny should address user as Hritthik: "${sanitized}"`);
+      const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'friday');
+      assert(!slangRegex.test(sanitized), `Friday must never use brotherly slang: "${sanitized}"`);
+      assert(sanitized.includes('Hritthik'), `Friday should address user as Hritthik: "${sanitized}"`);
     }
   });
 
-  test('ActionRunner standup speech for Jenny uses "Hritthik" and never "bro"', () => {
+  test('ActionRunner standup speech for Friday uses "Hritthik" and never "bro"', () => {
     const standup = actionRunner.generateStandupPlan();
-    const jennyStep = standup.steps.find((t: any) => t.agent === "Jenny");
-    assert(jennyStep !== undefined, "Jenny step exists in standup");
-    assert(!slangRegex.test(jennyStep.speech), `Jenny standup speech must not contain slang: "${jennyStep.speech}"`);
-    assert(jennyStep.speech.includes("Hritthik"), `Jenny standup speech must address Hritthik: "${jennyStep.speech}"`);
+    const fridayStep = standup.steps.find((t: any) => t.agent === "Friday");
+    assert(fridayStep !== undefined, "Friday step exists in standup");
+    assert(!slangRegex.test(fridayStep.speech), `Friday standup speech must not contain slang: "${fridayStep.speech}"`);
+    assert(fridayStep.speech.includes("Hritthik"), `Friday standup speech must address Hritthik: "${fridayStep.speech}"`);
   });
 
   // -------------------------------------------------------------
@@ -127,11 +127,11 @@ async function runSovereigntyLexicalIsolationSuite() {
     }
   });
 
-  test('Jenny suppresses relationship refereeing and redirects to specifications', () => {
+  test('Friday suppresses relationship refereeing and redirects to specifications', () => {
     for (const phrase of codependentPhrases) {
-      const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'jenny');
-      assert(!codependencyRegex.test(sanitized), `Jenny output must not contain codependent refereeing: "${sanitized}"`);
-      assert(sanitized.includes('specifications') || sanitized.includes('Hritthik'), `Jenny output should refocus on specs: "${sanitized}"`);
+      const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'friday');
+      assert(!codependencyRegex.test(sanitized), `Friday output must not contain codependent refereeing: "${sanitized}"`);
+      assert(sanitized.includes('specifications') || sanitized.includes('Hritthik'), `Friday output should refocus on specs: "${sanitized}"`);
     }
   });
 
@@ -145,7 +145,7 @@ async function runSovereigntyLexicalIsolationSuite() {
       tuktuk: "I am right here with you, babe!",
       andrew: "Right here, bro. Talk to me.",
       brian: "Systems steady, Hritthik. Standing by.",
-      jenny: "I'm right here, Hritthik. What are we investigating?",
+      friday: "I'm right here, Hritthik. What are we investigating?",
       team: "Squad is locked in. Let's go."
     };
 
@@ -153,10 +153,10 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(!intimateRegex.test(andrewFallback), `Andrew fallback must not contain intimate tokens: "${andrewFallback}"`);
     assert(andrewFallback.includes('bro'), `Andrew fallback must contain "bro": "${andrewFallback}"`);
 
-    const jennyFallback = jarvisManager.sanitizeAgentLexicon(fallbackMap.jenny, 'jenny');
-    assert(!intimateRegex.test(jennyFallback), `Jenny fallback must not contain intimate tokens: "${jennyFallback}"`);
-    assert(!slangRegex.test(jennyFallback), `Jenny fallback must not contain slang: "${jennyFallback}"`);
-    assert(jennyFallback.includes('Hritthik'), `Jenny fallback must contain "Hritthik": "${jennyFallback}"`);
+    const fridayFallback = jarvisManager.sanitizeAgentLexicon(fallbackMap.friday, 'friday');
+    assert(!intimateRegex.test(fridayFallback), `Friday fallback must not contain intimate tokens: "${fridayFallback}"`);
+    assert(!slangRegex.test(fridayFallback), `Friday fallback must not contain slang: "${fridayFallback}"`);
+    assert(fridayFallback.includes('Hritthik'), `Friday fallback must contain "Hritthik": "${fridayFallback}"`);
 
     const brianFallback = jarvisManager.sanitizeAgentLexicon(fallbackMap.brian, 'brian');
     assert(!intimateRegex.test(brianFallback), `Brian fallback must not contain intimate tokens: "${brianFallback}"`);
@@ -178,11 +178,11 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(prompt.includes("NEVER act as a relationship referee"), "Vision prompt forbids relationship refereeing");
   });
 
-  test('Jenny system prompt enforces Refined Salutation and forbids "bro" and "babe"', () => {
-    const prompt = jarvisManager.agents.jenny.getPrompt("Hritthik", "Hritthik");
-    assert(prompt.includes("REFINED INTELLECTUAL SALUTATION"), "Jenny prompt includes refined salutation directive");
-    assert(prompt.includes("STRICTLY NEVER call him \"bro\""), "Jenny prompt bans 'bro'");
-    assert(prompt.includes("STRICTLY NEVER call him \"babe\""), "Jenny prompt bans 'babe'");
+  test('Friday system prompt enforces Refined Salutation and forbids "bro" and "babe"', () => {
+    const prompt = jarvisManager.agents.friday.getPrompt("Hritthik", "Hritthik");
+    assert(prompt.includes("REFINED INTELLECTUAL SALUTATION"), "Friday prompt includes refined salutation directive");
+    assert(prompt.includes("STRICTLY NEVER call him \"bro\""), "Friday prompt bans 'bro'");
+    assert(prompt.includes("STRICTLY NEVER call him \"babe\""), "Friday prompt bans 'babe'");
   });
 
   test('Brian system prompt enforces Calm Guardian Salutation and forbids "babe"', () => {
@@ -224,15 +224,15 @@ async function runSovereigntyLexicalIsolationSuite() {
   // -------------------------------------------------------------
   console.log('\n--- TEST GROUP 7: Team Multi-Agent Structured Sanitization ---');
 
-  test('Team mode parses and sanitizes Andrew and Jenny turns individually', () => {
-    const rawTeamOutput = `[Andrew]: On it babe, the AST is clean.\n[Jenny]: Research verified bro, latency is 12ms.`;
+  test('Team mode parses and sanitizes Andrew and Friday turns individually', () => {
+    const rawTeamOutput = `[Andrew]: On it babe, the AST is clean.\n[Friday]: Research verified bro, latency is 12ms.`;
     const sanitized = jarvisManager.sanitizeAgentLexicon(rawTeamOutput, 'team');
 
     assert(!sanitized.includes("[Andrew]: On it babe") && !sanitized.includes("[Vision]: On it babe"), `Vision/Andrew turn in team must not have 'babe': "${sanitized}"`);
     assert(sanitized.includes("[Vision]: On it bro") || sanitized.includes("[Andrew]: On it bro"), `Vision/Andrew turn in team sanitized to 'bro': "${sanitized}"`);
 
-    assert(!sanitized.includes("bro, latency"), `Jenny turn in team must not have 'bro': "${sanitized}"`);
-    assert(sanitized.includes("Hritthik, latency"), `Jenny turn in team sanitized to 'Hritthik': "${sanitized}"`);
+    assert(!sanitized.includes("bro, latency"), `Friday turn in team must not have 'bro': "${sanitized}"`);
+    assert(sanitized.includes("Hritthik, latency"), `Friday turn in team sanitized to 'Hritthik': "${sanitized}"`);
   });
 
   // -------------------------------------------------------------
@@ -292,11 +292,11 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(resAndrew.speech.includes("bro"), `Andrew focus block speech should use 'bro': "${resAndrew.speech}"`);
     assert(!resAndrew.speech.includes("babe"), `Andrew focus block speech must never use 'babe': "${resAndrew.speech}"`);
 
-    const resJenny = await actionRunner.handleAction("close distractions", { name: "Jenny", voice: "en-US-EmmaMultilingualNeural" });
-    assert(resJenny && resJenny.handled, "Focus action handled for Jenny");
-    assert(resJenny.speech.includes("Hritthik"), `Jenny focus block speech should use 'Hritthik': "${resJenny.speech}"`);
-    assert(!resJenny.speech.includes("bro"), `Jenny focus block speech must never use 'bro': "${resJenny.speech}"`);
-    assert(!resJenny.speech.includes("babe"), `Jenny focus block speech must never use 'babe': "${resJenny.speech}"`);
+    const resFriday = await actionRunner.handleAction("close distractions", { name: "Friday", voice: "en-US-JennyNeural" });
+    assert(resFriday && resFriday.handled, "Focus action handled for Friday");
+    assert(resFriday.speech.includes("Hritthik"), `Friday focus block speech should use 'Hritthik': "${resFriday.speech}"`);
+    assert(!resFriday.speech.includes("bro"), `Friday focus block speech must never use 'bro': "${resFriday.speech}"`);
+    assert(!resFriday.speech.includes("babe"), `Friday focus block speech must never use 'babe': "${resFriday.speech}"`);
 
     const resTukTuk = await actionRunner.handleAction("close distractions", { name: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural" });
     assert(resTukTuk && resTukTuk.handled, "Focus action handled for Tuk Tuk");
@@ -326,10 +326,10 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert.strictEqual(visionBanglish, "en-US-AndrewNeural", `Vision Banglish must stay on Andrew (zero flickering), got: ${visionBanglish}`);
   });
 
-  test('Jenny and Brian strictly lock to their signature neural studio voices', () => {
+  test('Friday and Brian strictly lock to their signature neural studio voices', () => {
     const resolveVoice = JarvisManager.resolveVoiceForLanguage;
-    const jennyVoice = resolveVoice("en-US-EmmaMultilingualNeural", "I analyzed the research data, Chief.");
-    assert.strictEqual(jennyVoice, "en-US-EmmaMultilingualNeural", `Jenny must lock to Emma, got: ${jennyVoice}`);
+    const fridayVoice = resolveVoice("en-US-JennyNeural", "I analyzed the research data, Chief.");
+    assert.strictEqual(fridayVoice, "en-US-JennyNeural", `Friday must lock to JennyNeural, got: ${fridayVoice}`);
 
     const brianVoice = resolveVoice("en-US-BrianMultilingualNeural", "Memory heap is at 38 percent, standing by.");
     assert.strictEqual(brianVoice, "en-US-BrianMultilingualNeural", `Brian must lock to Brian, got: ${brianVoice}`);
@@ -343,9 +343,9 @@ async function runSovereigntyLexicalIsolationSuite() {
     const andrewBanglaIntimate = jarvisManager.sanitizeAgentLexicon("বাবু কোডটা ঠিক আছে", "andrew");
     assert(!/বাবু/i.test(andrewBanglaIntimate), "Andrew output must not contain 'বাবু'");
 
-    const jennyHindiIntimate = jarvisManager.sanitizeAgentLexicon("Haan meri jaan, the analysis is complete", "jenny");
-    assert(!/meri\s+jaan/i.test(jennyHindiIntimate), "Jenny output must not contain 'meri jaan'");
-    assert(jennyHindiIntimate.includes("Hritthik"), "Jenny replaces intimate token with 'Hritthik'");
+    const fridayHindiIntimate = jarvisManager.sanitizeAgentLexicon("Haan meri jaan, the analysis is complete", "friday");
+    assert(!/meri\s+jaan/i.test(fridayHindiIntimate), "Friday output must not contain 'meri jaan'");
+    assert(fridayHindiIntimate.includes("Hritthik"), "Friday replaces intimate token with 'Hritthik'");
   });
 
   test('detectActiveAgent correctly resolves Bengali and Hindi script addressing', () => {
@@ -357,10 +357,11 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert.strictEqual(jarvisManager.detectActiveAgent("विजन भाई कोड चेक करो").name, "Vision");
     assert.strictEqual(jarvisManager.detectActiveAgent("Vision bhai code check koro").name, "Vision");
     assert.notStrictEqual(jarvisManager.detectActiveAgent("অ্যান্ড্রু ভাই কোডটা দেখো").name, "Vision");
-    assert.notStrictEqual(jarvisManager.detectActiveAgent("Hey Andrew").name, "Vision");
-    assert.strictEqual(jarvisManager.detectActiveAgent("जेनी डेटा बताओ").name, "Jenny");
-    assert.strictEqual(jarvisManager.detectActiveAgent("ब्रायन सर्वर चेक करो").name, "Brian");
+    assert.strictEqual(jarvisManager.detectActiveAgent("Friday analyze the data").name, "Friday");
+    assert.strictEqual(jarvisManager.detectActiveAgent("फ़्राइडे डेटा बताओ").name, "Friday");
+    assert.strictEqual(jarvisManager.detectActiveAgent("ফ্রাইডে ডেটা বলো").name, "Friday");
     assert.strictEqual(jarvisManager.detectActiveAgent("ব্রায়ান সার্ভার চেক করো").name, "Brian");
+    assert.strictEqual(jarvisManager.detectActiveAgent("ब्रायन सर्वर चेक करो").name, "Brian");
   });
 
   test('Bengali and Hindi phrases are preserved and not flagged as Whisper hallucinations', () => {
@@ -419,9 +420,9 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(!sanitizedAndrew.includes("babe"), `Andrew code-mixed output must strip 'babe', got: "${sanitizedAndrew}"`);
     assert(sanitizedAndrew.includes("bro"), "Andrew maintains brotherly address");
 
-    const sanitizedJenny = jarvisManager.sanitizeAgentLexicon("Code-টা analyze করেছি meri jaan, data clean ache", "jenny");
-    assert(!/meri\s+jaan/i.test(sanitizedJenny), `Jenny code-mixed output must strip 'meri jaan', got: "${sanitizedJenny}"`);
-    assert(sanitizedJenny.includes("Chief") || sanitizedJenny.includes("Hritthik"), "Jenny maintains intellectual salutation");
+    const sanitizedFriday = jarvisManager.sanitizeAgentLexicon("Code-টা analyze করেছি meri jaan, data clean ache", "friday");
+    assert(!/meri\s+jaan/i.test(sanitizedFriday), `Friday code-mixed output must strip 'meri jaan', got: "${sanitizedFriday}"`);
+    assert(sanitizedFriday.includes("Chief") || sanitizedFriday.includes("Hritthik"), "Friday maintains intellectual salutation");
   });
 
   // -------------------------------------------------------------

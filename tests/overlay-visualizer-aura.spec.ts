@@ -2,7 +2,7 @@
  * Test Suite: Overlay Persistent Audio Visualizer & Multi-Agent Aura Synchronization
  * 
  * Verifies:
- * 1. Persona Aura Color Binding: Tuk Tuk (#f43f5e), Andrew (#06b6d4), Jenny (#10b981), Brian (#f59e0b).
+ * 1. Persona Aura Color Binding: Tuk Tuk (#f43f5e), Andrew (#06b6d4), Friday (#10b981), Brian (#f59e0b).
  * 2. Multi-State Waveform Equations:
  *    - Speaking: Syllabic cadence simulation guaranteeing non-zero bars (3.0px - 17.0px) under echo cancellation.
  *    - Thinking: Undulating cognitive wave (3.0px - 10.0px).
@@ -43,7 +43,7 @@ async function runOverlayVisualizerTests() {
     const AGENT_COLORS: Record<string, string> = {
       tuktuk: '#f43f5e',
       andrew: '#06b6d4',
-      jenny: '#10b981',
+      friday: '#10b981',
       brian: '#f59e0b',
       rewrite: '#a855f7',
       standard: '#22c55e'
@@ -55,8 +55,8 @@ async function runOverlayVisualizerTests() {
 
       const name = (currentAgentName || '').toLowerCase().trim();
       if (name.includes('tuk')) return AGENT_COLORS.tuktuk;
-      if (name.includes('andrew')) return AGENT_COLORS.andrew;
-      if (name.includes('jenny')) return AGENT_COLORS.jenny;
+      if (name.includes('andrew') || name.includes('vision')) return AGENT_COLORS.andrew;
+      if (name.includes('friday') || name.includes('fry day')) return AGENT_COLORS.friday;
       if (name.includes('brian')) return AGENT_COLORS.brian;
 
       return AGENT_COLORS.tuktuk;
@@ -64,7 +64,7 @@ async function runOverlayVisualizerTests() {
 
     assert(getActiveColor('Tuk Tuk') === '#f43f5e', 'Tuk Tuk resolves to Rose (#f43f5e)');
     assert(getActiveColor('Andrew (Lead Dev)') === '#06b6d4', 'Andrew resolves to Cyan (#06b6d4)');
-    assert(getActiveColor('Jenny') === '#10b981', 'Jenny resolves to Emerald (#10b981)');
+    assert(getActiveColor('Friday') === '#10b981', 'Friday resolves to Emerald (#10b981)');
     assert(getActiveColor('Brian') === '#f59e0b', 'Brian resolves to Amber (#f59e0b)');
     assert(getActiveColor('Any', 'rewrite') === '#a855f7', 'Rewrite mode resolves to Purple (#a855f7)');
     assert(getActiveColor('Any', 'standard') === '#22c55e', 'Standard mode resolves to Green (#22c55e)');

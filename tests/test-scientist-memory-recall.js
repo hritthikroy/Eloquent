@@ -50,7 +50,7 @@ async function callGroq(messages, options = {}) {
 
 function parseMultiAgentTurns(text) {
   if (!text || typeof text !== "string") return [];
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const regex = /\[(Tuk Tuk|Andrew|Vision|Friday|Brian|Ava)\]:\s*([^\[]+)/gi;
   const turns = [];
   let match;
   while ((match = regex.exec(text)) !== null) {

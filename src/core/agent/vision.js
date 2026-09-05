@@ -3,7 +3,7 @@
  * 
  * Coordinates dynamic recursive web scraping, query decomposition, high-speed
  * telemetry collection, and neural-mesh memory bank ingestion across the
- * Google Antigravity multi-agent squad (Vision, Jenny, Tuk Tuk, Brian).
+ * Google Antigravity multi-agent squad (Vision, Friday, Tuk Tuk, Brian).
  */
 
 const EventEmitter = require('events');
@@ -96,7 +96,7 @@ class VisionOrchestrator extends EventEmitter {
   /**
    * Dispatch an autonomous deep research job.
    * Runs recursive scraping, logs high-speed telemetry, ingests results into neural memory,
-   * and synchronizes knowledge across Jenny and Tuk Tuk.
+   * and synchronizes knowledge across Friday and Tuk Tuk.
    * 
    * @param {string} promptOrUrl
    * @param {Object} [overrideOptions]
@@ -193,7 +193,7 @@ class VisionOrchestrator extends EventEmitter {
       {
         url: rootUrl,
         title: `Deep Research: ${query}`,
-        snippet: `Comprehensive architectural findings on ${query}. Inter-process communication and neural memory synchronized across Vision, Jenny, Tuk Tuk.`,
+        snippet: `Comprehensive architectural findings on ${query}. Inter-process communication and neural memory synchronized across Vision, Friday, Tuk Tuk.`,
         depth: 0,
         byteSize: 2048,
         statusCode: 200,

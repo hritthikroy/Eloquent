@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"eloquent-backend/internal/audio"
 	"eloquent-backend/internal/config"
 	"eloquent-backend/internal/handlers"
 	"eloquent-backend/internal/middleware"
@@ -196,6 +197,27 @@ func main() {
 	skillUpdateHandler := handlers.NewSkillUpdateHandler("./config/skills")
 	log.Printf("📡 Handlers initialized in %v", time.Since(handlerStart))
 	log.Printf("🚀 Enhanced auth service with caching and session management enabled")
+
+	// ── Audio subsystem initialization ────────────────────────────────────────
+	audioSvc := audio.NewAudioService(audio.DefaultServiceConfig())
+	if err := audioSvc.Start(mainCtx); err != nil {
+		log.Printf("⚠️ [AudioService] Warning starting audio service: %v", err)
+	} else {
+		log.Println("🎙️ [AudioService] Background audio processing service active")
+	}
+
+	audioPort := os.Getenv("AUDIO_PORT")
+	if audioPort == "" {
+		audioPort = ":9090"
+	} else if !strings.HasPrefix(audioPort, ":") {
+		audioPort = ":" + audioPort
+	}
+	audioAPIServer := audio.NewAudioAPIServer(audioSvc, audioPort, 32)
+	if err := audioAPIServer.Start(mainCtx); err != nil {
+		log.Printf("⚠️ [AudioAPIServer] Note on binding %s: %v", audioPort, err)
+	} else {
+		log.Printf("🎙️ [AudioAPIServer] Dedicated audio API running on %s", audioPort)
+	}
 
 	// PERFORMANCE BOOST: Setup optimized Gin router
 	routerStart := time.Now()
@@ -446,6 +468,16 @@ func main() {
 			"timestamp": "2024-01-01T00:00:00Z",
 		})
 	})
+
+	// ── Audio Subsystem Endpoints ─────────────────────────────────────────────
+	r.GET("/audio/health", gin.WrapF(audioAPIServer.HandleHealthHTTP))
+	r.GET("/audio/status", gin.WrapF(audioAPIServer.HandleStatusHTTP))
+	r.GET("/audio/parameters", gin.WrapF(audioAPIServer.HandleParametersHTTP))
+	r.POST("/audio/parameters", gin.WrapF(audioAPIServer.HandleParametersHTTP))
+	r.PUT("/audio/parameters", gin.WrapF(audioAPIServer.HandleParametersHTTP))
+	r.POST("/audio/start", gin.WrapF(audioAPIServer.HandleStartHTTP))
+	r.POST("/audio/stop", gin.WrapF(audioAPIServer.HandleStopHTTP))
+	r.GET("/audio/stream", gin.WrapF(audioAPIServer.HandleStreamHTTP))
 
 	// API routes
 	api := r.Group("/api")

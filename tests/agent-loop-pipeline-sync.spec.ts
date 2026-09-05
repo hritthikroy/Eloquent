@@ -2,7 +2,7 @@
  * Test Suite: High-Velocity Automated Agent Synchronization & Fast-Path Pipeline Bridge
  * 
  * Verifies:
- * 1. Mathematical team bonding coefficient calculations across Andrew, Tuk Tuk, Jenny, and Brian.
+ * 1. Mathematical team bonding coefficient calculations across Andrew, Tuk Tuk, Friday, and Brian.
  * 2. Background worker thread lifecycle, high-frequency state synchronization, and adaptive tick rate.
  * 3. Fast-path shared memory audio buffer handoff latency (<0.02ms) in ElectronEyeBridge.
  * 4. IPC channel registration, message forwarding, and non-blocking delivery.
@@ -59,7 +59,7 @@ async function runTests() {
     agentStates: {
       agent_andrew: { emotionalState: { mood: 'focused', intensity: 0.8 } },
       agent_tuk_tuk: { emotionalState: { mood: 'affectionate', intensity: 0.9 } },
-      agent_jenny: { emotionalState: { mood: 'enthusiastic', intensity: 0.7 } },
+      agent_friday: { emotionalState: { mood: 'enthusiastic', intensity: 0.7 } },
       agent_brian: { emotionalState: { mood: 'analytical', intensity: 0.8 } }
     },
     interactions: [

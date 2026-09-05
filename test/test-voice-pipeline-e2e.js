@@ -54,16 +54,16 @@ async function runTests() {
   );
   console.log("   ✅ [Brian]: Strictly locked to en-US-BrianMultilingualNeural");
 
-  // Jenny
+  // Friday
   assert.strictEqual(
-    JarvisManager.resolveVoiceForLanguage("en-US-EmmaMultilingualNeural", "Here is the research."),
-    "en-US-EmmaMultilingualNeural"
+    JarvisManager.resolveVoiceForLanguage("en-US-JennyNeural", "Here is the research."),
+    "en-US-JennyNeural"
   );
   assert.strictEqual(
-    JarvisManager.resolveVoiceForLanguage("en-US-EmmaMultilingualNeural", "Chief, data analyze ho gaya."),
-    "en-US-EmmaMultilingualNeural"
+    JarvisManager.resolveVoiceForLanguage("en-US-JennyNeural", "Chief, data analyze ho gaya."),
+    "en-US-JennyNeural"
   );
-  console.log("   ✅ [Jenny]: Strictly locked to en-US-EmmaMultilingualNeural");
+  console.log("   ✅ [Friday]: Strictly locked to en-US-JennyNeural");
 
   // 2. Test Phonetic Normalization (Preserves Natural Script)
   console.log("\n2️⃣ Testing Phonetic Normalization (Zero Robotic Transliteration)...");

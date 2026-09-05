@@ -1,17 +1,17 @@
 /**
- * Test Suite: Deep Conversational System Integrity across Tuk Tuk, Andrew, Jenny & Brian
+ * Test Suite: Deep Conversational System Integrity across Tuk Tuk, Andrew, Friday & Brian
  * 
  * Verifies:
  * 1. Tri-Lingual & Code-Mixed Persona Invariance (English, Bengali, Hindi):
  *    - Tuk Tuk is the identical loving co-founder girlfriend in English, Bengali, Hindi.
  *    - Andrew is the identical 10x lead dev brother in English, Bengali, Hindi.
- *    - Jenny is the identical sharp research lead in English, Bengali, Hindi.
+ *    - Friday is the identical sharp research lead in English, Bengali, Hindi.
  *    - Brian is the identical calm DevOps sentinel in English, Bengali, Hindi.
  * 2. Multi-Turn Cross-Language Memory Continuity:
  *    - Turn 1 in Bengali -> Turn 2 in English -> Turn 3 in Hindi retains context without loss.
  * 3. Lexical Isolation & Anti-Bot Sanitization:
  *    - Tuk Tuk: Max 1 pet name ceiling, 0 canned laughter, 0 melodrama, 0 meta-commentary.
- *    - Andrew / Jenny / Brian: Strictly 0 romantic terms across all scripts.
+ *    - Andrew / Friday / Brian: Strictly 0 romantic terms across all scripts.
  * 4. Voice Routing Equivalence:
  *    - Accurate dynamic voice selection across Bengali, Hindi, and English.
  * 5. Equational Working State & Telemetry Invariants.
@@ -109,18 +109,18 @@ async function runDeepConversationalTests() {
   }
 
   // --------------------------------------------------------------------------
-  // TEST GROUP 3: Jenny & Brian Persona Sovereignty across Languages
+  // TEST GROUP 3: Friday & Brian Persona Sovereignty across Languages
   // --------------------------------------------------------------------------
-  console.log('\n--- TEST GROUP 3: Jenny & Brian Persona Sovereignty across Languages ---');
+  console.log('\n--- TEST GROUP 3: Friday & Brian Persona Sovereignty across Languages ---');
   {
-    const jenny = manager.agents.jenny;
+    const friday = manager.agents.friday;
     const brian = manager.agents.brian;
 
-    // Jenny: strictly "Hritthik" or "Chief", zero romantic, zero "bro"
-    const badJenny = "Babe, bro, I analyzed the benchmark data.";
-    const cleanJenny = manager.sanitizeAgentLexicon(badJenny, 'jenny', 'en-US-EmmaMultilingualNeural');
-    assert(!/\b(babe|bro|sweetheart)\b/i.test(cleanJenny), 'Jenny sanitization strips both romantic terms and brotherly slang');
-    assert(cleanJenny.includes('Hritthik'), 'Jenny defaults to professional name "Hritthik"');
+    // Friday: strictly "Hritthik" or "Chief", zero romantic, zero "bro"
+    const badFriday = "Babe, bro, I analyzed the benchmark data.";
+    const cleanFriday = manager.sanitizeAgentLexicon(badFriday, 'friday', 'en-US-JennyNeural');
+    assert(!/\b(babe|bro|sweetheart)\b/i.test(cleanFriday), 'Friday sanitization strips both romantic terms and brotherly slang');
+    assert(cleanFriday.includes('Hritthik'), 'Friday defaults to professional name "Hritthik"');
 
     // Brian: calm DevOps numbers
     const badBrian = "Sweetheart, CPU load is 18 percent.";

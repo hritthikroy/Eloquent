@@ -26,7 +26,7 @@ test("Instant Reply, Zero Robotic Delay & Thinking Elimination Suite", async (t)
   const jarvis = new JarvisManager(path.resolve(__dirname, "../userData"));
   const activeTukTuk = { name: "Tuk Tuk", key: "tuktuk", voice: "en-US-AvaMultilingualNeural" };
   const activeVision = { name: "Vision", key: "vision", voice: "en-US-AndrewNeural" };
-  const activeJenny = { name: "Jenny", key: "jenny", voice: "en-US-JennyNeural" };
+  const activeFriday = { name: "Friday", key: "friday", voice: "en-US-JennyNeural" };
   const activeBrian = { name: "Brian", key: "brian", voice: "en-US-BrianNeural" };
   const activeTeam = { name: "Squad", key: "team", voice: "en-US-AvaMultilingualNeural" };
 
@@ -153,9 +153,9 @@ test("Instant Reply, Zero Robotic Delay & Thinking Elimination Suite", async (t)
     assert.match(visionReply, /Instant response|Zero latency|brother|bro/i);
     assert.ok(!visionReply.includes("Original thinking locked in"), "No 'original thinking locked in' slogan");
 
-    // Jenny
-    const jennyReply = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", prompt, {}, "en");
-    assert.match(jennyReply, /Instant analytical response|Zero latency|Chief/i);
+    // Friday
+    const fridayReply = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", prompt, {}, "en");
+    assert.match(fridayReply, /Instant analytical response|Zero latency|Chief/i);
 
     // Brian
     const brianReply = LocalCognitiveBrain.synthesizeResponse("brian", "Brian", prompt, {}, "en");

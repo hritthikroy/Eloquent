@@ -57,7 +57,7 @@ async function runHarnessTests() {
 
   // Test 6: Skill Profile Schema Validation
   const skillsDir = path.resolve(__dirname, "../config/skills");
-  const skillFiles = ["vision.json", "brian.json", "jenny.json", "tuktuk.json", "andrew.json"];
+  const skillFiles = ["vision.json", "brian.json", "friday.json", "tuktuk.json", "andrew.json"];
   for (const file of skillFiles) {
     const filePath = path.join(skillsDir, file);
     if (fs.existsSync(filePath)) {

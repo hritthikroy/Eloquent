@@ -208,7 +208,7 @@ try {
   const registry = new AgentStateRegistry(manager);
   
   // Initialize agents
-  const agentIds = [AgentId.ANDREW, AgentId.TUK_TUK, AgentId.JENNY, AgentId.BRIAN];
+  const agentIds = [AgentId.ANDREW, AgentId.TUK_TUK, AgentId.FRIDAY, AgentId.BRIAN];
   agentIds.forEach(id => registry.initializeAgent(id));
   
   const startTime = Date.now();

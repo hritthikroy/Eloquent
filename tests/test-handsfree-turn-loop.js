@@ -34,7 +34,7 @@ console.log("   ✅ Test 1 Passed.\n");
 console.log("▶ [TEST 2] Single-Agent Tag Extraction & Spoken Text Cleaning");
 function parseMultiAgentTurns(text) {
   if (!text || typeof text !== "string") return [];
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const regex = /\[(Tuk Tuk|Andrew|Vision|Friday|Brian|Ava)\]:\s*([^\[]+)/gi;
   const turns = [];
   let match;
   while ((match = regex.exec(text)) !== null) {

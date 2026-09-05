@@ -3,7 +3,7 @@
  * 
  * Implements high-frequency background worker threads for asynchronous task
  * self-optimization, multi-agent state synchronization, and team bonding metrics
- * across Vision, Tuk Tuk, Jenny, and Brian.
+ * across Vision, Tuk Tuk, Friday, and Brian.
  */
 
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
@@ -16,7 +16,7 @@ const BONDING_CONFIG = {
   w2: 0.4, // Weight for cross-agent interaction affinity & receptive harmony
   w3: 0.2, // Weight for synchronization recency decay
   decayLambda: 0.001, // Decay coefficient per millisecond
-  defaultAgents: ['agent_andrew', 'agent_tuk_tuk', 'agent_jenny', 'agent_brian'],
+  defaultAgents: ['agent_andrew', 'agent_tuk_tuk', 'agent_friday', 'agent_brian'],
   minTickIntervalMs: 50,
   maxTickIntervalMs: 250,
   defaultTickIntervalMs: 100

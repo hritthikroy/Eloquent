@@ -26,7 +26,7 @@ Successfully implemented a persistent, zero-copy memory synchronization protocol
 
 2. **AgentStateRegistry** (`src/agents/agent-state-registry.ts`)
    - High-level API for agent lifecycle management
-   - Pre-configured agents: Andrew, Tuk Tuk, Jenny, Brian
+   - Pre-configured agents: Andrew, Tuk Tuk, Friday, Brian
    - Conversation history tracking (50 turns max per agent)
    - Emotional state management
    - Event system for state change notifications
@@ -314,7 +314,7 @@ app.on('ready', () => {
   // Initialize all agents
   registry.initializeAgent('agent_andrew');
   registry.initializeAgent('agent_tuk_tuk');
-  registry.initializeAgent('agent_jenny');
+  registry.initializeAgent('agent_friday');
   
   // Expose to IPC
   ipcMain.handle('shared-memory:read-agent', (_, agentId) => {

@@ -4,7 +4,7 @@
  * Verifies:
  * 1. Neural-mesh memory bank initialization, salience scoring, cross-agent retrieval, and persistence.
  * 2. Andrew autonomous deep research query detection, query decomposition, and scraper dispatch.
- * 3. High-speed telemetry collection and research vault ingestion across Andrew, Jenny, and Tuk Tuk.
+ * 3. High-speed telemetry collection and research vault ingestion across Andrew, Friday, and Tuk Tuk.
  * 4. Desktop Electron IPC bridge registration, squad coordination, and real-time research feeds.
  * 5. Preload context isolation and window.antigravityResearch API exposure.
  */
@@ -63,7 +63,7 @@ async function runDeepResearchTests() {
     const bank = new NeuralMeshMemoryBank({ storagePath: tempStorage });
 
     assert(bank.squadAgents.includes('agent_vision') || bank.squadAgents.includes('agent_andrew'), 'Squad contains Vision');
-    assert(bank.squadAgents.includes('agent_jenny'), 'Squad contains Jenny');
+    assert(bank.squadAgents.includes('agent_friday'), 'Squad contains Friday');
     assert(bank.squadAgents.includes('agent_tuk_tuk'), 'Squad contains Tuk Tuk');
     assert(bank.squadAgents.includes('agent_brian'), 'Squad contains Brian');
 
@@ -90,9 +90,9 @@ async function runDeepResearchTests() {
     assert(node.sharedWith.length === 4, 'Research node linked across all 4 squad agents');
 
     // Cross-agent associative retrieval
-    const jennyMemory = bank.getAgentMemory('agent_jenny');
-    assert(jennyMemory.linkedResearchCount === 1, 'Jenny immediately has access to Vision research findings');
-    assert(jennyMemory.recentResearch[0].query.includes('Shared Memory'), 'Jenny recalled Vision research topic');
+    const fridayMemory = bank.getAgentMemory('agent_friday');
+    assert(fridayMemory.linkedResearchCount === 1, 'Friday immediately has access to Vision research findings');
+    assert(fridayMemory.recentResearch[0].query.includes('Shared Memory'), 'Friday recalled Vision research topic');
 
     const tukTukMemory = bank.getAgentMemory('agent_tuk_tuk');
     assert(tukTukMemory.linkedResearchCount === 1, 'Tuk Tuk memory bank synchronized with research node');
@@ -204,8 +204,8 @@ async function runDeepResearchTests() {
     assert(typeof statusPayload.totalDispatches === 'number', 'research:status returns valid telemetry');
 
     // Test invoking memory:get-banks via IPC mock
-    const memoryPayload = await registeredHandlers['memory:get-banks'](null, 'agent_jenny');
-    assert(memoryPayload.agentId === 'agent_jenny', 'memory:get-banks returned Jenny memory snapshot');
+    const memoryPayload = await registeredHandlers['memory:get-banks'](null, 'agent_friday');
+    assert(memoryPayload.agentId === 'agent_friday', 'memory:get-banks returned Friday memory snapshot');
   }
 
   // --------------------------------------------------------------------------

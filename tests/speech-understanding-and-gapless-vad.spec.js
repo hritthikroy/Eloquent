@@ -3,8 +3,8 @@
  *
  * Rigorous integration test suite verifying:
  * 1. VAD Endpoint Silence Thresholds: Natural conversational pauses (500ms-850ms) to eliminate premature cut-offs
- * 2. Bayesian STT Acoustic Normalization: Disambiguates "television" -> "Tell Vision", "Tell DJ" -> "Tell Jenny"
- * 3. Cross-Agent Handoff Verification: Seamless delegation to Vision and Jenny from corrected speech
+ * 2. Bayesian STT Acoustic Normalization: Disambiguates "television" -> "Tell Vision", "Tell DJ" -> "Tell Friday"
+ * 3. Cross-Agent Handoff Verification: Seamless delegation to Vision and Friday from corrected speech
  * 4. Whisper Silence Hallucination Purge: Discarding Tesla laboratory quote and noise artifacts
  * 5. Language Transition & Bilingual Prompt Fluidity: Immediate Bangla switching and code-mixing comprehension
  * 6. LocalCognitiveBrain Intent Handling: Reassurance for speech understanding and gapless conversation
@@ -72,10 +72,10 @@ runTest("Bayesian STT Acoustic Normalization: Disambiguates acoustic collisions 
   assert.ok(sanitized1.includes("Tell Vision"), `Must normalize television to Tell Vision, got: "${sanitized1}"`);
   assert.ok(sanitized1.includes("write the problem"), `Must preserve task, got: "${sanitized1}"`);
 
-  // 2. "Tell DJ." -> "Tell Jenny."
+  // 2. "Tell DJ." -> "Tell Friday."
   const sanitized2 = TextSanitizer.sanitize("Tell DJ.");
   console.log(`     Sanitized "Tell DJ." -> "${sanitized2}"`);
-  assert.ok(sanitized2.includes("Tell Jenny"), `Must normalize Tell DJ to Tell Jenny, got: "${sanitized2}"`);
+  assert.ok(sanitized2.includes("Tell Friday"), `Must normalize Tell DJ to Tell Friday, got: "${sanitized2}"`);
 
   // 3. "tabul da chai" -> "table-ta chai"
   const sanitized3 = TextSanitizer.sanitize("Bangla, repeat keno, tabul da chai.");
@@ -190,7 +190,7 @@ runTest("Whisper Transcription: Jarvis mode does not hard-pin language='en'", ()
     "Only non-Jarvis mode pins language='en'; Jarvis mode allows multilingual transcription"
   );
   assert.ok(
-    mainJsCode.includes("Tell Vision, tell Jenny, tell Brian, ask Tuk Tuk"),
+    mainJsCode.includes("Tell Vision, tell Friday, tell Brian, ask Tuk Tuk"),
     "Whisper prompt is conditioned with agent names and delegation commands"
   );
 });

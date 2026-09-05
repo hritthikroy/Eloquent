@@ -1,7 +1,7 @@
 # 🔧 Fix: Simultaneous Agent Speaking Issue
 
 ## Problem
-Multiple agents (Andrew, Jenny, Brian, Tuk Tuk) were speaking simultaneously in team/squad mode, creating audio chaos and making responses unintelligible.
+Multiple agents (Andrew, Friday, Brian, Tuk Tuk) were speaking simultaneously in team/squad mode, creating audio chaos and making responses unintelligible.
 
 ## Root Causes Identified
 

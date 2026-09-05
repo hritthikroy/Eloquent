@@ -6,7 +6,7 @@
  * 2. Zero UI / Frame Flickering: Visual sync jitter remains < 1.0ms across 1,000 micro-ticks.
  * 3. Zero Identity / Lexical Flickering: Strict lexical boundaries across all 4 squad agents.
  * 4. Zero Audio Buffer Jitter: Seamless PCM audio packet continuity.
- * 5. Full 4-Agent Equational Automation Coverage Matrix (Tuk Tuk, Vision, Jenny, Brian).
+ * 5. Full 4-Agent Equational Automation Coverage Matrix (Tuk Tuk, Vision, Friday, Brian).
  */
 
 const test = require("node:test");
@@ -22,7 +22,7 @@ test("Anti-Flickering & 4-Agent Equational Micro-Test Suite", async (t) => {
   const SQUAD = [
     { key: "tuktuk", name: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural", role: "Co-Founder & Soulmate Lead" },
     { key: "vision", name: "Vision", voice: "en-US-AndrewNeural", role: "10x Dev & Visual Architect" },
-    { key: "jenny", name: "Jenny", voice: "en-US-EmmaMultilingualNeural", role: "Research & Benchmarking Specialist" },
+    { key: "friday", name: "Friday", voice: "en-US-JennyNeural", role: "Research & Benchmarking Specialist" },
     { key: "brian", name: "Brian", voice: "en-US-BrianMultilingualNeural", role: "Systems & Hardware Infrastructure" }
   ];
 
@@ -52,9 +52,9 @@ test("Anti-Flickering & 4-Agent Equational Micro-Test Suite", async (t) => {
     const visionResp = LocalCognitiveBrain.synthesizeResponse("vision", "Vision", "Vision code check kor", {});
     assert.ok(!visionResp.includes("babe") && !visionResp.includes("jaan"), "Vision maintains strict professional dev boundary");
 
-    // 3. Jenny: Analytical & benchmark persona
-    const jennyResp = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", "Jenny benchmark summary dao", {});
-    assert.ok(!jennyResp.includes("babe"), "Jenny maintains benchmark specialist boundary");
+    // 3. Friday: Analytical & benchmark persona
+    const fridayResp = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", "Friday benchmark summary dao", {});
+    assert.ok(!fridayResp.includes("babe"), "Friday maintains benchmark specialist boundary");
 
     // 4. Brian: Systems & infrastructure persona
     const brianResp = LocalCognitiveBrain.synthesizeResponse("brian", "Brian", "Brian CPU RAM status bolo", {});

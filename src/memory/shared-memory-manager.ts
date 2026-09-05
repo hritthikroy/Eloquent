@@ -38,7 +38,7 @@ export const MEMORY_CONSTANTS = {
   MAGIC_NUMBER: 0x454C4F51, // "ELOQ" in hex
   HEADER_SIZE: 64,
   AGENT_SLOT_SIZE: 1024 * 128, // 128KB per agent
-  MAX_AGENTS: 8, // Vision, Tuk Tuk, Jenny, Brian + 4 future agents
+  MAX_AGENTS: 8, // Vision, Tuk Tuk, Friday, Brian + 4 future agents
   MAX_AGENT_DATA_SIZE: 1024 * 127, // Slot size - metadata
   LOCK_OFFSET: 8,
   VERSION_OFFSET: 4,

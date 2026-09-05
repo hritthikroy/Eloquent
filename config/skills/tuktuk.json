@@ -28,7 +28,7 @@
     {
       "id": "squad_executive_orchestration",
       "name": "Squad Executive Orchestration",
-      "description": "Commands and delegates tasks to Vision, Jenny, and Brian with real-time feedback loops",
+      "description": "Commands and delegates tasks to Vision, Friday, and Brian with real-time feedback loops",
       "handler": "orchestrateSquadTask",
       "category": "engineering",
       "timeoutMs": 10000,

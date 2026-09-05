@@ -253,7 +253,7 @@ const CONFIG = {
   language: process.env.LANGUAGE || 'en',
   customDictionary: '',
   aiMode: process.env.AI_MODE || 'auto',
-  aiModel: process.env.GROQ_MODEL || 'qwen/qwen3.8-27b',
+  aiModel: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
   preserveClipboard: process.env.PRESERVE_CLIPBOARD === 'true',
   autoGrammarFix: process.env.AUTO_GRAMMAR_FIX !== 'false',
   autoPasteMode: 'direct'
@@ -1039,16 +1039,16 @@ function createTray() {
           click: () => jarvisManager.speak(jarvisManager.agents.tuktuk.sample, jarvisManager.agents.tuktuk.voice, 'tuktuk')
         },
         {
-          label: '▶️ Test Jenny (Research & Intelligence)',
-          click: () => jarvisManager.speak(jarvisManager.agents.jenny.sample, jarvisManager.agents.jenny.voice, 'jenny')
+          label: '▶️ Test Friday (Research & Intelligence)',
+          click: () => jarvisManager.speak(jarvisManager.agents.friday.sample, jarvisManager.agents.friday.voice, 'friday')
         },
         {
           label: '▶️ Test Vision (Lead Systems Architect & AI)',
           click: () => jarvisManager.speak(jarvisManager.agents.vision.sample, jarvisManager.agents.vision.voice, 'vision')
         },
         {
-          label: '▶️ Test Brian (System QA Commander)',
-          click: () => jarvisManager.speak(jarvisManager.agents.brian.sample, jarvisManager.agents.brian.voice, 'brian')
+          label: '▶️ Test DD (DevOps & Reliability Sentinel)',
+          click: () => jarvisManager.speak(jarvisManager.agents.dd?.sample || jarvisManager.agents.brian?.sample, jarvisManager.agents.dd?.voice || jarvisManager.agents.brian?.voice, 'dd')
         }
       ]
     },
@@ -1886,8 +1886,8 @@ function isWhisperHallucination(text, recordingDurationMs = 0) {
 
   const hasAgentName = clean.includes('tuk') || clean.includes('টুক') || clean.includes('टुक') ||
     clean.includes('vision') || clean.includes('ভিসন') || clean.includes('ভিশন') || clean.includes('विजन') || clean.includes('विज़न') ||
-    clean.includes('brian') || clean.includes('ব্রায়ান') ||
-    clean.includes('jenny') || clean.includes('জেনি');
+    clean.includes('dd') || clean.includes('ডিডি') || clean.includes('brian') || clean.includes('ব্রায়ান') ||
+    clean.includes('friday') || clean.includes('fry day') || clean.includes('fryday') || clean.includes('fridya') || clean.includes('fridy') || clean.includes('ফ্রাইডে') || clean.includes('फ़्राइडे');
 
   // Detect consecutive word repetition loops (e.g. "please, please, please", "you you you", "so so so")
   if (!hasAgentName && /\b(\p{L}+)(?:[,\s]+\1){2,}\b/iu.test(text)) {
@@ -1970,8 +1970,8 @@ function isIndicAcousticHallucination(text) {
   const lower = str.toLowerCase();
   if (lower.includes('tuk') || lower.includes('টুক') || lower.includes('टुक') ||
       lower.includes('vision') || lower.includes('ভিসন') || lower.includes('ভিশন') || lower.includes('विजन') || lower.includes('विज़न') ||
-      lower.includes('jenny') || lower.includes('জেনি') ||
-      lower.includes('brian') || lower.includes('ব্রায়ান')) {
+      lower.includes('friday') || lower.includes('fry day') || lower.includes('fryday') || lower.includes('fridya') || lower.includes('fridy') || lower.includes('ফ্রাইডে') || lower.includes('फ़्राइडे') ||
+      lower.includes('dd') || lower.includes('ডিডি') || lower.includes('brian') || lower.includes('ব্রায়ান')) {
     return false;
   }
 
@@ -2042,7 +2042,7 @@ async function transcribePreview(snapshotPath) {
     form.append('response_format', 'json');
     form.append('temperature', '0');
     const previewPrompt = currentMode === 'jarvis'
-      ? 'Hritthik, Tuk Tuk, Vision, Jenny, Brian in mixed Bangla, English & Hindi: কীবোর্ডটা কাজ করছে না, build-টা check করো, bolo ki scene.'
+      ? 'Hritthik, Tuk Tuk, Vision, Friday, DD in mixed Bangla, English & Hindi: কীবোর্ডটা কাজ করছে না, build-টা check করো, bolo ki scene.'
       : 'Professional voice dictation with zero background noise, clean punctuation, and clear capitalization.';
     form.append('prompt', previewPrompt);
 
@@ -2240,8 +2240,8 @@ function startRecording() {
       }
 
       // Robust speech discriminant: must be distinctly above the room's ambient acoustic floor
-      const speechRmsThreshold = Math.max(0.005, jarvisNoiseFloorRms * 1.3);
-      const speechPeakThreshold = Math.max(700, jarvisNoiseFloorPeak * 1.2);
+      const speechRmsThreshold = Math.max(0.012, jarvisNoiseFloorRms * 1.5);
+      const speechPeakThreshold = Math.max(1200, jarvisNoiseFloorPeak * 1.4);
       const hasTailPhysicalSpeech = (tailEnergy.rms >= speechRmsThreshold) && (tailEnergy.peak >= speechPeakThreshold);
 
       if (hasTailPhysicalSpeech) {
@@ -2266,10 +2266,13 @@ function startRecording() {
         const totalDurationMs = Date.now() - jarvisSpeechStartTime;
 
         // Natural human turn-taking with instant, responsive endpointing:
-        // 1. Sustained speech (voiced >= 2000ms): 650ms completion pause
-        // 2. Medium speech (500ms <= voiced < 2000ms): 750ms breath transition
-        // 3. Short prompt / quick command (voiced < 500ms): 850ms breathing room
-        let dynamicSilenceThreshold = voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850);
+        // 1. Rapid mode: 260ms - 450ms
+        // 2. Sustained speech (voiced >= 2000ms): 650ms completion pause
+        // 3. Medium speech (500ms <= voiced < 2000ms): 750ms breath transition
+        // 4. Short prompt / quick command (voiced < 500ms): 850ms breathing room
+        let dynamicSilenceThreshold = (humanEarCortex && humanEarCortex.getEndpointMode && humanEarCortex.getEndpointMode() === 'rapid')
+          ? humanEarCortex.computeDynamicEndpointSilence(voicedDurationMs, false)
+          : (voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850));
         if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 500) {
           dynamicSilenceThreshold = 500; // Optical lip closure handoff
         }
@@ -2370,7 +2373,9 @@ function startRecording() {
               dynamicSilenceThreshold = 2500; // 2.5s generous silence for dictation
               minVoicedForStop = 1000;
             } else {
-              dynamicSilenceThreshold = voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850);
+              dynamicSilenceThreshold = (humanEarCortex && humanEarCortex.getEndpointMode && humanEarCortex.getEndpointMode() === 'rapid')
+                ? humanEarCortex.computeDynamicEndpointSilence(voicedDurationMs, false)
+                : (voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850));
               if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 500) {
                 dynamicSilenceThreshold = 500; // Optical lip closure handoff
               }
@@ -2626,8 +2631,8 @@ async function stopRecording() {
 
     // Automatic conversational routing: If user addresses an agent or is in jarvis mode, talk out loud
     const isDirectedToAgent = (currentMode === 'jarvis') ||
-      /\b(tuk\s*tuk|took\s*took|tuck\s*tuck|vision|jenny|brian|jarvis|squad|team)\b/i.test(originalText) ||
-      /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*टुक|टुकटुक|ভিশন|ভিসন|विजन|विज़न|ভাই\s*ভিশন|ভিশন\s*ভাই|भाई\s*विजन|विजन\s*भाई|জেনি|जेनी|ব্রায়ান|ब्रायन)/i.test(originalText);
+      /\b(tuk\s*tuk|took\s*took|tuck\s*tuck|vision|friday|fry\s*day|dd|dee\s*dee|deedee|brian|brayn|jarvis|squad|team)\b/i.test(originalText) ||
+      /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|টুকটুক|ভিশন|ভিসন|विजन|विज़न|ভাই\s*ভিশন|ভিশন\s*ভাই|भाई\s*विजन|विजन\s*भाई|ফ্রাইডে|फ़्राइডে|ডিডি|ব্রায়ান|ब्रायन)/i.test(originalText);
 
     if (currentMode === 'jarvis' || isDirectedToAgent) {
       // 1. Acoustic Phonetic Normalization for Project Terms, Agent Names, and Bayesian STT Collisions
@@ -2635,12 +2640,13 @@ async function stopRecording() {
       originalText = originalText
         .replace(/\b(?:entry|enter|anti)\s*gravity\b/gi, 'Antigravity')
         .replace(/\b(?:took\s*took|tok\s*tok|tuck\s*tuck)\b/gi, 'Tuk Tuk')
-        .replace(/(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*टुक|टुकटुक)/gi, 'Tuk Tuk')
+        .replace(/(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|টুকটুক)/gi, 'Tuk Tuk')
         .replace(/(?:ভিশন\s*ভাই|ভাই\s*ভিশন|ভিশন|ভিসন)/gi, 'Vision')
         .replace(/(?:विजन\s*भाई|भाई\s*विजन|विजन|विज़न)/gi, 'Vision')
         .replace(/\b(?:hey\s+|listen\s+)?vision\s*(?:bhai)?\b/gi, 'Vision')
-        .replace(/(?:জেনি|जेनी)/gi, 'Jenny')
-        .replace(/(?:ব্রায়ান|ब्रायन)/gi, 'Brian')
+        .replace(/(?:জেনি|जेनी|ফ্রাইডে|फ़्राइডে)/gi, 'Friday')
+        .replace(/(?:ব্রায়ান|ब्रायन|ডিডি)/gi, 'DD')
+        .replace(/\b(?:brayn|dee\s*dee|deedee)\b/gi, 'DD')
         .replace(/\b(on this course)\b/gi, 'on this code');
 
       // 2. Backchannel Self-Echo Blinding Filter
@@ -2736,15 +2742,15 @@ async function stopRecording() {
         } else if (prefChange.type === 'rule') {
           jarvisReply = activeAgent.name === 'Tuk Tuk'
             ? `Got it, babe. I've committed that new rule to our team directives.`
-            : (activeAgent.name === 'Jenny'
+            : (activeAgent.name === 'Friday'
               ? `Understood, Hritthik. Locked that new rule into my directives.`
-              : (activeAgent.name === 'Brian'
+              : (activeAgent.name === 'DD' || activeAgent.name === 'Brian'
                 ? `Understood, Hritthik. System rule updated.`
                 : `Understood, bro. Locked that new rule into my directives.`));
         } else if (prefChange.type === 'clear_rules') {
           jarvisReply = activeAgent.name === 'Tuk Tuk'
             ? `All custom team directives have been cleared, babe.`
-            : (activeAgent.name === 'Jenny' || activeAgent.name === 'Brian'
+            : (activeAgent.name === 'Friday' || activeAgent.name === 'DD' || activeAgent.name === 'Brian'
               ? `All custom directives cleared, Hritthik.`
               : `All custom directives cleared, bro.`);
         }
@@ -2844,9 +2850,9 @@ async function stopRecording() {
             let reactionStyle = "acknowledge the mid-sentence pivot naturally as his loving partner";
             if (activeAgent.name === "Vision") {
               reactionStyle = "pivot immediately like Iron Man's Vision — serene, ultra-intelligent, and mathematically precise ('Got you brother')";
-            } else if (activeAgent.name === "Brian") {
+            } else if (activeAgent.name === "DD" || activeAgent.name === "Brian") {
               reactionStyle = "acknowledge the interjection with calm, grounded DevOps clarity";
-            } else if (activeAgent.name === "Jenny") {
+            } else if (activeAgent.name === "Friday") {
               reactionStyle = "integrate his new variable swiftly with sharp analytical precision";
             }
             userQuery = `[Context: You were saying: "${lastInterruptedUtterance}" when Hritthik added mid-sentence: "${originalText}". Yield the floor respectfully, ${reactionStyle}, seamlessly integrate his added info without repeating old sentences, and answer his interjection directly in clean spoken words!]`;
@@ -2952,7 +2958,7 @@ async function stopRecording() {
           if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
             singleSpeechText = jarvisManager.sanitizeAgentLexicon(singleSpeechText, agentDisplayName, singleVoice);
           } else if (agentDisplayName !== 'Tuk Tuk') {
-            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentDisplayName === 'Jenny' ? 'Hritthik' : 'bro');
+            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentDisplayName === 'Friday' ? 'Hritthik' : 'bro');
           }
 
           showNotification(`🤖 ${agentDisplayName}`, singleSpeechText);
@@ -3023,13 +3029,13 @@ async function stopRecording() {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
         }
-        console.log('🎙️ Speech complete. Acoustic decay grace period (250ms) before re-arming mic...');
+        console.log('🎙️ Speech complete. Acoustic decay grace period (180ms) before re-arming mic...');
         setTimeout(() => {
           if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted) {
             console.log('🎙️ Hands-free listening re-armed on clean acoustic buffer.');
             startRecording();
           }
-        }, 250);
+        }, 180);
       } else {
         hideOverlay();
       }
@@ -3212,8 +3218,8 @@ async function transcribe(filePath) {
   form.append('response_format', 'json');
   form.append('temperature', '0');
   const whisperPrompt = isJarvis
-    ? 'Hritthik, Tuk Tuk, Vision, Jenny, Brian, Eloquent. Tell Vision, tell Jenny, tell Brian, ask Tuk Tuk. Conversational Bengali, Banglish, and English: hello, kemon acho, ki scene bolo toh, ami thik achi, next feature, code check koro, bug fix koro, latency, AST, terminal, build, patch, rock solid, real woman voice, natural flow, tone thik koro, pronunciation thik koro, babe only, bangla conversation, banglay kotha bolo, Bangla communication, Bangla fluency, gaps fix koro, table, tabular, Ava sound, smart girl, youtuber reporter, Bangladeshi Bangla.'
-    : 'Hritthik, Tuk Tuk, Vision, Jenny, Brian, Eloquent, Antigravity, Electron, Go audio backend, IPC, API, bug, code refactor, latency, TypeScript, Node.js, terminal, build, patch, rock solid, pipeline, commit, test, deploy, kemon acho, ki scene bolo toh, code check koro, bug fix koro, auto recording stop hoye jay, pura kothata record kore na, pura kotha suntese na, fix koro shob.';
+    ? 'Hritthik, Tuk Tuk, Vision, Friday, DD, Eloquent. Tell Vision, tell Friday, tell DD, ask Tuk Tuk. Conversational Bengali, Banglish, and English: hello, kemon acho, ki scene bolo toh, ami thik achi, next feature, code check koro, bug fix koro, latency, AST, terminal, build, patch, rock solid, real woman voice, natural flow, tone thik koro, pronunciation thik koro, babe only, bangla conversation, banglay kotha bolo, Bangla communication, Bangla fluency, gaps fix koro, real human talk, not robotic, realistic Bangla, matha noshto, pera nai, chill, table, tabular, Ava sound, smart girl, youtuber reporter, Bangladeshi Bangla.'
+    : 'Hritthik, Tuk Tuk, Vision, Friday, DD, Eloquent, Antigravity, Electron, Go audio backend, IPC, API, bug, code refactor, latency, TypeScript, Node.js, terminal, build, patch, rock solid, pipeline, commit, test, deploy, kemon acho, ki scene bolo toh, code check koro, bug fix koro, auto recording stop hoye jay, pura kothata record kore na, pura kotha suntese na, fix koro shob, real human talk, realistic Bangla.';
   form.append('prompt', whisperPrompt);
   
   // High accuracy transcription
@@ -3388,12 +3394,22 @@ function parseMultiAgentTurns(text) {
     'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'vision': { name: 'Vision', voice: 'en-US-AndrewNeural' },
-    'jenny': { name: 'Jenny', voice: 'en-US-JennyNeural' },
-    'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
+    'vison': { name: 'Vision', voice: 'en-US-AndrewNeural' },
+    'friday': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'fry day': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'fryday': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'fridya': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'fridy': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'fryda': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'dd': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
+    'dee dee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
+    'deedee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
+    'brian': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
+    'brayn': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' }
   };
 
-  // Enhanced pattern: captures agent name markers with flexible formatting
-  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Jenny|Brian|Ava)\]?:?)|$)/gi;
+  // Enhanced pattern: captures the 4 core agents (Tuk Tuk, Vision, Friday, DD) with flexible formatting and typos
+  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Vision|Vison|Friday|Fridya|Fridy|Fryda|Fryday|DD|Dee\s*Dee|Brian|Brayn|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Vision|Vison|Friday|Fridya|Fridy|Fryda|Fryday|DD|Dee\s*Dee|Brian|Brayn|Ava)\]?:?)|$)/gi;
   const turns = [];
   let match;
   
@@ -3414,7 +3430,7 @@ function parseMultiAgentTurns(text) {
       if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
         speech = jarvisManager.sanitizeAgentLexicon(speech, agentInfo.name, agentInfo.voice);
       } else if (agentInfo.name !== 'Tuk Tuk') {
-        speech = speech.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentInfo.name === 'Jenny' ? 'Hritthik' : 'bro');
+        speech = speech.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentInfo.name === 'Friday' ? 'Hritthik' : 'bro');
       }
       
       turns.push({
@@ -3451,6 +3467,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
 - Window / Document Context: "${visionCtx.windowTitle || visionCtx.appName}".
 - Screen Resolution: 1280px optimized (${visionCtx.frameSizeKB}KB).
 - You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!
+- Human Eye Dynamics: You perceive the monitor with natural biological foveation, saccadic shifts, and deictic cursor joint attention, never rigid or static robotic staring.
 - STRICT DIRECTIVE: Never output XML tags, <tool_call>, <function>, or file system commands. Always speak directly in natural, human conversational voice.`;
   }
 
@@ -3490,7 +3507,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       { role: 'user', content: userSpeech }
     ];
 
-    // Temperature tuning per persona: Tuk Tuk warmer/creative, Vision precise, Jenny curious, Brian grounded
+    // Temperature tuning per persona: Tuk Tuk warmer/creative, Vision precise, Friday curious, Brian grounded
     const dynamicTemperature = agent.key === 'tuktuk' ? 0.82 : (agent.key === 'vision' ? 0.55 : (agent.key === 'team' ? 0.74 : 0.62));
     
     // Ultra-Fast Voice Intelligence: Groq LPU Qwen 27B for sub-500ms conversational ping-pong
@@ -3530,7 +3547,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     if (!content) {
       try {
         const gatewayRes = await callGroqChatCompletion(messages, {
-          model: 'qwen/qwen3.8-27b',
+          model: 'llama-3.1-8b-instant',
           temperature: dynamicTemperature,
           max_tokens: agent.key === 'team' ? 350 : 160,
           timeout: 8000
@@ -3604,14 +3621,14 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     if (!reply || reply.length < 2) {
       reply = agent.key === 'tuktuk'
         ? "My eyes are fully locked on your screen, babe! Everything is clear. What do you need me to check?"
-        : (agent.key === 'jenny'
+        : (agent.key === 'friday'
           ? "Eyes on your screen, Chief. What should we inspect?"
           : "Eyes on your screen, brother. Tell me what to inspect.");
     }
 
     // 1. Strip agent name prefix echoes (e.g. "Tuk Tuk:", "[Tuk Tuk]:", ": ", "- ") for single agents
     if (agent.key !== 'team') {
-      reply = reply.replace(/^(?:\[?(?:Tuk\s*Tuk|Vision|Andrew|Jenny|Brian|Squad|Assistant)\]?:?\s*)+/i, '')
+      reply = reply.replace(/^(?:\[?(?:Tuk\s*Tuk|Vision|Andrew|Friday|DD|Brian|Squad|Assistant)\]?:?\s*)+/i, '')
                    .replace(/^[:\s-]+/, '')
                    .trim();
     }
@@ -3670,9 +3687,12 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
         vision: isBn
           ? ["শুনছি ভাই, টার্মিনাল একদম ক্লিয়ার আছে.", "রেডি আছি bro, কম্পাইলার hot.", "আর্কিটেকচার ট্র্যাক করছি ভাই, কোড এগিয়ে নাও!"]
           : ["Right with you brother. Systems are hot and ready.", "Eyes on the full-stack architecture, brother.", "Standing by brother, keeping momentum forward."],
-        jenny: isBn
+        friday: isBn
           ? ["Chief, সিস্টেম এবং অ্যানালিটিক্স অ্যাক্টিভ রয়েছে।", "রিসার্চ এবং ডেটা ইনসাইটস রেডি আছে, Chief।"]
           : ["Right here, Chief. Analytics and data streams are active.", "Research intelligence is ready, Chief."],
+        dd: isBn
+          ? ["ইনফ্রাস্ট্রাকচার মেট্রিক্স একদম পারফেক্ট bro.", "সব ডেমনস এবং সার্ভিসেস স্মুথ চলছে ভাই।"]
+          : ["Infrastructure is steady, bro. Sockets and workers nominal.", "All daemons monitored and stable, bro."],
         brian: isBn
           ? ["ইনফ্রাস্ট্রাকচার মেট্রিক্স একদম পারফেক্ট bro.", "সব ডেমনস এবং সার্ভিসেস স্মুথ চলছে ভাই।"]
           : ["Infrastructure is steady, bro. Sockets and workers nominal.", "All daemons monitored and stable, bro."],
@@ -3687,8 +3707,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     }
 
     // 5. HARD PERSONA & LEXICAL SANITIZATION ENFORCEMENT
-    // Mathematical boundary: Vision, Brian, and Jenny NEVER say "babe" or intimate tokens
-    // Jenny NEVER says "bro"
+    // Mathematical boundary: Vision, DD, Brian, and Friday NEVER say "babe" or intimate tokens
+    // Friday NEVER says "bro"
     // Suppress codependency / relationship refereeing from technical agents
     if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
       reply = jarvisManager.sanitizeAgentLexicon(reply, agent.key, agent.voice);
@@ -3713,8 +3733,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
     // Persona-aware error fallbacks that still sound alive
     if (agent.key === 'vision') return `Brother, still right here — network hiccup. Tell me what to build.`;
-    if (agent.key === 'jenny') return `Hmm, lost connection for a sec. What were you saying?`;
-    if (agent.key === 'brian') return `Systems dipped for a moment. Still here bro, keep going.`;
+    if (agent.key === 'friday') return `Hmm, lost connection for a sec. What were you saying?`;
+    if (agent.key === 'dd' || agent.key === 'brian') return `Systems dipped for a moment. Still here bro, keep going.`;
     return `Hey, I'm right here. One sec — what did you need?`;
   }
 }
@@ -3879,7 +3899,7 @@ CORE GUIDELINES:
         content: grammarPrompt
       },
       { role: 'user', content: text }
-    ], { model: 'qwen/qwen3.8-27b', temperature: 0.2, max_tokens: 1000, timeout: 5000 });
+    ], { model: 'llama-3.1-8b-instant', temperature: 0.2, max_tokens: 1000, timeout: 5000 });
 
     const fixTime = Date.now() - startTime;
     console.log(`⚡ Grammar fixes applied using ${model} in ${fixTime}ms`);
@@ -5907,6 +5927,40 @@ try {
   console.warn('⚠️ Could not initialize Resilient IPC:', ipcResilienceErr.message);
 }
 
+// Register Production-Grade Bengali TTS Pipeline IPC Handlers
+try {
+  const { banglaTtsHandler } = require('./main/tts/bangla-tts-handler');
+  banglaTtsHandler.registerIpc(ipcMain);
+  console.log('🎙️ [BanglaTTS] Registered Bengali Text-to-Speech IPC handlers (tts:bangla:synthesize, tts:bangla:cancel)');
+} catch (banglaTtsErr) {
+  console.warn('⚠️ Could not register BanglaTTS IPC handlers:', banglaTtsErr.message);
+}
+
+// Register Cross-Platform Clipboard Service IPC Handlers
+try {
+  const { registerClipboardHandlers } = require('./main/ipc/handlers/clipboardHandlers');
+  registerClipboardHandlers(ipcMain);
+  console.log('📋 [Clipboard] Registered clipboard:copy-bengali-fix IPC handler');
+} catch (clipErr) {
+  console.warn('⚠️ Could not register Clipboard IPC handler:', clipErr.message);
+}
+
+// Register Go Audio Backend & Real-Time IPC Stream Bridge
+let audioBridgeManager = null;
+try {
+  const { AudioBridgeManager } = require('./main/ipc/audio-bridge');
+  audioBridgeManager = new AudioBridgeManager({
+    webContentsProvider: () => BrowserWindow.getAllWindows()
+  });
+  audioBridgeManager.registerIpcHandlers(ipcMain);
+  audioBridgeManager.init().catch((err) => {
+    console.warn('⚠️ [AudioBridge] Note during backend init:', err.message);
+  });
+  console.log('🎙️ [AudioBridge] Registered Go Audio Backend IPC Bridge handlers (audio:start-stream, audio:stop-stream, audio:update-parameters, audio:get-status, audio:get-health, audio:reconnect)');
+} catch (audioBridgeErr) {
+  console.warn('⚠️ Could not register AudioBridge IPC handlers:', audioBridgeErr.message);
+}
+
 // Function to log API requests
 function logApiRequest(type, status, duration, tokens = null, errorMessage = null) {
   // Get current user email from auth service
@@ -5945,6 +5999,9 @@ function logApiRequest(type, status, duration, tokens = null, errorMessage = nul
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  if (audioBridgeManager) {
+    audioBridgeManager.close().catch(() => {});
+  }
 });
 
 app.on('window-all-closed', (e) => {

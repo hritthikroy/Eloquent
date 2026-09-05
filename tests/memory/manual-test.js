@@ -281,7 +281,7 @@ console.log('🎉 ALL TESTS PASSED!');
 console.log('='.repeat(60));
 console.log('');
 console.log('✅ SharedMemoryManager: Zero-copy buffer working');
-console.log('✅ AgentStateRegistry: Andrew/Tuk Tuk/Jenny state management');
+console.log('✅ AgentStateRegistry: Andrew/Tuk Tuk/Friday state management');
 console.log('✅ ZeroCopySerializer: Binary serialization bypassing JSON');
 console.log('✅ Large Payloads: >1MB handled without issues');
 console.log('✅ Concurrent Access: Atomic locks preventing corruption');

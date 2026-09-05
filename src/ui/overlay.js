@@ -51,7 +51,7 @@ const AGENT_COLORS = {
   tuktuk: '#f43f5e',   // Tuk Tuk Rose
   vision: '#06b6d4',   // Vision Cyan
   andrew: '#06b6d4',   // Andrew Cyan (alias)
-  jenny: '#10b981',    // Jenny Emerald
+  friday: '#10b981',   // Friday Emerald
   brian: '#f59e0b',    // Brian Amber
   rewrite: '#a855f7',  // AI Rewriter Purple
   standard: '#22c55e'  // Standard Recording Green
@@ -64,7 +64,7 @@ function getActiveColor() {
   const name = (currentAgentName || '').toLowerCase().trim();
   if (name.includes('tuk')) return AGENT_COLORS.tuktuk;
   if (name.includes('vision') || name.includes('andrew')) return AGENT_COLORS.vision;
-  if (name.includes('jenny')) return AGENT_COLORS.jenny;
+  if (name.includes('friday') || name.includes('fry day')) return AGENT_COLORS.friday;
   if (name.includes('brian')) return AGENT_COLORS.brian;
 
   return AGENT_COLORS.tuktuk; // Default to vibrant Tuk Tuk rose
@@ -332,10 +332,10 @@ ipcRenderer.on('set-agent-name', (_, agentName) => {
     currentAgentName = agentName;
     const lower = agentName.toLowerCase();
     if (overlay) {
-      overlay.classList.remove('agent-tuktuk', 'agent-vision', 'agent-andrew', 'agent-jenny', 'agent-brian');
+      overlay.classList.remove('agent-tuktuk', 'agent-vision', 'agent-andrew', 'agent-friday', 'agent-brian');
       if (lower.includes('tuk')) overlay.classList.add('agent-tuktuk');
       else if (lower.includes('vision') || lower.includes('andrew')) overlay.classList.add('agent-vision');
-      else if (lower.includes('jenny')) overlay.classList.add('agent-jenny');
+      else if (lower.includes('friday') || lower.includes('fry day')) overlay.classList.add('agent-friday');
       else if (lower.includes('brian')) overlay.classList.add('agent-brian');
     }
 

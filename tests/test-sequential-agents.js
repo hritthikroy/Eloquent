@@ -8,15 +8,15 @@ const MOCK_RESPONSES = {
   singleAgent: "On it bro, checking the code now.",
   
   twoAgents: `[Andrew]: That bug is in the auth handler at line 47 bro.
-[Jenny]: I pulled the docs—bcrypt version 5.1.1 fixes it.`,
+[Friday]: I pulled the docs—bcrypt version 5.1.1 fixes it.`,
 
   threeAgents: `[Tuk Tuk]: On it babe, let me check with the team.
 [Andrew]: Code looks clean bro, no obvious issues.
-[Jenny]: Research shows the API changed in version 3.
+[Friday]: Research shows the API changed in version 3.
 [Brian]: Systems running smooth, 94% uptime.`,
 
   malformedAgents: `Andrew said: Check line 47
-Jenny found: Use bcrypt 5.1.1`,
+Friday found: Use bcrypt 5.1.1`,
   
   noFormatting: "We checked everything and it looks good, the team is on it."
 };
@@ -30,11 +30,11 @@ function parseMultiAgentTurns(text) {
     'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'andrew': { name: 'Andrew', voice: 'en-US-AndrewMultilingualNeural' },
-    'jenny': { name: 'Jenny', voice: 'en-US-EmmaMultilingualNeural' },
+    'friday': { name: 'Friday', voice: 'en-US-JennyNeural' },
     'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
   };
 
-  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?)|$)/gi;
+  const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Friday|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Friday|Brian|Ava)\]?:?)|$)/gi;
   const turns = [];
   let match;
   
@@ -140,13 +140,13 @@ async function runTests() {
   // Test 2: Two agents (should return 2 turns)
   console.log('\n📋 Test 2: Two Agent Response');
   const result2 = parseMultiAgentTurns(MOCK_RESPONSES.twoAgents);
-  if (result2.length === 2 && result2[0].agentName === 'Andrew' && result2[1].agentName === 'Jenny') {
+  if (result2.length === 2 && result2[0].agentName === 'Andrew' && result2[1].agentName === 'Friday') {
     console.log('✅ PASS: Two agents parsed correctly');
     console.log(`   - Turn 0: ${result2[0].agentName}`);
     console.log(`   - Turn 1: ${result2[1].agentName}`);
     passCount++;
   } else {
-    console.log(`❌ FAIL: Expected 2 turns [Andrew, Jenny], got ${result2.length} turns`);
+    console.log(`❌ FAIL: Expected 2 turns [Andrew, Friday], got ${result2.length} turns`);
     failCount++;
   }
 
@@ -169,7 +169,7 @@ async function runTests() {
   // Try to speak with 3 agents simultaneously
   const agents = [
     { name: 'Andrew', text: 'First response bro' },
-    { name: 'Jenny', text: 'Second response from research' },
+    { name: 'Friday', text: 'Second response from research' },
     { name: 'Brian', text: 'Third response on systems' }
   ];
   

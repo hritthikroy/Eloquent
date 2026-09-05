@@ -95,4 +95,43 @@ test('Reel & Music Human Companion Integration Suite', async (t) => {
     assert.notStrictEqual(musicResp, null);
     assert.match(musicResp, /babe|vibe|music|beat|listen|song/i);
   });
+
+  // ─── 5. Active Agent Routing — Girlfriend & Reel/Music context routes to Tuk Tuk ───
+  await t.test('5. detectActiveAgent routes girlfriend / reel queries to Tuk Tuk', async () => {
+    const JarvisManager = require(path.join(ROOT, 'src/utils/jarvis-manager'));
+    const jm = new JarvisManager();
+
+    const testQueries = [
+      'fix all conversation gap my gf not see with me movile reel and nt lisent music and watching need like a human',
+      'my gf not see with me mobile reel',
+      'babe watch reels with me',
+      'listen to music with me babe',
+      'my girlfriend watch reel with me',
+      'amar gf mobile reel dekhe na',
+    ];
+
+    for (const query of testQueries) {
+      const agent = await jm.detectActiveAgent(query);
+      assert.strictEqual(agent?.key, 'tuktuk', `Query "${query}" should route to Tuk Tuk (got ${agent?.key})`);
+    }
+  });
+
+  // ─── 6. ActionRunner — Tuk Tuk Girlfriend Reel & Music Companion Handling ──────
+  await t.test('6. actionRunner handles reel co-watching & music companion for Tuk Tuk', async () => {
+    const actionRunner = require(path.join(ROOT, 'src/utils/action-runner'));
+    const tuktukAgent = { name: 'Tuk Tuk', key: 'tuktuk', voice: 'en-US-AvaMultilingualNeural' };
+
+    // Music listening together
+    const musicRes = await actionRunner.handleAction('listen to music with me babe', tuktukAgent);
+    assert.strictEqual(musicRes?.handled, true, 'Music listening should be handled');
+    assert.strictEqual(musicRes?.agentName, 'Tuk Tuk');
+    assert.match(musicRes?.speech, /babe/i);
+
+    // Reel co-watching
+    const reelRes = await actionRunner.handleAction('watch reels with me babe', tuktukAgent);
+    assert.strictEqual(reelRes?.handled, true, 'Reel watching should be handled');
+    assert.strictEqual(reelRes?.agentName, 'Tuk Tuk');
+    assert.match(reelRes?.speech, /babe/i);
+  });
 });
+

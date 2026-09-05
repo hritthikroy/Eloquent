@@ -2,7 +2,7 @@
  * 25-Turn Deep Engineering Stress Test:
  * Daily Task Code & Deep Complex Work Across All Squad Members
  *
- * Verifies that all squad members (Tuk Tuk, Vision, Jenny, Brian) and Squad Mode
+ * Verifies that all squad members (Tuk Tuk, Vision, Friday, Brian) and Squad Mode
  * execute everyday coding tasks and deep complex workflows with zero gaps:
  * 1. Git Status & Inspection (English & Banglish)
  * 2. Git Diff Verification (English & Banglish)
@@ -13,7 +13,7 @@
  * 7. Web Search & Webpage Extraction via BrowserAgent
  * 8. Live Screen & Terminal Perception
  * 9. Multi-Agent Coordinated War-Room Tasks
- * 10. Voice lock (Ava, Andrew, Emma, Brian), persona salutations, and spoken brevity (<= 25 words)
+ * 10. Voice lock (Ava, Andrew, Friday, Brian), persona salutations, and spoken brevity (<= 25 words)
  */
 
 const assert = require('assert');
@@ -171,21 +171,21 @@ const DAILY_TASKS_TURNS = [
   },
   {
     turn: 12,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Deep Complex Work: Subagent Research Spawning in Banglish',
-    input: 'Jenny, subagent create kore WebRTC vs WebSocket latency research koro.',
+    input: 'Friday, subagent create kore WebRTC vs WebSocket latency research koro.',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       assert(res.length > 5, 'Must acknowledge research delegation');
-      assert(!res.toLowerCase().includes('bro'), 'Jenny strictly zero bro');
-      assert(!res.toLowerCase().includes('babe'), 'Jenny strictly zero babe');
+      assert(!res.toLowerCase().includes('bro'), 'Friday strictly zero bro');
+      assert(!res.toLowerCase().includes('babe'), 'Friday strictly zero babe');
     }
   },
   {
     turn: 13,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Deep Complex Work: Web Research & Benchmarks in English',
-    input: 'Jenny, what do recent research papers recommend for voice agent turn-taking latency?',
+    input: 'Friday, what do recent research papers recommend for voice agent turn-taking latency?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
@@ -195,9 +195,9 @@ const DAILY_TASKS_TURNS = [
   },
   {
     turn: 14,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Deep Complex Work: Architecture Trade-Offs (WebRTC vs SSE)',
-    input: 'Jenny, should we use WebRTC or Server-Sent Events for simplex audio streaming?',
+    input: 'Friday, should we use WebRTC or Server-Sent Events for simplex audio streaming?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
@@ -206,9 +206,9 @@ const DAILY_TASKS_TURNS = [
   },
   {
     turn: 15,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Deep Complex Work: Quantitative Kelly Criterion Formulation',
-    input: 'Jenny, what is the optimal Kelly fraction for a 60% win rate and 2 to 1 payoff ratio?',
+    input: 'Friday, what is the optimal Kelly fraction for a 60% win rate and 2 to 1 payoff ratio?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
@@ -318,7 +318,7 @@ const DAILY_TASKS_TURNS = [
   {
     turn: 24,
     agentKey: 'team',
-    domain: 'Squad Mode: Pre-Market Risk & Strategy Standup (Jenny + Brian)',
+    domain: 'Squad Mode: Pre-Market Risk & Strategy Standup (Friday + Brian)',
     input: 'Team, aajker market open-e quant trading ar capital risk management strategy ki?',
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {

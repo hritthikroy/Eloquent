@@ -173,14 +173,14 @@ assert(glued3.includes("Vision checking"), "Must unglue 'Visionchecking' to 'Vis
 
 const glued4 = TextSanitizer.sanitize("Denny has any way,.");
 console.log(`"Denny has any way,." -> "${glued4}"`);
-assert(glued4.includes("Jenny has any way"), "Must normalize 'Denny' to 'Jenny'");
+assert(glued4.includes("Friday has any way"), "Must normalize 'Denny' to 'Friday'");
 
 const glued5 = TextSanitizer.sanitize("Bangla kothe bolo, Jey.");
 console.log(`"Bangla kothe bolo, Jey." -> "${glued5}"`);
 assert(glued5.includes("kotha bolo"), "Must normalize 'kothe bolo' to 'kotha bolo'");
-assert(glued5.includes("Jenny"), "Must normalize 'Jey' to 'Jenny'");
+assert(glued5.includes("Friday"), "Must normalize 'Jey' to 'Friday'");
 
-const glued6 = TextSanitizer.sanitize("Ndh, bangla conversation, taro smooth koro, jenny.");
+const glued6 = TextSanitizer.sanitize("Ndh, bangla conversation, taro smooth koro, friday.");
 console.log(`"taro smooth koro" -> "${glued6}"`);
 assert(glued6.includes("aro smooth"), "Must normalize 'taro smooth' to 'aro smooth'");
 
@@ -201,42 +201,42 @@ assert.strictEqual(route2.key, "vision", "Must route 'Visionchecking' to Vision,
 
 const route3 = jm.detectActiveAgent("Denny has any way,.");
 console.log(`Routing for "Denny has any way,.": ${route3.name}`);
-assert.strictEqual(route3.key, "jenny", "Must route 'Denny has any way' to Jenny");
+assert.strictEqual(route3.key, "friday", "Must route 'Denny has any way' to Friday");
 
 const route4 = jm.detectActiveAgent("Bangla kothe bolo, Jey.");
 console.log(`Routing for "Bangla kothe bolo, Jey.": ${route4.name}`);
-assert.strictEqual(route4.key, "jenny", "Must route 'Bangla kothe bolo, Jey.' to Jenny");
+assert.strictEqual(route4.key, "friday", "Must route 'Bangla kothe bolo, Jey.' to Friday");
 
 console.log("✅ [PASS Test 7] All 4 misrouted forensic turns now route 100% accurately!");
 
 // -----------------------------------------------------------------------------
-// TEST 8: Jenny Web Research Capability vs VAD Hallucination Isolation
+// TEST 8: Friday Web Research Capability vs VAD Hallucination Isolation
 // -----------------------------------------------------------------------------
-console.log("\n--- TEST 8: Jenny Web Research vs VAD Hallucination Isolation ---");
+console.log("\n--- TEST 8: Friday Web Research vs VAD Hallucination Isolation ---");
 
-const jennyWebReplyEn = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", "Jenny has any web research access or not?", {}, "en");
-console.log("Jenny reply to web research inquiry (EN):\n", jennyWebReplyEn);
-assert(!jennyWebReplyEn.toLowerCase().includes("vad"), "Jenny must NOT hallucinate VAD turn-taking quote for web research inquiry!");
-assert(!jennyWebReplyEn.toLowerCase().includes("sub-250ms"), "Jenny must NOT quote sub-250ms VAD!");
+const fridayWebReplyEn = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", "Friday has any web research access or not?", {}, "en");
+console.log("Friday reply to web research inquiry (EN):\n", fridayWebReplyEn);
+assert(!fridayWebReplyEn.toLowerCase().includes("vad"), "Friday must NOT hallucinate VAD turn-taking quote for web research inquiry!");
+assert(!fridayWebReplyEn.toLowerCase().includes("sub-250ms"), "Friday must NOT quote sub-250ms VAD!");
 assert(
-  jennyWebReplyEn.toLowerCase().includes("web") ||
-  jennyWebReplyEn.toLowerCase().includes("research") ||
-  jennyWebReplyEn.toLowerCase().includes("intelligence") ||
-  jennyWebReplyEn.toLowerCase().includes("access"),
-  "Jenny must confirm web research access"
+  fridayWebReplyEn.toLowerCase().includes("web") ||
+  fridayWebReplyEn.toLowerCase().includes("research") ||
+  fridayWebReplyEn.toLowerCase().includes("intelligence") ||
+  fridayWebReplyEn.toLowerCase().includes("access"),
+  "Friday must confirm web research access"
 );
 
-const jennyWebReplyBn = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", "Jenny web research access ache kina bolo", {}, "bn");
-console.log("Jenny reply to web research inquiry (BN):\n", jennyWebReplyBn);
-assert(!jennyWebReplyBn.toLowerCase().includes("vad"), "Jenny BN must NOT hallucinate VAD quote");
-assert(jennyWebReplyBn.includes("ওয়েব") || jennyWebReplyBn.includes("রিসার্চ"), "Jenny must confirm web research access in Bengali");
+const fridayWebReplyBn = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", "Friday web research access ache kina bolo", {}, "bn");
+console.log("Friday reply to web research inquiry (BN):\n", fridayWebReplyBn);
+assert(!fridayWebReplyBn.toLowerCase().includes("vad"), "Friday BN must NOT hallucinate VAD quote");
+assert(fridayWebReplyBn.includes("ওয়েব") || fridayWebReplyBn.includes("রিসার্চ"), "Friday must confirm web research access in Bengali");
 
 // Ensure VAD quote STILL fires when VAD or latency paper IS specifically asked
-const jennyVadReply = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", "What does the research paper say about VAD turn taking latency?", {}, "en");
-console.log("Jenny reply to explicit VAD inquiry:\n", jennyVadReply);
-assert(jennyVadReply.toLowerCase().includes("vad"), "Jenny must answer VAD when VAD is specifically queried");
+const fridayVadReply = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", "What does the research paper say about VAD turn taking latency?", {}, "en");
+console.log("Friday reply to explicit VAD inquiry:\n", fridayVadReply);
+assert(fridayVadReply.toLowerCase().includes("vad"), "Friday must answer VAD when VAD is specifically queried");
 
-console.log("✅ [PASS Test 8] Jenny Web Research confirmed & VAD hallucination decoupled!");
+console.log("✅ [PASS Test 8] Friday Web Research confirmed & VAD hallucination decoupled!");
 
 // -----------------------------------------------------------------------------
 // TEST 9: Tuk Tuk Consecutive Anti-Duplication Ring Buffer

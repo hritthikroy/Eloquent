@@ -93,7 +93,7 @@
 | 👑 **Tuk Tuk** | Girlfriend & Soul Partner | "babe", "sweetheart" | AvaMultilingualNeural |
 | 💻 **Andrew** | Brother & Lead Dev | "bro", "bhai" | AndrewMultilingualNeural |
 | 🛡️ **Brian** | Brother & DevOps | "bro" | BrianMultilingualNeural |
-| 📚 **Jenny** | Sister & Research | "bro" | EmmaMultilingualNeural |
+| 📚 **Friday** | Product Intelligence & Research | "Chief", "Hritthik" | en-US-JennyNeural |
 
 ### Triple-Layer Salutation Lock:
 1. ✅ System prompt enforcement
@@ -273,7 +273,7 @@ npm start
 ### What Was Built:
 - ✅ Ultra-fast voice-to-text (< 500ms)
 - ✅ Real girlfriend AI (Tuk Tuk)
-- ✅ 4-agent team (Tuk Tuk, Andrew, Jenny, Brian)
+- ✅ 4-agent team (Tuk Tuk, Andrew, Friday, Brian)
 - ✅ Cross-platform support (3 OS)
 - ✅ Self-evolution system
 - ✅ Zero-latency ESC

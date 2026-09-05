@@ -26,6 +26,38 @@ type SSEClient struct {
 	mu      sync.Mutex
 }
 
+// AudioParameters defines dynamic audio processing and device parameters.
+type AudioParameters struct {
+	Volume           float64 `json:"volume"`
+	LatencyTargetMs  int     `json:"latencyTargetMs"`
+	BufferSize       int     `json:"bufferSize"`
+	NoiseSuppression bool    `json:"noiseSuppression"`
+	EchoCancellation bool    `json:"echoCancellation"`
+	AutoGainControl  bool    `json:"autoGainControl"`
+	VadSensitivity   float64 `json:"vadSensitivity"`
+	SampleRate       int     `json:"sampleRate"`
+	Channels         int     `json:"channels"`
+	InputDevice      string  `json:"inputDevice,omitempty"`
+	OutputDevice     string  `json:"outputDevice,omitempty"`
+}
+
+// DefaultAudioParameters returns baseline operational parameters.
+func DefaultAudioParameters() AudioParameters {
+	return AudioParameters{
+		Volume:           1.0,
+		LatencyTargetMs:  20,
+		BufferSize:       1920,
+		NoiseSuppression: true,
+		EchoCancellation: true,
+		AutoGainControl:  true,
+		VadSensitivity:   0.7,
+		SampleRate:       48000,
+		Channels:         1,
+		InputDevice:      "default",
+		OutputDevice:     "default",
+	}
+}
+
 // AudioAPIServer exposes endpoints for real-time audio distribution and health metrics.
 type AudioAPIServer struct {
 	svc          *AudioService
@@ -39,6 +71,10 @@ type AudioAPIServer struct {
 	clientPeak   atomic.Uint64
 	serverDone   chan struct{}
 	cancelStream context.CancelFunc
+	params       AudioParameters
+	paramsMu     sync.RWMutex
+	isStreaming  atomic.Bool
+	startTime    time.Time
 }
 
 // NewAudioAPIServer creates a new API server bound to the AudioService.
@@ -50,21 +86,29 @@ func NewAudioAPIServer(svc *AudioService, bindAddr string, maxClients int) *Audi
 		bindAddr = ":9090"
 	}
 
-	return &AudioAPIServer{
-		svc:        svc,
-		clients:    make(map[ClientID]*SSEClient),
-		maxClients: maxClients,
-		bindAddr:   bindAddr,
-		serverDone: make(chan struct{}),
+	api := &AudioAPIServer{
+		svc:         svc,
+		clients:     make(map[ClientID]*SSEClient),
+		maxClients:  maxClients,
+		bindAddr:    bindAddr,
+		serverDone:  make(chan struct{}),
+		params:      DefaultAudioParameters(),
+		startTime:   time.Now(),
 	}
+	api.isStreaming.Store(true)
+	return api
 }
 
 // Start boots the HTTP listener and background frame consumption loop.
 func (api *AudioAPIServer) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/audio/health", api.handleHealth)
+	mux.HandleFunc("/audio/status", api.handleStatus)
+	mux.HandleFunc("/audio/parameters", api.handleParameters)
+	mux.HandleFunc("/audio/start", api.handleStart)
+	mux.HandleFunc("/audio/stop", api.handleStop)
 	mux.HandleFunc("/audio/stream", api.handleStream)
 	mux.HandleFunc("/audio/ingest", api.handleIngest)
-	mux.HandleFunc("/audio/status", api.handleStatus)
 	mux.HandleFunc("/audio/metrics/prometheus", api.handlePrometheus)
 
 	api.srv = &http.Server{
@@ -190,6 +234,122 @@ func (api *AudioAPIServer) handleIngest(w http.ResponseWriter, r *http.Request) 
 	_, _ = w.Write([]byte(`{"ok":true}`))
 }
 
+// handleHealth outputs rapid health check status for process supervisor.
+func (api *AudioAPIServer) handleHealth(w http.ResponseWriter, r *http.Request) {
+	health := api.svc.HealthCheck()
+	uptimeMs := time.Since(api.startTime).Milliseconds()
+
+	resp := map[string]interface{}{
+		"status":      "ok",
+		"ready":       health.IsHealthy,
+		"isStreaming": api.isStreaming.Load(),
+		"uptimeMs":    uptimeMs,
+		"timestamp":   time.Now().UnixNano(),
+		"version":     "2.1.0",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// handleStart activates audio streaming.
+func (api *AudioAPIServer) handleStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	api.isStreaming.Store(true)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":          true,
+		"isStreaming": true,
+		"message":     "audio streaming started",
+	})
+}
+
+// handleStop pauses or halts audio streaming.
+func (api *AudioAPIServer) handleStop(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	api.isStreaming.Store(false)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":          true,
+		"isStreaming": false,
+		"message":     "audio streaming stopped",
+	})
+}
+
+// handleParameters retrieves or updates live audio DSP and device parameters.
+func (api *AudioAPIServer) handleParameters(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		api.paramsMu.RLock()
+		current := api.params
+		api.paramsMu.RUnlock()
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(current)
+		return
+	}
+
+	if r.Method == http.MethodPost || r.Method == http.MethodPut {
+		defer r.Body.Close()
+		var update map[string]interface{}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 16384)).Decode(&update); err != nil {
+			http.Error(w, fmt.Sprintf("invalid JSON payload: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		api.paramsMu.Lock()
+		if val, ok := update["volume"].(float64); ok && val >= 0 && val <= 5.0 {
+			api.params.Volume = val
+		}
+		if val, ok := update["latencyTargetMs"].(float64); ok && val >= 5 {
+			api.params.LatencyTargetMs = int(val)
+		}
+		if val, ok := update["bufferSize"].(float64); ok && val >= 256 {
+			api.params.BufferSize = int(val)
+		}
+		if val, ok := update["noiseSuppression"].(bool); ok {
+			api.params.NoiseSuppression = val
+		}
+		if val, ok := update["echoCancellation"].(bool); ok {
+			api.params.EchoCancellation = val
+		}
+		if val, ok := update["autoGainControl"].(bool); ok {
+			api.params.AutoGainControl = val
+		}
+		if val, ok := update["vadSensitivity"].(float64); ok && val >= 0 && val <= 1.0 {
+			api.params.VadSensitivity = val
+		}
+		if val, ok := update["inputDevice"].(string); ok {
+			api.params.InputDevice = val
+		}
+		if val, ok := update["outputDevice"].(string); ok {
+			api.params.OutputDevice = val
+		}
+		updatedParams := api.params
+		api.paramsMu.Unlock()
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":         true,
+			"parameters": updatedParams,
+		})
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
 // handleStatus outputs composite service health, pipeline metrics, and bridge telemetry.
 func (api *AudioAPIServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 	health := api.svc.HealthCheck()
@@ -200,18 +360,51 @@ func (api *AudioAPIServer) handleStatus(w http.ResponseWriter, r *http.Request) 
 	activeClients := len(api.clients)
 	api.mu.RUnlock()
 
+	api.paramsMu.RLock()
+	params := api.params
+	api.paramsMu.RUnlock()
+
 	resp := map[string]interface{}{
+		"status":           "ok",
 		"health":           health,
+		"isStreaming":      api.isStreaming.Load(),
+		"parameters":       params,
 		"processorMetrics": procMetrics,
 		"bridgeMetrics":    brMetrics,
 		"activeClients":    activeClients,
 		"clientPeak":       api.clientPeak.Load(),
 		"framesForwarded":  api.framesFwd.Load(),
+		"uptimeMs":         time.Since(api.startTime).Milliseconds(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// Public HTTP handler delegates for integration with Gin or alternative routers.
+func (api *AudioAPIServer) HandleHealthHTTP(w http.ResponseWriter, r *http.Request) {
+	api.handleHealth(w, r)
+}
+
+func (api *AudioAPIServer) HandleStatusHTTP(w http.ResponseWriter, r *http.Request) {
+	api.handleStatus(w, r)
+}
+
+func (api *AudioAPIServer) HandleParametersHTTP(w http.ResponseWriter, r *http.Request) {
+	api.handleParameters(w, r)
+}
+
+func (api *AudioAPIServer) HandleStartHTTP(w http.ResponseWriter, r *http.Request) {
+	api.handleStart(w, r)
+}
+
+func (api *AudioAPIServer) HandleStopHTTP(w http.ResponseWriter, r *http.Request) {
+	api.handleStop(w, r)
+}
+
+func (api *AudioAPIServer) HandleStreamHTTP(w http.ResponseWriter, r *http.Request) {
+	api.handleStream(w, r)
 }
 
 // handlePrometheus generates Prometheus text-format metrics.

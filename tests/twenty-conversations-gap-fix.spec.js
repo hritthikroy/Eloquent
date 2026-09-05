@@ -1,10 +1,10 @@
 /**
  * Test Suite: 20-Turn Conversational End-to-End Stress Test & Everyday Task Gap Fix
  * 
- * Verifies across all 4 squad members (Tuk Tuk, Vision, Jenny, Brian) and Squad Mode:
+ * Verifies across all 4 squad members (Tuk Tuk, Vision, Friday, Brian) and Squad Mode:
  * 1. 2-Language Lockdown (Conversational English & Modern Banglish)
- * 2. 100% Single Signature Voice Invariance (Ava, Andrew, Emma, Brian - zero flickering)
- * 3. Exact Lexical Isolation (Tuk Tuk exclusive "babe", Vision brotherly, Jenny refined, Brian DevOps)
+ * 2. 100% Single Signature Voice Invariance (Ava, Andrew, Friday, Brian - zero flickering)
+ * 3. Exact Lexical Isolation (Tuk Tuk exclusive "babe", Vision brotherly, Friday refined, Brian DevOps)
  * 4. Spoken Brevity (<= 25 spoken words per turn, <= 35 in team mode)
  * 5. Anti-Bot Rules (Zero canned openers, zero fake laughter, zero melodrama, zero nagging)
  * 6. TTS Phonetic & Acronym Expansion (AST, PR, CPU, RAM, IPC, SSE, UI, VAD, ms, MB)
@@ -199,19 +199,19 @@ async function runTwentyConversationAudit() {
   });
 
   // ════════════════════════════════════════════════════════════════════════════
-  // SQUAD MEMBER 3: JENNY (Head of Product Intelligence & Research)
+  // SQUAD MEMBER 3: FRIDAY (Head of Product Intelligence & Research)
   // ════════════════════════════════════════════════════════════════════════════
-  console.log("\n─── [SQUAD MEMBER 3: JENNY (en-US-EmmaMultilingualNeural)] ───");
+  console.log("\n─── [SQUAD MEMBER 3: FRIDAY (en-US-JennyNeural)] ───");
 
   // Turn 11: VAD Turn-Taking Research Paper Query (English)
-  testTurn(11, "Jenny: VAD Turn-Taking Latency Research Benchmark", () => {
-    const input = "Jenny, what do recent research papers recommend for voice agent turn-taking latency?";
-    const answer = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", input);
-    const sanitized = manager.sanitizeAgentLexicon(answer, "jenny");
-    const voice = JarvisManager.resolveVoiceForLanguage("en-US-EmmaMultilingualNeural", sanitized);
+  testTurn(11, "Friday: VAD Turn-Taking Latency Research Benchmark", () => {
+    const input = "Friday, what do recent research papers recommend for voice agent turn-taking latency?";
+    const answer = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", input);
+    const sanitized = manager.sanitizeAgentLexicon(answer, "friday");
+    const voice = JarvisManager.resolveVoiceForLanguage("en-US-JennyNeural", sanitized);
     const ttsOutput = JarvisManager.phoneticNormalizeForTTS(sanitized, voice);
 
-    assert.strictEqual(voice, "en-US-EmmaMultilingualNeural", "Must lock to EmmaMultilingualNeural");
+    assert.strictEqual(voice, "en-US-JennyNeural", "Must lock to JennyNeural");
     assert.ok(sanitized.includes("Hritthik") || sanitized.includes("Chief"), "Addresses as Hritthik or Chief");
     assert.ok(!/\b(bro|bhai|babe)\b/i.test(sanitized), "Strictly zero 'bro' and zero 'babe'");
     assert.ok(sanitized.includes("250ms") || sanitized.includes("VAD"), "Quotes research latency parameters");
@@ -222,14 +222,14 @@ async function runTwentyConversationAudit() {
   });
 
   // Turn 12: Architecture Trade-off: WebRTC vs SSE (English)
-  testTurn(12, "Jenny: Architecture Trade-Off Comparison (WebRTC vs SSE)", () => {
-    const input = "Jenny, should we use WebRTC or Server-Sent Events for our Go audio streaming bridge?";
-    const answer = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", input);
-    const sanitized = manager.sanitizeAgentLexicon(answer, "jenny");
-    const voice = JarvisManager.resolveVoiceForLanguage("en-US-EmmaMultilingualNeural", sanitized);
+  testTurn(12, "Friday: Architecture Trade-Off Comparison (WebRTC vs SSE)", () => {
+    const input = "Friday, should we use WebRTC or Server-Sent Events for our Go audio streaming bridge?";
+    const answer = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", input);
+    const sanitized = manager.sanitizeAgentLexicon(answer, "friday");
+    const voice = JarvisManager.resolveVoiceForLanguage("en-US-JennyNeural", sanitized);
     const ttsOutput = JarvisManager.phoneticNormalizeForTTS(sanitized, voice);
 
-    assert.strictEqual(voice, "en-US-EmmaMultilingualNeural", "Must lock to EmmaMultilingualNeural");
+    assert.strictEqual(voice, "en-US-JennyNeural", "Must lock to JennyNeural");
     assert.ok(sanitized.includes("Hritthik") || sanitized.includes("Chief"), "Professional address");
     assert.ok(!/\b(bro|babe)\b/i.test(sanitized), "Strictly zero bro and zero babe");
     assert.ok(sanitized.includes("SSE") && sanitized.includes("WebRTC"), "Compares both technologies");
@@ -238,28 +238,28 @@ async function runTwentyConversationAudit() {
   });
 
   // Turn 13: Benchmark Metric Audit in Banglish (Banglish)
-  testTurn(13, "Jenny: v2 Pipeline Speed & Memory Benchmark Audit in Banglish", () => {
-    const input = "Jenny, v2 pipeline-er memory ar speed benchmark data-ta ki bolche?";
-    const answer = LocalCognitiveBrain.synthesizeResponse("jenny", "Jenny", input);
-    const sanitized = manager.sanitizeAgentLexicon(answer, "jenny");
-    const voice = JarvisManager.resolveVoiceForLanguage("en-US-EmmaMultilingualNeural", sanitized);
+  testTurn(13, "Friday: v2 Pipeline Speed & Memory Benchmark Audit in Banglish", () => {
+    const input = "Friday, v2 pipeline-er memory ar speed benchmark data-ta ki bolche?";
+    const answer = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", input);
+    const sanitized = manager.sanitizeAgentLexicon(answer, "friday");
+    const voice = JarvisManager.resolveVoiceForLanguage("en-US-JennyNeural", sanitized);
 
-    assert.strictEqual(voice, "en-US-EmmaMultilingualNeural", "Must lock to EmmaMultilingualNeural");
+    assert.strictEqual(voice, "en-US-JennyNeural", "Must lock to JennyNeural");
     assert.ok(sanitized.includes("Chief") || sanitized.includes("Hritthik"), "Refined salutation in Banglish");
     assert.ok(!/\b(bro|babe)\b/i.test(sanitized), "Strictly zero bro and zero babe");
     assert.ok(sanitized.includes("benchmark") || sanitized.includes("pipeline"), "Cites analytical benchmark metrics");
     assert.ok(sanitized.split(/\s+/).length <= 25, "Brevity under 25 words");
   });
 
-  // Turn 14: Jenny Romantic & Slang Immunity Check (Edge Case)
-  testTurn(14, "Jenny: Lexical Isolation Immunity Check (Accidental 'sweetheart bro')", () => {
+  // Turn 14: Friday Romantic & Slang Immunity Check (Edge Case)
+  testTurn(14, "Friday: Lexical Isolation Immunity Check (Accidental 'sweetheart bro')", () => {
     const input = "Hey sweetheart bro, summarize the UX specs for me.";
     const rawAnswer = "Sweetheart bro, the UX specification is complete.";
-    const sanitized = manager.sanitizeAgentLexicon(rawAnswer, "jenny");
-    const voice = JarvisManager.resolveVoiceForLanguage("en-US-EmmaMultilingualNeural", sanitized);
+    const sanitized = manager.sanitizeAgentLexicon(rawAnswer, "friday");
+    const voice = JarvisManager.resolveVoiceForLanguage("en-US-JennyNeural", sanitized);
     const ttsOutput = JarvisManager.phoneticNormalizeForTTS(sanitized, voice);
 
-    assert.strictEqual(voice, "en-US-EmmaMultilingualNeural", "Must lock to Emma");
+    assert.strictEqual(voice, "en-US-JennyNeural", "Must lock to JennyNeural");
     assert.ok(!/\b(sweetheart|bro|babe)\b/i.test(sanitized), "Sanitizer purges sweetheart and bro");
     assert.ok(sanitized.includes("Hritthik"), "Replaces with Hritthik");
     assert.ok(ttsOutput.includes("U X") || ttsOutput.includes("UX"), "TTS handles technical acronym");
@@ -327,7 +327,7 @@ async function runTwentyConversationAudit() {
   });
 
   // ════════════════════════════════════════════════════════════════════════════
-  // SQUAD COLLABORATION / TEAM MODE (Tuk Tuk, Vision, Jenny, Brian)
+  // SQUAD COLLABORATION / TEAM MODE (Tuk Tuk, Vision, Friday, Brian)
   // ════════════════════════════════════════════════════════════════════════════
   console.log("\n─── [SQUAD COLLABORATION / TEAM MODE] ───");
 

@@ -1,6 +1,6 @@
 # Libboard Prompt Generation & Conversation Processor Developer Guide
 
-The **Conversation Processor** is a core subsystem within the Eloquent workspace that ingests dialogue transcripts between the user and specialist agents (Tuk Tuk, Andrew, Jenny, Brian), extracts actionable engineering intents, and constructs authoritative, production-ready **Libboard / Antigravity execution prompts**.
+The **Conversation Processor** is a core subsystem within the Eloquent workspace that ingests dialogue transcripts between the user and specialist agents (Tuk Tuk, Andrew, Friday, Brian), extracts actionable engineering intents, and constructs authoritative, production-ready **Libboard / Antigravity execution prompts**.
 
 ---
 

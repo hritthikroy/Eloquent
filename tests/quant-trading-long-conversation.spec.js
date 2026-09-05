@@ -2,7 +2,7 @@
  * 24-Turn Continuous Long Conversation Stress Test:
  * Quantitative Trading, Money Management, Capital Preservation & Multi-Domain Systems
  *
- * Verifies that all 4 squad agents (Tuk Tuk, Vision, Jenny, Brian) and Squad Mode
+ * Verifies that all 4 squad agents (Tuk Tuk, Vision, Friday, Brian) and Squad Mode
  * operate as elite human analyzers, quants, systems architects, and risk sentinels:
  * - Kelly Criterion calculation (f* = (p*b - q)/b)
  * - Maximum Drawdown (MDD <= 5%) & 99% Value at Risk (VaR)
@@ -12,8 +12,8 @@
  * - Multi-agent institutional trade committee sign-off
  * - Software architecture & DevOps telemetry cross-domain verification
  * - 2-Language Lockdown (English & Banglish)
- * - Voice locks (Ava, Andrew, Emma, Brian) with zero flickering
- * - Persona lexical isolation (babe exclusivity for Tuk Tuk, 0 bro for Jenny)
+ * - Voice locks (Ava, Andrew, Friday, Brian) with zero flickering
+ * - Persona lexical isolation (babe exclusivity for Tuk Tuk, 0 bro for Friday)
  * - Zero canned financial disclaimers ("I am not a financial advisor...")
  * - Spoken brevity: <= 25 words per turn (<= 35 for Squad Mode)
  */
@@ -151,52 +151,52 @@ const LONG_CONVERSATION_TURNS = [
     }
   },
 
-  // ─── AGENT 3: JENNY (Head of Quantitative Research & Statistical Modeling) ───
+  // ─── AGENT 3: FRIDAY (Head of Quantitative Research & Statistical Modeling) ───
   {
     turn: 11,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Kelly Criterion Optimal Position Sizing Formulation',
-    input: 'Jenny, what is the optimal Kelly fraction for a 60% win rate and 2 to 1 payoff ratio?',
+    input: 'Friday, what is the optimal Kelly fraction for a 60% win rate and 2 to 1 payoff ratio?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(lower.includes('kelly') || lower.includes('40') || lower.includes('fraction'), 'Must compute Kelly criterion');
       assert(lower.includes('hritthik') || lower.includes('chief'), 'Must address as Hritthik or Chief');
-      assert(!lower.includes('bro'), 'Jenny strictly NEVER says bro');
-      assert(!lower.includes('babe'), 'Jenny strictly NEVER says babe');
+      assert(!lower.includes('bro'), 'Friday strictly NEVER says bro');
+      assert(!lower.includes('babe'), 'Friday strictly NEVER says babe');
     }
   },
   {
     turn: 12,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Sharpe & Sortino Ratio Quantitative Backtest in Banglish',
-    input: 'Jenny, amader quant trading strategy-r historical backtest data ar Sharpe ratio ki bolche?',
+    input: 'Friday, amader quant trading strategy-r historical backtest data ar Sharpe ratio ki bolche?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(lower.includes('sharpe') || lower.includes('sortino') || lower.includes('backtest'), 'Must report Sharpe/Sortino ratios');
-      assert(!lower.includes('bro'), 'Jenny strictly NEVER says bro');
-      assert(!lower.includes('babe'), 'Jenny strictly NEVER says babe');
+      assert(!lower.includes('bro'), 'Friday strictly NEVER says bro');
+      assert(!lower.includes('babe'), 'Friday strictly NEVER says babe');
     }
   },
   {
     turn: 13,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Volatility Modeling & Quantitative Tail Risk Analysis',
-    input: 'Jenny, how does implied volatility skew affect our downside tail risk in derivative hedging?',
+    input: 'Friday, how does implied volatility skew affect our downside tail risk in derivative hedging?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
-      assert(!lower.includes('bro'), 'Jenny strictly NEVER says bro');
-      assert(!lower.includes('babe'), 'Jenny strictly NEVER says babe');
+      assert(!lower.includes('bro'), 'Friday strictly NEVER says bro');
+      assert(!lower.includes('babe'), 'Friday strictly NEVER says babe');
       assert(lower.includes('hritthik') || lower.includes('chief'), 'Professional salutation');
     }
   },
   {
     turn: 14,
-    agentKey: 'jenny',
+    agentKey: 'friday',
     domain: 'Multi-Domain Research: Sub-250ms VAD Conversational Turn-Taking',
-    input: 'Jenny, what do recent research papers recommend for voice agent turn-taking latency?',
+    input: 'Friday, what do recent research papers recommend for voice agent turn-taking latency?',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
@@ -206,8 +206,8 @@ const LONG_CONVERSATION_TURNS = [
   },
   {
     turn: 15,
-    agentKey: 'jenny',
-    domain: 'Lexical Immunity Guard (Accidental "sweetheart bro" on Jenny)',
+    agentKey: 'friday',
+    domain: 'Lexical Immunity Guard (Accidental "sweetheart bro" on Friday)',
     input: 'Hey sweetheart bro, summarize the quantitative risk model for me.',
     expectedVoice: 'en-US-JennyNeural',
     validate: (res) => {
@@ -284,11 +284,11 @@ const LONG_CONVERSATION_TURNS = [
   {
     turn: 21,
     agentKey: 'team',
-    domain: 'Institutional Trading Committee Trade Approval (Jenny + Brian)',
+    domain: 'Institutional Trading Committee Trade Approval (Friday + Brian)',
     input: 'Team, should we approve this breakout trade allocation with 5% risk?',
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {
-      assert(res.includes('[Jenny]') || res.includes('Jenny:'), 'Jenny must participate as quant researcher');
+      assert(res.includes('[Friday]') || res.includes('Friday:'), 'Friday must participate as quant researcher');
       assert(res.includes('[Brian]') || res.includes('Brian:'), 'Brian must participate as risk officer');
       assert(res.includes('\n'), 'Team turn must separate agents with newline');
     }
@@ -296,7 +296,7 @@ const LONG_CONVERSATION_TURNS = [
   {
     turn: 22,
     agentKey: 'team',
-    domain: 'Pre-Market Risk & Strategy Standup in Banglish (Jenny + Brian)',
+    domain: 'Pre-Market Risk & Strategy Standup in Banglish (Friday + Brian)',
     input: 'Team, aajker market open-e quant trading ar capital risk management strategy ki?',
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {
@@ -376,8 +376,8 @@ console.log('  ✅ [PASS] All quantitative financial acronyms expanded accuratel
 // 8. Verify Specialist Resonance Routing for Unprefixed Quant Queries
 console.log('\n--- VERIFYING SPECIALIST RESONANCE ON UNPREFIXED TRADING & QUANT QUERIES ---');
 const kellyResonance = jm.computeSpecialistResonance('calculate optimal kelly fraction position sizing for volatility');
-assert(kellyResonance.dominantAgent.key === 'jenny', `Kelly query must route to Jenny (got ${kellyResonance.dominantAgent.key})`);
-console.log(`  ✅ [PASS] "kelly fraction position sizing" routes to Jenny (${kellyResonance.dominantAgent.name})`);
+assert(kellyResonance.dominantAgent.key === 'friday', `Kelly query must route to Friday (got ${kellyResonance.dominantAgent.key})`);
+console.log(`  ✅ [PASS] "kelly fraction position sizing" routes to Friday (${kellyResonance.dominantAgent.name})`);
 
 const drawdownResonance = jm.computeSpecialistResonance('check maximum drawdown bounds and var margin liquidation limits');
 assert(drawdownResonance.dominantAgent.key === 'brian', `Drawdown query must route to Brian (got ${drawdownResonance.dominantAgent.key})`);

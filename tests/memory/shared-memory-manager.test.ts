@@ -282,12 +282,12 @@ describe('SharedMemoryManager', () => {
     });
 
     it('should update emotional state', () => {
-      registry.initializeAgent(AgentId.JENNY);
+      registry.initializeAgent(AgentId.FRIDAY);
       
-      const success = registry.updateEmotionalState(AgentId.JENNY, 'excited', 0.9);
+      const success = registry.updateEmotionalState(AgentId.FRIDAY, 'excited', 0.9);
       expect(success).toBe(true);
 
-      const state = registry.getAgentState(AgentId.JENNY);
+      const state = registry.getAgentState(AgentId.FRIDAY);
       expect(state?.emotionalState.mood).toBe('excited');
       expect(state?.emotionalState.intensity).toBe(0.9);
     });

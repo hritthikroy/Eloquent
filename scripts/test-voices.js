@@ -20,11 +20,11 @@ const AGENTS = [
     sample: "Codebase is clean, brother. AST validation passed with zero syntax errors. What are we engineering today?"
   },
   {
-    key: "jenny",
-    alias: "jenny",
-    name: "Jenny",
+    key: "friday",
+    alias: "fryday",
+    name: "Friday",
     role: "Head of Product Intelligence & Research",
-    voice: "en-US-EmmaMultilingualNeural",
+    voice: "en-US-JennyNeural",
     sample: "I looked at the research and benchmark data, Hritthik — here is what matters."
   },
   {
@@ -59,7 +59,7 @@ async function run() {
       a.name.toLowerCase().includes(targetKey)
     );
     if (!found) {
-      console.error(`❌ Agent "${targetKey}" not found. Available: tuktuk (ava), vision (andrew), jenny, brian`);
+      console.error(`❌ Agent "${targetKey}" not found. Available: tuktuk (ava), vision (andrew), friday, brian`);
       process.exit(1);
     }
     await playAgent(jarvis, found);

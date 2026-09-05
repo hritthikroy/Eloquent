@@ -66,10 +66,10 @@ function parseMultiAgentTurns(text) {
     "tuktuk": { name: "Tuk Tuk", voice: "en-US-AvaNeural" },
     "ava": { name: "Tuk Tuk", voice: "en-US-AvaNeural" },
     "andrew": { name: "Andrew", voice: "en-US-AndrewNeural" },
-    "jenny": { name: "Jenny", voice: "en-US-JennyNeural" },
+    "friday": { name: "Friday", voice: "en-US-JennyNeural" },
     "brian": { name: "Brian", voice: "en-US-BrianNeural" }
   };
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const regex = /\[(Tuk Tuk|Andrew|Vision|Friday|Brian|Ava)\]:\s*([^\[]+)/gi;
   const turns = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -123,10 +123,10 @@ async function runDeepMultiAgentAudit() {
   console.log("   ✅ Scenario 1 audit completed.\n");
 
   // ---------------------------------------------------------------------------
-  // SCENARIO 2: Research & Product Moat (Jenny & Tuk Tuk)
+  // SCENARIO 2: Research & Product Moat (Friday & Tuk Tuk)
   // ---------------------------------------------------------------------------
-  console.log("▶ [SCENARIO 2] Research vs Product Moat: Jenny & Tuk Tuk");
-  const s2_input = "Jenny, how does our acoustic VAD compare to Hume EVI and OpenAI Realtime, and Tuk Tuk, how does that make our product unbeatable?";
+  console.log("▶ [SCENARIO 2] Research vs Product Moat: Friday & Tuk Tuk");
+  const s2_input = "Friday, how does our acoustic VAD compare to Hume EVI and OpenAI Realtime, and Tuk Tuk, how does that make our product unbeatable?";
   const s2_agent = jm.detectActiveAgent(s2_input);
   const s2_vibe = jm.prosodicEntrainment.analyzeVibe(s2_input, 3800);
   jm.behaviorEngine.updateBehavior(s2_input, 3800, s2_vibe);
@@ -143,7 +143,7 @@ async function runDeepMultiAgentAudit() {
   const s2_turns = parseMultiAgentTurns(s2_reply);
   s2_turns.forEach((t, i) => console.log(`     [Turn ${i+1}] ${t.agentName} (${t.voice}): "${t.text}"`));
 
-  if (s2_turns.length < 2) issuesFound.push("Scenario 2: Expected 2 turns between Jenny & Tuk Tuk");
+  if (s2_turns.length < 2) issuesFound.push("Scenario 2: Expected 2 turns between Friday & Tuk Tuk");
   if (s2_reply.match(/\([^)]*\)/)) issuesFound.push("Scenario 2: Output contains parenthetical action tags");
   console.log("   ✅ Scenario 2 audit completed.\n");
 
@@ -177,20 +177,20 @@ async function runDeepMultiAgentAudit() {
   // ---------------------------------------------------------------------------
   console.log("▶ [SCENARIO 4] Mid-Turn Interruption & Edge Model Pivot");
   const origSpeaking = "We can rely on cloud APIs like Groq and Deepgram for our speech pipeline...";
-  const correction = "Wait Jenny, focus only on on-device local models, zero cloud dependence.";
+  const correction = "Wait Friday, focus only on on-device local models, zero cloud dependence.";
 
   let context = `[Context: You were saying: "${origSpeaking}" when Hritthik added mid-sentence: "${correction}". Yield the floor respectfully, pivot immediately with sharp analytical precision, adopt his on-device requirement, and answer directly in clean spoken words!]`;
 
   const s4_start = Date.now();
   const s4_reply = await callGroq([
-    { role: "system", content: jm.getSystemPrompt(jm.agents.jenny) },
+    { role: "system", content: jm.getSystemPrompt(jm.agents.friday) },
     { role: "user", content: context }
   ], { temperature: 0.35 });
   const s4_lat = Date.now() - s4_start;
 
-  console.log(`   Jenny Pivot (${s4_lat}ms):\n   "${s4_reply}"\n`);
+  console.log(`   Friday Pivot (${s4_lat}ms):\n   "${s4_reply}"\n`);
   if (!s4_reply.toLowerCase().includes("on-device") && !s4_reply.toLowerCase().includes("local")) {
-    issuesFound.push("Scenario 4: Jenny did not integrate the on-device constraint");
+    issuesFound.push("Scenario 4: Friday did not integrate the on-device constraint");
   }
   if (s4_reply.toLowerCase().includes("cloud")) {
     // If it mentions cloud, ensure it's rejecting it

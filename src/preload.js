@@ -63,6 +63,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'conversation:rehydrated',
       'audio:device-changed',
       'audio:pipeline-warning',
+      'audio:status-update',
+      'audio:stream-data',
+      'audio:error',
       'system:terminating',
       'ipc:connection-state'
     ];
@@ -97,6 +100,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'conversation:rehydrated',
       'audio:device-changed',
       'audio:pipeline-warning',
+      'audio:status-update',
+      'audio:stream-data',
+      'audio:error',
       'system:terminating',
       'ipc:connection-state'
     ];
@@ -273,6 +279,12 @@ contextBridge.exposeInMainWorld('electronInvoke', {
       'audio-ring:close',
       'audio:fast-path-stream',
       'audio:fast-path-metrics',
+      'audio:start-stream',
+      'audio:stop-stream',
+      'audio:update-parameters',
+      'audio:get-status',
+      'audio:get-health',
+      'audio:reconnect',
       'agent:sync-pipeline',
       'locale:detect',
       'locale:change',
@@ -395,6 +407,45 @@ contextBridge.exposeInMainWorld('audioBridge', {
   }
 });
 
+// Expose dedicated, type-safe Audio API for control signals & real-time streaming
+contextBridge.exposeInMainWorld('audioAPI', {
+  startStream: (config) => ipcRenderer.invoke('audio:start-stream', config),
+  stopStream: () => ipcRenderer.invoke('audio:stop-stream'),
+  updateParameters: (params) => {
+    if (!params || typeof params !== 'object') {
+      return Promise.reject(new Error('Audio parameters payload must be an object'));
+    }
+    return ipcRenderer.invoke('audio:update-parameters', params);
+  },
+  getStatus: () => ipcRenderer.invoke('audio:get-status'),
+  getHealth: () => ipcRenderer.invoke('audio:get-health'),
+  reconnect: () => ipcRenderer.invoke('audio:reconnect'),
+  onStatusUpdate: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const subscription = (_event, status) => callback(status);
+    ipcRenderer.on('audio:status-update', subscription);
+    return () => ipcRenderer.removeListener('audio:status-update', subscription);
+  },
+  onStreamData: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const subscription = (_event, data) => callback(data);
+    ipcRenderer.on('audio:stream-data', subscription);
+    return () => ipcRenderer.removeListener('audio:stream-data', subscription);
+  },
+  onError: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const subscription = (_event, err) => callback(err);
+    ipcRenderer.on('audio:error', subscription);
+    return () => ipcRenderer.removeListener('audio:error', subscription);
+  },
+  onDeviceChanged: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const subscription = (_event, dev) => callback(dev);
+    ipcRenderer.on('audio:device-changed', subscription);
+    return () => ipcRenderer.removeListener('audio:device-changed', subscription);
+  }
+});
+
 // Expose dedicated, type-safe Skill Daemon & Metadata Hot-Reload Bridge
 contextBridge.exposeInMainWorld('skillDaemon', {
   getProfile: (agentId) => ipcRenderer.invoke('skills:get-profile', agentId),
@@ -510,5 +561,32 @@ contextBridge.exposeInMainWorld('systemDiagnostics', {
     const sub = (_event, data) => callback(data);
     ipcRenderer.on('audio:pipeline-warning', sub);
     return () => ipcRenderer.removeListener('audio:pipeline-warning', sub);
+  }
+});
+
+// Expose dedicated, type-safe Bengali Text-to-Speech (TTS) pipeline API
+contextBridge.exposeInMainWorld('banglaTTS', {
+  synthesize: (text, options) => {
+    if (!text || typeof text !== 'string') {
+      return Promise.reject(new Error('Bengali TTS: text must be a non-empty string'));
+    }
+    return ipcRenderer.invoke('tts:bangla:synthesize', text, options || {});
+  },
+  cancel: (sessionId) => ipcRenderer.invoke('tts:bangla:cancel', sessionId)
+});
+
+// Expose dedicated, type-safe Clipboard Service API
+contextBridge.exposeInMainWorld('clipboardAPI', {
+  copyBengaliFix: (customText) => ipcRenderer.invoke('clipboard:copy-bengali-fix', customText),
+  writeText: (text) => ipcRenderer.invoke('clipboard:write-text', text),
+  readText: () => ipcRenderer.invoke('clipboard:read-text')
+});
+
+// Expose window.electron with ipcRenderer for renderer utility bridges
+contextBridge.exposeInMainWorld('electron', {
+  ipcRenderer: {
+    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+    on: (channel, listener) => ipcRenderer.on(channel, listener),
+    removeListener: (channel, listener) => ipcRenderer.removeListener(channel, listener)
   }
 });

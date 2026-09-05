@@ -12,7 +12,7 @@ async function deepListenTest() {
   const testVoices = [
     { name: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural", text: "Hey babe, শোনো না! আমি তো তোমার পাশেই বসে আছি, একদম শান্ত মাথায় কাজ করো। বলো কী হেল্প লাগবে?" },
     { name: "Andrew", voice: "en-US-AndrewNeural", text: "Yo bro, the architecture is locked in and zero-copy buffers are running clean." },
-    { name: "Jenny", voice: "en-US-EmmaMultilingualNeural", text: "Hritthik, the competitive latency benchmarks show we are holding an eight-times speed advantage." },
+    { name: "Friday", voice: "en-US-JennyNeural", text: "Hritthik, the competitive latency benchmarks show we are holding an eight-times speed advantage." },
     { name: "Brian", voice: "en-US-BrianMultilingualNeural", text: "Brother, memory usage is flat at ninety megabytes and system telemetry is all green." }
   ];
 

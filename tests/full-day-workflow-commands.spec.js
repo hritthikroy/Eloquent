@@ -111,10 +111,10 @@ test("Full-Day Workflow & Spoken Command Execution Matrix", async (t) => {
     assert.strictEqual(handoffBrian.delegated, true);
     assert.strictEqual(handoffBrian.targetAgent.key, "brian");
 
-    const handoffJenny = jarvis.evaluateCrossAgentHandoff("jenny ke bol research dekhte");
-    assert.notStrictEqual(handoffJenny, null, "Handoff to Jenny in Banglish must succeed");
-    assert.strictEqual(handoffJenny.delegated, true);
-    assert.strictEqual(handoffJenny.targetAgent.key, "jenny");
+    const handoffFriday = jarvis.evaluateCrossAgentHandoff("friday ke bol research dekhte");
+    assert.notStrictEqual(handoffFriday, null, "Handoff to Friday in Banglish must succeed");
+    assert.strictEqual(handoffFriday.delegated, true);
+    assert.strictEqual(handoffFriday.targetAgent.key, "friday");
   });
 
   await t.test("6. LocalCognitiveBrain Full-Day Workflow Resilience", async () => {

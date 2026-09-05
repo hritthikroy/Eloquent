@@ -6,7 +6,7 @@
  * 2. Real-time latency budget validation (AST < 50ms, Foveation < 10ms, WorkingDomain < 20ms).
  * 3. End-to-end data consistency across all 5 Working Domains.
  * 4. Zero memory leakage & clean garbage collection resilience.
- * 5. Full-stack persona isolation across Tuk Tuk, Vision, Jenny, and Brian.
+ * 5. Full-stack persona isolation across Tuk Tuk, Vision, Friday, and Brian.
  */
 
 const test = require("node:test");

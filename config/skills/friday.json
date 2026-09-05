@@ -1,8 +1,8 @@
 {
   "$schema": "./skill-schema.json",
-  "agentId": "agent_jenny",
-  "name": "Jenny",
-  "role": "Research Scientist & Knowledge Intelligence Lead",
+  "agentId": "agent_friday",
+  "name": "Friday",
+  "role": "Head of Product Intelligence & Research",
   "version": "2.1.0",
   "enabled": true,
   "lastUpdated": 1788489000000,
@@ -38,7 +38,7 @@
   "metadata": [
     {
       "key": "lead_role",
-      "value": "Research Scientist & Knowledge Intelligence Lead",
+      "value": "Head of Product Intelligence & Research",
       "type": "string",
       "description": "Academic and deep knowledge research responsibility"
     },
@@ -56,9 +56,9 @@
     },
     {
       "key": "aura_color",
-      "value": "#ec4899",
+      "value": "#10b981",
       "type": "string",
-      "description": "Rose pink visual aura hex code"
+      "description": "Emerald green visual aura hex code"
     },
     {
       "key": "telemetry_enabled",

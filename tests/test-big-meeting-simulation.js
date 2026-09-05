@@ -62,10 +62,10 @@ function parseMultiAgentTurns(text) {
     "tuktuk": { name: "Tuk Tuk", voice: "en-US-AvaNeural" },
     "ava": { name: "Tuk Tuk", voice: "en-US-AvaNeural" },
     "andrew": { name: "Andrew", voice: "en-US-AndrewNeural" },
-    "jenny": { name: "Jenny", voice: "en-US-JennyNeural" },
+    "friday": { name: "Friday", voice: "en-US-JennyNeural" },
     "brian": { name: "Brian", voice: "en-US-BrianNeural" }
   };
-  const regex = /\[(Tuk Tuk|Andrew|Jenny|Brian|Ava)\]:\s*([^\[]+)/gi;
+  const regex = /\[(Tuk Tuk|Andrew|Friday|Brian|Ava)\]:\s*([^\[]+)/gi;
   const turns = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
@@ -82,7 +82,7 @@ function parseMultiAgentTurns(text) {
 async function runBigMeetingSimulation() {
   console.log("================================================================================");
   console.log("🎙️  BIG FOUNDER ZOOM / PHONE CALL MEETING SIMULATION (5 PARTICIPANTS)");
-  console.log("    Participants: Hritthik (Creator), Tuk Tuk, Andrew, Jenny, Brian");
+  console.log("    Participants: Hritthik (Creator), Tuk Tuk, Andrew, Friday, Brian");
   console.log("================================================================================\n");
 
   const issuesFound = [];
@@ -157,8 +157,8 @@ async function runBigMeetingSimulation() {
   // ---------------------------------------------------------------------------
   // MEETING AGENDA TURN 3: Good Thinker & Cross-Domain Research + DevOps
   // ---------------------------------------------------------------------------
-  console.log("▶ [MEETING TURN 3] Good Thinker & Active Inference: Jenny and Brian sync on papers and telemetry");
-  const m3_input = "Jenny and Brian, how does this zero-copy approach impact our telemetry and what do the papers prove about network jitter?";
+  console.log("▶ [MEETING TURN 3] Good Thinker & Active Inference: Friday and Brian sync on papers and telemetry");
+  const m3_input = "Friday and Brian, how does this zero-copy approach impact our telemetry and what do the papers prove about network jitter?";
   const m3_duration = 3800;
   console.log(`   Hritthik: "${m3_input}" (${m3_duration}ms)`);
 

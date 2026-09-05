@@ -52,7 +52,7 @@ func TestRecursiveScraper_Crawl(t *testing.T) {
 				<html>
 				<head><title>Agent Squad</title></head>
 				<body>
-					<p>Andrew, Jenny, Tuk Tuk, and Brian collaborating continuously.</p>
+					<p>Andrew, Friday, Tuk Tuk, and Brian collaborating continuously.</p>
 				</body>
 				</html>
 			`)

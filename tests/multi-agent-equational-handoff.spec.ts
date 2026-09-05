@@ -53,12 +53,12 @@ async function runTests() {
 
     assert(resonance !== null && typeof resonance.scores === 'object', "computeSpecialistResonance returns valid structure");
     assert(resonance.scores.vision > resonance.scores.tuktuk, "Vision resonance R_vision > R_tuktuk for code/fix tokens");
-    assert(resonance.scores.vision > resonance.scores.jenny, "Vision resonance R_vision > R_jenny for code/fix tokens");
+    assert(resonance.scores.vision > resonance.scores.friday, "Vision resonance R_vision > R_friday for code/fix tokens");
     assert(resonance.scores.vision > resonance.scores.brian, "Vision resonance R_vision > R_brian for code/fix tokens");
 
     // Verify Softmax distribution properties: \sum P(A_k) = 1.0 and P(Vision) is dominant
     const probSum = resonance.probabilities.vision + resonance.probabilities.tuktuk + 
-                     resonance.probabilities.jenny + resonance.probabilities.brian;
+                     resonance.probabilities.friday + resonance.probabilities.brian;
     assert(Math.abs(probSum - 1.0) < 1e-4, `Softmax probabilities sum to 1.0 (got ${probSum.toFixed(4)})`);
     assert(resonance.probabilities.vision > 0.65, `Vision receives dominant Softmax probability (got ${resonance.probabilities.vision.toFixed(4)})`);
 
@@ -150,11 +150,11 @@ async function runTests() {
       'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
       'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
       'andrew': { name: 'Andrew', voice: 'en-US-AndrewMultilingualNeural' },
-      'jenny': { name: 'Jenny', voice: 'en-US-EmmaMultilingualNeural' },
+      'friday': { name: 'Friday', voice: 'en-US-JennyNeural' },
       'brian': { name: 'Brian', voice: 'en-US-BrianMultilingualNeural' }
     };
 
-    const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Jenny|Brian|Ava)\]?:?)|$)/gi;
+    const pattern = /(?:^|\n)\s*\[?(Tuk\s*Tuk|Andrew|Friday|Brian|Ava)\]?:?\s*([\s\S]*?)(?=(?:\n\s*\[?(?:Tuk\s*Tuk|Andrew|Friday|Brian|Ava)\]?:?)|$)/gi;
     const testMultiTurnText = `[Tuk Tuk]: Andrew, listen up! Babe is telling you to fix the issues first. Take over right now!\n[Andrew]: Copy that Tuk Tuk, on it bro! Audited codebase AST syntax: 0 syntax errors detected across main engine modules. All systems green, bro!`;
 
     const turns: Array<{ agentName: string; voice: string; text: string; turnIndex: number }> = [];
