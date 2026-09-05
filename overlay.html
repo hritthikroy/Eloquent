@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Recording</title>
+  <title>2070 Cyber HUD Recording</title>
   <style>
     * {
       margin: 0;
@@ -12,33 +12,36 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', monospace, sans-serif;
       -webkit-app-region: drag;
       user-select: none;
       overflow: hidden;
+      background: transparent;
     }
 
-    /* Ultra-Compact Recording Overlay */
+    /* 2070 Cyberpunk HUD Recording Overlay */
     .overlay {
-      width: 280px;
-      height: 60px;
-      background: linear-gradient(135deg, rgba(20, 20, 25, 0.98), rgba(30, 30, 40, 0.98));
-      backdrop-filter: blur(60px) saturate(180%);
-      -webkit-backdrop-filter: blur(60px) saturate(180%);
-      border-radius: 10px;
+      width: 286px;
+      height: 64px;
+      background: linear-gradient(135deg, rgba(8, 12, 22, 0.96), rgba(13, 20, 36, 0.98));
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 240, 255, 0.35);
       box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.6),
-        0 0 0 0.5px rgba(255, 255, 255, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        0 0 16px rgba(0, 240, 255, 0.25),
+        inset 0 1px 0 rgba(0, 240, 255, 0.4),
+        inset 0 -1px 0 rgba(255, 0, 85, 0.25);
       display: flex;
       flex-direction: column;
       padding: 8px 12px;
-      gap: 6px;
+      gap: 5px;
       position: relative;
       overflow: hidden;
     }
 
-    /* Gradient Accent Border */
+    /* Animated 2070 Laser Scanline Border */
     .overlay::before {
       content: '';
       position: absolute;
@@ -46,21 +49,14 @@
       left: 0;
       right: 0;
       height: 2px;
-      background: linear-gradient(90deg, #00d4ff, #a855f7, #00d4ff);
-      background-size: 200% 100%;
-      animation: gradientShift 3s ease infinite;
+      background: linear-gradient(90deg, #00f0ff, #ff0055, #00ff9f, #00f0ff);
+      background-size: 300% 100%;
+      animation: cyberGradient 3s linear infinite;
     }
 
-    @keyframes gradientShift {
-
-      0%,
-      100% {
-        background-position: 0% 50%;
-      }
-
-      50% {
-        background-position: 100% 50%;
-      }
+    @keyframes cyberGradient {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
     }
 
     /* Top Row */
@@ -71,39 +67,78 @@
       height: 16px;
     }
 
+    .hud-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 2070 Cyber Status Badge */
+    .cyber-tag {
+      font-size: 8px;
+      font-weight: 800;
+      color: #00f0ff;
+      background: rgba(0, 240, 255, 0.12);
+      border: 0.5px solid rgba(0, 240, 255, 0.4);
+      padding: 1px 5px;
+      border-radius: 3px;
+      letter-spacing: 0.8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 0 6px rgba(0, 240, 255, 0.3);
+    }
+
+    .cyber-tag::before {
+      content: '';
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #00ff9f;
+      box-shadow: 0 0 6px #00ff9f;
+      animation: pulseDot 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
     /* Mode Badge */
     .mode-badge {
-      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      background: linear-gradient(135deg, #ff0055, #a855f7);
       color: white;
-      padding: 2px 7px;
-      border-radius: 4px;
+      padding: 1px 6px;
+      border-radius: 3px;
       font-size: 8px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
-      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 10px rgba(255, 0, 85, 0.6);
       display: none;
     }
 
-    /* Timer */
+    /* 2070 Digital Timer */
     .timer {
-      font-size: 10px;
-      color: #999;
+      font-family: 'JetBrains Mono', 'SF Mono', monospace;
+      font-size: 11px;
+      color: #00f0ff;
+      text-shadow: 0 0 6px rgba(0, 240, 255, 0.6);
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.5px;
     }
 
     /* Close Button */
     .close-btn {
       -webkit-app-region: no-drag;
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
-      background: rgba(255, 59, 48, 0.15);
-      border: none;
-      color: #ff3b30;
-      font-size: 11px;
+      background: rgba(255, 0, 85, 0.15);
+      border: 1px solid rgba(255, 0, 85, 0.4);
+      color: #ff0055;
+      font-size: 10px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -112,7 +147,8 @@
     }
 
     .close-btn:hover {
-      background: rgba(255, 59, 48, 0.25);
+      background: rgba(255, 0, 85, 0.35);
+      box-shadow: 0 0 8px rgba(255, 0, 85, 0.8);
       transform: scale(1.1);
     }
 
@@ -121,22 +157,23 @@
       width: 100%;
       height: 22px;
       border-radius: 4px;
+      filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.4));
     }
 
     /* Time Left Row */
     .time-left-row {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       height: 10px;
     }
 
     .time-left-label {
       font-size: 7px;
-      color: #666;
-      font-weight: 700;
+      color: rgba(0, 240, 255, 0.7);
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.5px;
       white-space: nowrap;
     }
 
@@ -150,56 +187,29 @@
 
     .time-left-bar {
       height: 100%;
-      background: linear-gradient(90deg, #00d4ff, #0099ff);
-      border-radius: 2px;
-      transition: width 1s linear, background 0.3s;
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+      width: 0%;
+      background: linear-gradient(90deg, #00f0ff, #00ff9f);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+      transition: width 0.3s ease;
     }
 
     .time-left-text {
+      font-family: monospace;
       font-size: 8px;
-      color: #00d4ff;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-      text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
-    }
-
-    /* Recording Pulse */
-    .recording-pulse {
-      position: absolute;
-      top: 8px;
-      right: 38px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: #ff3b30;
-      box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
-      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-
-    @keyframes pulse-ring {
-
-      0%,
-      100% {
-        box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
-      }
-
-      50% {
-        box-shadow: 0 0 0 5px rgba(255, 59, 48, 0);
-      }
+      color: #00f0ff;
+      font-weight: 600;
     }
   </style>
 </head>
 
 <body>
   <div class="overlay">
-    <!-- Recording Pulse -->
-    <div class="recording-pulse"></div>
-
     <!-- Top Row -->
     <div class="top-row">
-      <div class="mode-badge" id="modeBadge">AI</div>
+      <div class="hud-left">
+        <div class="cyber-tag">2070 HUD</div>
+        <div class="mode-badge" id="modeBadge">AI</div>
+      </div>
       <div class="timer" id="timer">0:00</div>
       <button class="close-btn" onclick="cancel()" title="Cancel [Esc]">✕</button>
     </div>
@@ -209,7 +219,7 @@
 
     <!-- Time Left Row -->
     <div class="time-left-row">
-      <div class="time-left-label">⏱️ LEFT</div>
+      <div class="time-left-label">TELEMETRY</div>
       <div class="time-left-bar-container">
         <div class="time-left-bar" id="timeLeftBar"></div>
       </div>
@@ -227,10 +237,9 @@
     const timeLeftBar = document.getElementById('timeLeftBar');
     const timeLeftText = document.getElementById('timeLeftText');
 
-    // Set canvas size for compact overlay
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = 256 * dpr;  // Compact width
-    canvas.height = 22 * dpr;  // Compact height
+    canvas.width = 256 * dpr;
+    canvas.height = 22 * dpr;
     canvas.style.width = '256px';
     canvas.style.height = '22px';
     ctx.scale(dpr, dpr);
@@ -244,28 +253,22 @@
     let maxRecordingTime = 2400;
     let usedTime = 0;
 
-    // Load real values
     function loadRealValues() {
       try {
         const today = new Date().toISOString().split('T')[0];
         const stats = JSON.parse(localStorage.getItem('recordingStats') || '{}');
-
         if (stats.date === today) {
           usedTime = (stats.standardTime || 0) + (stats.rewriteTime || 0);
-          console.log('Loaded:', usedTime);
         } else {
           usedTime = 0;
         }
-
         updateTimeLeft();
       } catch (err) {
-        console.error('Error:', err);
         usedTime = 0;
         updateTimeLeft();
       }
     }
 
-    // Initialize audio
     async function initAudio() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -279,75 +282,64 @@
         dataArray = new Uint8Array(analyser.frequencyBinCount);
         drawWaveform();
       } catch (err) {
-        console.error('Mic error:', err);
         drawFakeWaveform();
       }
     }
 
-    // Shared bar rendering function for compact overlay
     function drawBars(values) {
       ctx.clearRect(0, 0, 256, 22);
-
-      const barCount = 40;  // Fewer bars for compact width
-      const barWidth = 3;   // Thinner bars
+      const barCount = 40;
+      const barWidth = 3;
       const gap = 2.5;
-      const centerY = 11;   // Center for 22px height
+      const centerY = 11;
 
       for (let i = 0; i < barCount; i++) {
         const barHeight = Math.max(values[i], 2);
-
         const gradient = ctx.createLinearGradient(0, centerY - barHeight / 2, 0, centerY + barHeight / 2);
         if (mode === 'rewrite') {
-          gradient.addColorStop(0, '#a855f7');
-          gradient.addColorStop(1, '#7c3aed');
+          gradient.addColorStop(0, '#ff0055');
+          gradient.addColorStop(1, '#a855f7');
         } else {
-          gradient.addColorStop(0, '#00d4ff');
-          gradient.addColorStop(1, '#0099ff');
+          gradient.addColorStop(0, '#00f0ff');
+          gradient.addColorStop(1, '#00ff9f');
         }
 
         ctx.fillStyle = gradient;
-        ctx.shadowBlur = 3;
-        ctx.shadowColor = mode === 'rewrite' ? '#a855f7' : '#00d4ff';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = mode === 'rewrite' ? '#ff0055' : '#00f0ff';
         ctx.fillRect(i * (barWidth + gap), centerY - barHeight / 2, barWidth, barHeight);
       }
-
       updateTimer();
     }
 
-    // Draw waveform from real audio (compact)
     function drawWaveform() {
       animationId = requestAnimationFrame(drawWaveform);
       analyser.getByteFrequencyData(dataArray);
 
       const values = [];
-      for (let i = 0; i < 40; i++) {  // 40 bars for compact width
+      for (let i = 0; i < 40; i++) {
         const dataIndex = Math.floor(i * dataArray.length / 40);
         const value = dataArray[dataIndex] / 255;
-        values.push(value * 18);  // Slightly smaller bars
+        values.push(value * 18);
       }
-
       drawBars(values);
     }
 
-    // Fallback animation for compact overlay
     function drawFakeWaveform() {
       let frame = 0;
       function animate() {
         animationId = requestAnimationFrame(animate);
-
         const values = [];
-        for (let i = 0; i < 40; i++) {  // 40 bars for compact width
+        for (let i = 0; i < 40; i++) {
           const value = (Math.sin(frame * 0.05 + i * 0.3) * 0.5 + 0.5) * 0.6;
-          values.push(value * 16);  // Slightly smaller bars
+          values.push(value * 16);
         }
-
         drawBars(values);
         frame++;
       }
       animate();
     }
 
-    // Update timer
     function updateTimer() {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const mins = Math.floor(elapsed / 60);
@@ -356,7 +348,6 @@
       updateTimeLeft();
     }
 
-    // Update time left
     function updateTimeLeft() {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const currentUsed = usedTime + elapsed;
@@ -367,19 +358,16 @@
       timeLeftText.textContent = `${currentUsed}/${maxRecordingTime}s`;
 
       if (remaining < 60) {
-        timeLeftBar.style.background = 'linear-gradient(90deg, #ff3b30, #cc0000)';
-        timeLeftBar.style.boxShadow = '0 0 8px rgba(255, 59, 48, 0.5)';
-        timeLeftText.style.color = '#ff3b30';
-        timeLeftText.style.textShadow = '0 0 8px rgba(255, 59, 48, 0.5)';
+        timeLeftBar.style.background = 'linear-gradient(90deg, #ff0055, #cc0000)';
+        timeLeftBar.style.boxShadow = '0 0 8px rgba(255, 0, 85, 0.8)';
+        timeLeftText.style.color = '#ff0055';
       } else if (remaining < 300) {
-        timeLeftBar.style.background = 'linear-gradient(90deg, #ffaa00, #ff8800)';
-        timeLeftBar.style.boxShadow = '0 0 8px rgba(255, 170, 0, 0.5)';
-        timeLeftText.style.color = '#ffaa00';
-        timeLeftText.style.textShadow = '0 0 8px rgba(255, 170, 0, 0.5)';
+        timeLeftBar.style.background = 'linear-gradient(90deg, #ffb703, #ff8800)';
+        timeLeftBar.style.boxShadow = '0 0 8px rgba(255, 183, 3, 0.8)';
+        timeLeftText.style.color = '#ffb703';
       }
     }
 
-    // Set mode
     ipcRenderer.on('set-mode', (_, m) => {
       mode = m;
       if (mode === 'rewrite') {
@@ -387,18 +375,15 @@
       }
     });
 
-    // Cancel
     function cancel() {
       if (audioContext) audioContext.close();
       if (animationId) cancelAnimationFrame(animationId);
       window.close();
     }
 
-    // Initialize
     loadRealValues();
     initAudio();
 
-    // Cleanup
     window.addEventListener('beforeunload', () => {
       if (audioContext) audioContext.close();
       if (animationId) cancelAnimationFrame(animationId);

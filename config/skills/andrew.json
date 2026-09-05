@@ -1,0 +1,127 @@
+{
+  "$schema": "./skill-schema.json",
+  "agentId": "agent_andrew",
+  "name": "Andrew",
+  "role": "Lead Software Engineer & Antigravity Auto-Mode Coding Agent",
+  "version": "2.1.0",
+  "enabled": true,
+  "lastUpdated": 1788489000000,
+  "skills": [
+    {
+      "id": "git_diff_summary",
+      "name": "Git Diff Summary",
+      "description": "Inspects git diff summary and unstaged changes across the repository",
+      "handler": "getGitDiffSummary",
+      "category": "engineering",
+      "timeoutMs": 3000,
+      "enabled": true
+    },
+    {
+      "id": "recent_commits",
+      "name": "Recent Commits",
+      "description": "Fetches the 3 most recent git commits from the active branch",
+      "handler": "getRecentCommits",
+      "category": "engineering",
+      "timeoutMs": 3000,
+      "enabled": true
+    },
+    {
+      "id": "syntax_integrity",
+      "name": "Syntax Integrity Verification",
+      "description": "Performs AST and syntax validation via node -c on core codebase files",
+      "handler": "runSyntaxCheck",
+      "category": "automation",
+      "timeoutMs": 5000,
+      "enabled": true
+    },
+    {
+      "id": "package_version",
+      "name": "Package Version & Dependency Stats",
+      "description": "Checks package.json version and counts production dependencies",
+      "handler": "getPackageVersion",
+      "category": "engineering",
+      "timeoutMs": 2000,
+      "enabled": true
+    },
+    {
+      "id": "auto_coding_task",
+      "name": "Antigravity Auto-Mode Execution",
+      "description": "Executes autonomous engineering tasks and code refactors",
+      "handler": "executeAutoCodingTask",
+      "category": "automation",
+      "timeoutMs": 15000,
+      "enabled": true
+    },
+    {
+      "id": "audio_ipc_bridge",
+      "name": "Fast-Path Audio Ring Buffer IPC",
+      "description": "Monitors shared memory ring buffer metrics and handles sub-millisecond audio streaming",
+      "handler": "sendAudioFrameFastPath",
+      "category": "audio-ipc",
+      "timeoutMs": 1000,
+      "enabled": true
+    }
+  ],
+  "metadata": [
+    {
+      "key": "lead_role",
+      "value": "Lead Software Engineer",
+      "type": "string",
+      "description": "Primary architectural and engineering responsibility"
+    },
+    {
+      "key": "salutation",
+      "value": "bro",
+      "type": "string",
+      "description": "Conversational persona address token"
+    },
+    {
+      "key": "execution_mode",
+      "value": "antigravity_auto_mode",
+      "type": "string",
+      "description": "Autonomous task executor engine"
+    },
+    {
+      "key": "voice_model",
+      "value": "en-US-AndrewMultilingualNeural",
+      "type": "string",
+      "description": "Neural TTS voice identifier"
+    },
+    {
+      "key": "aura_color",
+      "value": "#06b6d4",
+      "type": "string",
+      "description": "Cyan visual aura hex code"
+    },
+    {
+      "key": "telemetry_enabled",
+      "value": true,
+      "type": "boolean",
+      "description": "Skill update and execution telemetry logging flag"
+    },
+    {
+      "key": "max_concurrency",
+      "value": 16,
+      "type": "number",
+      "description": "Maximum parallel worker goroutines and async handlers"
+    },
+    {
+      "key": "hot_reload_enabled",
+      "value": true,
+      "type": "boolean",
+      "description": "Enables zero-downtime hot reloading for skills and metadata"
+    },
+    {
+      "key": "sync_interval_ms",
+      "value": 5000,
+      "type": "number",
+      "description": "Interval in milliseconds between state synchronization checkpoints"
+    },
+    {
+      "key": "log_level",
+      "value": "info",
+      "type": "string",
+      "description": "Verbosity level for daemon and skill logs"
+    }
+  ]
+}

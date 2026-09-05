@@ -38,3 +38,9 @@ yarn-error.log*
 # User data (contains API keys and history)
 api-usage.json
 history.json
+
+# Binaries and local instructions
+*.dmg
+*.zip
+PUSH_INSTRUCTIONS.md
+secrets*.txt
