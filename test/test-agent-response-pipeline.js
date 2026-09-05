@@ -81,9 +81,9 @@ async function runTests() {
   console.log("\n4️⃣ Testing Agent Persona Prompts & Lexicon Constraints for All 4 Agents...");
   const agentsToTest = [
     { key: "tuktuk", name: "Tuk Tuk", expectedVoice: "en-US-AvaMultilingualNeural" },
-    { key: "andrew", name: "Andrew", expectedVoice: "en-US-AndrewNeural" },
+    { key: "vision", name: "Vision", expectedVoice: "en-US-AndrewNeural" },
     { key: "brian", name: "Brian", expectedVoice: "en-US-BrianMultilingualNeural" },
-    { key: "jenny", name: "Jenny", expectedVoice: "en-US-EmmaMultilingualNeural" }
+    { key: "jenny", name: "Jenny", expectedVoice: "en-US-JennyNeural" }
   ];
 
   for (const agent of agentsToTest) {

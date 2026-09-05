@@ -286,7 +286,8 @@ class ElectronEyeBridge {
       try {
         const logDir = path.join(process.cwd ? process.cwd() : '.', 'logs');
         if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-        const entry = `${new Date().toISOString()} [ElectronEyeBridge] eye-unavailable: ${JSON.stringify(errorPayload)}\n`;
+        const ts = new Date().toISOString();
+        const entry = `${ts} [ElectronEyeBridge] eye-unavailable: ${JSON.stringify(errorPayload)}\n`;
         fs.appendFileSync(path.join(logDir, 'eye_error.log'), entry);
       } catch (err) {
         // Non-fatal logging failure
@@ -396,7 +397,9 @@ class ElectronEyeBridge {
             let electronModule = null;
             try {
               electronModule = require('electron');
-            } catch (e) {}
+            } catch (e) {
+              /* ignore */
+            }
             const sp = electronModule ? electronModule.systemPreferences : null;
             if (sp && typeof sp.askForMediaAccess === 'function') {
               const status = typeof sp.getMediaAccessStatus === 'function' ? sp.getMediaAccessStatus('camera') : 'unknown';

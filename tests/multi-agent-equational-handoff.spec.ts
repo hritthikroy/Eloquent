@@ -48,56 +48,65 @@ async function runTests() {
   // -------------------------------------------------------------
   console.log('--- TEST GROUP 1: Specialist Resonance & Softmax Probabilities ---');
   {
-    const codeQuery = "See, Andrew not listen. Fix first, Andrew and check syntax";
+    const codeQuery = "See, Vision not listen. Fix first, Vision and check syntax";
     const resonance = jarvis.computeSpecialistResonance(codeQuery);
 
     assert(resonance !== null && typeof resonance.scores === 'object', "computeSpecialistResonance returns valid structure");
-    assert(resonance.scores.andrew > resonance.scores.tuktuk, "Andrew resonance R_andrew > R_tuktuk for code/fix tokens");
-    assert(resonance.scores.andrew > resonance.scores.jenny, "Andrew resonance R_andrew > R_jenny for code/fix tokens");
-    assert(resonance.scores.andrew > resonance.scores.brian, "Andrew resonance R_andrew > R_brian for code/fix tokens");
+    assert(resonance.scores.vision > resonance.scores.tuktuk, "Vision resonance R_vision > R_tuktuk for code/fix tokens");
+    assert(resonance.scores.vision > resonance.scores.jenny, "Vision resonance R_vision > R_jenny for code/fix tokens");
+    assert(resonance.scores.vision > resonance.scores.brian, "Vision resonance R_vision > R_brian for code/fix tokens");
 
-    // Verify Softmax distribution properties: \sum P(A_k) = 1.0 and P(Andrew) is dominant
-    const probSum = resonance.probabilities.andrew + resonance.probabilities.tuktuk + 
+    // Verify Softmax distribution properties: \sum P(A_k) = 1.0 and P(Vision) is dominant
+    const probSum = resonance.probabilities.vision + resonance.probabilities.tuktuk + 
                      resonance.probabilities.jenny + resonance.probabilities.brian;
     assert(Math.abs(probSum - 1.0) < 1e-4, `Softmax probabilities sum to 1.0 (got ${probSum.toFixed(4)})`);
-    assert(resonance.probabilities.andrew > 0.65, `Andrew receives dominant Softmax probability (got ${resonance.probabilities.andrew.toFixed(4)})`);
+    assert(resonance.probabilities.vision > 0.65, `Vision receives dominant Softmax probability (got ${resonance.probabilities.vision.toFixed(4)})`);
+
+    // Verify Andrew does NOT activate Vision
+    const andrewQuery = "Hey Andrew, check this bug";
+    const andrewAgent = jarvis.detectActiveAgent(andrewQuery);
+    assert(andrewAgent.key !== 'vision', "detectActiveAgent does NOT map Andrew to Vision");
   }
 
   // -------------------------------------------------------------
   // TEST GROUP 2: Equational Cross-Agent Handoff U_handoff >= Theta
   // -------------------------------------------------------------
-  console.log('\n--- TEST GROUP 2: Equational Cross-Agent Handoff (Tuk Tuk -> Andrew) ---');
+  console.log('\n--- TEST GROUP 2: Equational Cross-Agent Handoff (Tuk Tuk -> Vision) ---');
   {
-    // Case A: User reprimands "Andrew not listen. Fix first, Andrew"
-    const handoffA = jarvis.evaluateCrossAgentHandoff("See, Andrew not listen. Fix first, Andrew");
-    assert(handoffA !== null, "Handoff evaluated for 'Andrew not listen. Fix first, Andrew'");
+    // Case A: User reprimands "Vision not listen. Fix first, Vision"
+    const handoffA = jarvis.evaluateCrossAgentHandoff("See, Vision not listen. Fix first, Vision");
+    assert(handoffA !== null, "Handoff evaluated for 'Vision not listen. Fix first, Vision'");
     assert(handoffA.delegated === true, "Handoff delegated is true");
     assert(handoffA.utility >= 0.60, `U_handoff (${handoffA.utility.toFixed(2)}) satisfies threshold >= 0.60`);
     assert(handoffA.sourceAgent.key === 'tuktuk', "Source agent is Tuk Tuk (Co-Founder authority)");
-    assert(handoffA.targetAgent.key === 'andrew', "Target agent is Andrew (Lead Dev execution)");
-    assert(handoffA.handoffLead.includes("listen up"), "Handoff lead orders Andrew to listen up");
+    assert(handoffA.targetAgent.key === 'vision', "Target agent is Vision (Lead Dev execution)");
+    assert(handoffA.handoffLead.includes("listen up"), "Handoff lead orders Vision to listen up");
 
-    // Case B: Third-person delegation "Tuk Tuk, tell Andrew to fix the issues"
-    const handoffB = jarvis.evaluateCrossAgentHandoff("Tuk Tuk, tell Andrew to fix the issues");
-    assert(handoffB !== null, "Handoff evaluated for 'tell Andrew to fix'");
-    assert(handoffB.delegated === true, "Delegated is true for 'tell Andrew'");
-    assert(handoffB.targetAgent.key === 'andrew', "Target agent is Andrew");
+    // Case B: Third-person delegation "Tuk Tuk, tell Vision to fix the issues"
+    const handoffB = jarvis.evaluateCrossAgentHandoff("Tuk Tuk, tell Vision to fix the issues");
+    assert(handoffB !== null, "Handoff evaluated for 'tell Vision to fix'");
+    assert(handoffB.delegated === true, "Delegated is true for 'tell Vision'");
+    assert(handoffB.targetAgent.key === 'vision', "Target agent is Vision");
     assert(handoffB.utility >= 0.60, `U_handoff (${handoffB.utility.toFixed(2)}) satisfies threshold >= 0.60`);
 
-    // Case C: Unrelated query without delegation
-    const handoffC = jarvis.evaluateCrossAgentHandoff("What is the current system memory usage?");
-    assert(handoffC === null, "Unrelated query yields null handoff");
+    // Case C: Unlinking assertion - saying "tell Andrew" does NOT hand off to Vision
+    const handoffAndrew = jarvis.evaluateCrossAgentHandoff("Tuk Tuk, tell Andrew to fix the issues");
+    assert(handoffAndrew === null, "'tell Andrew' does NOT route to Vision");
+
+    // Case D: Unrelated query without delegation
+    const handoffD = jarvis.evaluateCrossAgentHandoff("What is the current system memory usage?");
+    assert(handoffD === null, "Unrelated query yields null handoff");
   }
 
   // -------------------------------------------------------------
-  // TEST GROUP 3: Task Assignment Backward Compatibility
+  // TEST GROUP 3: Task Assignment Delegation Interface
   // -------------------------------------------------------------
   console.log('\n--- TEST GROUP 3: Task Assignment Delegation Interface ---');
   {
-    const assignment = jarvis.evaluateTaskAssignment("Tuk Tuk, have Andrew fix the bug");
+    const assignment = jarvis.evaluateTaskAssignment("Tuk Tuk, have Vision fix the bug");
     assert(assignment !== null, "evaluateTaskAssignment returns valid object");
     assert(assignment.delegated === true, "assignment.delegated is true");
-    assert(assignment.assignedAgent.key === 'andrew', "assignment.assignedAgent is Andrew");
+    assert(assignment.assignedAgent.key === 'vision', "assignment.assignedAgent is Vision");
     assert(assignment.lead.key === 'tuktuk', "assignment.lead is Tuk Tuk");
   }
 
@@ -106,26 +115,26 @@ async function runTests() {
   // -------------------------------------------------------------
   console.log('\n--- TEST GROUP 4: Receptive Listening Invariant Prompt Ingestion ---');
   {
-    const handoffCtx = { command: "Andrew, listen up! Babe is telling you to fix the issues first. Take over right now!" };
-    const andrewPrompt = jarvis.getSystemPrompt(jarvis.agents.andrew, "fix first, Andrew", handoffCtx);
+    const handoffCtx = { command: "Vision, listen up! Babe is telling you to fix the issues first. Take over right now!" };
+    const visionPrompt = jarvis.getSystemPrompt(jarvis.agents.vision, "fix first, Vision", handoffCtx);
 
-    assert(andrewPrompt.includes("[TUK TUK DIRECTIVE & RECEPTIVE LISTENING INVARIANT]"), "System prompt contains receptive listening invariant section");
-    assert(andrewPrompt.includes(handoffCtx.command), "System prompt embeds Tuk Tuk's exact command");
-    assert(andrewPrompt.includes("On it Tuk Tuk") || andrewPrompt.includes("Copy that Tuk Tuk"), "Prompt instructs Andrew to acknowledge Tuk Tuk directly");
-    assert(andrewPrompt.includes("STRICT INVARIANT: NEVER ignore Tuk Tuk's command"), "Prompt enforces strict invariant against ignoring Tuk Tuk");
-    assert(andrewPrompt.includes("bro") || andrewPrompt.includes("bhai"), "Andrew prompt enforces brotherly salutation");
+    assert(visionPrompt.includes("[TUK TUK DIRECTIVE & RECEPTIVE LISTENING INVARIANT]"), "System prompt contains receptive listening invariant section");
+    assert(visionPrompt.includes(handoffCtx.command), "System prompt embeds Tuk Tuk's exact command");
+    assert(visionPrompt.includes("On it Tuk Tuk") || visionPrompt.includes("Copy that Tuk Tuk"), "Prompt instructs Vision to acknowledge Tuk Tuk directly");
+    assert(visionPrompt.includes("STRICT INVARIANT: NEVER ignore Tuk Tuk's command"), "Prompt enforces strict invariant against ignoring Tuk Tuk");
+    assert(visionPrompt.includes("bro") || visionPrompt.includes("bhai"), "Vision prompt enforces brotherly salutation");
   }
 
   // -------------------------------------------------------------
-  // TEST GROUP 5: Antigravity Auto-Mode AST Verification for Andrew
+  // TEST GROUP 5: Antigravity Auto-Mode AST Verification for Vision
   // -------------------------------------------------------------
   console.log('\n--- TEST GROUP 5: Antigravity Auto-Mode Execution for Fix Directives ---');
   {
-    // Test that actionRunner recognizes fix directives directed at Andrew
-    const actionRes = await actionRunner.handleAction("fix first, Andrew", jarvis.agents.andrew, jarvis);
-    assert(actionRes !== null && actionRes.handled === true, "actionRunner handles 'fix first, Andrew'");
-    assert(actionRes.agentName === "Andrew" || actionRes.agentName === "Vision", "Executing agent is Vision");
-    assert(actionRes.agentVoice === "en-US-AndrewMultilingualNeural", "Voice is AndrewMultilingualNeural");
+    // Test that actionRunner recognizes fix directives directed at Vision
+    const actionRes = await actionRunner.handleAction("fix first, Vision", jarvis.agents.vision, jarvis);
+    assert(actionRes !== null && actionRes.handled === true, "actionRunner handles 'fix first, Vision'");
+    assert(actionRes.agentName === "Vision", "Executing agent is Vision");
+    assert(actionRes.agentVoice.includes("Andrew"), "Voice is Andrew neural voice");
     assert(actionRes.speech.includes("Tuk Tuk") || actionRes.speech.includes("AST") || actionRes.speech.includes("syntax"), "Speech acknowledges Tuk Tuk or reports AST verification");
     assert(actionRes.speech.includes("0 syntax errors detected") || actionRes.speech.includes("verified"), "Codebase AST audit confirms 0 syntax errors");
   }

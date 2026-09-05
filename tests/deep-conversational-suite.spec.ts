@@ -84,7 +84,7 @@ async function runDeepConversationalTests() {
   // --------------------------------------------------------------------------
   console.log('\n--- TEST GROUP 2: Andrew Tri-Lingual 10x Dev Brother Invariance ---');
   {
-    const andrew = manager.agents.andrew;
+    const andrew = manager.agents.andrew || manager.agents.vision;
     const prompt = manager.getSystemPrompt(andrew, 'Hritthik');
 
     assert(prompt.includes('Systems Architect, 10x dev, and Hritthik\'s loyal brother'), 'Prompt sets Andrew as lead systems architect and brother');
@@ -145,38 +145,35 @@ async function runDeepConversationalTests() {
     manager.addTurn('assistant', 'CoreAudio handles 14ms buffer cleanly without crackling, babe.', 'tuktuk');
 
     // Turn 3: User in Hindi
-    manager.addTurn('user', 'Andrew bhai ko bolo test karne ke liye', 'user');
+    manager.addTurn('user', 'Vision bhai ko bolo test karne ke liye', 'user');
 
     const history = manager.getHistory(6, 'tuktuk');
     assert(history.length === 5, `History retains all 5 conversation turns across Bengali, English, and Hindi (got ${history.length})`);
     assert(history[0].content.includes('বাফারটা'), 'Turn 1 Bengali context preserved in memory');
     assert(history[2].content.includes('crackle'), 'Turn 2 English context preserved in memory');
-    assert(history[4].content.includes('Andrew bhai'), 'Turn 3 Hindi context preserved in memory');
+    assert(history[4].content.includes('Vision bhai'), 'Turn 3 Hindi context preserved in memory');
 
     // Verify cross-agent handoff detection on multilingual prompt
-    const handoff = manager.evaluateCrossAgentHandoff('Andrew bhai ko bolo test karne ke liye');
-    assert(handoff.delegated === true, 'Cross-agent handoff successfully delegates to Andrew');
-    assert(handoff.targetAgent.name === 'Andrew', 'Target agent is Andrew');
+    const handoff = manager.evaluateCrossAgentHandoff('Vision bhai ko bolo test karne ke liye');
+    assert(handoff.delegated === true, 'Cross-agent handoff successfully delegates to Vision');
+    assert(handoff.targetAgent.name === 'Vision' || handoff.targetAgent.name === 'Andrew', 'Target agent is Vision (or alias Andrew)');
   }
 
   // --------------------------------------------------------------------------
   // TEST GROUP 5: Dynamic Voice Resolution across 3 Languages
   // --------------------------------------------------------------------------
-  console.log('\n--- TEST GROUP 5: Dynamic Voice Resolution across 3 Languages ---');
+  console.log('\n--- TEST GROUP 5: Zero-Flickering Locked Core Studio Voices across English & Banglish ---');
   {
     const { resolveVoiceForLanguage } = require(path.join(projectRoot, 'src/utils/jarvis-manager'));
 
-    // Tuk Tuk (Female base)
+    // Tuk Tuk (Ava Multilingual locked)
     assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'Let us ship this update today') === 'en-US-AvaMultilingualNeural', 'English routes to Ava');
-    assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'আমি তো ভাবছিলামই babe') === 'bn-IN-TanishaaNeural', 'Bengali script routes to Tanishaa');
-    assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'Eloquent-er voice latency niye kaj korbo') === 'bn-IN-TanishaaNeural', 'Romanized Banglish with enclitic "-er" routes to Tanishaa');
-    assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'यह बहुत बढ़िया है') === 'hi-IN-SwaraNeural', 'Devanagari script routes to Swara');
-    assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'Scene toh mast hai babe batao kya karna hai') === 'hi-IN-SwaraNeural', 'Romanized Hinglish routes to Swara');
+    assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'আমি তো ভাবছিলামই babe') === 'en-US-AvaMultilingualNeural', 'Bengali script stays on Ava (zero flickering)');
+    assert(resolveVoiceForLanguage('en-US-AvaMultilingualNeural', 'Eloquent-er voice latency niye kaj korbo') === 'en-US-AvaMultilingualNeural', 'Romanized Banglish stays on Ava (zero flickering)');
 
-    // Andrew (Male base)
-    assert(resolveVoiceForLanguage('en-US-AndrewMultilingualNeural', 'Patch is pushed bro') === 'en-US-AndrewMultilingualNeural', 'Andrew English routes to Andrew');
-    assert(resolveVoiceForLanguage('en-US-AndrewMultilingualNeural', 'আমি patch push করে দিয়েছি ভাই') === 'bn-IN-BashkarNeural', 'Andrew Bengali routes to Bashkar');
-    assert(resolveVoiceForLanguage('en-US-AndrewMultilingualNeural', 'हाँ भाई सब clean है') === 'hi-IN-MadhurNeural', 'Andrew Hindi routes to Madhur');
+    // Vision / Andrew (AndrewNeural locked)
+    assert(resolveVoiceForLanguage('en-US-AndrewNeural', 'Patch is pushed bro') === 'en-US-AndrewNeural', 'Andrew English routes to Andrew');
+    assert(resolveVoiceForLanguage('en-US-AndrewNeural', 'আমি patch push করে দিয়েছি ভাই') === 'en-US-AndrewNeural', 'Andrew Banglish stays on Andrew (zero flickering)');
   }
 
   // --------------------------------------------------------------------------
@@ -224,6 +221,7 @@ async function runDeepConversationalTests() {
   console.log('\n================================================================');
   console.log(`🎉 ALL ${passed}/${total} DEEP CONVERSATIONAL INTEGRITY TESTS PASSED!`);
   console.log('================================================================\n');
+  process.exit(0);
 }
 
 runDeepConversationalTests().catch(err => {

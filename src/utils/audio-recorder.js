@@ -279,7 +279,7 @@ class AudioRecorder {
       }
       console.log('✅ Unix recording stopped');
       
-      // Wait for this specific process to exit with fast 90ms SIGKILL fallback
+      // Wait for this specific process to exit with 300ms buffer flush safety fallback
       await new Promise((resolve) => {
         let timer = null;
         const onClose = () => {
@@ -293,7 +293,7 @@ class AudioRecorder {
             proc.kill('SIGKILL');
           } catch (e) {}
           resolve();
-        }, 90);
+        }, 300);
       });
       
       return this.audioFilePath;

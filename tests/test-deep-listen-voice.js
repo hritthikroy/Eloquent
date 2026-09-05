@@ -10,10 +10,10 @@ async function deepListenTest() {
   console.log("================================================================================\n");
 
   const testVoices = [
-    { name: "Tuk Tuk", voice: "en-US-AvaNeural", text: "I am doing wonderful, babe! What are we tackling first tonight?" },
+    { name: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural", text: "Hey babe, শোনো না! আমি তো তোমার পাশেই বসে আছি, একদম শান্ত মাথায় কাজ করো। বলো কী হেল্প লাগবে?" },
     { name: "Andrew", voice: "en-US-AndrewNeural", text: "Yo bro, the architecture is locked in and zero-copy buffers are running clean." },
-    { name: "Jenny", voice: "en-US-JennyNeural", text: "Hritthik, the competitive latency benchmarks show we are holding an eight-times speed advantage." },
-    { name: "Brian", voice: "en-US-BrianNeural", text: "Brother, memory usage is flat at ninety megabytes and system telemetry is all green." }
+    { name: "Jenny", voice: "en-US-EmmaMultilingualNeural", text: "Hritthik, the competitive latency benchmarks show we are holding an eight-times speed advantage." },
+    { name: "Brian", voice: "en-US-BrianMultilingualNeural", text: "Brother, memory usage is flat at ninety megabytes and system telemetry is all green." }
   ];
 
   const outDir = "/tmp/eloquent_voice_audit";
@@ -24,7 +24,7 @@ async function deepListenTest() {
     console.log(`   Utterance: "${item.text}"`);
 
     const tts = new MsEdgeTTS();
-    await tts.setMetadata(item.voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    await tts.setMetadata(item.voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
 
     const startT = Date.now();
     const res = await tts.toFile(outDir, item.text, { rate: "+0%", pitch: "+0Hz" });

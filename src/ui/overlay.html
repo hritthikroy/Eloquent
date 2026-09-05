@@ -14,9 +14,8 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
-      -webkit-app-region: drag;
       user-select: none;
-      overflow: hidden;
+      overflow: visible;
       background: transparent;
       margin: 0;
       padding: 0;
@@ -37,18 +36,19 @@
 
     /* ULTRA-FAST Pill-shaped overlay with hardware acceleration */
     .overlay {
+      -webkit-app-region: drag;
       height: 40px;
+      max-width: 440px;
       background: #1e293b;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 10px rgba(0, 0, 0, 0.2);
       display: inline-flex;
       align-items: center;
       padding: 0 16px;
       gap: 10px;
       position: relative;
       flex-shrink: 0;
-      overflow: hidden;
       /* PERFORMANCE BOOST: Hardware acceleration and compositing */
       transform: translateZ(0);
       backface-visibility: hidden;
@@ -56,8 +56,8 @@
       /* PERFORMANCE BOOST: Force GPU layer */
       -webkit-transform: translateZ(0);
       -webkit-backface-visibility: hidden;
-      /* PERFORMANCE BOOST: Optimize rendering */
-      contain: layout style paint;
+      /* PERFORMANCE BOOST: Optimize rendering without clipping aura */
+      contain: layout style;
     }
 
     /* Recording indicator - pulsing ring */
@@ -89,19 +89,30 @@
 
     .overlay.rewrite .rec-ring {
       border-color: #a855f7;
+      box-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
     }
 
     .overlay.rewrite .rec-dot {
       background: #a855f7;
     }
 
+    .overlay.rewrite {
+      border-color: rgba(168, 85, 247, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(168, 85, 247, 0.25);
+    }
+
     .overlay.jarvis .rec-ring {
       border-color: #38bdf8;
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
     }
 
     .overlay.jarvis .rec-dot {
       background: #38bdf8;
+    }
+
+    .overlay.jarvis {
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(56, 189, 248, 0.25);
     }
 
     /* Stonic-Grade Agent Telemetry & Personality Auras */
@@ -113,7 +124,8 @@
       background: #f43f5e;
     }
     .overlay.agent-tuktuk {
-      border-color: rgba(244, 63, 94, 0.3);
+      border-color: rgba(244, 63, 94, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(244, 63, 94, 0.25);
     }
 
     .overlay.agent-vision .rec-ring,
@@ -127,7 +139,8 @@
     }
     .overlay.agent-vision,
     .overlay.agent-andrew {
-      border-color: rgba(6, 182, 212, 0.3);
+      border-color: rgba(6, 182, 212, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(6, 182, 212, 0.25);
     }
 
     .overlay.agent-jenny .rec-ring {
@@ -138,7 +151,8 @@
       background: #10b981;
     }
     .overlay.agent-jenny {
-      border-color: rgba(16, 185, 129, 0.3);
+      border-color: rgba(16, 185, 129, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(16, 185, 129, 0.25);
     }
 
     .overlay.agent-brian .rec-ring {
@@ -149,7 +163,8 @@
       background: #f59e0b;
     }
     .overlay.agent-brian {
-      border-color: rgba(245, 158, 11, 0.3);
+      border-color: rgba(245, 158, 11, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(245, 158, 11, 0.25);
     }
 
     /* Thinking / Working / Synthesizing / Transcribing Core Particle Orb Animation */

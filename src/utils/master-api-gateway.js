@@ -44,22 +44,20 @@ class MasterApiGateway {
 
     // Default Preferred Models in Hierarchy Order
     this.groqModels = [
-      "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant",
-      "qwen/qwen3.6-27b",
       "qwen/qwen3.8-27b",
+      "qwen/qwen3.6-27b",
+      "groq/compound",
       "groq/compound-mini",
-      "groq/compound"
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-20b"
     ];
 
     this.geminiModels = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash",
-      "gemini-1.5-flash-8b",
-      "gemini-flash-latest",
-      "gemini-2.5-pro",
-      "gemini-pro-latest"
+      "gemini-3.6-flash",
+      "gemini-3.7-flash",
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-flash-latest"
     ];
 
     this.geminiClient = options.geminiClient || null;
@@ -305,7 +303,8 @@ class MasterApiGateway {
       const uniqueModels = [...new Set(candidateModels)];
 
       const rankedKeys = this.getRankedGroqKeys();
-      let lastError = null;
+      let groqLastError = null;
+      let geminiLastError = null;
 
       // Phase 1: Multiplex across Groq keys and models
       for (const model of uniqueModels) {
@@ -318,7 +317,9 @@ class MasterApiGateway {
               model: model,
               messages: messages,
               temperature: options.temperature !== undefined ? options.temperature : 0.3,
-              max_tokens: options.max_tokens || 1200
+              max_tokens: options.max_tokens || 1200,
+              presence_penalty: options.presence_penalty !== undefined ? options.presence_penalty : 0.6,
+              frequency_penalty: options.frequency_penalty !== undefined ? options.frequency_penalty : 0.5
             };
             if (model.includes("qwen") || model.includes("deepseek")) {
               payload.reasoning_effort = "none";
@@ -346,6 +347,7 @@ class MasterApiGateway {
               rawContent = rawContent
                 .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "")
                 .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "")
+                .replace(/^\s*(?:(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s+says|user\s+says|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, "")
                 .trim();
 
               if (rawContent.length > 0) {
@@ -368,13 +370,13 @@ class MasterApiGateway {
               const cooldownMs = isTpd ? (45 * 1000) : (retryAfter > 0 ? retryAfter * 1000 : 10000);
 
               this.setKeyCooldown(key, cooldownMs, isTpd ? "TPD limit" : "RPM rate-limit", model);
-              lastError = new Error(response.data?.error?.message || `429 on ${model}`);
+              groqLastError = new Error(response.data?.error?.message || `429 on ${model}`);
               continue; // Try next key / model
             }
 
-            lastError = new Error(response.data?.error?.message || `Groq HTTP ${response.status}`);
+            groqLastError = new Error(response.data?.error?.message || `Groq HTTP ${response.status} on ${model}`);
           } catch (err) {
-            lastError = err;
+            groqLastError = err;
             const meta = this.keyTelemetry.get(key);
             if (meta) meta.consecutiveFailures = (meta.consecutiveFailures || 0) + 1;
           }
@@ -401,12 +403,16 @@ class MasterApiGateway {
               };
             }
           } catch (gemErr) {
-            lastError = gemErr;
+            geminiLastError = gemErr;
           }
         }
       }
 
-      throw lastError || new Error("All Groq master/sub keys and Gemini fallback keys exhausted");
+      const errParts = [];
+      if (groqLastError) errParts.push(`Groq: ${groqLastError.message || groqLastError}`);
+      if (geminiLastError) errParts.push(`Gemini: ${geminiLastError.message || geminiLastError}`);
+      const finalMsg = errParts.length > 0 ? errParts.join(" | ") : "All Groq master/sub keys and Gemini fallback keys exhausted";
+      throw new Error(finalMsg);
     } finally {
       this.activeInteractiveRequests = Math.max(0, this.activeInteractiveRequests - 1);
     }

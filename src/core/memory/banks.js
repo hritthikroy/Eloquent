@@ -3,7 +3,7 @@
  * 
  * Provides cross-agent associative knowledge retention, deep research archiving,
  * multi-turn episodic continuity, and salience-weighted memory synchronization
- * across Andrew, Jenny, Tuk Tuk, and Brian.
+ * across Vision, Jenny, Tuk Tuk, and Brian.
  */
 
 const fs = require('fs');
@@ -53,7 +53,7 @@ class NeuralMeshMemoryBank extends EventEmitter {
     this.researchVault = new Map(); // Deep research outputs & web scrape archives
     this.meshIndex = new Map();     // Cross-agent associative knowledge graph
 
-    this.squadAgents = ['agent_andrew', 'agent_jenny', 'agent_tuk_tuk', 'agent_brian'];
+    this.squadAgents = ['agent_vision', 'agent_jenny', 'agent_tuk_tuk', 'agent_brian'];
     this.telemetry = {
       totalIngestions: 0,
       totalQueries: 0,
@@ -77,10 +77,10 @@ class NeuralMeshMemoryBank extends EventEmitter {
    * Ingest a structured deep research report into the research vault and neural mesh.
    * 
    * @param {Object} report - Deep research report from Go scraper or agent synthesis
-   * @param {string} [originAgent='agent_andrew']
+   * @param {string} [originAgent='agent_vision']
    * @returns {Object} node - Ingested research node
    */
-  ingestResearch(report, originAgent = 'agent_andrew') {
+  ingestResearch(report, originAgent = 'agent_vision') {
     if (!report || typeof report !== 'object') {
       throw new Error('Research report must be a non-null object');
     }

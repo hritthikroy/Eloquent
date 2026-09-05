@@ -3,7 +3,7 @@
  * 
  * Implements high-frequency background worker threads for asynchronous task
  * self-optimization, multi-agent state synchronization, and team bonding metrics
- * across Andrew, Tuk Tuk, Jenny, and Brian.
+ * across Vision, Tuk Tuk, Jenny, and Brian.
  */
 
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');

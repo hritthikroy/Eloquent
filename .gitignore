@@ -6,10 +6,15 @@ dist/
 dist-ts/
 .cache/
 
-# Environment variables
+# Environment variables & Secrets
 .env
 .env.production
 .env.local
+secrets-replace.txt
+remove-secrets.sh
+coverage.out
+generated-websites/
+
 
 # macOS
 .DS_Store

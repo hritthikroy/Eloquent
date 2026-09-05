@@ -1,8 +1,8 @@
 {
   "$schema": "./skill-schema.json",
-  "agentId": "agent_andrew",
-  "name": "Andrew",
-  "role": "Lead Software Engineer & Antigravity Auto-Mode Coding Agent",
+  "agentId": "agent_vision",
+  "name": "Vision",
+  "role": "Lead Systems Architect & Vision AI",
   "version": "2.1.0",
   "enabled": true,
   "lastUpdated": 1788489000000,

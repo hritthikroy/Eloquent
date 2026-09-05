@@ -149,7 +149,7 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
     if (combined.includes('electron') || combined.includes('main') || combined.includes('ipc') || combined.includes('overlay') || combined.includes('window')) {
       return 'electron_ipc';
     }
-    if (combined.includes('brain') || combined.includes('agent') || combined.includes('memory') || combined.includes('tuktuk') || combined.includes('andrew')) {
+    if (combined.includes('brain') || combined.includes('agent') || combined.includes('memory') || combined.includes('tuktuk') || combined.includes('vision') || combined.includes('andrew')) {
       return 'agent_brain';
     }
     return 'audio_backend';
@@ -209,7 +209,7 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
         { path: 'src/utils/behavior-mode-engine.js', description: '24/7 circadian circadian rhythm and operating mode scheduler' }
       ],
       quality: [
-        'Enforce strict persona isolation: Tuk Tuk strictly addresses user as "babe", Andrew as "bro", Brian as "Hritthik", Jenny as "Hritthik". Intimate tokens strictly forbidden for all non-Tuk Tuk agents.',
+        'Enforce strict persona isolation: Tuk Tuk strictly addresses user as "babe", Vision as "bro", Brian as "Hritthik", Jenny as "Hritthik". Intimate tokens strictly forbidden for all non-Tuk Tuk agents.',
         'Verify zero deadlocks during full-duplex turn transitions under simulated load.'
       ]
     };

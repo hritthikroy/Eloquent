@@ -114,7 +114,7 @@ export function executeReconciliation(
   // Clone UI state to preserve immutability
   const reconciledState: ConversationalState = {
     turnId: uiState.turnId || `turn-${now}`,
-    participants: [...(uiState.participants || ['user', 'Tuk Tuk', 'Andrew'])],
+    participants: [...(uiState.participants || ['user', 'Tuk Tuk', 'Vision'])],
     lastMessageTimestamp: uiState.lastMessageTimestamp || now,
     contextBuffer: Array.isArray(uiState.contextBuffer)
       ? uiState.contextBuffer.map(t => ({ ...t }))
@@ -262,7 +262,7 @@ const WORKER_SCRIPT = `
 
     const reconciledState = {
       turnId: uiState.turnId || ('turn-' + now),
-      participants: [...(uiState.participants || ['user', 'Tuk Tuk', 'Andrew'])],
+      participants: [...(uiState.participants || ['user', 'Tuk Tuk', 'Vision'])],
       lastMessageTimestamp: uiState.lastMessageTimestamp || now,
       contextBuffer: Array.isArray(uiState.contextBuffer)
         ? uiState.contextBuffer.map(t => ({ ...t }))
@@ -556,7 +556,7 @@ export class ConversationStateManager {
   public async verifyIntegrity(uiState?: ConversationalState): Promise<StateAuditReport> {
     const stateToVerify: ConversationalState = uiState || {
       turnId: `turn-${Date.now()}`,
-      participants: ['user', 'Tuk Tuk', 'Andrew'],
+      participants: ['user', 'Tuk Tuk', 'Vision'],
       lastMessageTimestamp: Date.now(),
       contextBuffer: [],
       rateLimitInfo: {

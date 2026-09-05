@@ -168,8 +168,14 @@ class ElectronLanguageBridge {
       return null;
     }
 
-    const detection = this.detector.detect(text);
-    if (detection && detection.confidence >= 0.65 && detection.locale !== this.activeLocale) {
+    const trimmed = text.trim();
+    // Guard: Prevent language switching on short affirmations, greetings or fragments
+    if (/^(?:ok|okay|yeah|yep|sure|cool|nice|yes|no|babe|bro|chief|hi|hello|hey)[.!?]?$/i.test(trimmed)) {
+      return { locale: this.activeLocale, confidence: 1.0, isRomanized: false };
+    }
+
+    const detection = this.detector.detect(trimmed);
+    if (detection && detection.confidence >= 0.80 && detection.locale !== this.activeLocale) {
       console.log(`🌍 [LanguageBridge] Auto-detected language "${detection.locale}" (${detection.confidence * 100}% confidence) -> switching pipeline`);
       this.setLocale(detection.locale, { source: 'auto', confidence: detection.confidence }).catch(err => {
         console.warn('[LanguageBridge] Failed auto-switching locale:', err.message);

@@ -38,7 +38,8 @@ const POST_MERGE_HASH_MANIFEST: Record<string, string> = {
   'src/services/updater.js': 'dcfbff462ca2038ce2ccd096943522310a038e6b7e047fe7b7371d68c7eb9b3b',
   'src/utils/file-integrity.js': '1bf846858912b3f22b48277cf91ac5e7e1f2f971a3fdee1ddefd0fac5a8bd8f8',
   'src/core/fs-manager.js': '33d118a7abe780884e6030033659af74df307c8c20bd141ba6df6a197e185c53',
-  'config/skills/andrew.json': 'a1a4bd44911ee1a10d6b7855de6dc1e72d08d42518a7052e7e8211b52ec17c2e',
+  'config/skills/andrew.json': '104a99ee9125000d15d8b3a5f06b973786cebd29ab295a81323b9b915a0d2885',
+  'config/skills/vision.json': '5b762955a04bbc0fc978308a2725fd6119b8e574095ea833319aed78191b4e2c',
   'backend-go/internal/audio/processor.go': 'dc023fc3682179eb2e65b5ed619074e0ab8844f03cd18fd3b628935ee760e076',
   'backend-go/internal/audio/streamer.go': 'dc9742b397905e97158dfc5a72ba1536e6cca9c23413dbe025004bf32898f7ae',
   'backend-go/pkg/bridge/ipc.go': '8575cc1b74b2fd7230cae4338c598af68bcfaf374c078e4a62e7123dcd2d0f00'

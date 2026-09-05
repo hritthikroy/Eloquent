@@ -109,7 +109,7 @@ export class ConversationManager extends EventEmitter {
     // Default initial state
     this.state = {
       turnId: `turn-${Date.now()}`,
-      participants: ['user', 'Tuk Tuk', 'Andrew'],
+      participants: ['user', 'Tuk Tuk', 'Vision'],
       lastMessageTimestamp: Date.now(),
       contextBuffer: [],
       rateLimitInfo: {

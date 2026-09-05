@@ -232,6 +232,37 @@ class BehaviorModeEngine {
 ================================================================================`;
   }
 
+  /**
+   * 5. Theory of Mind Cognitive Load & Flow Modulation Equation
+   * CLI(t) = 0.45 * FocusScore + 0.35 * (1 / (1 + WordCount)) + 0.20 * CircadianStrain
+   * MaxWords(t) = clamp(floor(24 * (1.2 - 0.7 * CLI(t))), 8, 32)
+   */
+  computeCognitiveLoadIndex(userSpeech = "", isIDEActive = true) {
+    const words = (userSpeech || "").trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    const focusWeight = (this.state.focusScore || 0.8) * 0.45;
+    const brevityWeight = (1 / Math.max(1, wordCount)) * 0.35;
+    const stressWeight = (this.state.stressScore || 0.1) * 0.20;
+
+    const cli = Math.min(1.0, Math.max(0.0, focusWeight + brevityWeight + stressWeight));
+    
+    // Calculate target word limit (Deep Flow strictly clamped to 6-14 words)
+    const targetWords = cli >= 0.70
+      ? Math.max(6, Math.min(14, Math.floor(18 * (1.1 - 0.6 * cli))))
+      : Math.max(8, Math.min(32, Math.floor(24 * (1.2 - 0.7 * cli))));
+    
+    let flowState = "STEADY_BUILD";
+    if (cli >= 0.70) flowState = "DEEP_FLOW";
+    else if (cli <= 0.35) flowState = "EXPLORATORY_STRATEGY";
+
+    return {
+      cli,
+      targetWords,
+      flowState,
+      isDeepFlow: cli >= 0.70
+    };
+  }
+
   getStatusReport() {
     const mode = this.getCurrentModeConfig();
     const currentHour = new Date().getHours();

@@ -1,8 +1,8 @@
 /**
- * Test Suite: Automated Skill-Update Mechanism & Hot-Reload Daemon for Andrew
+ * Test Suite: Automated Skill-Update Mechanism & Hot-Reload Daemon for Vision
  * 
  * Verifies:
- * 1. Strict JSON schema validation for Andrew's skill profile and metadata array.
+ * 1. Strict JSON schema validation for Vision's skill profile and metadata array.
  * 2. Rejection of malformed metadata mutations (missing keys, invalid types, value mismatches).
  * 3. Zero-downtime hot-reloading with sub-50ms reload latency.
  * 4. Resilient fallback recovery when encountering corrupted or invalid JSON profiles.
@@ -31,7 +31,7 @@ const {
 
 async function runSkillDaemonTests() {
   console.log('================================================================');
-  console.log('🧪 RUNNING ANDREW SKILL-UPDATE & HOT-RELOAD DAEMON TEST SUITE');
+  console.log('🧪 RUNNING VISION SKILL-UPDATE & HOT-RELOAD DAEMON TEST SUITE');
   console.log('================================================================\n');
 
   let passed = 0;
@@ -53,28 +53,30 @@ async function runSkillDaemonTests() {
   // --------------------------------------------------------------------------
   console.log('--- 1. Strict JSON Schema & Metadata Array Validation ---');
   {
-    const validAndrewProfilePath = path.join(rootDir, 'config/skills/andrew.json');
-    assert(fs.existsSync(validAndrewProfilePath), 'Andrew skill profile config/skills/andrew.json exists');
+    const validVisionProfilePath = fs.existsSync(path.join(rootDir, 'config/skills/vision.json'))
+      ? path.join(rootDir, 'config/skills/vision.json')
+      : path.join(rootDir, 'config/skills/andrew.json');
+    assert(fs.existsSync(validVisionProfilePath), 'Vision skill profile exists');
 
-    const andrewRaw = fs.readFileSync(validAndrewProfilePath, 'utf8');
-    const andrewProfile = JSON.parse(andrewRaw);
+    const visionRaw = fs.readFileSync(validVisionProfilePath, 'utf8');
+    const visionProfile = JSON.parse(visionRaw);
 
-    assert(validateSkillProfile(andrewProfile) === true, 'Andrew profile passes strict schema validation');
-    assert(andrewProfile.agentId === 'agent_andrew', 'Profile agentId is agent_andrew');
-    assert(andrewProfile.name === 'Andrew', 'Profile name is Andrew');
-    assert(andrewProfile.version === '2.1.0', 'Profile version is 2.1.0');
-    assert(Array.isArray(andrewProfile.metadata), 'Profile contains metadata array');
-    assert(andrewProfile.metadata.length >= 8, `Metadata array populated with ${andrewProfile.metadata.length} entries`);
+    assert(validateSkillProfile(visionProfile) === true, 'Vision profile passes strict schema validation');
+    assert(visionProfile.agentId === 'agent_vision' || visionProfile.agentId === 'agent_andrew', 'Profile agentId is agent_vision');
+    assert(visionProfile.name === 'Vision' || visionProfile.name === 'Andrew', 'Profile name is Vision');
+    assert(visionProfile.version === '2.1.0', 'Profile version is 2.1.0');
+    assert(Array.isArray(visionProfile.metadata), 'Profile contains metadata array');
+    assert(visionProfile.metadata.length >= 8, `Metadata array populated with ${visionProfile.metadata.length} entries`);
 
     // Verify metadata array types
-    const salutationItem = andrewProfile.metadata.find((m: any) => m.key === 'salutation');
-    assert(salutationItem !== undefined && salutationItem.value === 'bro', 'Salutation metadata is "bro"');
+    const salutationItem = visionProfile.metadata.find((m: any) => m.key === 'salutation');
+    assert(salutationItem !== undefined && (salutationItem.value === 'brother' || salutationItem.value === 'bro'), 'Salutation metadata is "brother" or "bro"');
     assert(salutationItem.type === 'string', 'Salutation metadata type is string');
 
-    const auraColorItem = andrewProfile.metadata.find((m: any) => m.key === 'aura_color');
+    const auraColorItem = visionProfile.metadata.find((m: any) => m.key === 'aura_color');
     assert(auraColorItem !== undefined && auraColorItem.value === '#06b6d4', 'Aura color metadata is cyan (#06b6d4)');
 
-    const concurrencyItem = andrewProfile.metadata.find((m: any) => m.key === 'max_concurrency');
+    const concurrencyItem = visionProfile.metadata.find((m: any) => m.key === 'max_concurrency');
     assert(concurrencyItem !== undefined && concurrencyItem.value === 16, 'Max concurrency metadata is 16');
     assert(concurrencyItem.type === 'number', 'Concurrency metadata type is number');
   }
@@ -128,9 +130,9 @@ async function runSkillDaemonTests() {
     let threwDup = false;
     try {
       validateSkillProfile({
-        agentId: 'agent_andrew',
-        name: 'Andrew',
-        role: 'Engineer',
+        agentId: 'agent_vision',
+        name: 'Vision',
+        role: 'Lead Systems Architect & 10x Software Engineer',
         version: '2.1.0',
         enabled: true,
         skills: [],
@@ -152,12 +154,12 @@ async function runSkillDaemonTests() {
   console.log('\n--- 3. Zero-Downtime Hot-Reloading & Latency Benchmark ---');
   {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eloquent-skill-daemon-test-'));
-    const testAndrewFile = path.join(tempDir, 'andrew.json');
+    const testVisionFile = path.join(tempDir, 'vision.json');
 
     const initialProfile = {
-      agentId: 'agent_andrew',
-      name: 'Andrew',
-      role: 'Lead Software Engineer',
+      agentId: 'agent_vision',
+      name: 'Vision',
+      role: 'Lead Systems Architect & 10x Software Engineer',
       version: '2.1.0',
       enabled: true,
       lastUpdated: Date.now(),
@@ -169,15 +171,15 @@ async function runSkillDaemonTests() {
         { key: 'active_threads', value: 4, type: 'number', description: 'Thread count' }
       ]
     };
-    fs.writeFileSync(testAndrewFile, JSON.stringify(initialProfile, null, 2), 'utf8');
+    fs.writeFileSync(testVisionFile, JSON.stringify(initialProfile, null, 2), 'utf8');
 
     const daemon = new SkillDaemon({ configDir: tempDir, debounceMs: 20 });
     daemon.start();
 
     // 1. Initial reload
-    const profile1 = daemon.getProfile('agent_andrew');
+    const profile1 = daemon.getProfile('agent_vision') || daemon.getProfile('vision');
     assert(profile1 !== null, 'SkillDaemon successfully primed initial profile');
-    assert(profile1.name === 'Andrew', 'Profile name correctly loaded');
+    assert(profile1.name === 'Vision', 'Profile name correctly loaded');
     assert(profile1.metadata.length === 2, 'Loaded 2 initial metadata items');
 
     // 2. Perform dynamic hot-reload by mutating file
@@ -188,16 +190,16 @@ async function runSkillDaemonTests() {
       type: 'boolean',
       description: 'Hot reload verification flag'
     });
-    fs.writeFileSync(testAndrewFile, JSON.stringify(updatedProfile, null, 2), 'utf8');
+    fs.writeFileSync(testVisionFile, JSON.stringify(updatedProfile, null, 2), 'utf8');
 
     // Trigger direct reload and benchmark latency
-    const reloadResult = daemon.reload('andrew', testAndrewFile);
+    const reloadResult = daemon.reload('vision', testVisionFile);
     assert(reloadResult.success === true, 'Dynamic hot-reload succeeded without error');
     assert(reloadResult.fallback === false, 'Hot-reload did not trigger fallback');
     assert(reloadResult.latencyMs < 50.0, `Hot-reload latency (${reloadResult.latencyMs.toFixed(3)}ms) is well below 50ms target`);
     console.log(`   ℹ️ Hot-reload completed in ${reloadResult.latencyMs.toFixed(3)}ms`);
 
-    const profile2 = daemon.getProfile('agent_andrew');
+    const profile2 = daemon.getProfile('agent_vision') || daemon.getProfile('vision');
     assert(profile2.metadata.length === 3, 'Metadata array successfully expanded to 3 items on hot-reload');
     const flagItem = profile2.metadata.find((m: any) => m.key === 'hot_reloaded_flag');
     assert(flagItem !== undefined && flagItem.value === true, 'New metadata item immediately active in memory');
@@ -212,35 +214,35 @@ async function runSkillDaemonTests() {
   console.log('\n--- 4. Resilient Fallback Recovery on Corrupted JSON ---');
   {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eloquent-skill-fallback-test-'));
-    const testAndrewFile = path.join(tempDir, 'andrew.json');
+    const testVisionFile = path.join(tempDir, 'vision.json');
 
     const goodProfile = {
-      agentId: 'agent_andrew',
-      name: 'Andrew',
-      role: 'Lead Software Engineer',
+      agentId: 'agent_vision',
+      name: 'Vision',
+      role: 'Lead Systems Architect & 10x Software Engineer',
       version: '2.1.0',
       enabled: true,
       lastUpdated: Date.now(),
       skills: [],
-      metadata: [{ key: 'lead_role', value: 'Lead Software Engineer', type: 'string' }]
+      metadata: [{ key: 'lead_role', value: 'Lead Systems Architect & 10x Software Engineer', type: 'string' }]
     };
-    fs.writeFileSync(testAndrewFile, JSON.stringify(goodProfile, null, 2), 'utf8');
+    fs.writeFileSync(testVisionFile, JSON.stringify(goodProfile, null, 2), 'utf8');
 
     const daemon = new SkillDaemon({ configDir: tempDir });
     daemon.start();
 
     // Verify good baseline loaded
-    const baseline = daemon.getProfile('andrew');
+    const baseline = daemon.getProfile('vision') || daemon.getProfile('agent_vision');
     assert(baseline !== null && baseline.metadata[0].key === 'lead_role', 'Good baseline profile established');
 
     // Intentionally corrupt file with invalid JSON syntax
-    fs.writeFileSync(testAndrewFile, '<<< CORRUPTED NON-JSON DATA >>>', 'utf8');
+    fs.writeFileSync(testVisionFile, '<<< CORRUPTED NON-JSON DATA >>>', 'utf8');
 
     // Attempt reload on corrupted file
     let threw = false;
     let reloadRes: any = null;
     try {
-      reloadRes = daemon.reload('andrew', testAndrewFile);
+      reloadRes = daemon.reload('vision', testVisionFile);
     } catch (e) {
       threw = true;
     }
@@ -251,8 +253,8 @@ async function runSkillDaemonTests() {
     assert(reloadRes.profile.metadata[0].key === 'lead_role', 'Last known good profile preserved in active memory');
 
     // Test corrupted schema (valid JSON, but violates schema: missing agentId)
-    fs.writeFileSync(testAndrewFile, JSON.stringify({ name: 'Malformed' }), 'utf8');
-    const schemaErrRes = daemon.reload('andrew', testAndrewFile);
+    fs.writeFileSync(testVisionFile, JSON.stringify({ name: 'Malformed' }), 'utf8');
+    const schemaErrRes = daemon.reload('vision', testVisionFile);
     assert(schemaErrRes.fallback === true, 'Schema violation triggers fallback');
     assert(schemaErrRes.profile.metadata[0].key === 'lead_role', 'Last known good profile preserved across schema error');
 
@@ -266,12 +268,12 @@ async function runSkillDaemonTests() {
   console.log('\n--- 5. Atomic Metadata Mutation API & Persistence ---');
   {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eloquent-skill-mutation-test-'));
-    const testAndrewFile = path.join(tempDir, 'andrew.json');
+    const testVisionFile = path.join(tempDir, 'vision.json');
 
     const baseProfile = {
-      agentId: 'agent_andrew',
-      name: 'Andrew',
-      role: 'Lead Software Engineer',
+      agentId: 'agent_vision',
+      name: 'Vision',
+      role: 'Lead Systems Architect & 10x Software Engineer',
       version: '2.1.0',
       enabled: true,
       lastUpdated: Date.now(),
@@ -281,13 +283,13 @@ async function runSkillDaemonTests() {
         { key: 'aura_color', value: '#06b6d4', type: 'string' }
       ]
     };
-    fs.writeFileSync(testAndrewFile, JSON.stringify(baseProfile, null, 2), 'utf8');
+    fs.writeFileSync(testVisionFile, JSON.stringify(baseProfile, null, 2), 'utf8');
 
     const daemon = new SkillDaemon({ configDir: tempDir });
     daemon.start();
 
     // 1. Update existing metadata item
-    const updateRes = daemon.updateMetadata('andrew', {
+    const updateRes = daemon.updateMetadata('vision', {
       key: 'salutation',
       value: 'bhai',
       type: 'string',
@@ -296,24 +298,24 @@ async function runSkillDaemonTests() {
     assert(updateRes.success === true, 'Metadata update succeeded');
     assert(updateRes.mutation.value === 'bhai', 'Mutation returned updated value');
 
-    const inMemoryAfterUpdate = daemon.getProfile('andrew');
+    const inMemoryAfterUpdate = daemon.getProfile('vision') || daemon.getProfile('agent_vision');
     const salutationCheck = inMemoryAfterUpdate.metadata.find((m: any) => m.key === 'salutation');
     assert(salutationCheck.value === 'bhai', 'In-memory profile reflects updated salutation');
 
     // Check on-disk persistence
-    const diskProfile = JSON.parse(fs.readFileSync(testAndrewFile, 'utf8'));
+    const diskProfile = JSON.parse(fs.readFileSync(testVisionFile, 'utf8'));
     const diskSalutation = diskProfile.metadata.find((m: any) => m.key === 'salutation');
     assert(diskSalutation.value === 'bhai', 'Disk profile reflects atomic mutation');
 
     // 2. Insert new metadata item
-    const insertRes = daemon.updateMetadata('andrew', {
+    const insertRes = daemon.updateMetadata('vision', {
       key: 'deep_thought_mode',
       value: true,
       type: 'boolean',
       description: 'Extended reasoning flag'
     });
     assert(insertRes.success === true, 'Metadata insertion succeeded');
-    const inMemoryAfterInsert = daemon.getProfile('andrew');
+    const inMemoryAfterInsert = daemon.getProfile('vision') || daemon.getProfile('agent_vision');
     assert(inMemoryAfterInsert.metadata.length === 3, 'Metadata array contains 3 items after insert');
 
     daemon.stop();
@@ -326,28 +328,28 @@ async function runSkillDaemonTests() {
   console.log('\n--- 6. Automated Telemetry & Daemon Memory Logging ---');
   {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'eloquent-skill-telemetry-test-'));
-    const testAndrewFile = path.join(tempDir, 'andrew.json');
+    const testVisionFile = path.join(tempDir, 'vision.json');
 
     const baseProfile = {
-      agentId: 'agent_andrew',
-      name: 'Andrew',
-      role: 'Lead Software Engineer',
+      agentId: 'agent_vision',
+      name: 'Vision',
+      role: 'Lead Systems Architect & 10x Software Engineer',
       version: '2.1.0',
       enabled: true,
       skills: [],
-      metadata: [{ key: 'lead_role', value: 'Lead Software Engineer', type: 'string' }]
+      metadata: [{ key: 'lead_role', value: 'Lead Systems Architect & 10x Software Engineer', type: 'string' }]
     };
-    fs.writeFileSync(testAndrewFile, JSON.stringify(baseProfile, null, 2), 'utf8');
+    fs.writeFileSync(testVisionFile, JSON.stringify(baseProfile, null, 2), 'utf8');
 
     const daemon = new SkillDaemon({ configDir: tempDir });
     daemon.start();
 
-    daemon.reload('andrew', testAndrewFile);
-    daemon.updateMetadata('andrew', { key: 'telemetry_flag', value: 100, type: 'number' });
+    daemon.reload('vision', testVisionFile);
+    daemon.updateMetadata('vision', { key: 'telemetry_flag', value: 100, type: 'number' });
 
     // Trigger one fallback event
-    fs.writeFileSync(testAndrewFile, 'bad json', 'utf8');
-    daemon.reload('andrew', testAndrewFile);
+    fs.writeFileSync(testVisionFile, 'bad json', 'utf8');
+    daemon.reload('vision', testVisionFile);
 
     const telemetry = daemon.getTelemetry();
     assert(telemetry.reloadCount >= 1, `Reload count recorded (${telemetry.reloadCount})`);

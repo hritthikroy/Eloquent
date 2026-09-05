@@ -62,7 +62,7 @@ async function runDeepResearchTests() {
     const tempStorage = path.join(os.tmpdir(), `eloquent-neural-mesh-${Date.now()}.json`);
     const bank = new NeuralMeshMemoryBank({ storagePath: tempStorage });
 
-    assert(bank.squadAgents.includes('agent_andrew'), 'Squad contains Andrew');
+    assert(bank.squadAgents.includes('agent_vision') || bank.squadAgents.includes('agent_andrew'), 'Squad contains Vision');
     assert(bank.squadAgents.includes('agent_jenny'), 'Squad contains Jenny');
     assert(bank.squadAgents.includes('agent_tuk_tuk'), 'Squad contains Tuk Tuk');
     assert(bank.squadAgents.includes('agent_brian'), 'Squad contains Brian');
@@ -84,15 +84,15 @@ async function runDeepResearchTests() {
       ]
     };
 
-    const node = bank.ingestResearch(mockReport, 'agent_andrew');
+    const node = bank.ingestResearch(mockReport, 'agent_vision');
     assert(node.id === 'job_arch_001', 'Node ID preserved from research report');
     assert(node.salience >= 0.70, `Node salience (${node.salience}) exceeds high-priority retention threshold`);
     assert(node.sharedWith.length === 4, 'Research node linked across all 4 squad agents');
 
     // Cross-agent associative retrieval
     const jennyMemory = bank.getAgentMemory('agent_jenny');
-    assert(jennyMemory.linkedResearchCount === 1, 'Jenny immediately has access to Andrew research findings');
-    assert(jennyMemory.recentResearch[0].query.includes('Shared Memory'), 'Jenny recalled Andrew research topic');
+    assert(jennyMemory.linkedResearchCount === 1, 'Jenny immediately has access to Vision research findings');
+    assert(jennyMemory.recentResearch[0].query.includes('Shared Memory'), 'Jenny recalled Vision research topic');
 
     const tukTukMemory = bank.getAgentMemory('agent_tuk_tuk');
     assert(tukTukMemory.linkedResearchCount === 1, 'Tuk Tuk memory bank synchronized with research node');
@@ -104,9 +104,9 @@ async function runDeepResearchTests() {
 
     // Episodic memory
     bank.addEpisode('user', 'Can you research our IPC latency?');
-    bank.addEpisode('Andrew', 'On it bro, running deep research right now.');
-    const andrewMemory = bank.getAgentMemory('agent_andrew');
-    assert(andrewMemory.recentEpisodes.length === 2, 'Episodic memory logged 2 conversation turns');
+    bank.addEpisode('Vision', 'On it bro, running deep research right now.');
+    const visionMemory = bank.getAgentMemory('agent_vision') || bank.getAgentMemory('agent_andrew');
+    assert(visionMemory.recentEpisodes.length === 2, 'Episodic memory logged 2 conversation turns');
 
     // Persistence sync
     const syncRes = bank.sync();

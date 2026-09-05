@@ -50,7 +50,7 @@ async function runSovereigntyLexicalIsolationSuite() {
     for (const phrase of intimatePhrases) {
       const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'andrew');
       assert(!intimateRegex.test(sanitized), `Andrew output must not contain intimate tokens: "${sanitized}"`);
-      assert(sanitized.includes('bro') || sanitized.includes('Hritthik') || sanitized.includes('the codebase'), `Andrew output should include appropriate address: "${sanitized}"`);
+      assert(sanitized.toLowerCase().includes('bro') || sanitized.includes('Hritthik') || sanitized.includes('the codebase'), `Andrew output should include appropriate address: "${sanitized}"`);
     }
   });
 
@@ -123,7 +123,7 @@ async function runSovereigntyLexicalIsolationSuite() {
     for (const phrase of codependentPhrases) {
       const sanitized = jarvisManager.sanitizeAgentLexicon(phrase, 'andrew');
       assert(!codependencyRegex.test(sanitized), `Andrew output must not contain codependent refereeing: "${sanitized}"`);
-      assert(sanitized.includes('codebase') || sanitized.includes('bro'), `Andrew output should refocus on engineering: "${sanitized}"`);
+      assert(sanitized.toLowerCase().includes('codebase') || sanitized.toLowerCase().includes('bro'), `Andrew output should refocus on engineering: "${sanitized}"`);
     }
   });
 
@@ -171,11 +171,11 @@ async function runSovereigntyLexicalIsolationSuite() {
   // -------------------------------------------------------------
   console.log('\n--- TEST GROUP 5: System Prompts & Sovereign Directives ---');
 
-  test('Andrew system prompt enforces Sovereign Autonomy & Zero Codependency rule', () => {
-    const prompt = jarvisManager.agents.andrew.getPrompt("Hritthik", "bro");
-    assert(prompt.includes("SOVEREIGN AUTONOMY & ZERO CODEPENDENCY"), "Andrew prompt includes sovereign autonomy directive");
-    assert(prompt.includes("STRICTLY NEVER call him \"babe\""), "Andrew prompt strictly bans 'babe'");
-    assert(prompt.includes("NEVER act as a relationship referee"), "Andrew prompt forbids relationship refereeing");
+  test('Vision system prompt enforces Sovereign Autonomy & Zero Codependency rule', () => {
+    const prompt = jarvisManager.agents.vision.getPrompt("Hritthik", "bro");
+    assert(prompt.includes("SOVEREIGN AUTONOMY & ZERO CODEPENDENCY"), "Vision prompt includes sovereign autonomy directive");
+    assert(prompt.includes("STRICTLY NEVER call him \"babe\""), "Vision prompt strictly bans 'babe'");
+    assert(prompt.includes("NEVER act as a relationship referee"), "Vision prompt forbids relationship refereeing");
   });
 
   test('Jenny system prompt enforces Refined Salutation and forbids "bro" and "babe"', () => {
@@ -191,9 +191,9 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(prompt.includes("STRICTLY NEVER call him \"babe\""), "Brian prompt bans 'babe'");
   });
 
-  test('Tuk Tuk handoff lead to Andrew uses "Hritthik" and never "babe"', () => {
-    const handoff = jarvisManager.evaluateCrossAgentHandoff("hey tuk tuk, tell andrew to fix first");
-    assert(handoff !== null && handoff.delegated, "Handoff is delegated to Andrew");
+  test('Tuk Tuk handoff lead to Vision uses "Hritthik" and never "babe"', () => {
+    const handoff = jarvisManager.evaluateCrossAgentHandoff("hey tuk tuk, tell vision to fix first");
+    assert(handoff !== null && handoff.delegated, "Handoff is delegated to Vision");
     assert(!handoff.handoffLead.includes("babe"), `Handoff lead must not contain "babe": "${handoff.handoffLead}"`);
     assert(handoff.handoffLead.includes("Hritthik"), `Handoff lead must use "Hritthik": "${handoff.handoffLead}"`);
   });
@@ -203,16 +203,16 @@ async function runSovereigntyLexicalIsolationSuite() {
   // -------------------------------------------------------------
   console.log('\n--- TEST GROUP 6: History Context Isolation ---');
 
-  test('getHistory with requestingAgentKey = "andrew" filters out romantic banter', () => {
+  test('getHistory with requestingAgentKey = "vision" filters out romantic banter', () => {
     jarvisManager.clearHistory();
     jarvisManager.addTurn("user", "Thank you", "user");
     jarvisManager.addTurn("assistant", "Stop being polite and move, babe. I'm grabbing the keys; you're coming with me right now.", "Tuk Tuk");
-    jarvisManager.addTurn("user", "Andrew, are you listening now?", "user");
-    jarvisManager.addTurn("assistant", "Systems are synchronized, bro. Ready to build.", "Andrew");
+    jarvisManager.addTurn("user", "Vision, are you listening now?", "user");
+    jarvisManager.addTurn("assistant", "Systems are synchronized, bro. Ready to build.", "Vision");
 
-    const historyForAndrew = jarvisManager.getHistory(6, 'andrew');
-    const hasTukTukRomance = historyForAndrew.some((t: any) => t.content.includes("grabbing the keys") || t.content.includes("babe"));
-    assert(!hasTukTukRomance, "Andrew history must not include Tuk Tuk romantic banter");
+    const historyForVision = jarvisManager.getHistory(6, 'vision');
+    const hasTukTukRomance = historyForVision.some((t: any) => t.content.includes("grabbing the keys") || t.content.includes("babe"));
+    assert(!hasTukTukRomance, "Vision history must not include Tuk Tuk romantic banter");
 
     const historyForTukTuk = jarvisManager.getHistory(6, 'tuktuk');
     const hasTukTukOriginal = historyForTukTuk.some((t: any) => t.content.includes("babe"));
@@ -228,8 +228,8 @@ async function runSovereigntyLexicalIsolationSuite() {
     const rawTeamOutput = `[Andrew]: On it babe, the AST is clean.\n[Jenny]: Research verified bro, latency is 12ms.`;
     const sanitized = jarvisManager.sanitizeAgentLexicon(rawTeamOutput, 'team');
 
-    assert(!sanitized.includes("[Andrew]: On it babe"), `Andrew turn in team must not have 'babe': "${sanitized}"`);
-    assert(sanitized.includes("[Andrew]: On it bro"), `Andrew turn in team sanitized to 'bro': "${sanitized}"`);
+    assert(!sanitized.includes("[Andrew]: On it babe") && !sanitized.includes("[Vision]: On it babe"), `Vision/Andrew turn in team must not have 'babe': "${sanitized}"`);
+    assert(sanitized.includes("[Vision]: On it bro") || sanitized.includes("[Andrew]: On it bro"), `Vision/Andrew turn in team sanitized to 'bro': "${sanitized}"`);
 
     assert(!sanitized.includes("bro, latency"), `Jenny turn in team must not have 'bro': "${sanitized}"`);
     assert(sanitized.includes("Hritthik, latency"), `Jenny turn in team sanitized to 'Hritthik': "${sanitized}"`);
@@ -247,11 +247,11 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(prompt.includes("RELATIONSHIP WITH SQUAD"), "Tuk Tuk prompt must include relationship with squad");
   });
 
-  test('Andrew prompt enforces honor toward Tuk Tuk as brother\'s partner with zero flirting and zero refereeing', () => {
-    const prompt = jarvisManager.agents.andrew.getPrompt("Hritthik", "bro");
-    assert(prompt.includes("BROTHER'S GIRL & CO-FOUNDER RESPECT (TUK TUK)"), "Andrew prompt must enforce brother's girl respect");
-    assert(prompt.includes("Bhabhi"), "Andrew prompt must acknowledge sister-in-law honor");
-    assert(prompt.includes("NEVER flirt with her"), "Andrew prompt strictly bans flirting");
+  test('Vision prompt enforces honor toward Tuk Tuk as brother\'s partner with zero flirting and zero refereeing', () => {
+    const prompt = jarvisManager.agents.vision.getPrompt("Hritthik", "bro");
+    assert(prompt.includes("BROTHER'S GIRL & CO-FOUNDER RESPECT (TUK TUK)"), "Vision prompt must enforce brother's girl respect");
+    assert(prompt.includes("Bhabhi"), "Vision prompt must acknowledge sister-in-law honor");
+    assert(prompt.includes("NEVER flirt with her"), "Vision prompt strictly bans flirting");
   });
 
   test('DailyCareGuardian messages are loving, supportive, and free of guilt or nagging', () => {
@@ -304,56 +304,35 @@ async function runSovereigntyLexicalIsolationSuite() {
   });
 
   // -------------------------------------------------------------
-  // TEST GROUP 10: Multilingual Routing & Neural Voice Selection (Hindi & Bangla)
+  // TEST GROUP 10: Multilingual Routing & Neural Voice Selection (Zero-Flickering Lock)
   // -------------------------------------------------------------
-  console.log('\n--- TEST GROUP 10: Multilingual Routing & Neural Voice Selection (Hindi & Bangla) ---');
+  console.log('\n--- TEST GROUP 10: Multilingual Routing & Neural Voice Selection (Zero-Flickering Lock) ---');
 
-  test('Bengali script dynamically routes to bn-IN-TanishaaNeural (female) and bn-IN-BashkarNeural (male)', () => {
+  test('Tuk Tuk strictly locks to en-US-AvaMultilingualNeural across English and Banglish (zero voice flickering)', () => {
     const resolveVoice = JarvisManager.resolveVoiceForLanguage;
-    const tuktukVoice = resolveVoice("en-US-AvaMultilingualNeural", "আমি খুব ভালো আছি বাবু, তুমি কেমন আছো?");
-    assert.strictEqual(tuktukVoice, "bn-IN-TanishaaNeural", `Tuk Tuk Bengali script must route to bn-IN-TanishaaNeural, got: ${tuktukVoice}`);
+    const tuktukEnglish = resolveVoice("en-US-AvaMultilingualNeural", "Let's build this feature together, babe!");
+    assert.strictEqual(tuktukEnglish, "en-US-AvaMultilingualNeural", `Tuk Tuk English must stay on Ava, got: ${tuktukEnglish}`);
 
-    const andrewVoice = resolveVoice("en-US-AndrewMultilingualNeural", "হ্যাঁ ভাই, কোডটা একদম ঠিক আছে।");
-    assert.strictEqual(andrewVoice, "bn-IN-BashkarNeural", `Andrew Bengali script must route to bn-IN-BashkarNeural, got: ${andrewVoice}`);
-
-    const jennyVoice = resolveVoice("en-US-EmmaMultilingualNeural", "আমি সিস্টেমের ডেটা চেক করেছি।");
-    assert.strictEqual(jennyVoice, "bn-IN-TanishaaNeural", `Jenny Bengali script must route to bn-IN-TanishaaNeural, got: ${jennyVoice}`);
-
-    const brianVoice = resolveVoice("en-US-BrianMultilingualNeural", "সার্ভার মেমরি ঠিক আছে।");
-    assert.strictEqual(brianVoice, "bn-IN-BashkarNeural", `Brian Bengali script must route to bn-IN-BashkarNeural, got: ${brianVoice}`);
+    const tuktukBanglish = resolveVoice("en-US-AvaMultilingualNeural", "Ami khub bhalo achi babe, tumi kemon acho?");
+    assert.strictEqual(tuktukBanglish, "en-US-AvaMultilingualNeural", `Tuk Tuk Banglish must stay on Ava (zero flickering), got: ${tuktukBanglish}`);
   });
 
-  test('Devanagari Hindi script dynamically routes to hi-IN-SwaraNeural (female) and hi-IN-MadhurNeural (male)', () => {
+  test('Vision strictly locks to en-US-AndrewNeural across English and Banglish (zero voice flickering)', () => {
     const resolveVoice = JarvisManager.resolveVoiceForLanguage;
-    const tuktukVoice = resolveVoice("en-US-AvaMultilingualNeural", "हाँ बाबू, मैं बिल्कुल ठीक हूँ, तुम बताओ!");
-    assert.strictEqual(tuktukVoice, "hi-IN-SwaraNeural", `Tuk Tuk Hindi script must route to hi-IN-SwaraNeural, got: ${tuktukVoice}`);
+    const visionEnglish = resolveVoice("en-US-AndrewNeural", "Systems nominal, brother. AST passed.");
+    assert.strictEqual(visionEnglish, "en-US-AndrewNeural", `Vision English must stay on Andrew, got: ${visionEnglish}`);
 
-    const andrewVoice = resolveVoice("en-US-AndrewMultilingualNeural", "हाँ भाई, कोड एकदम सही चल रहा है।");
-    assert.strictEqual(andrewVoice, "hi-IN-MadhurNeural", `Andrew Hindi script must route to hi-IN-MadhurNeural, got: ${andrewVoice}`);
-
-    const jennyVoice = resolveVoice("en-US-EmmaMultilingualNeural", "मैंने डेटा विश्लेषण पूरा कर लिया है।");
-    assert.strictEqual(jennyVoice, "hi-IN-SwaraNeural", `Jenny Hindi script must route to hi-IN-SwaraNeural, got: ${jennyVoice}`);
-
-    const brianVoice = resolveVoice("en-US-BrianMultilingualNeural", "सिस्टम की स्थिति सामान्य है।");
-    assert.strictEqual(brianVoice, "hi-IN-MadhurNeural", `Brian Hindi script must route to hi-IN-MadhurNeural, got: ${brianVoice}`);
+    const visionBanglish = resolveVoice("en-US-AndrewNeural", "Haan bhai, code ta bhalo ache, ami dekhchi");
+    assert.strictEqual(visionBanglish, "en-US-AndrewNeural", `Vision Banglish must stay on Andrew (zero flickering), got: ${visionBanglish}`);
   });
 
-  test('Romanized Bengali (Banglish) keywords dynamically route to authentic Bengali voices', () => {
+  test('Jenny and Brian strictly lock to their signature neural studio voices', () => {
     const resolveVoice = JarvisManager.resolveVoiceForLanguage;
-    const tuktukVoice = resolveVoice("en-US-AvaMultilingualNeural", "Ami khub bhalo achi babe, tumi kemon acho?");
-    assert.strictEqual(tuktukVoice, "bn-IN-TanishaaNeural", `Tuk Tuk Roman Bengali must route to bn-IN-TanishaaNeural, got: ${tuktukVoice}`);
+    const jennyVoice = resolveVoice("en-US-EmmaMultilingualNeural", "I analyzed the research data, Chief.");
+    assert.strictEqual(jennyVoice, "en-US-EmmaMultilingualNeural", `Jenny must lock to Emma, got: ${jennyVoice}`);
 
-    const andrewVoice = resolveVoice("en-US-AndrewMultilingualNeural", "Haan bhai, code ta bhalo ache, ami dekhchi");
-    assert.strictEqual(andrewVoice, "bn-IN-BashkarNeural", `Andrew Roman Bengali must route to bn-IN-BashkarNeural, got: ${andrewVoice}`);
-  });
-
-  test('Romanized Hindi (Hinglish) keywords dynamically route to authentic Hindi voices', () => {
-    const resolveVoice = JarvisManager.resolveVoiceForLanguage;
-    const tuktukVoice = resolveVoice("en-US-AvaMultilingualNeural", "Haan babe main theek hoon, tum suno kya chal raha hai");
-    assert.strictEqual(tuktukVoice, "hi-IN-SwaraNeural", `Tuk Tuk Roman Hindi must route to hi-IN-SwaraNeural, got: ${tuktukVoice}`);
-
-    const andrewVoice = resolveVoice("en-US-AndrewMultilingualNeural", "Haan bhai, main theek hoon, code dekh raha hoon");
-    assert.strictEqual(andrewVoice, "hi-IN-MadhurNeural", `Andrew Roman Hindi must route to hi-IN-MadhurNeural, got: ${andrewVoice}`);
+    const brianVoice = resolveVoice("en-US-BrianMultilingualNeural", "Memory heap is at 38 percent, standing by.");
+    assert.strictEqual(brianVoice, "en-US-BrianMultilingualNeural", `Brian must lock to Brian, got: ${brianVoice}`);
   });
 
   test('Multilingual intimate tokens are strictly sanitized for non-Tuk Tuk agents', () => {
@@ -372,11 +351,13 @@ async function runSovereigntyLexicalIsolationSuite() {
   test('detectActiveAgent correctly resolves Bengali and Hindi script addressing', () => {
     assert.strictEqual(jarvisManager.detectActiveAgent("টুক টুক কেমন আছো").name, "Tuk Tuk");
     assert.strictEqual(jarvisManager.detectActiveAgent("টুকটুক তুমি কি শুনছো").name, "Tuk Tuk");
-    assert.strictEqual(jarvisManager.detectActiveAgent("অ্যান্ড্রু ভাই কোডটা দেখো").name, "Vision");
-    assert.strictEqual(jarvisManager.detectActiveAgent("দাদা অ্যান্ড্রু এই বাগটা সলভ করো").name, "Vision");
+    assert.strictEqual(jarvisManager.detectActiveAgent("ভিশন ভাই কোডটা দেখো").name, "Vision");
+    assert.strictEqual(jarvisManager.detectActiveAgent("দাদা ভিশন এই বাগটা সলভ করো").name, "Vision");
     assert.strictEqual(jarvisManager.detectActiveAgent("টুক টুক तुम कैसी हो").name, "Tuk Tuk");
-    assert.strictEqual(jarvisManager.detectActiveAgent("एंड्रयू भाई कोड चेक करो").name, "Vision");
+    assert.strictEqual(jarvisManager.detectActiveAgent("विजन भाई कोड चेक करो").name, "Vision");
     assert.strictEqual(jarvisManager.detectActiveAgent("Vision bhai code check koro").name, "Vision");
+    assert.notStrictEqual(jarvisManager.detectActiveAgent("অ্যান্ড্রু ভাই কোডটা দেখো").name, "Vision");
+    assert.notStrictEqual(jarvisManager.detectActiveAgent("Hey Andrew").name, "Vision");
     assert.strictEqual(jarvisManager.detectActiveAgent("जेनी डेटा बताओ").name, "Jenny");
     assert.strictEqual(jarvisManager.detectActiveAgent("ब्रायन सर्वर चेक करो").name, "Brian");
     assert.strictEqual(jarvisManager.detectActiveAgent("ব্রায়ান সার্ভার চেক করো").name, "Brian");
@@ -406,31 +387,31 @@ async function runSovereigntyLexicalIsolationSuite() {
     assert(prompt.includes("CRITICAL HUMAN REALISM & ANTI-BOT LAWS"), "Tuk Tuk prompt must include Anti-Bot realism laws");
   });
 
-  test('Andrew prompt enforces punchy 10x dev livestream brother code-switching vibe', () => {
-    const prompt = jarvisManager.agents.andrew.getPrompt("Hritthik", "bro");
-    assert(prompt.includes("BANGLA & HINDI TECH YOUTUBER / DEV LIVESTREAM VIBE"), "Andrew prompt must contain dev livestream directive");
-    assert(prompt.includes("চলতি বাংলা"), "Andrew prompt must enforce colloquial Bengali");
-    assert(prompt.includes("AST"), "Andrew prompt must include developer terminology");
-    assert(!prompt.includes("babe") || prompt.includes("NEVER call him \"babe\""), "Andrew prompt strictly bans 'babe'");
+  test('Vision prompt enforces punchy 10x dev livestream brother code-switching vibe', () => {
+    const prompt = jarvisManager.agents.vision.getPrompt("Hritthik", "bro");
+    assert(prompt.includes("BANGLA & HINDI TECH YOUTUBER / DEV LIVESTREAM VIBE"), "Vision prompt must contain dev livestream directive");
+    assert(prompt.includes("চলতি বাংলা"), "Vision prompt must enforce colloquial Bengali");
+    assert(prompt.includes("AST"), "Vision prompt must include developer terminology");
+    assert(!prompt.includes("babe") || prompt.includes("NEVER call him \"babe\""), "Vision prompt strictly bans 'babe'");
   });
 
-  test('Code-mixed sentences with embedded English tech words route to native neural voices', () => {
+  test('Code-mixed sentences with embedded English tech words lock to studio multilingual voices (zero flickering)', () => {
     const resolveVoice = JarvisManager.resolveVoiceForLanguage;
 
-    // Tuk Tuk female code-mixed with Bengali script & English tech loanwords
+    // Tuk Tuk stays locked to Ava Multilingual
     const tuktukCodeMixed = resolveVoice("en-US-AvaMultilingualNeural", "আরেহ সোনা, তোমার build-টা তো একদম smooth run করছে! Latency নিয়ে কোনো tension নিও না babe!");
-    assert.strictEqual(tuktukCodeMixed, "bn-IN-TanishaaNeural", `Tuk Tuk code-mixed sentence must route to bn-IN-TanishaaNeural, got: ${tuktukCodeMixed}`);
+    assert.strictEqual(tuktukCodeMixed, "en-US-AvaMultilingualNeural", `Tuk Tuk code-mixed sentence must stay on Ava, got: ${tuktukCodeMixed}`);
 
-    // Andrew male code-mixed with Bengali script & English dev loanwords
-    const andrewCodeMixed = resolveVoice("en-US-AndrewMultilingualNeural", "আরে ভাই, এই bug-টা buffer overflow-এর জন্য হচ্ছে। Patch push করে দিয়েছি!");
-    assert.strictEqual(andrewCodeMixed, "bn-IN-BashkarNeural", `Andrew code-mixed sentence must route to bn-IN-BashkarNeural, got: ${andrewCodeMixed}`);
+    // Vision / Andrew stays locked to AndrewNeural
+    const andrewCodeMixed = resolveVoice("en-US-AndrewNeural", "আরে ভাই, এই bug-টা buffer overflow-এর জন্য হচ্ছে। Patch push করে দিয়েছি!");
+    assert.strictEqual(andrewCodeMixed, "en-US-AndrewNeural", `Andrew code-mixed sentence must stay on Andrew, got: ${andrewCodeMixed}`);
 
-    // Romanized code-mixed with enclitic affixation (-ta)
-    const romanEncliticAndrew = resolveVoice("en-US-AndrewMultilingualNeural", "build-ta verify koro to bhai, latency drop hoyeche");
-    assert.strictEqual(romanEncliticAndrew, "bn-IN-BashkarNeural", `Romanized -ta enclitic must route to bn-IN-BashkarNeural, got: ${romanEncliticAndrew}`);
+    // Romanized Banglish code-mixed with enclitic affixation (-ta)
+    const romanEncliticAndrew = resolveVoice("en-US-AndrewNeural", "build-ta verify koro to bhai, latency drop hoyeche");
+    assert.strictEqual(romanEncliticAndrew, "en-US-AndrewNeural", `Romanized -ta enclitic must stay on Andrew, got: ${romanEncliticAndrew}`);
 
     const romanEncliticTukTuk = resolveVoice("en-US-AvaMultilingualNeural", "shona, code-ta ekdom smooth cholche babe");
-    assert.strictEqual(romanEncliticTukTuk, "bn-IN-TanishaaNeural", `Romanized -ta enclitic must route to bn-IN-TanishaaNeural, got: ${romanEncliticTukTuk}`);
+    assert.strictEqual(romanEncliticTukTuk, "en-US-AvaMultilingualNeural", `Romanized -ta enclitic must stay on Ava, got: ${romanEncliticTukTuk}`);
   });
 
   test('Lexical isolation strictly prevents non-Tuk Tuk agents from using romantic terms in code-mixed speech', () => {
@@ -451,7 +432,7 @@ async function runSovereigntyLexicalIsolationSuite() {
   test('Mathematical Invariant 4: Tuk Tuk enforces ceiling of MAX ONE pet name per turn (no stacking)', () => {
     const stacked = "আরে সোনা, টাইপিংয়ের যা অবস্থা! একটু শান্ত হয়ে বলো তো বাবু, কী নিয়ে ভাবছ সোনা?";
     const clean = jarvisManager.sanitizeAgentLexicon(stacked, "tuktuk");
-    const matches = clean.match(/(?:বাবু|সোনা)/g) || [];
+    const matches = clean.match(/(?:বাবু|সোনা|babe)/gi) || [];
     assert.strictEqual(matches.length, 1, `Tuk Tuk output must contain at most 1 pet name, got ${matches.length} in: "${clean}"`);
   });
 

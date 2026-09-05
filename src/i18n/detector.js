@@ -71,10 +71,10 @@ const BANGLISH_LEXICON = new Set([
   'kemon', 'achho', 'acho', 'achhen', 'achen', 'amra', 'tumi', 'apni', 'tui',
   'koro', 'korbo', 'korchhi', 'korchi', 'dekho', 'bhalo', 'valo', 'thik', 'bhai',
   'babu', 'shona', 'sona', 'kichu', 'khobor', 'dada', 'bolun', 'bolo', 'hobe',
-  'shundor', 'sundor', 'ekdom', 'aajke', 'ajke', 'shune', 'sune', 'ki', 'tai',
-  'noy', 'eta', 'ota', 'sheta', 'kintu', 'ebong', 'aar', 'ar', 'jani', 'janina',
-  'cholo', 'holo', 'hoye', 'geche', 'achena', 'mon', 'bhabchi', 'bhabo', 'kotha',
-  'shob', 'sob', 'shunechi', 'sunechi', 'korle', 'dite', 'niye', 'jabo', 'parbo'
+  'shundor', 'sundor', 'ekdom', 'aajke', 'ajke', 'shune', 'sune',
+  'noy', 'eta', 'ota', 'sheta', 'kintu', 'ebong', 'jani', 'janina',
+  'cholo', 'holo', 'hoye', 'geche', 'achena', 'bhabchi', 'bhabo', 'kotha',
+  'shunechi', 'sunechi', 'korle', 'dite', 'niye', 'jabo', 'parbo'
 ]);
 
 const HINGLISH_LEXICON = new Set([
@@ -236,20 +236,20 @@ class LanguageDetector {
     const banglishRatio = banglishHits / totalTokens;
     const hinglishRatio = hinglishHits / totalTokens;
 
-    // Priority matching: strong dialect signal overrides generic English
-    if (banglishHits > 0 && banglishHits >= hinglishHits && (banglishRatio >= 0.2 || banglishHits >= 2)) {
+    // Robust dialect matching: requires strong cluster to prevent single-word false flips
+    if (banglishHits >= 2 && banglishHits >= hinglishHits && (banglishRatio >= 0.35 || banglishHits >= 3)) {
       return {
         locale: 'bn-Roman',
-        confidence: Math.min(0.98, 0.65 + banglishRatio * 0.35),
+        confidence: Math.min(0.98, 0.70 + banglishRatio * 0.30),
         isRomanized: true,
         script: 'Latin (Banglish)'
       };
     }
 
-    if (hinglishHits > 0 && hinglishHits > banglishHits && (hinglishRatio >= 0.2 || hinglishHits >= 2)) {
+    if (hinglishHits >= 2 && hinglishHits > banglishHits && (hinglishRatio >= 0.35 || hinglishHits >= 3)) {
       return {
         locale: 'hi-Roman',
-        confidence: Math.min(0.98, 0.65 + hinglishRatio * 0.35),
+        confidence: Math.min(0.98, 0.70 + hinglishRatio * 0.30),
         isRomanized: true,
         script: 'Latin (Hinglish)'
       };

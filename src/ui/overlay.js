@@ -257,7 +257,10 @@ function drawBars() {
   const barWidth = canvasW <= 40 ? 1.8 : 2.5;
   const barGap = canvasW <= 40 ? 1.5 : 2.5;
 
-  ctx.fillStyle = getActiveColor();
+  const activeColor = getActiveColor();
+  ctx.fillStyle = activeColor;
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = activeColor;
 
   for (let i = 0; i < HALF_BARS; i++) {
     const h = Math.max(barHeights[i], 2.5);

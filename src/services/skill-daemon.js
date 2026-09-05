@@ -1,7 +1,7 @@
 /**
  * Eloquent Skill Daemon - Automated Hot-Reloading & Metadata Management Service
  * 
- * Manages dynamic agent skill profiles (including Andrew's engineering profile),
+ * Manages dynamic agent skill profiles (including Vision's engineering profile),
  * enforces strict JSON schema validation for all metadata array mutations,
  * performs zero-downtime hot-reloading with fallback recovery, and tracks
  * performance telemetry and daemon memory consumption over time.
@@ -279,7 +279,7 @@ class SkillDaemon extends EventEmitter {
    * Perform a zero-downtime hot-reload of a specific agent profile.
    * If parsing or schema validation fails, safely recovers using the last known good profile.
    * 
-   * @param {string} agentName - Identifier, e.g. "andrew" or "agent_andrew"
+   * @param {string} agentName - Identifier, e.g. "vision" or "agent_vision"
    * @param {string} [customFilePath]
    * @returns {Object} result - { success, fallback, latencyMs, profile, error }
    */
@@ -361,7 +361,7 @@ class SkillDaemon extends EventEmitter {
   /**
    * Mutate or insert a metadata entry in an agent's skill profile with atomic disk write.
    * 
-   * @param {string} agentName - "andrew" or "agent_andrew"
+   * @param {string} agentName - "vision" or "agent_vision"
    * @param {Object} mutation - { key, value, type, description }
    * @returns {Object} result - { success, profile, mutation, latencyMs }
    */

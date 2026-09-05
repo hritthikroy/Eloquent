@@ -46,7 +46,7 @@ class StateManager {
   createDefaultState() {
     return {
       turnId: `turn-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-      participants: ['user', 'Tuk Tuk', 'Andrew'],
+      participants: ['user', 'Tuk Tuk', 'Vision'],
       lastMessageTimestamp: Date.now(),
       contextBuffer: [],
       rateLimitInfo: { ...this.defaultRateLimit }

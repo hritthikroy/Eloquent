@@ -52,10 +52,10 @@ async function runTests() {
     `Vision agent preserves Paul Bettany timbre voice (got "${visionAgent?.voice}")`
   );
 
-  // TEST 2: Andrew backwards compatibility alias
+  // TEST 2: Andrew is completely unlinked from Vision
   test(
-    jarvisManager.agents.andrew === jarvisManager.agents.vision,
-    'AGENTS.andrew is an exact reference alias to AGENTS.vision'
+    jarvisManager.agents.andrew === undefined,
+    'AGENTS.andrew is completely unlinked (not defined in AGENTS)'
   );
 
   // TEST 3: Active agent detection with English wake words
@@ -63,7 +63,7 @@ async function runTests() {
   test(d1?.key === 'vision', `detectActiveAgent matches "Vision" (got ${d1?.key})`);
 
   const d2 = jarvisManager.detectActiveAgent('Hey Andrew, check this bug');
-  test(d2?.key === 'vision', `detectActiveAgent backwards-compatible matches "Andrew" as Vision (got ${d2?.key})`);
+  test(d2?.key !== 'vision', `detectActiveAgent with "Andrew" does NOT activate Vision (got ${d2?.key})`);
 
   // TEST 4: Active agent detection with Bengali phonetic wake words
   const d3 = jarvisManager.detectActiveAgent('ভিসন ভাই সিস্টেম দেখো');
@@ -88,8 +88,8 @@ async function runTests() {
     'Resonance returns score for vision'
   );
   test(
-    resonance?.scores?.andrew !== undefined,
-    'Resonance returns backwards-compatible score for andrew'
+    resonance?.scores?.andrew === undefined,
+    'Resonance does NOT contain score for andrew'
   );
   test(
     resonance.selectedAgent?.key === 'vision',
@@ -99,14 +99,14 @@ async function runTests() {
   // TEST 7: Cross agent handoff
   const handoffVision = jarvisManager.evaluateCrossAgentHandoff('tell vision to inspect the logs');
   test(
-    handoffVision?.shouldHandoff && (handoffVision.targetAgentKey === 'vision' || handoffVision.targetAgent?.key === 'vision'),
+    handoffVision !== null && (handoffVision.targetAgentKey === 'vision' || handoffVision.targetAgent?.key === 'vision'),
     `Cross-agent handoff routes to "vision" for "tell vision..." (got ${handoffVision?.targetAgentKey || handoffVision?.targetAgent?.key})`
   );
 
   const handoffAndrew = jarvisManager.evaluateCrossAgentHandoff('tell andrew to run the benchmarks');
   test(
-    handoffAndrew?.shouldHandoff && (handoffAndrew.targetAgentKey === 'vision' || handoffAndrew.targetAgent?.key === 'vision'),
-    `Cross-agent handoff routes to "vision" for "tell andrew..." (got ${handoffAndrew?.targetAgentKey || handoffAndrew?.targetAgent?.key})`
+    handoffAndrew === null || (handoffAndrew.targetAgentKey !== 'vision' && handoffAndrew.targetAgent?.key !== 'vision'),
+    `Cross-agent handoff does NOT route to Vision for "tell andrew..." (got ${handoffAndrew?.targetAgentKey || handoffAndrew?.targetAgent?.key || 'null'})`
   );
 
   // TEST 8: Lexicon sanitization (brotherly, not romantic)

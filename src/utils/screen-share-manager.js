@@ -112,29 +112,37 @@ class ScreenShareManager {
 
   _processCapturedFrame() {
     try {
-      let appName = "";
-      let winTitle = "";
-      try {
-        const appOut = execSync(
-          `osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`,
-          { timeout: 1000 }
-        ).toString().trim();
-        if (appOut) appName = appOut;
-      } catch (e) {}
+      const now = Date.now();
+      const sendUpdate = (appName) => {
+        const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
+        this.lastContext = {
+          appName: appName || "Active Workspace",
+          windowTitle: "",
+          timestamp: now,
+          frameSizeKB: stats ? Math.round(stats.size / 1024) : 0
+        };
 
-      const stats = fs.existsSync(this.framePath) ? fs.statSync(this.framePath) : null;
-      this.lastContext = {
-        appName: appName || "Active Workspace",
-        windowTitle: winTitle,
-        timestamp: Date.now(),
-        frameSizeKB: stats ? Math.round(stats.size / 1024) : 0
+        if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
+          try {
+            this.overlayWindow.webContents.send("screenshare-frame-updated", this.lastContext);
+          } catch (e) {}
+        }
       };
 
-      if (this.overlayWindow && !this.overlayWindow.isDestroyed()) {
-        try {
-          this.overlayWindow.webContents.send("screenshare-frame-updated", this.lastContext);
-        } catch (e) {}
+      // Use cached appName if fresh (< 3000ms)
+      if (this._cachedAppName && (now - this._cachedAppTime < 3000)) {
+        sendUpdate(this._cachedAppName);
+        return;
       }
+
+      // Asynchronously fetch frontmost app name without blocking the event loop
+      exec(`osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null`, (err, stdout) => {
+        if (!err && stdout && stdout.trim()) {
+          this._cachedAppName = stdout.trim();
+          this._cachedAppTime = now;
+        }
+        sendUpdate(this._cachedAppName || "Active Workspace");
+      });
     } catch (e) {}
   }
 
@@ -187,6 +195,12 @@ class ScreenShareManager {
 
   getVisionContext() {
     const hasFrame = fs.existsSync(this.framePath);
+    let eyeCortexState = null;
+    try {
+      const humanEyeCortex = require("./human-eye-cortex");
+      eyeCortexState = humanEyeCortex.step();
+    } catch (e) {}
+
     return {
       isActive: this.isActive || hasFrame,
       hasFrame: hasFrame,
@@ -194,8 +208,18 @@ class ScreenShareManager {
       appName: this.lastContext.appName || "Active Workspace",
       windowTitle: this.lastContext.windowTitle || "",
       frameSizeKB: this.lastContext.frameSizeKB || 0,
-      timestamp: this.lastContext.timestamp
+      timestamp: this.lastContext.timestamp,
+      eyeCortex: eyeCortexState
     };
+  }
+
+  getFoveatedCropBox(scale = 0.35) {
+    try {
+      const humanEyeCortex = require("./human-eye-cortex");
+      return humanEyeCortex.getFoveatedCropBox(1920, 1080, scale);
+    } catch (e) {
+      return { x: 480, y: 270, width: 960, height: 540, center: { x: 960, y: 540 }, fovealAcuity: 1.0 };
+    }
   }
 }
 

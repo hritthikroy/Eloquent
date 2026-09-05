@@ -80,9 +80,9 @@
     },
     {
       "key": "bengali_voice_model",
-      "value": "bn-IN-TanishaaNeural",
+      "value": "en-US-AvaMultilingualNeural",
       "type": "string",
-      "description": "Authentic Bengali neural TTS voice identifier"
+      "description": "Unified studio neural TTS voice identifier (Ava, Multilingual)"
     },
     {
       "key": "aura_color",
