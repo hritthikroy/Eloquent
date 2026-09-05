@@ -644,6 +644,21 @@ export class CyberAgent2070Engine extends EventEmitter {
     }
     return "Brother, her Ear, Eyes, and Automation benchmarks are fully dominating! The Ear Cortex delivers 43-microsecond audio handoff and 100% echo blinding; the Eye Cortex boasts 0.98 foveal acuity and 18ms instant capture; and our Automation loop runs AST-verified with 358x faster perception-action turnaround than OpenClaw!";
   }
+
+  /**
+   * Returns the Higher-Level Human Action Cortex instance
+   */
+  public getHumanActionCortex(): any {
+    try {
+      const { humanActionCortex } = require('../../utils/human-action-cortex');
+      return humanActionCortex;
+    } catch {
+      const path = require('path');
+      const cortexPath = path.resolve(__dirname, '../../../../src/utils/human-action-cortex');
+      return require(cortexPath).humanActionCortex;
+    }
+  }
 }
 
 export const cyberAgent2070 = new CyberAgent2070Engine();
+

@@ -1301,6 +1301,20 @@
           <div>[2070-KERNEL] Ready to execute OpenClaw bilingual evaluation. Click "RUN LIVE BENCHMARK" above.</div>
         </div>
       </div>
+
+      <!-- ANTIGRAVITY VEHICLE STATE & IO TELEMETRY -->
+      <div class="cyber-card" style="border-left: 4px solid #38bdf8; margin-top: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="color: #38bdf8; margin: 0; font-size: 14px; font-weight: 600;">⚡ Antigravity State Machine & IO Telemetry</h3>
+          <button onclick="window.open('state-telemetry.html', '_blank', 'width=860,height=640')" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: 600;">OPEN TELEMETRY DASHBOARD</button>
+        </div>
+        <div style="display: flex; gap: 16px; font-size: 11px; color: #94a3b8; flex-wrap: wrap;">
+          <span>FSM State: <strong style="color: #38bdf8;" id="dashVehicleState">IDLE</strong></span>
+          <span>Speed: <strong style="color: #fff;" id="dashVehicleSpeed">0.0 km/h</strong></span>
+          <span>Collision Loops Prevented: <strong style="color: #10b981;" id="dashVehicleLoops">0</strong></span>
+          <span>Mode: <strong style="color: #a855f7;">NON-BLOCKING QUEUE</strong></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1441,13 +1455,56 @@
       }
     };
 
-    // Initialize English cards on start
+    // Antigravity Vehicle State & Telemetry IPC Listener
+    function initVehicleStateTelemetry() {
+      const stateEl = document.getElementById('dashVehicleState');
+      const speedEl = document.getElementById('dashVehicleSpeed');
+      const loopsEl = document.getElementById('dashVehicleLoops');
+
+      function updateUI(data) {
+        if (!data) return;
+        const state = data.state || (data.currentState && data.currentState.state) || 'IDLE';
+        const speed = data.speed !== undefined ? data.speed : (data.currentState ? data.currentState.speed : 0);
+        const loops = data.collisionLoopsPrevented !== undefined ? data.collisionLoopsPrevented : (data.currentState ? data.currentState.collisionLoopsPrevented : 0);
+
+        if (stateEl) {
+          stateEl.textContent = state;
+          if (state === 'CRUISING') stateEl.style.color = '#00ff9f';
+          else if (state === 'ACCELERATING') stateEl.style.color = '#38bdf8';
+          else if (state === 'DECELERATING') stateEl.style.color = '#f59e0b';
+          else if (state === 'EMERGENCY_STOP') stateEl.style.color = '#ef4444';
+          else stateEl.style.color = '#94a3b8';
+        }
+        if (speedEl) speedEl.textContent = (typeof speed === 'number' ? speed.toFixed(1) : speed) + ' km/h';
+        if (loopsEl) loopsEl.textContent = loops;
+      }
+
+      const ipc = (typeof ipcRenderer !== 'undefined' && ipcRenderer) ||
+                  (window.electronAPI && window.electronAPI.ipcRenderer) ||
+                  (window.require ? (function() { try { return window.require('electron').ipcRenderer; } catch(e) { return null; } })() : null);
+
+      if (ipc && typeof ipc.on === 'function') {
+        ipc.on('state-updated', (_event, data) => {
+          updateUI(data);
+        });
+
+        if (typeof ipc.invoke === 'function') {
+          ipc.invoke('state-request').then(initial => {
+            if (initial) updateUI(initial);
+          }).catch(() => {});
+        }
+      }
+    }
+
+    // Initialize English cards and state telemetry on start
     document.addEventListener('DOMContentLoaded', () => {
       renderBenchmarkCards('en');
+      initVehicleStateTelemetry();
     });
     // If DOM already loaded
     if (document.readyState !== 'loading') {
       renderBenchmarkCards('en');
+      initVehicleStateTelemetry();
     }
   </script>
 </body>

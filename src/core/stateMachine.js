@@ -277,8 +277,10 @@ class VehicleState extends EventEmitter {
     this.distance = distance;
 
     let targetSpeed = this.currentSpeed;
+    let targetState = undefined;
     if (distance === 0) {
       targetSpeed = 0;
+      targetState = STATES.STOPPED;
     } else if (distance < 50) {
       targetSpeed = 25; // Slow approach
     } else if (distance < 200) {
@@ -290,8 +292,11 @@ class VehicleState extends EventEmitter {
     if (options.speed !== undefined) {
       targetSpeed = options.speed;
     }
+    if (options.state !== undefined) {
+      targetState = options.state;
+    }
 
-    return this.transition(undefined, targetSpeed, { distance, source: 'chooseDistance' });
+    return this.transition(targetState, targetSpeed, { distance, source: 'chooseDistance' });
   }
 
   setSpeed(speed) {

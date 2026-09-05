@@ -362,7 +362,7 @@ async function runTwentyConversationAudit() {
     const lines = sanitized.split("\n").filter(l => l.trim().length > 0);
     assert.strictEqual(lines.length, 2, "Team mode must contain exactly 2 agents");
     assert.ok(lines[0].startsWith("[Vision]:"), "First speaker is Vision");
-    assert.ok(lines[1].startsWith("[Brian]:"), "Second speaker is Brian");
+    assert.ok(lines[1].startsWith("[DD]:") || lines[1].startsWith("[Brian]:"), "Second speaker is DD (or legacy Brian)");
 
     assert.ok(!sanitized.includes("babe"), "Strictly zero 'babe' when Tuk Tuk is not speaking");
     assert.ok(lines[0].includes("brother") || lines[0].includes("bro"), "Vision speaks as brother");

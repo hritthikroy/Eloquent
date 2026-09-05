@@ -82,6 +82,7 @@ const { StateManager } = require('./main/stateManager');
 const { geminiClient } = require('./utils/gemini-client');
 const { quantumVibeEngine } = require('./utils/quantum-vibe-engine');
 const cameraManager = require('./utils/camera-manager');
+const humanEarCortex = require('./utils/human-ear-cortex');
 const { getLanguageBridge } = require('./main/electron-bridge');
 const languageBridge = getLanguageBridge({ storageDir: path.join(__dirname, '..', 'userData') });
 const TextSanitizer = require('./utils/prompt-engine/text-sanitizer');

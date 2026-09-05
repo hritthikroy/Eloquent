@@ -1808,7 +1808,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       scores: { tuktuk: scoreTukTuk, vision: scoreVision, friday: scoreFriday, dd: scoreDD, brian: scoreDD },
       probabilities: { tuktuk: probTukTuk, vision: probVision, friday: probFriday, dd: probDD, brian: probDD },
       dominantAgent,
-      selectedAgent: dominantAgent
+      selectedAgent: dominantAgent,
+      recommendedAgent: dominantAgent.key
     };
   }
 

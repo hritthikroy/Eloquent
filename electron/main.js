@@ -167,6 +167,46 @@ function registerStateIpc(ipcMain, options = {}) {
     manager.queueUpdate(payload);
   });
 
+  // 4. telemetry:state-metrics handler
+  ipcMain.handle('telemetry:state-metrics', async () => {
+    const ioHandlerMod = require('../src/pipeline/ioHandler');
+    const ioMetrics = ioHandlerMod.ioHandler ? ioHandlerMod.ioHandler.getMetrics() : {};
+    const stateMetrics = vState.getMetrics();
+    const batchMetrics = manager.getMetrics();
+
+    return {
+      success: true,
+      timestamp: Date.now(),
+      state: vState.getState(),
+      fsmMetrics: stateMetrics,
+      pipelineMetrics: ioMetrics,
+      batchMetrics
+    };
+  });
+
+  // 5. telemetry:open-window handler
+  ipcMain.handle('telemetry:open-window', async () => {
+    try {
+      if (!BrowserWindow) return { success: false, error: 'BrowserWindow not available' };
+      const path = require('path');
+      const win = new BrowserWindow({
+        width: 860,
+        height: 640,
+        title: 'Antigravity State & IO Telemetry Dashboard',
+        backgroundColor: '#0f172a',
+        webPreferences: {
+          nodeIntegration: true,
+          contextIsolation: false
+        }
+      });
+      const telemetryPath = path.resolve(__dirname, '../src/ui/state-telemetry.html');
+      win.loadFile(telemetryPath);
+      return { success: true, windowId: win.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
   return {
     manager,
     vehicleState: vState

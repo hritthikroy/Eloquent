@@ -108,7 +108,12 @@ class TextSanitizer {
       .replace(/\b(?:eda\s+na|eta\s+na\s+aabharbois)\b/gi, "eta na abar voice")
       .replace(/\b(?:aabharbois)\b/gi, "abar voice")
       .replace(/\b(?:wilihan[,\s]*pete\s*koro)\b/gi, "workflow check koro")
-      .replace(/\ba\s+tuk\s+sound[,\s]*smart\s+girl\b/gi, "Tuk Tuk smart girl");
+      .replace(/\ba\s+tuk\s+sound[,\s]*smart\s+girl\b/gi, "Tuk Tuk smart girl")
+      // Automation and higher-level human automation STT normalizations
+      .replace(/\b(?:higher|high)\s*(?:lavel|laval|lebel)\b/gi, "higher level")
+      .replace(/\b(?:lavel|laval)\b/gi, "level")
+      .replace(/\b(?:atumation|autometion|automatation)\b/gi, "automation")
+      .replace(/\bautomations\b/gi, "automation");
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire')
     text = text

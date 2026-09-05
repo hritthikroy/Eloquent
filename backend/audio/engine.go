@@ -417,6 +417,9 @@ func (ae *AudioEngine) PublishStateUpdate(event StateSyncEvent) {
 		event.TimestampMs = time.Now().UnixMilli()
 	}
 
+	// Dynamically adjust audio buffer size according to vehicle speed state
+	ae.SetDynamicBufferForSpeed(event.State, event.Speed)
+
 	ae.stateMu.Lock()
 	ae.lastStateEvent = event
 	subscribers := make([]StateSyncListener, 0, len(ae.stateSubscribers))
@@ -429,6 +432,37 @@ func (ae *AudioEngine) PublishStateUpdate(event StateSyncEvent) {
 	for _, sub := range subscribers {
 		sub(event)
 	}
+}
+
+// SetDynamicBufferForSpeed adjusts buffer size dynamically based on vehicle speed and state.
+// High speed (speed >= 60 or CRUISING) -> 1024 bytes (ultra-low latency ~5-10ms)
+// Moderate speed (25 <= speed < 60 or ACCELERATING/DECELERATING) -> 2048 bytes (~20ms)
+// Stopped / Low speed (speed < 25 or STOPPED/IDLE) -> 4096 bytes (power-efficient baseline)
+func (ae *AudioEngine) SetDynamicBufferForSpeed(state string, speed float64) int {
+	targetSize := 4096
+
+	if speed >= 60.0 || state == "CRUISING" {
+		targetSize = 1024
+	} else if speed >= 25.0 || state == "ACCELERATING" || state == "DECELERATING" {
+		targetSize = 2048
+	} else {
+		targetSize = 4096
+	}
+
+	ae.mu.Lock()
+	defer ae.mu.Unlock()
+
+	if ae.config.BufferSize != targetSize {
+		ae.config.BufferSize = targetSize
+	}
+	return targetSize
+}
+
+// GetBufferSize returns the current active audio buffer size.
+func (ae *AudioEngine) GetBufferSize() int {
+	ae.mu.RLock()
+	defer ae.mu.RUnlock()
+	return ae.config.BufferSize
 }
 
 // GetLatestState returns the latest cached state synchronization event.
