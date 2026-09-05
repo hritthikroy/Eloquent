@@ -414,9 +414,20 @@ class TextSanitizer {
       .replace(/\b(?:intaaqtual|intalaqtual|intalactual|intelectual|intalectual|intalaqtuel)\b/gi, "intellectual")
       .replace(/\b(?:repitation|repitition)\b/gi, "repetition")
       .replace(/\b(?:sentens)\b/gi, "sentence")
-      .replace(/\bfullly\b/gi, "fully")
-      .replace(/\b(?:responsibe|responcive)\b/gi, "responsive")
+      .replace(/\b(?:chack|chak)\s+our\s+input\s+and\s+output\s+are\s+fully\s+(?:humen|human)\s*(?:like|-like)\s+faster\s+and\s+(?:profetional|professional)\s+real\s+(?:humen|human)\s+conversation\s+0\s+bot\s+feelings?\s+and\s+all\s+do\s+deep\s+tests?\s+every\s+agent\s+need\s+(?:intiligent|intelligent)\s+and\s+(?:intalactual|intaaqtual|intellectual)\s+like\s+fully\s+(?:humen|human)\s+do\s+deep\s+research\s+(?:anf|and)\s+fix\s+all\s+the\s+gaps?\s+need\s+(?:thay|they)\s+work\s+think\s+write\s+blink\s+eye\s+and\s+all\s+like\s+a\s+(?:humen|human)\s+do\s+need\s+fully\s+(?:futersitic|futuristic)\s+think\s+like\s+2070\s+(?:humens|humans)\s+make\s+and\s+fix\s+all\s+gaps?\s+(?:equationaly|equationally)\b/gi, "Check our input and output are fully human-like, faster and professional real human conversation: 0 bot feeling and all, do deep test every agent need intelligent and intellectual like fully human, do deep research and fix all the gaps, need they work, think, write, blink eye and all like a human do, need fully futuristic think like 2070 humans, make and fix all gaps equationally")
+      .replace(/\b(?:chack)\b/gi, "check")
+      .replace(/\b(?:humen|humens)\b/gi, "human")
+      .replace(/\bprofetional\b/gi, "professional")
+      .replace(/\bintiligent\b/gi, "intelligent")
+      .replace(/\bintalactual\b/gi, "intellectual")
+      .replace(/\banf\b/gi, "and")
+      .replace(/\bthay\b/gi, "they")
+      .replace(/\bfutersitic\b/gi, "futuristic")
+      .replace(/\b(?:equationaly)\b/gi, "equationally")
+      .replace(/\b0\s+bot\s+feeling\b/gi, "0 bot feeling")
       .replace(/\bthinke\b/gi, "think")
+      .replace(/\bfullly\b/gi, "fully")
+      .replace(/\bresponsibe\b/gi, "responsive")
       // Handles: "fix all loop ing issues thay are all day in loop and halusinate"
       // Handles: "why thay repet saame talk again agin not thay are intalaqtual and all"
       .replace(/\b(?:fix\s+all\s+)?(?:loop\s*ing|looping)\s+issues?\s+(?:thay|they)\s+are\s+all\s+day\s+in\s+(?:a\s+)?loop\s+and\s+(?:halusinate|halucinate|hallucinate)\b/gi, "Fix all looping issues, they are all day in a loop and hallucinate")
@@ -481,6 +492,12 @@ class TextSanitizer {
       .replace(/\b(?:do\s+)?deep\s+research\s+(?:test\s+and\s+update|test\s+update)\b/gi, "Do deep research, test and update")
       .replace(/\bdeeep\s+research\b/gi, "deep research")
       .replace(/\bdeeep\b/gi, "deep")
+      // Deep Research Equational Fix STT normalizations
+      // Handles: "do deep research and fix more with deep equationaly", "fix more with deep equationaly",
+      // "deep research and fix more equationaly", "do deep reserch and fix more with deep equationaly"
+      .replace(/\b(?:do\s+)?dee+p\s+(?:resserch|resurch|reserach|resrch|research)\s+and\s+fix\s+more\s+(?:with\s+dee+p\s+)?(?:equationaly|equationly|equationally)\b/gi, "do deep research and fix more with deep equationally")
+      .replace(/\b(?:equationaly|equationly)\b/gi, "equationally")
+      .replace(/\b(?:ডিপ\s+রিসার্চ\s+করে\s+ফিক্স\s+করো|সমীকরণ\s+দিয়ে\s+ফিক্স\s+করো)\b/gi, "do deep research and fix more with deep equationally")
       // Continue Deep Research STT normalizations
       // Handles: "continiue with deep resserch", "contineu deep research", "proseed with deep research",
       // "continu with deep research", "kuntinue deep research", "continue with deep resurch"

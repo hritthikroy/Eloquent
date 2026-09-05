@@ -47,6 +47,22 @@ class IntentParser {
       }
     }
 
+    // 2.3 Deep Research & Equational Fix Directive
+    if (IntentParser.isDeepResearchEquationalFixDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "deep_research_equational_fix",
+        agentDirective
+      };
+    }
+
     // 2.4 Continue Deep Research Directive
     if (IntentParser.isContinueDeepResearchDirective(lower)) {
       let agentDirective = "team";
@@ -394,6 +410,25 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Deep Research & Equational Fix Directive
+   * Handles: "do deep research and fix more with deep equationaly", "fix more with deep equationaly",
+   * "do deep research and fix more with deep equationally", "deep equational research and fix more",
+   * "ডিপ রিসার্চ করে সমীকরণ দিয়ে ফিক্স করো", "গভীর গবেষণা এবং সমীকরণগত ফিক্স"
+   */
+  static isDeepResearchEquationalFixDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:do\s+)?dee+p\s+(?:resserch|resurch|reserach|resrch|research)\s+and\s+(?:fix|update)\s+more\s+(?:with\s+dee+p\s+)?(?:equationaly|equationly|equationally)\b/i.test(lower)) ||
+      (/\b(?:fix|update)\s+more\s+(?:with\s+)?(?:dee+p\s+)?(?:equationaly|equationly|equationally)\b/i.test(lower)) ||
+      (/\b(?:fix|update)\s+(?:more\s+)?(?:equationaly|equationly|equationally)\b/i.test(lower)) ||
+      (/\bdee+p\s+(?:equational\s+research|equational\s+fix|equational\s+update|research\s+and\s+(?:fix|update)\s+more)\b/i.test(lower)) ||
+      (/\b(?:equationaly|equationally)\s+(?:fix\s+more|update\s+more|update|fix|deep\s+research)\b/i.test(lower)) ||
+      (/(?:ডিপ\s*রিসার্চ\s*(?:করে|এবং)?\s*(?:ফিক্স|আপডেট|সমীকরণ)|সমীকরণ\s*দিয়ে\s*(?:ফিক্স|আপডেট))/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Continue Deep Research Directive
    * Handles: "continue with deep research", "proceed with deep research", "continue deep research",
    * "continue the biometric research", "Phase 2 runtime integration", "চালিয়ে যাও ডিপ রিসার্চ",
@@ -402,7 +437,10 @@ class IntentParser {
   static isContinueDeepResearchDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
-    // Must not collide with test-and-update variant
+    // Must not collide with equational-fix or test-and-update variant
+    if (IntentParser.isDeepResearchEquationalFixDirective(lower)) {
+      return false;
+    }
     if (/\b(?:test\s+and\s+update|test\s+update|test\s+suite|run\s+test|audit|verify)\b/i.test(lower) &&
         !/\b(?:continue|proceed|phase)\b/i.test(lower)) {
       return false;
@@ -415,6 +453,22 @@ class IntentParser {
       /\b(?:runtime\s+biometric|biometric\s+integration|trimodal\s+fusion)\s+(?:continue|proceed|research|phase)\b/i.test(lower) ||
       /(?:চালিয়ে\s+যাও|চালু\s+রাখো|এগিয়ে\s+যাও)\s+(?:ডিপ\s+রিসার্চ|গভীর\s+গবেষণা|বায়োমেট্রিক)/u.test(lower) ||
       /\bcontinue\s+(?:with\s+)?deep\s+research\b/i.test(lower)
+    );
+  }
+
+  /**
+   * Centralized detector for 2070 Futuristic Human Embodiment & Intelligence Directive
+   * Handles: "chack our input and output are fully humen like faster and profetional real humen conversation 0 bot feeling and all do deep test every agent need intiligent and intalactual like fully humen do deep research anf fix all the gap need thay work think write blink eye and all like a humen do need fully futersitic think like 2070 humens make and fix all gap equationaly"
+   */
+  static isFuturistic2070HumanEmbodimentDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:2070|futuristic|futersitic)\b/i.test(lower) && /\b(?:humen|humans?|human|embodiment|think|blink|eye|work|write)\b/i.test(lower)) ||
+      (/\b0\s+bot\s+feelings?\b/i.test(lower)) ||
+      (/\b(?:work\s+think\s+write\s+blink\s+eye|blink\s+eye|think\s+write\s+blink)\b/i.test(lower)) ||
+      (lower.includes("input and output are fully human") || lower.includes("input and output are fully humen")) ||
+      (lower.includes("2070 humans") || lower.includes("2070 humens"))
     );
   }
 }
@@ -431,5 +485,7 @@ module.exports = {
   isTestUpdateImprovementDirective: IntentParser.isTestUpdateImprovementDirective,
   isTukTukTeamLeaderCommunicationDirective: IntentParser.isTukTukTeamLeaderCommunicationDirective,
   isDeepResearchTestAndUpdateDirective: IntentParser.isDeepResearchTestAndUpdateDirective,
-  isContinueDeepResearchDirective: IntentParser.isContinueDeepResearchDirective
+  isContinueDeepResearchDirective: IntentParser.isContinueDeepResearchDirective,
+  isDeepResearchEquationalFixDirective: IntentParser.isDeepResearchEquationalFixDirective,
+  isFuturistic2070HumanEmbodimentDirective: IntentParser.isFuturistic2070HumanEmbodimentDirective
 };

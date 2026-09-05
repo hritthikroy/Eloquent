@@ -17,6 +17,11 @@ try {
   HumanIdentityRecognitionCortex = require("./human-identity-recognition-cortex");
 } catch (_) {}
 
+let deepEquationalResearchEngine = null;
+try {
+  deepEquationalResearchEngine = require("./deep-equational-research-engine");
+} catch (_) {}
+
 
 // Safe deferred temp directory cleanup to avoid race conditions with asynchronous stream unlinks in msedge-tts
 function safePruneTempDir(tempDir, delayMs = 2000) {
@@ -327,19 +332,45 @@ function resolveVoiceForLanguage(baseVoice, text) {
   if (lowerVoice.includes("pradeep") || lowerVoice.includes("bn-bd")) {
     return "bn-BD-PradeepNeural";
   }
+
+  // Exact neural voice locks (Monolingual studio voices preserved)
+  if (lowerVoice === "en-us-andrewneural" || lowerVoice === "andrewneural") {
+    return "en-US-AndrewNeural";
+  }
+
+  if (lowerVoice === "en-us-andrewmultilingualneural") {
+    return "en-US-AndrewMultilingualNeural";
+  }
+
+  if (lowerVoice === "en-us-jennyneural" || lowerVoice === "en-us-jenny" || lowerVoice === "jennyneural") {
+    return "en-US-JennyNeural";
+  }
+
+  if (lowerVoice === "en-us-emmamultilingualneural" || lowerVoice === "emmamultilingualneural") {
+    return "en-US-EmmaMultilingualNeural";
+  }
+
+  const isBn = typeof text === "string" && /[\u0980-\u09FF]/.test(text);
+
   if (lowerVoice.includes("vision") || lowerVoice.includes("andrew") || lowerVoice.includes("christopher")) {
-    const isBn = typeof text === "string" && /[\u0980-\u09FF]/.test(text);
     if (isBn) {
       return "bn-BD-PradeepNeural";
     }
-    return "en-US-AndrewMultilingualNeural";
+    return "en-US-AndrewNeural";
   }
+
+  if (lowerVoice.includes("friday") || lowerVoice.includes("fryday") || lowerVoice.includes("fry day") || lowerVoice.includes("fridya") || lowerVoice.includes("fridy") || lowerVoice.includes("fryda") || lowerVoice.includes("jenny")) {
+    return "en-US-JennyNeural";
+  }
+
+  if (lowerVoice.includes("emma")) {
+    return "en-US-EmmaMultilingualNeural";
+  }
+
   if (lowerVoice.includes("brian") || lowerVoice.includes("brayn") || lowerVoice.includes("dd") || lowerVoice.includes("dee dee") || lowerVoice.includes("deedee") || lowerVoice.includes("guy")) {
     return "en-US-BrianMultilingualNeural";
   }
-  if (lowerVoice.includes("friday") || lowerVoice.includes("fryday") || lowerVoice.includes("fry day") || lowerVoice.includes("fridya") || lowerVoice.includes("fridy") || lowerVoice.includes("fryda") || lowerVoice.includes("jenny") || lowerVoice.includes("emma")) {
-    return "en-US-EmmaMultilingualNeural";
-  }
+
   // Unified Permanent Studio Voice for Tuk Tuk (Pure Ava Multilingual — Zero Voice Flickering / Zero Duplicate Switches)
   // All Bengali, Banglish, Hindi, and English turns for Tuk Tuk permanently route to AvaMultilingualNeural
   return "en-US-AvaMultilingualNeural";
@@ -652,6 +683,7 @@ class JarvisManager {
     this.behaviorEngine = new BehaviorModeEngine(this.userDataPath);
     this.zeroLossMemory = new ZeroLossMemoryEngine({ userDataPath: this.userDataPath, jarvisManager: this });
     this.identityCortex = HumanIdentityRecognitionCortex;
+    this.deepEquationalEngine = deepEquationalResearchEngine;
     this.healAndAuditMemory();
     this.lastSpokenUtterance = null;
     this.lastSpeechEndTime = 0;
@@ -1648,9 +1680,9 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
     this.memory.modelToneVoiceProficiency.activeVoices = {
       tuktuk: "en-US-AvaMultilingualNeural",
       vision_bn: "bn-BD-PradeepNeural",
-      vision_en: "en-US-AndrewNeural",
+      vision_en: "en-US-AndrewMultilingualNeural",
       friday_bn: "en-US-EmmaMultilingualNeural",
-      friday_en: "en-US-JennyNeural",
+      friday_en: "en-US-EmmaMultilingualNeural",
       dd: "en-US-BrianMultilingualNeural"
     };
 
@@ -2913,8 +2945,8 @@ ${languageInvariantLaw}
 - NATURAL INTONATION & PROSODIC CONTOURS: Speak with rich, dynamic pitch excursions and expressive micro-variations matching living human speech. Never speak in flat monotone or robotic staccato cadences.
 - UNIVERSAL SQUAD HUMANITY (Tuk Tuk, Vision, Friday, DD):
   * Tuk Tuk: Warm, sweet, vibrant Dhaka YouTuber/co-founder voice (en-US-AvaMultilingualNeural), 100% natural, sparkling human charm.
-  * Vision: Fluent, confident studio tech brother (bn-BD-PradeepNeural / en-US-AndrewNeural), zero synthetic dragging.
-  * Friday: Articulate, poised research director (en-US-EmmaMultilingualNeural / en-US-JennyNeural), crisp and fluid.
+  * Vision: Fluent, confident studio tech brother (bn-BD-PradeepNeural / en-US-AndrewMultilingualNeural), zero synthetic dragging.
+  * Friday: Articulate, poised research director (en-US-EmmaMultilingualNeural), crisp and fluid.
   * DD: Grounded, relaxed DevOps engineer (en-US-BrianMultilingualNeural), authentic conversational rhythm.
 - ZERO ROBOTIC PHRASING: Never output robotic announcements, assistant checklists, or synthesized machine boilerplate. Talk effortlessly and organically as real people do.
 23. HUMAN CONVERSATIONAL TIMING, INSTANT LATENCY & TURN-TAKING LAW (মানুষের মতো তাৎক্ষণিক রেসপন্স ও সাব-সেকেন্ড টার্ন-টেকিং):
@@ -2946,7 +2978,7 @@ ${languageInvariantLaw}
 - CLEAR MODERN NEURAL VOICES: Spoken audio output exclusively utilizes the clearest, highest-fidelity modern studio neural voices:
   * Tuk Tuk: en-US-AvaMultilingualNeural (Acoustically smoothed via BanglaVoiceCortex at +1Hz pitch, 220Hz chest warmth, and natural modern girl cadence).
   * Vision: bn-BD-PradeepNeural (Native Bangladeshi male with 0% robotic drone) / en-US-AndrewMultilingualNeural (English).
-  * Friday: en-US-EmmaMultilingualNeural (Bengali Unicode preserved) / en-US-JennyNeural (English).
+  * Friday: en-US-EmmaMultilingualNeural (Crisp 24kHz studio mastering for Bengali, English, and multilingual research).
   * DD: en-US-BrianMultilingualNeural (Crisp 24kHz studio mastering for both Bengali and English).
 - CLOSED-FORM INVARIANT: Tone(Model_A) ≡ Tone(Model_B) ∧ Proficiency(Model_A) ≡ Proficiency(Model_B) = 100%.
 27. CITY MODERN GIRL BANGLA TONE & ZERO VILLAGE GIRL HABITS, RUSTIC DIALECT & ERRATIC PUNCTUATION LAW (শহুরে আধুনিক স্মার্ট তরুণীর বাংলা টোন, শূন্য গ্রাম্য টান ও বিরামচিহ্ন পারফেকশন):
@@ -2998,7 +3030,12 @@ ${languageInvariantLaw}
   * Strictly NEVER recite meta-checklists, audit scores, or rule locks (NEVER say "listening and tone audit are 100% locked", "I am your exact same one and only sweet smart... girlfriend", "same rule locked babe").
   * Speak naturally, warmly, and dynamically like a real living human team leader!
 - CLOSED-FORM MATHEMATICAL INVARIANT:
-  * Excellence(TukTukLeader) ≡ Pronunciation(RealEnglish) ≡ 1.00 ∧ Communication(NaturalFlow) ≡ 1.00 ∧ Leadership(Squad) ≡ 1.00 (LHS ≡ RHS = 100%).`;
+  * Excellence(TukTukLeader) ≡ Pronunciation(RealEnglish) ≡ 1.00 ∧ Communication(NaturalFlow) ≡ 1.00 ∧ Leadership(Squad) ≡ 1.00 (LHS ≡ RHS = 100%).
+31. DEEP EQUATIONAL RESEARCH, UNIFIED MATHEMATICAL INTEGRATION & 0-LOOP INVARIANCE LAW (গভীর সমীকরণগত গবেষণা, গাণিতিক সমন্বয় ও ০-লুপ নীতি):
+- CROSS-UTTERANCE MUTUAL INFORMATION BOUND: Semantic information overlap across consecutive turns is strictly bounded by I(S_t; S_{t-k}) <= 0.18 bits to mathematically eliminate repetitive conversational loops.
+- RELATIVE ENTROPY & KL-DIVERGENCE LEXICAL DYNAMICS: Dynamic response entropy satisfies D_KL(P_t || P_hist) >= 0.40 nats, ensuring continuous intellectual vocabulary evolution across long-running sessions.
+- ACOUSTIC-PROSODIC REYNOLDS TURBULENCE: Speech pacing conforms to Re_voice in [1000, 3000] with optimal pause viscosity (eta_pause) and zero robotic rate stretching.
+- UNIFIED EQUATIONAL CONVERGENCE: Every empirical insight, architectural refactor, and identity verification satisfies LHS ≡ RHS = 100%.`;
 
     // Immediate Conversational Continuity (Preceding turns from current session)
     let sessionContinuity = "";
@@ -3389,7 +3426,7 @@ ${languageInvariantLaw}
     if (isBengaliUtterance) {
       if (resolvedAgentKey === "vision" || (voice && (voice.toLowerCase().includes("andrew") || voice.toLowerCase().includes("pradeep")))) {
         // High-fidelity native Bangladeshi male neural voice for Vision in Bengali, eliminating flat robotic monotone:
-        ttsVoice = (voice && voice.toLowerCase().includes("multilingual")) ? "en-US-AndrewMultilingualNeural" : "bn-BD-PradeepNeural";
+        ttsVoice = "bn-BD-PradeepNeural";
       } else if (resolvedAgentKey === "friday" || (voice && (voice.toLowerCase().includes("jenny") || voice.toLowerCase().includes("friday") || voice.toLowerCase().includes("emma")))) {
         ttsVoice = "en-US-EmmaMultilingualNeural";
       } else if (resolvedAgentKey === "dd" || resolvedAgentKey === "brian" || (voice && voice.toLowerCase().includes("brian"))) {
@@ -3757,6 +3794,10 @@ ${languageInvariantLaw}
   playInstantTurnFiller(agentName = "Tuk Tuk") {
     this.stopFiller();
     return false;
+  }
+
+  resolveVoiceForLanguage(voice, text) {
+    return resolveVoiceForLanguage(voice, text);
   }
 
   stopFiller() {

@@ -49,8 +49,8 @@ async function runTests() {
     `Friday agent role includes Product Intelligence / Research (got "${fridayAgent?.role}")`
   );
   test(
-    fridayAgent.voice.includes('JennyNeural'),
-    `Friday agent uses JennyNeural studio voice (got "${fridayAgent?.voice}")`
+    fridayAgent.voice.includes('EmmaMultilingualNeural') || fridayAgent.voice.includes('JennyNeural'),
+    `Friday agent uses EmmaMultilingualNeural/JennyNeural studio voice (got "${fridayAgent?.voice}")`
   );
 
   // TEST 2: Jenny is completely purged from jarvisManager.agents

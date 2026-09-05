@@ -496,6 +496,10 @@ class HumanIdentityRecognitionCortex {
       }
     };
   }
+
+  verifyAllEquations() {
+    return this.verifyEquationalInvariants();
+  }
 }
 
 const humanIdentityRecognitionCortex = new HumanIdentityRecognitionCortex();
