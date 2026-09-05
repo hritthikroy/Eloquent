@@ -259,7 +259,15 @@ class GeminiClient {
             const json = JSON.parse(responseBody);
             if (res.statusCode === 200 && json.candidates && json.candidates[0]?.content) {
               const textParts = json.candidates[0].content.parts || [];
-              const rawText = textParts.map(p => p.text).filter(Boolean).join("\n").trim();
+              const nonThoughtParts = textParts.filter(p => !p.thought);
+              const targetParts = nonThoughtParts.length > 0 ? nonThoughtParts : textParts;
+              let rawText = targetParts.map(p => p.text).filter(Boolean).join("\n").trim();
+              // Strip any inline reasoning tags
+              rawText = rawText
+                .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "")
+                .replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, "")
+                .replace(/<\/?(?:think|thought)>/gi, "")
+                .trim();
               if (!rawText || rawText.length === 0) {
                 resolve({
                   status: 502,
@@ -377,10 +385,12 @@ class GeminiClient {
                   if (line.startsWith("data: ")) {
                     try {
                       const json = JSON.parse(line.slice(6));
-                      const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                      if (text) {
-                        fullText += text;
-                        if (typeof onChunk === "function") onChunk(text);
+                      const parts = json.candidates?.[0]?.content?.parts || [];
+                      for (const part of parts) {
+                        if (!part.thought && part.text) {
+                          fullText += part.text;
+                          if (typeof onChunk === "function") onChunk(part.text);
+                        }
                       }
                     } catch (e) {}
                   }

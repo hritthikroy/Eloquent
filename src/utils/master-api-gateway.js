@@ -42,8 +42,10 @@ class MasterApiGateway {
     this.backgroundQueue = [];
     this.isProcessingBackgroundQueue = false;
 
-    // Default Preferred Models in Hierarchy Order
+    // Default Preferred Models in Hierarchy Order (Prioritize sub-150ms instant voice models)
     this.groqModels = [
+      "llama-3.1-8b-instant",
+      "llama-3.3-70b-versatile",
       "qwen/qwen3.8-27b",
       "qwen/qwen3.6-27b",
       "groq/compound",
@@ -321,7 +323,7 @@ class MasterApiGateway {
               presence_penalty: options.presence_penalty !== undefined ? options.presence_penalty : 0.6,
               frequency_penalty: options.frequency_penalty !== undefined ? options.frequency_penalty : 0.5
             };
-            if (model.includes("qwen") || model.includes("deepseek")) {
+            if (model.includes("qwen") || model.includes("deepseek") || model.includes("gpt-oss") || model.includes("compound")) {
               payload.reasoning_effort = "none";
             }
 
@@ -346,7 +348,11 @@ class MasterApiGateway {
               let rawContent = (rawChoice?.content || rawChoice?.reasoning || "").trim();
               rawContent = rawContent
                 .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "")
-                .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "")
+                .replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, "")
+                .replace(/<\/?(?:think|thought)>/gi, "")
+                .replace(/\[Thinking:[\s\S]*?\]/gi, "")
+                .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, "")
+                .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis|thinking process)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "")
                 .replace(/^\s*(?:(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s+says|user\s+says|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, "")
                 .trim();
 
@@ -483,4 +489,7 @@ class MasterApiGateway {
   }
 }
 
+const defaultGateway = new MasterApiGateway();
 module.exports = MasterApiGateway;
+module.exports.MasterApiGateway = MasterApiGateway;
+module.exports.masterApiGateway = defaultGateway;

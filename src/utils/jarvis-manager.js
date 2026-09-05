@@ -1345,8 +1345,14 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     }
 
     // Strip LLM internal reasoning / chain-of-thought blocks if leaked
-    clean = clean.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "");
-    clean = clean.replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "");
+    clean = clean
+      .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "")
+      .replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, "")
+      .replace(/<\/?(?:think|thought)>/gi, "")
+      .replace(/\[Thinking:[\s\S]*?\]/gi, "")
+      .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, "")
+      .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis|thinking process)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "")
+      .replace(/^\s*(?:(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s+says|user\s+says|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, "");
 
     // Strip foreign script hallucinations (e.g. Hangul, Chinese, Cyrillic) unless configured
     clean = clean.replace(/[\uAC00-\uD7AF\u1100-\u11FF\u4E00-\u9FFF\u0400-\u04FF]+/g, "").trim();
@@ -2291,23 +2297,21 @@ ${languageInvariantLaw}
   }
 
   async speak(text, customVoice = null, agentKey = null) {
-    // 0. CRITICAL: Enforce sequential speaking lock with a 2.5s ceiling to prevent dialogue stalls
+    // 0. Enforce sequential speaking lock with snappy 500ms ceiling
     let waitLoops = 0;
-    while (this.isSpeakingLocked && waitLoops < 50) {
+    while (this.isSpeakingLocked && waitLoops < 10) {
       waitLoops++;
-      if (waitLoops % 10 === 0) {
-        console.log('⏳ Waiting for previous agent to finish speaking...');
-      }
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     if (this.isSpeakingLocked) {
-      console.warn('⚠️ Force-clearing stale speaking lock to maintain dialogue responsiveness');
+      this.isSpeakingLocked = false;
     }
     this.isSpeakingLocked = true;
 
     try {
       // 1. Immediately silence any active speech or orphaned audio processes
       this.stopSpeaking();
+      this.isSpeakingLocked = true;
 
       // 2. Mint unique generation token to invalidate any async race conditions
       const speechId = ++this.currentSpeechId;
@@ -2318,10 +2322,14 @@ ${languageInvariantLaw}
     }
 
     // Sanitize for TTS:
-    // 1. Strip any <think>...</think> reasoning tokens that may leak from Qwen/GPT-OSS models
+    // 1. Strip any <think>, <thought>, or internal reasoning tokens
     let cleanText = text
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
-      .replace(/<\/?think>/gi, '')
+      .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+      .replace(/<\/?(?:think|thought)>/gi, '')
+      .replace(/\[Thinking:[\s\S]*?\]/gi, '')
+      .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, '')
+      .replace(/^(?:Thinking Process|Thought Process|Internal Reasoning|Analysis|Chain of Thought):[\s\S]*?(?:\n\n|$)/gim, '')
       .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
       .replace(/<function=[^>]*>[\s\S]*?<\/function>/gi, '')
       .replace(/<parameter=[^>]*>[\s\S]*?<\/parameter>/gi, '')
@@ -2643,6 +2651,7 @@ ${languageInvariantLaw}
     this.stopFiller();
     this.isAborted = true;
     this.isSpeaking = false;
+    this.isSpeakingLocked = false; // CRITICAL: Reset speaking lock immediately so next turn never stalls
     this.currentSpeechId++; // Invalidate all pending async speech jobs
     if (this.currentUtterance) {
       this.interruptedUtterance = this.currentUtterance;

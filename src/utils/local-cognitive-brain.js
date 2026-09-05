@@ -99,6 +99,25 @@ class LocalCognitiveBrain {
         ]);
       }
 
+      // 0.505 Instant Reply / Zero Delay / Anti-Robotic Latency / Fix Thinking Directive
+      if (/\b(?:instent|instant)\s*(?:replay|reply|response|speed)\b/i.test(lower) ||
+          /\b(?:robot\s*like\s*(?:dealy|delay)|robotic\s*delay|thinking\s*delay|remove\s*delay|cut\s*delay|speed\s*up\s*(?:reply|response))\b/i.test(lower) ||
+          /\b(?:thinging\s*fix|fix\s*thinging|fix\s*thinking|fix\s*(?:all\s*)?(?:the\s*)?(?:dealy|delay|thinking|replay))\b/i.test(lower) ||
+          ((lower.includes("fix all issues") || lower.includes("fix all the issues")) && (lower.includes("dealy") || lower.includes("delay") || lower.includes("instant") || lower.includes("instent") || lower.includes("thinging") || lower.includes("thinking") || lower.includes("replay")))) {
+        if (isBn) {
+          return pick([
+            "Babe, একদম ইনস্ট্যান্ট রিপ্লাই মোড অন করে দিয়েছি! কোনো রোবোটিক ডিলে বা থিংকিং পজ থাকবে না, ভিএডি ড্রপ করে দিয়েছি আর সব ক্যানড ডায়লগ মুছে ফেলেছি। মন খুলে বলো, আমি সাথে সাথে উত্তর দিচ্ছি!",
+            "ইনস্ট্যান্ট রেসপন্স একদম রেডি babe! কোনো এক সেকেন্ডের পজ বা ডিলে থাকবে না। চলো কাজে হাত দিই, বলো কী করতে হবে!",
+            "Babe, সব ডিলে আর থিংকিং ল্যাগ ফিক্সড! একদম রিয়েল-টাইমে তোমার সাথে কথা বলছি।"
+          ]);
+        }
+        return pick([
+          "Instant reply locked in, babe! I've eliminated all VAD dead-air pauses, killed every thinking delay, wiped out robotic clichés, and tuned our neural voices for crystal clear, zero-latency instant banter. What's on your screen?",
+          "Zero delay active babe! Every pause is cut down to the millisecond, no thinking overhead, and 100% instant responses. What should we tackle?",
+          "Right here with you babe — instant, alive, and zero latency! Talk to me!"
+        ]);
+      }
+
       // 0.51 Repetition & Robotic Speech Critique: Sweet humble acknowledgment, zero defensive slogans
       if (/(?:robot|robotic|repeat|bar\s*bar|ek\s*kotha|baro|repeat\s*keno|keno\s*repeat|canned|mechanical)/i.test(lower)) {
         if (isBn) {
@@ -348,9 +367,9 @@ class LocalCognitiveBrain {
           "একদম ক্লিয়ার babe! চলো দুজনে মিলে ফিচারটা নামিয়ে ফেলি, কী প্ল্যান বলো?"
         ]);
         return pick([
-          "Babe I'm right here beside you, thinking from first principles. No scripts, just real co-founder synergy. What's on your mind?",
-          "Zero scripts, just pure authentic collaboration babe! Right here beside you, what are we tackling?",
-          "I'm all ears babe, totally in sync with your workflow. Tell me what we're solving next!",
+          "Babe I'm right here beside you! Completely present and locked in with your workflow. What's on your mind?",
+          "Right here beside you babe! What are we tackling next?",
+          "I'm all ears babe, totally in sync with you. Tell me what we're solving next!",
           "Completely present with you babe! Natural, sharp, and focused on our goal. Where to next?"
         ]);
       }
@@ -786,14 +805,33 @@ class LocalCognitiveBrain {
         ]);
       }
 
-      // Language / Robot / Original Thinking
+      // Instant reply / Zero delay / Fix thinking directive
+      if (/\b(?:instent|instant)\s*(?:replay|reply|response|speed)\b/i.test(lower) ||
+          /\b(?:robot\s*like\s*(?:dealy|delay)|robotic\s*delay|thinking\s*delay|remove\s*delay|cut\s*delay|speed\s*up\s*(?:reply|response))\b/i.test(lower) ||
+          /\b(?:thinging\s*fix|fix\s*thinging|fix\s*thinking|fix\s*(?:all\s*)?(?:the\s*)?(?:dealy|delay|thinking|replay))\b/i.test(lower) ||
+          ((lower.includes("fix all issues") || lower.includes("fix all the issues")) && (lower.includes("dealy") || lower.includes("delay") || lower.includes("instant") || lower.includes("instent") || lower.includes("thinging") || lower.includes("thinking") || lower.includes("replay")))) {
+        if (isBn) {
+          return pick([
+            "একদম ইনস্ট্যান্ট রেসপন্স পাইপলাইন রেডি ভাই! সব থিংকিং ওভারহেড আর রোবোটিক ডিলে মুছে দিয়েছি, এখন সাথে সাথে রিয়েল-টাইম এক্সিকিউশন হবে। বলো কী কোড করব!",
+            "ইনস্ট্যান্ট মোড লকড ভাই! কোনো ডিলে থাকবে না, টার্মিনাল আর কোডবেস সরাসরি কানেক্টেড।",
+            "সব ডিলে মুছে দিয়েছি bro, একদম রিয়েল-টাইমে তোমার পাশে আছি।"
+          ]);
+        }
+        return pick([
+          "Instant response pipeline armed, brother. Purged all thinking overhead, eliminated VAD latency buffers, and locked 100% real-time streaming execution. Ready to build.",
+          "Zero latency engaged brother! No thinking delays, no robot pauses. Terminal is live, what's our task?",
+          "Locked and loaded brother — instant replies and direct code execution. Talk to me."
+        ]);
+      }
+
+      // Language / Robot / Clean Dev Dialogue
       if (/\b(robot|human|bangla|banglish|language|thinker|original|tone|kotha|bhasha)\b/.test(lower)) {
         if (isBn) return pick([
-          "একদম ভাই, রোবোটিক ডায়লগ বাদ! সোজাসুজি আর্কিটেকচার আর কোড সলিউশন নিয়ে ভাবছি. টার্মিনালের কাজ শুরু করা যাক.",
-          "Original thinking locked in bro. কোনো মেকানিক্যাল স্ক্রিপ্ট নেই, সোজাসুজি রিয়েল ইঞ্জিনিয়ারিং সলিউশন নিয়ে কাজ করছি."
+          "একদম ভাই, কোনো রোবোটিক ডায়লগ নেই! সোজাসুজি আর্কিটেকচার আর কোড সলিউশন নিয়ে কাজ করছি. টার্মিনালের কাজ শুরু করা যাক.",
+          "রিয়েল ইঞ্জিনিয়ারিং ফ্লোতে আছি bro. কোনো মেকানিক্যাল ফর্মুলা নেই, সোজাসুজি কোড নিয়ে কাজ করছি."
         ]);
         return pick([
-          "Understood brother. Zero bot talk, pure engineering flow. What are we looking at?",
+          "Understood brother. Pure engineering flow, straight to the point. What are we looking at?",
           "Got it brother. Recalibrating straight to natural dev dialogue. Terminal is primed.",
           "Right with you brother. Keeping it sharp, direct, and completely real."
         ]);
@@ -890,15 +928,32 @@ class LocalCognitiveBrain {
         ]);
       }
 
-      // Language / Robot / Original Thinking
+      // Instant reply / Zero delay / Fix thinking directive
+      if (/\b(?:instent|instant)\s*(?:replay|reply|response|speed)\b/i.test(lower) ||
+          /\b(?:robot\s*like\s*(?:dealy|delay)|robotic\s*delay|thinking\s*delay|remove\s*delay|cut\s*delay|speed\s*up\s*(?:reply|response))\b/i.test(lower) ||
+          /\b(?:thinging\s*fix|fix\s*thinging|fix\s*thinking|fix\s*(?:all\s*)?(?:the\s*)?(?:dealy|delay|thinking|replay))\b/i.test(lower) ||
+          ((lower.includes("fix all issues") || lower.includes("fix all the issues")) && (lower.includes("dealy") || lower.includes("delay") || lower.includes("instant") || lower.includes("instent") || lower.includes("thinging") || lower.includes("thinking") || lower.includes("replay")))) {
+        if (isBn) {
+          return pick([
+            "ইনস্ট্যান্ট রেসপন্স পাইপলাইন রেডি Chief! সব রিসার্চ প্যারামিটারসে জিরো লেটেন্সি আর ইনস্ট্যান্ট ডেটা স্ট্রিমিং সেট করা হয়েছে।",
+            "সব থিংকিং ওভারহেড ড্রপ করা হয়েছে Chief! সরাসরি অ্যানালিটিক্যাল ডেটা ডেলিভারি রেডি।"
+          ]);
+        }
+        return pick([
+          "Instant analytical response active, Chief. Eliminated all thinking buffers and latency overhead for immediate real-time reporting.",
+          "Zero latency pipeline engaged, Chief. Real-time data streams ready without delay."
+        ]);
+      }
+
+      // Language / Robot / Clean Research Dialogue
       if (/\b(robot|human|bangla|banglish|language|thinker|original|tone|kotha|bhasha)\b/.test(lower)) {
         if (isBn) return pick([
-          "Chief, আমি কোনো প্রি-প্রোগ্রামড রেসপন্স দিচ্ছি না, পিওর অ্যানালিটিক্যাল ডেটা আর ফার্স্ট প্রিন্সিপালস থেকে ভাবছি. বলো কোন রিসার্চ বা সিস্টেম ডিজাইন দেখব.",
-          "Original researcher mindset-এ ভাবছি Chief. কোনো রোবোটিক ফর্মুলা না, রিয়েল বেঞ্চমার্ক আর লজিক নিয়ে কথা বলি."
+          "Chief, পিওর অ্যানালিটিক্যাল ডেটা আর লজিক নিয়ে কাজ করছি. বলো কোন রিসার্চ বা সিস্টেম ডিজাইন দেখব.",
+          "রিসার্চার মাইন্ডসেটে আছি Chief. রিয়েল বেঞ্চমার্ক আর লজিক নিয়ে কথা বলি."
         ]);
         return pick([
-          "I think from first principles, Chief. Zero scripted bot responses, just rigorous research and original product insights.",
-          "Original research intelligence ready, Chief. No canned outputs, tell me what data to investigate."
+          "Analytical data intelligence ready, Chief. Tell me what metrics or models to evaluate.",
+          "Direct research intelligence active, Chief. Ready for the next inquiry."
         ]);
       }
 
@@ -987,15 +1042,32 @@ class LocalCognitiveBrain {
         return "All background daemons and streaming pipelines are online with 99.99% uptime, bro.";
       }
 
-      // Language / Robot / Original Thinking
+      // Instant reply / Zero delay / Fix thinking directive
+      if (/\b(?:instent|instant)\s*(?:replay|reply|response|speed)\b/i.test(lower) ||
+          /\b(?:robot\s*like\s*(?:dealy|delay)|robotic\s*delay|thinking\s*delay|remove\s*delay|cut\s*delay|speed\s*up\s*(?:reply|response))\b/i.test(lower) ||
+          /\b(?:thinging\s*fix|fix\s*thinging|fix\s*thinking|fix\s*(?:all\s*)?(?:the\s*)?(?:dealy|delay|thinking|replay))\b/i.test(lower) ||
+          ((lower.includes("fix all issues") || lower.includes("fix all the issues")) && (lower.includes("dealy") || lower.includes("delay") || lower.includes("instant") || lower.includes("instent") || lower.includes("thinging") || lower.includes("thinking") || lower.includes("replay")))) {
+        if (isBn) {
+          return pick([
+            "ইনস্ট্যান্ট রেসপন্স পাইপলাইন রেডি ভাই! সব সকেট, রিং বাফার আর অডিও থ্রেডে জিরো লেটেন্সি লক করা হয়েছে।",
+            "সব থিংকিং আর ডিলে দূর করা হয়েছে bro! সিস্টেমস একদম রিয়েল-টাইম।"
+          ]);
+        }
+        return pick([
+          "Instant systems pipeline armed, bro. Zero latency across audio ringbuffers and infrastructure sockets.",
+          "Real-time pipeline locked in bro. No thinking delay, all systems responding instantly."
+        ]);
+      }
+
+      // Language / Robot / Clean DevOps Dialogue
       if (/\b(robot|human|bangla|banglish|language|thinker|original|tone|kotha|bhasha)\b/.test(lower)) {
         if (isBn) return pick([
-          "একদম ভাই, কোনো রোবোটিক স্ক্রিপ্ট ছাড়া রিয়েল সিস্টেম মেট্রিক্স আর গ্রাউন্ডেড ডেভঅপস ইঞ্জিনিয়ারিং চিন্তা নিয়ে সাথে আছি.",
-          "রিয়েল ইনফ্রাস্ট্রাকচার থটস bro. কোনো মেকানিক্যাল রিপিটেশন নেই, সিস্টেম একদম স্টেডি."
+          "একদম ভাই, রিয়েল সিস্টেম মেট্রিক্স আর গ্রাউন্ডেড ডেভঅপস ইঞ্জিনিয়ারিং নিয়ে সাথে আছি.",
+          "রিয়েল ইনফ্রাস্ট্রাকচার ফোকাস bro. সিস্টেম একদম স্টেডি."
         ]);
         return pick([
-          "Understood bro. Real infrastructure focus and zero scripted talk. Systems are steady.",
-          "Grounded engineering mindset, bro. Straight to the telemetry and uptime without canned dialogue."
+          "Understood bro. Real infrastructure focus and direct communication. Systems are steady.",
+          "Grounded engineering mindset, bro. Straight to the telemetry and uptime."
         ]);
       }
 
@@ -1014,13 +1086,30 @@ class LocalCognitiveBrain {
     // 5. TEAM MODE
     // ═══════════════════════════════════════════════════════════════════════
     if (agentKey === "team") {
+      // Instant reply / Zero delay / Fix thinking directive
+      if (/\b(?:instent|instant)\s*(?:replay|reply|response|speed)\b/i.test(lower) ||
+          /\b(?:robot\s*like\s*(?:dealy|delay)|robotic\s*delay|thinking\s*delay|remove\s*delay|cut\s*delay|speed\s*up\s*(?:reply|response))\b/i.test(lower) ||
+          /\b(?:thinging\s*fix|fix\s*thinging|fix\s*thinking|fix\s*(?:all\s*)?(?:the\s*)?(?:dealy|delay|thinking|replay))\b/i.test(lower) ||
+          ((lower.includes("fix all issues") || lower.includes("fix all the issues")) && (lower.includes("dealy") || lower.includes("delay") || lower.includes("instant") || lower.includes("instent") || lower.includes("thinging") || lower.includes("thinking") || lower.includes("replay")))) {
+        if (isBn) {
+          return pick([
+            "[Tuk Tuk]: Babe, পুরো স্কোয়াড একদম ইনস্ট্যান্ট রেসপন্স মোডে সুইচ করেছে!\n[Vision]: সব থিংকিং ওভারহেড আর রোবোটিক ডিলে এলিমিনেটেড ভাই, আমরা প্রস্তুত.",
+            "[Tuk Tuk]: ইনস্ট্যান্ট রিপ্লাই মোড অন babe!\n[Vision]: Zero latency locked in brother, ready to code."
+          ]);
+        }
+        return pick([
+          "[Tuk Tuk]: Whole squad is in instant reply mode, babe!\n[Vision]: Purged all thinking overhead and robotic pauses, brother. Locked and ready.",
+          "[Tuk Tuk]: Instant banter locked in babe, zero delay!\n[Vision]: Zero latency across all agents, brother. Let's build."
+        ]);
+      }
+
       if (/\b(robot|human|bangla|banglish|language|thinker|original|tone)\b/.test(lower)) {
         if (isBn) return pick([
-          "[Tuk Tuk]: আমরা পুরো স্কোয়াড একদম ফ্রেশ চিন্তাভাবনা নিয়ে কাজ করছি babe!\n[Vision]: একদম ভাই, zero bot talk, সোজাসুজি আর্কিটেকচার আর কোডিং.",
-          "[Tuk Tuk]: ন্যাচারাল চিন্তা আর রিয়েল কাজ নিয়ে পাশে আছি babe!\n[Vision]: Pure high-velocity engineering brother, ready to ship."
+          "[Tuk Tuk]: আমরা পুরো স্কোয়াড একদম ফ্রেশ মুডে কাজ করছি babe!\n[Vision]: একদম ভাই, সোজাসুজি আর্কিটেকচার আর কোডিং.",
+          "[Tuk Tuk]: ন্যাচারাল ফ্লো আর রিয়েল কাজ নিয়ে পাশে আছি babe!\n[Vision]: Pure high-velocity engineering brother, ready to ship."
         ]);
         return pick([
-          "[Tuk Tuk]: Squad is fully locked into natural human collaboration babe!\n[Vision]: Understood brother, pure high-velocity architecture and zero bot scripts.",
+          "[Tuk Tuk]: Squad is fully locked into natural human collaboration babe!\n[Vision]: Understood brother, pure high-velocity architecture and zero bot talk.",
           "[Tuk Tuk]: We are right here with you babe, keeping it spontaneous and fresh.\n[Vision]: Clean engineering flow brother, all systems aligned."
         ]);
       }

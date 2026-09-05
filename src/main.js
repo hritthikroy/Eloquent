@@ -2265,17 +2265,17 @@ function startRecording() {
         const voicedDurationMs = jarvisLastSpeechTime - jarvisSpeechStartTime;
         const totalDurationMs = Date.now() - jarvisSpeechStartTime;
 
-        // Natural human turn-taking with zero mid-sentence cut-offs:
-        // 1. Sustained speech (voiced >= 2000ms): 1400ms completion pause
-        // 2. Medium speech (500ms <= voiced < 2000ms): 1600ms breath transition
-        // 3. Short prompt / hesitation (voiced < 500ms): 1800ms breathing room
-        let dynamicSilenceThreshold = voicedDurationMs >= 2000 ? 1400 : (voicedDurationMs >= 500 ? 1600 : 1800);
+        // Natural human turn-taking with instant, responsive endpointing:
+        // 1. Sustained speech (voiced >= 2000ms): 650ms completion pause
+        // 2. Medium speech (500ms <= voiced < 2000ms): 750ms breath transition
+        // 3. Short prompt / quick command (voiced < 500ms): 850ms breathing room
+        let dynamicSilenceThreshold = voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850);
         if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 500) {
           dynamicSilenceThreshold = 500; // Optical lip closure handoff
         }
         const isMaxSpeechCap = totalDurationMs >= 60000;
 
-        if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 600) || isMaxSpeechCap) {
+        if ((silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= 240) || isMaxSpeechCap) {
           const reason = isMaxSpeechCap ? "60s max speech ceiling" : `${silenceMs}ms natural pause`;
           console.log(`🗣️ VAD Heartbeat: Turn completion detected (${reason}, ${voicedDurationMs}ms speech) - auto-submitting!`);
           jarvisAutoStopTriggered = true;
@@ -2363,18 +2363,18 @@ function startRecording() {
 
             // Mode-aware natural human endpointing:
             // In standard / rewrite mode (dictation): Give 2500ms generous silence so users can think and dictate without being cut off!
-            // In jarvis mode: 1400ms - 1800ms natural conversational breath room
+            // In jarvis mode: 650ms - 850ms snappy conversational response
             let dynamicSilenceThreshold;
             let minVoicedForStop;
             if (currentMode !== 'jarvis') {
               dynamicSilenceThreshold = 2500; // 2.5s generous silence for dictation
               minVoicedForStop = 1000;
             } else {
-              dynamicSilenceThreshold = voicedDurationMs >= 2000 ? 1400 : (voicedDurationMs >= 500 ? 1600 : 1800);
+              dynamicSilenceThreshold = voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850);
               if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 500) {
                 dynamicSilenceThreshold = 500; // Optical lip closure handoff
               }
-              minVoicedForStop = 600;
+              minVoicedForStop = 240;
             }
             const isMaxSpeechCap = speechDurationMs >= 60000;
             const isNaturalPause = silenceMs >= dynamicSilenceThreshold && voicedDurationMs >= minVoicedForStop;
@@ -3588,6 +3588,11 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
                  .replace(/<\/?(?:tool_call|function|parameter)[^>]*>/gi, '')
                  .replace(/<tool_call>[\s\S]*/gi, '')
                  .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+                 .replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, '')
+                 .replace(/<\/?(?:think|thought)>/gi, '')
+                 .replace(/\[Thinking:[\s\S]*?\]/gi, '')
+                 .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, '')
+                 .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis|thinking process)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, '')
                  .replace(/^\s*(?:(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s+says|user\s+says|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, '')
                  .trim();
 

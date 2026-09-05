@@ -300,7 +300,7 @@ class HumanEarCortex {
       return 450; // Short fragment / command
     }
 
-    // Default conversational mode
+    // Conversational mode with natural human breath & pause protection
     if (opticalLipClosure) return 500; // Natural visual closure handoff
     if (phraseDurationMs > 3000) return 1250; // Sustained speech completion
     if (phraseDurationMs > 1200) return 1450; // Standard sentence pause
