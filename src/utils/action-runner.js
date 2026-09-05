@@ -399,15 +399,16 @@ class OfficeActionRunner {
       (lower.includes("every agent") && (lower.includes("conversational session") || lower.includes("conversational sation") || lower.includes("fluent vibe")));
 
     if (isMultiConversationalBuildingVibeDirective) {
-      if (this.jarvisManager) {
-        if (typeof this.jarvisManager.addDynamicDirective === "function") {
-          this.jarvisManager.addDynamicDirective({
-            target: "all",
-            rule: "always: All agents maintain unbroken multi-conversational session fluency, fully fluent co-building and updating vibe, and 100% authentic human behavior on every side adhering strictly to persona sovereignty"
-          });
+      const jm = jarvisManager || this.jarvisManager;
+      if (jm) {
+        if (typeof jm.addDynamicDirective === "function") {
+          jm.addDynamicDirective(
+            "always: All agents maintain unbroken multi-conversational session fluency, fully fluent co-building and updating vibe, and 100% authentic human behavior on every side adhering strictly to persona sovereignty",
+            "all"
+          );
         }
-        if (typeof this.jarvisManager.setLivingMemoryPreference === "function") {
-          this.jarvisManager.setLivingMemoryPreference(
+        if (typeof jm.setLivingMemoryPreference === "function") {
+          jm.setLivingMemoryPreference(
             "multi_conversational_building_vibe",
             "Active (100% Fluent Co-Building & Updating Vibe, Complete Human Realism Across All 4 Agents)"
           );
