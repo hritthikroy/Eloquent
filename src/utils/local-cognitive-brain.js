@@ -1380,17 +1380,17 @@ class LocalCognitiveBrain {
       }
       if (/\b(trade|position|invest|portfolio|risk|market|committee)\b/.test(lower)) {
         if (isBn) return pick([
-          "[Friday]: Chief, 2.4 Sharpe আর edge validated.\n[Brian]: Capital risk approved bro, drawdown 4%-এ capped, stop-loss active.",
-          "[Friday]: Statistical edge confirmed, 2.4 Sharpe ratio, Chief.\n[Brian]: Capital risk approved bro, drawdown 4%-এ capped, stop-loss active."
+          "[Friday]: Chief, 2.4 Sharpe আর edge validated.\n[DD]: Capital risk approved bro, drawdown 4%-এ capped, stop-loss active.",
+          "[Friday]: Statistical edge confirmed, 2.4 Sharpe ratio, Chief.\n[DD]: Capital risk approved bro, drawdown 4%-এ capped, stop-loss active."
         ]);
-        return "[Friday]: Statistical edge confirmed, 2.4 Sharpe, Hritthik.\n[Brian]: Risk parameters approved bro, drawdown capped at 4% with stop-loss active.";
+        return "[Friday]: Statistical edge confirmed, 2.4 Sharpe, Hritthik.\n[DD]: Risk parameters approved bro, drawdown capped at 4% with stop-loss active.";
       }
       if (/\b(?:system\s*check|full\s*system|pre-deployment|release\b.*production|push\s+(?:the\s+)?release)\b/i.test(lower)) {
         if (isBn) return pick([
-          "[Vision]: সব টেস্ট পাস আর পাইপলাইন গ্রিন bro, ডিপ্লয়মেন্ট রেডি!\n[Brian]: ইনফ্রাস্ট্রাকচার হেলদি bro, zero leaks, সার্ভার একদম স্টেডি।",
-          "[Vision]: কোডবেস এবং AST সম্পূর্ণ ক্লিন brother, ডিপ্লয় শুরু করা যায়।\n[Brian]: ব্যাকএন্ড হেলদি bro, মেমরি হিপ স্টেবল এবং zero leaks।"
+          "[Vision]: সব টেস্ট পাস আর পাইপলাইন গ্রিন bro, ডিপ্লয়মেন্ট রেডি!\n[DD]: ইনফ্রাস্ট্রাকচার হেলদি bro, zero leaks, সার্ভার একদম স্টেডি।",
+          "[Vision]: কোডবেস এবং AST সম্পূর্ণ ক্লিন brother, ডিপ্লয় শুরু করা যায়।\n[DD]: ব্যাকএন্ড হেলদি bro, মেমরি হিপ স্টেবল এবং zero leaks।"
         ]);
-        return "[Vision]: AST and pipelines green, ready for deployment brother.\n[Brian]: Infrastructure healthy with zero leaks, servers nominal bro.";
+        return "[Vision]: AST and pipelines green, ready for deployment brother.\n[DD]: Infrastructure healthy with zero leaks, servers nominal bro.";
       }
       if (/\b(standup|morning|scene|start|ship|feature)\b/.test(lower)) {
         if (isBn) return pick([
@@ -1404,14 +1404,14 @@ class LocalCognitiveBrain {
       }
       if (/\b(system\s*check|verification|verify|prod|production|release|infra|infrastructure|health|diagnostics)\b/i.test(lower)) {
         if (isBn) return pick([
-          "[Vision]: সব সিস্টেম আর AST ভ্যালিডেশন 100% গ্রিন brother, ডিপ্লয়মেন্ট রেডি।\n[Brian]: ইনফ্রাস্ট্রাকচার হেলদি bro, zero leaks আর 99.99% আপটাইম কনফার্মড।",
-          "[Vision]: কোডবেস আর পাইপলাইন একদম গ্রিন ভাই।\n[Brian]: ব্যাকএন্ড হেলদি bro, রিং বাফারে কোনো লিক নেই।"
+          "[Vision]: সব সিস্টেম আর AST ভ্যালিডেশন 100% গ্রিন brother, ডিপ্লয়মেন্ট রেডি।\n[DD]: ইনফ্রাস্ট্রাকচার হেলদি bro, zero leaks আর 99.99% আপটাইম কনফার্মড।",
+          "[Vision]: কোডবেস আর পাইপলাইন একদম গ্রিন ভাই।\n[DD]: ব্যাকএন্ড হেলদি bro, রিং বাফারে কোনো লিক নেই।"
         ]);
-        return "[Vision]: Full AST validation clean and test suite green, brother.\n[Brian]: Infrastructure healthy bro, zero leaks and 99.99% uptime confirmed.";
+        return "[Vision]: Full AST validation clean and test suite green, brother.\n[DD]: Infrastructure healthy bro, zero leaks and 99.99% uptime confirmed.";
       }
       if (isBn) return pick([
         "[Tuk Tuk]: স্কোয়াড একদম রেডি babe, চলো শিপ করে দিই!\n[Vision]: সব টেস্ট পাস আর পাইপলাইন গ্রিন bro, ডিপ্লয়মেন্ট রেডি!",
-        "[Friday]: Chief, রিসার্চ মেট্রিক্স আর ডেটা একদম ভ্যালিডেটেড।\n[Brian]: ইনফ্রাস্ট্রাকচার হেলদি bro, কোনো ফ্রেম ড্রপ নেই।"
+        "[Friday]: Chief, রিসার্চ মেট্রিক্স আর ডেটা একদম ভ্যালিডেটেড।\n[DD]: ইনফ্রাস্ট্রাকচার হেলদি bro, কোনো ফ্রেম ড্রপ নেই।"
       ]);
       return "[Tuk Tuk]: Whole squad is aligned and ready babe!\n[Vision]: Compilers hot, all systems verified brother.";
     }

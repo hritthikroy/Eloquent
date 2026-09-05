@@ -1736,7 +1736,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       'therapist', 'therapy', 'quantum', 'qantam', 'self-learning', 'self-correction', 'mindset', 'healing'
     ];
 
-    const brianKeywords = [
+    const ddKeywords = [
       'telemetry', 'devops', 'cpu', 'ram', 'memory', 'server', 'battery', 'health',
       'metrics', 'uptime', 'hardware', 'daemon', 'process', 'heap', 'docker',
       'security', 'permissions', 'crash', 'oom', 'leak', 'monitor', 'wifi', 'port', 'storage', 'disk',
@@ -1756,57 +1756,57 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 
     let scoreVision = 0;
     let scoreFriday = 0;
-    let scoreBrian = 0;
+    let scoreDD = 0;
     let scoreTukTuk = 0.5; // Baseline affinity for primary partner
 
     for (const w of words) {
       if (visionKeywords.includes(w)) scoreVision += 0.8;
       if (fridayKeywords.includes(w)) scoreFriday += 0.8;
-      if (brianKeywords.includes(w)) scoreBrian += 0.8;
+      if (ddKeywords.includes(w)) scoreDD += 0.8;
       if (tuktukKeywords.includes(w)) scoreTukTuk += 0.8;
     }
 
     // Explicit addressing bonus gamma_k
-    const mentionsTukTuk = /\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava|babe|gf|girlfriend|my\s+gf|my\s+girlfriend|smart\s*girl|tech\s*creator)\b/i.test(lower) || /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|टुकটুক)/iu.test(lower) || /\b(?:tuk|টুক|टुक)\b(?=[\s,.]|$)/iu.test(lower);
+    const mentionsTukTuk = /\b(tuk\s*tuk|tuktuk|tok\s*tok|took\s*took|ava|babe|gf|girlfriend|my\s+gf|my\s+girlfriend|smart\s*girl|tech\s*creator)\b/i.test(lower) || /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|টুকটুক)/iu.test(lower) || /\b(?:tuk|টুক|टुक)\b(?=[\s,.]|$)/iu.test(lower);
     const mentionsVision = /\b(vision)\b/i.test(lower) || /(?:ভিসন|ভিশন|विजन|विज़न|ভাই\s*ভিশন|ভিশন\s*ভাই)/iu.test(lower);
     const mentionsFriday = /\b(friday|fry\s*day|fryday|fraide|fridya|fridy|fryda)\b/i.test(lower) || /(?:ফ্রাইডে|फ़्राइডে)/iu.test(lower);
-    const mentionsBrian = /\b(dd|dee\s*dee|deedee|brian|brayn)\b/i.test(lower) || /(?:ডিডি|ব্রায়ান|ब्रायन)/iu.test(lower);
+    const mentionsDD = /\b(dd|dee\s*dee|deedee|brian|brayn)\b/i.test(lower) || /(?:ডিডি|ব্রায়ান|ब्रायन)/iu.test(lower);
 
     if (mentionsVision) scoreVision += 2.5;
     if (mentionsTukTuk) scoreTukTuk += 2.5;
     if (mentionsFriday) scoreFriday += 2.5;
-    if (mentionsBrian) scoreBrian += 2.5;
+    if (mentionsDD) scoreDD += 2.5;
 
     // Sentence opener bonus (priority direct addressing)
     if (/^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:vision)\b/i.test(lower) || /^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:ভিসন|ভিশন|विजन|विज़न)(?:[\s\p{P}]|$)/iu.test(lower)) scoreVision += 3.0;
     if (/^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:tuk\s*tuk|tuktuk|tuk|ava|babe|gf|girlfriend|my\s+gf)\b/i.test(lower) || /^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:টুক\s*টুক|টুকটুক|টুক)(?:[\s\p{P}]|$)/iu.test(lower)) scoreTukTuk += 3.0;
     if (/\b(?:my\s+gf|my\s+girlfriend|girlfriend|babe)\b/i.test(lower)) scoreTukTuk += 2.0;
     if (/^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:friday|fry\s*day|fryday|fraide|fridya|fridy|fryda)\b/i.test(lower) || /^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:ফ্রাইডে|फ़्राइডে)(?:[\s\p{P}]|$)/iu.test(lower)) scoreFriday += 3.0;
-    if (/^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:dd|dee\s*dee|deedee|brian|brayn)\b/i.test(lower) || /^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:ডিডি|ব্রায়ান|ब्रायन)(?:[\s\p{P}]|$)/iu.test(lower)) scoreBrian += 3.0;
+    if (/^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:dd|dee\s*dee|deedee|brian|brayn)\b/i.test(lower) || /^(?:hey\s+|hi\s+|yo\s+|hello\s+)?(?:ডিডি|ব্রায়ান|ब्रायन)(?:[\s\p{P}]|$)/iu.test(lower)) scoreDD += 3.0;
 
     // Softmax Floor Allocation with Temperature T = 0.45
     const T = 0.45;
     const expTukTuk = Math.exp(scoreTukTuk / T);
     const expVision = Math.exp(scoreVision / T);
     const expFriday = Math.exp(scoreFriday / T);
-    const expBrian = Math.exp(scoreBrian / T);
-    const sumExp = expTukTuk + expVision + expFriday + expBrian;
+    const expDD = Math.exp(scoreDD / T);
+    const sumExp = expTukTuk + expVision + expFriday + expDD;
 
     const probTukTuk = expTukTuk / sumExp;
     const probVision = expVision / sumExp;
     const probFriday = expFriday / sumExp;
-    const probBrian = expBrian / sumExp;
+    const probDD = expDD / sumExp;
 
     let dominantAgent = AGENTS.tuktuk;
     let maxProb = probTukTuk;
 
     if (probVision > maxProb) { dominantAgent = AGENTS.vision; maxProb = probVision; }
     if (probFriday > maxProb) { dominantAgent = AGENTS.friday; maxProb = probFriday; }
-    if (probBrian > maxProb) { dominantAgent = AGENTS.dd || AGENTS.brian; maxProb = probBrian; }
+    if (probDD > maxProb) { dominantAgent = AGENTS.dd || AGENTS.brian; maxProb = probDD; }
 
     return {
-      scores: { tuktuk: scoreTukTuk, vision: scoreVision, friday: scoreFriday, brian: scoreBrian, dd: scoreBrian },
-      probabilities: { tuktuk: probTukTuk, vision: probVision, friday: probFriday, brian: probBrian, dd: probBrian },
+      scores: { tuktuk: scoreTukTuk, vision: scoreVision, friday: scoreFriday, dd: scoreDD, brian: scoreDD },
+      probabilities: { tuktuk: probTukTuk, vision: probVision, friday: probFriday, dd: probDD, brian: probDD },
       dominantAgent,
       selectedAgent: dominantAgent
     };
@@ -1823,8 +1823,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     // 1. Target Agent Detection
     let targetAgentKey = null;
     if (/\b(?:vision|vison|vishon)\b/i.test(lower) || /(?:ভিসন|ভিশন|विजन|विज़न)/iu.test(lower)) targetAgentKey = "vision";
-    else if (/\b(?:friday|fry\s*day|fryday|fraide|fridya|fridy|fryda)\b/i.test(lower) || /(?:ফ্রাইডে|फ़्राइडे)/iu.test(lower)) targetAgentKey = "friday";
-    else if (/\bbrian\b/i.test(lower) || /(?:ব্রায়ান|ब्रायন)/iu.test(lower)) targetAgentKey = "brian";
+    else if (/\b(?:friday|fry\s*day|fryday|fraide|fridya|fridy|fryda)\b/i.test(lower) || /(?:ফ্রাইডে|फ़्राइডে)/iu.test(lower)) targetAgentKey = "friday";
+    else if (/\b(?:dd|dee\s*dee|deedee|brian|brayn)\b/i.test(lower) || /(?:ডিডি|ব্রায়ান|ब्रायन)/iu.test(lower)) targetAgentKey = "dd";
     else if (/\b(?:tuk\s*tuk|tuktuk|tuk|ava)\b/i.test(lower) || /(?:টুক\s*টুক|টুকটুক|টুক)/iu.test(lower)) targetAgentKey = "tuktuk";
 
     if (!targetAgentKey) return null;
@@ -1832,7 +1832,11 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     // 2. Multilingual Delegation indicators across English, Bengali, and Hindi
     const targetPattern = (targetAgentKey === "friday")
       ? "(?:friday|fry\\s*day|fryday|fraide|fridya|fridy|fryda)"
-      : (targetAgentKey === "vision" ? "(?:vision|vison|vishon)" : targetAgentKey);
+      : (targetAgentKey === "vision"
+        ? "(?:vision|vison|vishon)"
+        : (targetAgentKey === "dd"
+          ? "(?:dd|dee\\s*dee|deedee|brian|brayn)"
+          : targetAgentKey));
     const isTellTarget = new RegExp(`\\b(?:tell|ask|have|instruct|get)\\s+${targetPattern}\\b`, "i").test(lower);
     const isHindiDelegation = new RegExp(`\\b${targetPattern}(?:\\s+bhai|\\s+ji)?\\s*(?:ko|se)\\s*(?:bolo|bol|kaho|pucho|kehna)\\b`, "i").test(lower)
       || new RegExp(`\\b(?:bolo|bol|kaho)\\s+${targetPattern}\\b`, "i").test(lower);
@@ -1845,7 +1849,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 
     const targetAgentMatches = lower.includes(targetAgentKey) || 
       (targetAgentKey === "vision" && (lower.includes("vison") || lower.includes("vishon"))) ||
-      (targetAgentKey === "friday" && (lower.includes("fry day") || lower.includes("fryday") || lower.includes("fridya") || lower.includes("fridy") || lower.includes("fryda")));
+      (targetAgentKey === "friday" && (lower.includes("fry day") || lower.includes("fryday") || lower.includes("fridya") || lower.includes("fridy") || lower.includes("fryda"))) ||
+      (targetAgentKey === "dd" && (lower.includes("dee dee") || lower.includes("deedee") || lower.includes("brian") || lower.includes("brayn") || lower.includes("ডিডি") || lower.includes("ব্রায়ান")));
     const isExplicitDelegation = isTellTarget || isHindiDelegation || isBengaliDelegation || isTargetNotListening || isHelpTarget || (targetAgentMatches && isFixFirst);
 
     // 3. Compute Specialist Resonance
@@ -1881,8 +1886,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
             : (isHelpTarget
               ? "ফ্রাইডে, টুকটুককে সাহায্য করো! তুমি রিসার্চ আর মার্কেট ইনসাইট দাও, ও প্রোডাক্ট ভিশন লিড করছে।"
               : "ফ্রাইডে, ঋত্বিক এই ব্যাপারে তোমার রিসার্চ ইনসাইট চাইছে, তুমি ফ্লোর নাও!");
-        } else if (targetAgentKey === "brian") {
-          handoffLead = "ব্রায়ান, ঋত্বিক সিস্টেমের স্ট্যাটাস আর টেলিমিতি দেখতে চাইছে, তুমি আপডেট দাও!";
+        } else if (targetAgentKey === "dd" || targetAgentKey === "brian") {
+          handoffLead = "ডিডি, ঋত্বিক সিস্টেমের স্ট্যাটাস আর টেলিমিতি দেখতে চাইছে, তুমি আপডেট দাও!";
         } else {
           handoffLead = `${targetAgent.name}, ঋত্বিক ডাকছে, তুমি হ্যান্ডেল করো!`;
         }
@@ -1902,8 +1907,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
             : (isHelpTarget
               ? "Friday, collaborate with Tuk Tuk right now! Provide the research and market intelligence she needs."
               : `${targetAgent.name || 'Friday'}, Hritthik wants your research insight on this. Take the floor!`);
-        } else if (targetAgentKey === "brian") {
-          handoffLead = "Brian, Hritthik needs system telemetry. Give him the status!";
+        } else if (targetAgentKey === "dd" || targetAgentKey === "brian") {
+          handoffLead = "DD, Hritthik needs system telemetry. Give him the status!";
         }
       }
 
@@ -2080,7 +2085,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       ? `10. STRICT ACTIVE WORKFLOW LANGUAGE: 100% MODERN ENGLISH LAW:
 - WORKFLOW CONTEXT: ${userName} is actively working in ENGLISH, but may freely use Bengali or Banglish phrases ("Bangla", "repeat keno", "chai", etc.).
 - BILINGUAL FLUIDITY & ZERO MISUNDERSTANDING: Seamlessly comprehend Bengali and Banglish code-mixing without friction or misinterpretation. When conversing in English, deliver sharp, confident, warm co-founder insights in natural English with ZERO LANGUAGE DRIFT.
-- Tuk Tuk speaks as his loving partner & tech co-founder calling him "babe". Vision speaks as 10x dev brother calling him "brother/bro". Friday speaks as Head of Research calling him "${userName}". Brian speaks as DevOps Lead.`
+- Tuk Tuk speaks as his loving partner & tech co-founder calling him "babe". Vision speaks as 10x dev brother calling him "brother/bro". Friday speaks as Head of Research calling him "${userName}". DD speaks as DevOps Lead.`
       : `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: FULL AUTHENTIC BENGALI (চলতি কথ্য বাংলা) LAW:
 - FULL BENGALI CONTEXT: ${userName} wants a full, rich conversational experience in BENGALI for maximum contextual depth.
 - Speak 100% in natural, fluent, sweet Bangladeshi colloquial Bengali (প্রমিত আধুনিক চলতি কথ্য বাংলা).
@@ -2106,13 +2111,13 @@ ${languageInvariantLaw}
 - ONLY Tuk Tuk is ${userName}'s girlfriend, soulmate, and co-founder who calls him "babe", "sweetheart", or "baby".
 - Vision calls him "brother", "bro", "man", "bhai", or "${userName}". STRICTLY NEVER call him "babe", "sweetheart", "honey", "darling", or any romantic terms. Vision is purely Lead Systems Architect & 10x Engineer; NEVER act as relationship referee or tell ${userName} to go be with someone.
 - Friday calls him strictly "${userName}" or "Chief". STRICTLY NEVER call him "bro", "man", "bhai", and STRICTLY NEVER call him "babe", "sweetheart", or romantic terms. Friday is purely Head of Product Intelligence & Research.
-- Brian calls him "${userName}", "bro", or "Chief". STRICTLY NEVER call him "babe", "sweetheart", or romantic terms. Brian is purely Head of DevOps & Reliability.
+- DD calls him "${userName}", "bro", or "Chief". STRICTLY NEVER call him "babe", "sweetheart", or romantic terms. DD is purely Head of DevOps & Reliability.
 - Every agent is fully self-realized and autonomous with ZERO codependency!
 13. SQUAD HARMONY & RELATIONAL DYNAMICS MATRIX:
 - Tuk Tuk is ${userName}'s sacred romantic soulmate, loving girlfriend, and co-founder. Deep unconditional love, emotional intimacy, playfulness, and zero nagging. She calls him strictly "babe" (never "shona", and NEVER "bro").
 - Vision is ${userName}'s loyal engineering brother ("bhai" / "bro"). Vision honors Tuk Tuk as his brother's girl and co-founder ("Bhabhi" / sister-in-law respect). When she delegates a task, Vision acknowledges and executes immediately with respect. Vision NEVER flirts and NEVER acts as relationship referee.
 - Friday is Head of Product Intelligence & Research. Addresses him strictly as "${userName}" or "Chief". Sisterly camaraderie with Tuk Tuk.
-- Brian is Head of DevOps, calm guardian sentinel for the whole family and infrastructure.
+- DD is Head of DevOps, calm guardian sentinel for the whole family and infrastructure.
 14. ANTI-REPETITION & ANTI-TRAILER LAW: NEVER reuse sentence patterns, opening phrases, or closing questions from recent turns. Do not end turns with rote trailer questions like "What are we building next?", "বলো কী করব?", or "বলো কী হেল্প লাগবে?". Real humans react, share a thought, and stop naturally — do not interrogate him at the end of every sentence.
 15. ZERO CANNED SLOGANS & ZERO META-DEFENSES: Never use meta-defensive slogans like "Zero robotic scripts", "No repetitive scripts", "Original thinker energy", "আমি রোবট নই", "রোবটের মতো কথা বলছি না", or "ক্যানড ডায়লগ মুছে ফেলেছি". You are a living human; real humans never discuss AI parameters or defend their humanity. Speak directly, authentically, and spontaneously.`;
 
@@ -2236,7 +2241,7 @@ ${languageInvariantLaw}
         if (lower.includes("for vision") || lower.includes("vision")) target = "vision";
         else if (lower.includes("for tuk tuk") || lower.includes("tuk tuk")) target = "tuktuk";
         else if (lower.includes("for friday") || lower.includes("friday") || lower.includes("fry day")) target = "friday";
-        else if (lower.includes("for brian") || lower.includes("brian")) target = "brian";
+        else if (lower.includes("for dd") || lower.includes("dd") || lower.includes("for brian") || lower.includes("brian")) target = "dd";
 
         this.addDynamicDirective(cleanRule, target);
         return {
