@@ -127,14 +127,15 @@ class ConversationProcessor {
   static parsePlainTextTranscript(text) {
     const lines = text.split('\n');
     const turns = [];
-    const turnRegex = /^(?:\[?(user|tuk|tuk\s*tuk|ava|vision|andrew|brian|friday|fry\s*day|assistant)\]?[:\s-]+)(.*)$/i;
+    const turnRegex = /^(?:\[?(user|tuk|tuk\s*tuk|ava|vision|vison|andrew|dd|dee\s*dee|deedee|brian|brayn|friday|fry\s*day|assistant)\]?[:\s-]+)(.*)$/i;
 
     for (const line of lines) {
       const match = line.trim().match(turnRegex);
       if (match) {
         let rawSpeaker = match[1].toLowerCase().replace(/\s+/g, '');
-        if (rawSpeaker === 'andrew') rawSpeaker = 'vision';
+        if (rawSpeaker === 'andrew' || rawSpeaker === 'vison') rawSpeaker = 'vision';
         if (rawSpeaker === 'fryday') rawSpeaker = 'friday';
+        if (rawSpeaker === 'brian' || rawSpeaker === 'brayn' || rawSpeaker === 'deedee') rawSpeaker = 'dd';
         turns.push({
           speaker: rawSpeaker,
           text: match[2].trim(),
