@@ -971,21 +971,21 @@ Your task:
     }
 
     // -------------------------------------------------------------
-    // HARNESS DEVOPS & CI/CD PIPELINE AUTOMATION (Vision & Brian)
+    // HARNESS DEVOPS & CI/CD PIPELINE AUTOMATION (Vision & DD)
     // -------------------------------------------------------------
     if (lower.includes("harness pipeline") || lower.includes("trigger pipeline") || lower.includes("trigger deployment") ||
         lower.includes("deploy to production") || lower.includes("deploy eloquent") || lower.includes("run deployment") ||
         lower.includes("start deployment") || (lower.includes("harness") && (lower.includes("deploy") || lower.includes("trigger") || lower.includes("run")))) {
       const pipelineId = lower.includes("release") ? "eloquent_release_pipeline" : "eloquent_build_pipeline";
       const triggerRes = await harnessService.triggerPipeline(pipelineId);
-      const isBrian = activeAgent?.key === "brian" || lower.includes("brian");
-      const agentName = isBrian ? "Brian" : "Vision";
-      const agentVoice = isBrian ? "en-US-BrianMultilingualNeural" : "en-US-AndrewNeural";
+      const isDD = activeAgent?.key === "dd" || activeAgent?.key === "brian" || lower.includes("dd") || lower.includes("brian") || lower.includes("brayn");
+      const agentName = isDD ? "DD" : "Vision";
+      const agentVoice = isDD ? "en-US-BrianMultilingualNeural" : "en-US-AndrewNeural";
       return {
         handled: true,
         agentName,
         agentVoice,
-        speech: isBrian
+        speech: isDD
           ? `Harness CI/CD pipeline triggered, Hritthik. Execution ID ${triggerRes.executionId} is running with health telemetry active.`
           : `I've triggered Harness pipeline ${pipelineId}, brother! Execution ID is ${triggerRes.executionId}. All systems rolling.`
       };
@@ -993,15 +993,15 @@ Your task:
 
     if (lower.includes("pipeline status") || lower.includes("harness status") || lower.includes("build status") ||
         lower.includes("deployment status") || lower.includes("check harness") || lower.includes("harness execution")) {
-      const isBrian = activeAgent?.key === "brian" || lower.includes("brian");
-      const agentName = isBrian ? "Brian" : "Vision";
-      const agentVoice = isBrian ? "en-US-BrianMultilingualNeural" : "en-US-AndrewNeural";
+      const isDD = activeAgent?.key === "dd" || activeAgent?.key === "brian" || lower.includes("dd") || lower.includes("brian") || lower.includes("brayn");
+      const agentName = isDD ? "DD" : "Vision";
+      const agentVoice = isDD ? "en-US-BrianMultilingualNeural" : "en-US-AndrewNeural";
       const statusRes = await harnessService.getExecutionStatus("exec_latest");
       return {
         handled: true,
         agentName,
         agentVoice,
-        speech: isBrian
+        speech: isDD
           ? `Harness pipeline status is verified: all stages passed with 100% build integrity, Hritthik.`
           : `Harness build pipeline is green, brother! All AST checks and deployment stages completed successfully.`
       };
@@ -1022,7 +1022,7 @@ Your task:
       const healthRes = await harnessService.getServiceHealth("eloquent_core");
       return {
         handled: true,
-        agentName: "Brian",
+        agentName: "DD",
         agentVoice: "en-US-BrianMultilingualNeural",
         speech: `Harness infrastructure telemetry confirms Eloquent core service is healthy with 99.99% uptime and zero open incidents, Hritthik.`
       };
