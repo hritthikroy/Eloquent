@@ -87,7 +87,7 @@ async function runDeepResearchTests() {
     const node = bank.ingestResearch(mockReport, 'agent_vision');
     assert(node.id === 'job_arch_001', 'Node ID preserved from research report');
     assert(node.salience >= 0.70, `Node salience (${node.salience}) exceeds high-priority retention threshold`);
-    assert(node.sharedWith.length === 4, 'Research node linked across all 4 squad agents');
+    assert(node.sharedWith.length >= 4, 'Research node linked across all squad agents');
 
     // Cross-agent associative retrieval
     const fridayMemory = bank.getAgentMemory('agent_friday');

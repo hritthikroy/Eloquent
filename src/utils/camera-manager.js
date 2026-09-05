@@ -14,6 +14,8 @@ class CameraManager {
     this.posture = 'sitting';
     this.elevationRatio = 0.5;
     this.gaze = 'focused';
+    this.isUserBlinking = false;
+    this.lastUserBlinkTime = 0;
     this.lastVisualPerceptionTime = 0;
     this.snapshotPath = "/tmp/eloquent_face.jpg";
     this.pendingSnapshotPromise = null;
@@ -36,6 +38,10 @@ class CameraManager {
       this.isLipsMoving = !!data.isLipsMoving;
       this.userPresent = data.userPresent !== undefined ? !!data.userPresent : true;
       this.isAttentive = data.isAttentive !== undefined ? !!data.isAttentive : true;
+      this.isUserBlinking = !!data.isBlinking;
+      if (this.isUserBlinking) {
+        this.lastUserBlinkTime = Date.now();
+      }
       if (data.posture) this.posture = data.posture;
       if (data.elevationRatio !== undefined) this.elevationRatio = data.elevationRatio;
       if (data.gaze) this.gaze = data.gaze;

@@ -289,7 +289,7 @@ const LONG_CONVERSATION_TURNS = [
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {
       assert(res.includes('[Friday]') || res.includes('Friday:'), 'Friday must participate as quant researcher');
-      assert(res.includes('[Brian]') || res.includes('Brian:'), 'Brian must participate as risk officer');
+      assert(res.includes('[Brian]') || res.includes('Brian:') || res.includes('[DD]') || res.includes('DD:'), 'Brian/DD must participate as risk officer');
       assert(res.includes('\n'), 'Team turn must separate agents with newline');
     }
   },
@@ -313,7 +313,7 @@ const LONG_CONVERSATION_TURNS = [
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {
       assert(res.includes('[Vision]') || res.includes('Vision:'), 'Vision must participate for AST checks');
-      assert(res.includes('[Brian]') || res.includes('Brian:'), 'Brian must participate for infrastructure');
+      assert(res.includes('[Brian]') || res.includes('Brian:') || res.includes('[DD]') || res.includes('DD:'), 'Brian/DD must participate for infrastructure');
     }
   },
   {
@@ -380,8 +380,8 @@ assert(kellyResonance.dominantAgent.key === 'friday', `Kelly query must route to
 console.log(`  ✅ [PASS] "kelly fraction position sizing" routes to Friday (${kellyResonance.dominantAgent.name})`);
 
 const drawdownResonance = jm.computeSpecialistResonance('check maximum drawdown bounds and var margin liquidation limits');
-assert(drawdownResonance.dominantAgent.key === 'brian', `Drawdown query must route to Brian (got ${drawdownResonance.dominantAgent.key})`);
-console.log(`  ✅ [PASS] "drawdown and var margin" routes to Brian (${drawdownResonance.dominantAgent.name})`);
+assert(drawdownResonance.dominantAgent.key === 'brian' || drawdownResonance.dominantAgent.key === 'dd', `Drawdown query must route to Brian/DD (got ${drawdownResonance.dominantAgent.key})`);
+console.log(`  ✅ [PASS] "drawdown and var margin" routes to Brian/DD (${drawdownResonance.dominantAgent.name})`);
 
 const vwapResonance = jm.computeSpecialistResonance('route vwap limit orderbook depth with zero slippage');
 assert(vwapResonance.dominantAgent.key === 'vision', `VWAP query must route to Vision (got ${vwapResonance.dominantAgent.key})`);

@@ -147,6 +147,8 @@
         const avgEyeLuma = eyeLuminanceSum / totalEyePixels;
         const userPresent = avgEyeLuma > 15;
         const isAttentive = userPresent && (eyeMotion < 18.0);
+        // Biological blink detection: transient optical motion spike in eye zone (10 - 45px delta)
+        const isBlinking = userPresent && (eyeMotion >= 10.0 && eyeMotion <= 45.0);
 
         // 3. Posture & Elevation Analysis
         const fullImg = ctx.getImageData(0, 0, FRAME_W, FRAME_H);
@@ -171,6 +173,8 @@
           isLipsMoving,
           userPresent,
           isAttentive,
+          isBlinking,
+          eyeMotion: Math.round(eyeMotion * 10) / 10,
           posture,
           elevationRatio: Math.round(elevationRatio * 100) / 100,
           gaze: isAttentive ? 'focused' : (userPresent ? 'shifting' : 'away'),

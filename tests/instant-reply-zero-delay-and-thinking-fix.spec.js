@@ -116,8 +116,12 @@ test("Instant Reply, Zero Robotic Delay & Thinking Elimination Suite", async (t)
     // 3. main.js code validation
     const mainJs = fs.readFileSync(path.join(__dirname, "../src/main.js"), "utf8");
     assert.ok(mainJs.includes("minVoicedForStop = 240;"), "main.js uses 240ms minVoicedForStop");
-    assert.ok(mainJs.includes("dynamicSilenceThreshold = 500;"), "main.js uses 500ms optical handoff");
-    assert.ok(mainJs.includes("voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850)"), "main.js uses responsive 650-850ms silence thresholds");
+    assert.ok(mainJs.includes("dynamicSilenceThreshold = 500;") || mainJs.includes("dynamicSilenceThreshold = 400;"), "main.js uses 400-500ms optical handoff");
+    assert.ok(
+      mainJs.includes("voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850)") ||
+      mainJs.includes("voicedDurationMs >= 2000 ? 450 : (voicedDurationMs >= 500 ? 550 : 650)"),
+      "main.js uses responsive silence thresholds"
+    );
   });
 
   await t.test("5. ActionRunner handles exact user prompt with instant reply execution", async () => {

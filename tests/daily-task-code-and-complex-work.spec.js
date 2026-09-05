@@ -311,7 +311,7 @@ const DAILY_TASKS_TURNS = [
     expectedVoice: 'en-US-AvaMultilingualNeural',
     validate: (res) => {
       assert(res.includes('[Vision]') || res.includes('Vision:'), 'Vision AST turn');
-      assert(res.includes('[Brian]') || res.includes('Brian:'), 'Brian telemetry turn');
+      assert(res.includes('[Brian]') || res.includes('Brian:') || res.includes('[DD]') || res.includes('DD:'), 'Brian/DD telemetry turn');
       assert(res.includes('\n'), 'Must separate turns with newline');
     }
   },

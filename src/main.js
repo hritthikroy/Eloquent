@@ -83,6 +83,9 @@ const { geminiClient } = require('./utils/gemini-client');
 const { quantumVibeEngine } = require('./utils/quantum-vibe-engine');
 const cameraManager = require('./utils/camera-manager');
 const humanEarCortex = require('./utils/human-ear-cortex');
+if (humanEarCortex && typeof humanEarCortex.setEndpointMode === 'function') {
+  humanEarCortex.setEndpointMode('rapid');
+}
 const { getLanguageBridge } = require('./main/electron-bridge');
 const languageBridge = getLanguageBridge({ storageDir: path.join(__dirname, '..', 'userData') });
 const TextSanitizer = require('./utils/prompt-engine/text-sanitizer');
@@ -1195,6 +1198,25 @@ function handleShortcut(action, mode = 'standard') {
     }
     showOverlayUltraFast(mode);
   } else if (action === 'stop') {
+    // If Jarvis hands-free loop is active and AI is actively speaking or processing:
+    // ESC acts as an instant conversational barge-in/cut-off!
+    // Silence AI speech immediately and re-arm the microphone without killing the session.
+    if (isJarvisLoopActive && (jarvisManager?.isSpeaking || isProcessing)) {
+      console.log('⚡ ESC pressed during AI speech/processing - stopping speech and instantly re-arming mic!');
+      try { jarvisManager.stopSpeaking(); } catch (e) {}
+      isProcessing = false;
+      isStopRecordingLock = false;
+      if (overlayWindow && !overlayWindow.isDestroyed()) {
+        overlayWindow.webContents.send('jarvis-listening');
+      }
+      setTimeout(() => {
+        if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted) {
+          startRecording();
+        }
+      }, 80);
+      return;
+    }
+
     // Idempotency: If already completely aborted and hidden, prevent redundant cascading
     if (isSessionAborted && !isRecording && !recordingProcess && !isProcessing && (!overlayWindow || !overlayWindow.isVisible())) {
       return;
@@ -2241,8 +2263,8 @@ function startRecording() {
       }
 
       // Robust speech discriminant: must be distinctly above the room's ambient acoustic floor
-      const speechRmsThreshold = Math.max(0.012, jarvisNoiseFloorRms * 1.5);
-      const speechPeakThreshold = Math.max(1200, jarvisNoiseFloorPeak * 1.4);
+      const speechRmsThreshold = Math.max(0.005, jarvisNoiseFloorRms * 1.25);
+      const speechPeakThreshold = Math.max(650, jarvisNoiseFloorPeak * 1.2);
       const hasTailPhysicalSpeech = (tailEnergy.rms >= speechRmsThreshold) && (tailEnergy.peak >= speechPeakThreshold);
 
       if (hasTailPhysicalSpeech) {
@@ -2268,14 +2290,14 @@ function startRecording() {
 
         // Natural human turn-taking with instant, responsive endpointing:
         // 1. Rapid mode: 260ms - 450ms
-        // 2. Sustained speech (voiced >= 2000ms): 650ms completion pause
-        // 3. Medium speech (500ms <= voiced < 2000ms): 750ms breath transition
-        // 4. Short prompt / quick command (voiced < 500ms): 850ms breathing room
+        // 2. Sustained speech (voiced >= 2000ms): 450ms completion pause
+        // 3. Medium speech (500ms <= voiced < 2000ms): 550ms breath transition
+        // 4. Short prompt / quick command (voiced < 500ms): 650ms breathing room
         let dynamicSilenceThreshold = (humanEarCortex && humanEarCortex.getEndpointMode && humanEarCortex.getEndpointMode() === 'rapid')
           ? humanEarCortex.computeDynamicEndpointSilence(voicedDurationMs, false)
-          : (voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850));
-        if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 500) {
-          dynamicSilenceThreshold = 500; // Optical lip closure handoff
+          : (voicedDurationMs >= 2000 ? 450 : (voicedDurationMs >= 500 ? 550 : 650));
+        if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 400) {
+          dynamicSilenceThreshold = 400; // Optical lip closure handoff
         }
         const isMaxSpeechCap = totalDurationMs >= 60000;
 
@@ -2289,9 +2311,9 @@ function startRecording() {
           }
           stopRecording();
         }
-      } else if (!jarvisSpeechDetected && (Date.now() - jarvisSessionStartTime >= 8000)) {
-        // Idle safety: If open for 8 seconds with zero speech, auto-stop cleanly and recycle buffer
-        console.log('⏱️ VAD Heartbeat: 8s idle with no speech detected - auto-recycling buffer.');
+      } else if (!jarvisSpeechDetected && (Date.now() - jarvisSessionStartTime >= 30000)) {
+        // Idle safety: If open for 30 seconds with zero speech, auto-stop cleanly and recycle buffer
+        console.log('⏱️ VAD Heartbeat: 30s idle with no speech detected - auto-recycling buffer.');
         jarvisAutoStopTriggered = true;
         if (jarvisVadHeartbeat) {
           clearInterval(jarvisVadHeartbeat);
@@ -2376,9 +2398,9 @@ function startRecording() {
             } else {
               dynamicSilenceThreshold = (humanEarCortex && humanEarCortex.getEndpointMode && humanEarCortex.getEndpointMode() === 'rapid')
                 ? humanEarCortex.computeDynamicEndpointSilence(voicedDurationMs, false)
-                : (voicedDurationMs >= 2000 ? 650 : (voicedDurationMs >= 500 ? 750 : 850));
-              if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 500) {
-                dynamicSilenceThreshold = 500; // Optical lip closure handoff
+                : (voicedDurationMs >= 2000 ? 450 : (voicedDurationMs >= 500 ? 550 : 650));
+              if (cameraManager && cameraManager.isActive && !cameraManager.isLipMovementDetected() && voicedDurationMs >= 1200 && silenceMs >= 400) {
+                dynamicSilenceThreshold = 400; // Optical lip closure handoff
               }
               minVoicedForStop = 240;
             }
@@ -2524,8 +2546,8 @@ async function stopRecording() {
     // Dual-VAD Acoustic Energy Invariant:
     // Cross-verify VAD frame counters with physical PCM sample energy to guarantee ZERO lost speech
     const pcmEnergy = getAudioBufferEnergy(targetAudioFile);
-    const hasPhysicalVoiceEnergy = (pcmEnergy.rms >= 0.009) && (pcmEnergy.peak >= 1500);
-    const hasFrameConfirmation = jarvisSpeechDetected && jarvisSpeechFrames >= 2;
+    const hasPhysicalVoiceEnergy = (pcmEnergy.rms >= 0.005) && (pcmEnergy.peak >= 650);
+    const hasFrameConfirmation = jarvisSpeechDetected && jarvisSpeechFrames >= 1;
     const isConfirmedSpeech = hasFrameConfirmation || hasPhysicalVoiceEnergy;
 
     if (currentMode === 'jarvis' && !isConfirmedSpeech) {
@@ -2633,7 +2655,10 @@ async function stopRecording() {
     // Automatic conversational routing: If user addresses an agent or is in jarvis mode, talk out loud
     const isDirectedToAgent = (currentMode === 'jarvis') ||
       /\b(tuk\s*tuk|took\s*took|tuck\s*tuck|vision|friday|fry\s*day|dd|dee\s*dee|deedee|brian|brayn|jarvis|squad|team)\b/i.test(originalText) ||
-      /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|টুকটুক|ভিশন|ভিসন|विजन|विज़न|ভাই\s*ভিশন|ভিশন\s*ভাই|भाई\s*विजन|विजन\s*भाई|ফ্রাইডে|फ़्राइডে|ডিডি|ব্রায়ান|ब्रायन)/i.test(originalText);
+      /(?:টুক\s*টুক|টুকটুক|টুকী|টুক্টুক|टुक\s*টুক|টুকটুক|ভিশন|ভিসন|विजन|विज़न|ভাই\s*ভিশন|ভিশন\s*ভাই|भाई\s*विजन|विजन\s*भाई|ফ্রাইডে|फ़्राइডে|ডিডি|ব্রায়ান|ब्रायन)/i.test(originalText) ||
+      /\b(?:instent|instant)\s*(?:replay|reply|response)\b/i.test(originalText) ||
+      /\b(?:fas|fast)\s*(?:conversationl|conversational|conversation)\b/i.test(originalText) ||
+      /\b(?:conversationl|conversational)\s*(?:issue|issues|latency|delay|gap|gaps)\b/i.test(originalText);
 
     if (currentMode === 'jarvis' || isDirectedToAgent) {
       // 1. Acoustic Phonetic Normalization for Project Terms, Agent Names, and Bayesian STT Collisions
@@ -3515,8 +3540,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     // Deep Cognitive Fallback: Google Gemini 3.7 / 3.5 Pool for multimodal vision & high-level reasoning
     const lowerSpeech = (displaySpeech || userSpeech).toLowerCase();
     const isVisualContextQuery =
-      /\b(screen|look\s+at|see|blind|eye|eyes|showing|antigravity|prompt|blank|empty|chokh|dekho|what is this|this error|this code|line )\b/i.test(lowerSpeech) ||
-      /\b(not\s+seeing|not\s+see|thay\s+are\s+not|they\s+are\s+not|fix\s+(?:\w+\s+)?eye|fix\s+eye|recalibrate|eye\s+tracker|eye\s+drift)\b/i.test(lowerSpeech);
+      /\b(screen|look\s+at\s+my\s+screen|look\s+at\s+this|dekho\s+toh|chokh\s+kholo|what\s+is\s+this\s+(?:error|code|screen|bug)|this\s+error|this\s+code|line\s+\d+|on\s+my\s+screen|showing\s+on\s+screen)\b/i.test(lowerSpeech) ||
+      /\b(not\s+seeing\s+(?:my\s+)?screen|(?:thay|they)\s+are\s+not\s+(?:seeing|looking)|fix\s+(?:\w+\s+)?eye|recalibrate\s+eye|eye\s+tracker|eye\s+drift)\b/i.test(lowerSpeech);
 
     let content = null;
     let usage = null;
@@ -3548,10 +3573,10 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     if (!content) {
       try {
         const gatewayRes = await callGroqChatCompletion(messages, {
-          model: 'llama-3.1-8b-instant',
+          model: 'qwen/qwen3.8-27b',
           temperature: dynamicTemperature,
-          max_tokens: agent.key === 'team' ? 350 : 160,
-          timeout: 8000
+          max_tokens: agent.key === 'team' ? 220 : 90,
+          timeout: 4000
         });
         if (gatewayRes && gatewayRes.content) {
           content = gatewayRes.content;
@@ -3565,10 +3590,10 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
           try {
             const framePath = (isVisualContextQuery || visionCtx.isActive) ? screenShareManager.framePath : null;
             const geminiRes = await geminiClient.callChatCompletion(messages, {
-              model: 'gemini-2.5-flash',
+              model: 'gemini-3.6-flash',
               temperature: dynamicTemperature,
               max_tokens: agent.key === 'team' ? 450 : 200,
-              timeout: 8000,
+              timeout: 6000,
               imagePath: framePath
             });
             if (geminiRes && geminiRes.content) {
@@ -3664,13 +3689,13 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     }
     reply = reply.replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
 
-    // 4. Hard cap at 30 words for spoken delivery — short punchy girlfriend voice messages
-    // (Team/squad mode gets 50 words since 2 agents speak)
-    const wordCap = agent.key === 'team' ? 50 : 30;
+    // 4. Hard cap at 18 words for spoken delivery — ultra-crisp, snappy, natural conversational voice
+    // (Team/squad mode gets 36 words since 2 agents speak)
+    const wordCap = agent.key === 'team' ? 36 : 18;
     const words = reply.split(/\s+/);
     if (words.length > wordCap) {
       reply = words.slice(0, wordCap).join(' ');
-      const lastPunct = Math.max(reply.lastIndexOf('.'), reply.lastIndexOf('?'), reply.lastIndexOf('!'));
+      const lastPunct = Math.max(reply.lastIndexOf('.'), reply.lastIndexOf('?'), reply.lastIndexOf('!'), reply.lastIndexOf('।'));
       if (lastPunct > reply.length * 0.55) {
         reply = reply.slice(0, lastPunct + 1);
       }
@@ -3900,7 +3925,7 @@ CORE GUIDELINES:
         content: grammarPrompt
       },
       { role: 'user', content: text }
-    ], { model: 'llama-3.1-8b-instant', temperature: 0.2, max_tokens: 1000, timeout: 5000 });
+    ], { model: 'qwen/qwen3.8-27b', temperature: 0.2, max_tokens: 1000, timeout: 5000 });
 
     const fixTime = Date.now() - startTime;
     console.log(`⚡ Grammar fixes applied using ${model} in ${fixTime}ms`);

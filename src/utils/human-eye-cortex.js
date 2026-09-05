@@ -63,6 +63,32 @@ class HumanEyeCortex {
     this.headAngularVelocity = { pitch: 0.0, yaw: 0.0, roll: 0.0 }; // rad/s
     this.interpupillaryDistMm = options.ipdMm || 63.0; // Primate average 63mm
     this.viewingDistanceMm = options.distanceMm || 600.0; // Desk monitor ~60cm
+
+    // 7. Spontaneous, Reflexive & Cognitive Eyelid Blinking State (Evinger, Stern, Volkmann)
+    this.isBlinking = false;
+    this.blinkStartTime = 0;
+    this.blinkDurationMs = 250.0;
+    this.blinkClosingDurationMs = 75.0; // Rapid downward closure phase
+    this.blinkOpeningDurationMs = 175.0; // Slower upward opening phase
+    this.blinkAperture = 1.0; // [0.0, 1.0] (1.0 = fully open, 0.0 = fully closed)
+    this.blinkMinAperture = 0.0;
+    this.blinkPhase = 'open'; // 'open' | 'closing' | 'opening'
+    this.blinkType = 'spontaneous'; // 'spontaneous' | 'reflexive' | 'post_saccadic' | 'micro'
+    this.isMicroBlink = false;
+    this.lastBlinkTime = Date.now();
+    this.nextBlinkIntervalMs = 3500;
+    this.blinkCount = 0;
+    this.blinkSuppressionFactor = 0.0;
+    this.bellsElevationOffset = 0.0;
+    this.blinkInhibition = 0.0; // [0, 1] - high cognitive focus inhibits spontaneous blinking
+    this.blinkRateHistory = [];
+
+    // 8. Butter-Smooth Minimum-Jerk Saccade & Anti-Flicker State
+    this.saccadeStartX = 0.5;
+    this.saccadeStartY = 0.5;
+    this.saccadeTargetX = 0.5;
+    this.saccadeTargetY = 0.5;
+    this.butterSmoothActive = true;
   }
 
   // ===========================================================================
@@ -170,17 +196,18 @@ class HumanEyeCortex {
   computeFixationalOffset(timeMs = Date.now()) {
     const tSec = timeMs / 1000.0;
 
-    // High frequency physiological tremor (50 Hz & 75 Hz harmonic)
-    const tremorX = 0.0008 * Math.sin(2 * Math.PI * 50 * tSec) + 0.0004 * Math.sin(2 * Math.PI * 75 * tSec);
-    const tremorY = 0.0008 * Math.cos(2 * Math.PI * 50 * tSec) + 0.0004 * Math.cos(2 * Math.PI * 75 * tSec);
+    // Butter-smooth low-frequency biological drift (0.85 Hz & 1.4 Hz harmonic)
+    // Completely eliminates 50Hz/75Hz aliased tremor that causes visible pixel flickering
+    const driftWaveX = 0.00045 * Math.sin(2 * Math.PI * 0.85 * tSec) + 0.00025 * Math.sin(2 * Math.PI * 1.4 * tSec);
+    const driftWaveY = 0.00045 * Math.cos(2 * Math.PI * 0.85 * tSec) + 0.00025 * Math.cos(2 * Math.PI * 1.4 * tSec);
 
-    // Ornstein-Uhlenbeck Brownian drift
+    // Damped Ornstein-Uhlenbeck Brownian drift with smooth restoring spring
     const dt = 0.016; // 16ms delta
-    const randNoiseX = (Math.random() - 0.5) * 2 * this.DRIFT_SIGMA;
-    const randNoiseY = (Math.random() - 0.5) * 2 * this.DRIFT_SIGMA;
+    const randNoiseX = (Math.random() - 0.5) * 0.4 * this.DRIFT_SIGMA;
+    const randNoiseY = (Math.random() - 0.5) * 0.4 * this.DRIFT_SIGMA;
 
-    this.driftState.x += -this.DRIFT_GAMMA * this.driftState.x * dt + randNoiseX;
-    this.driftState.y += -this.DRIFT_GAMMA * this.driftState.y * dt + randNoiseY;
+    this.driftState.x = (this.driftState.x * (1.0 - this.DRIFT_GAMMA * dt)) + randNoiseX;
+    this.driftState.y = (this.driftState.y * (1.0 - this.DRIFT_GAMMA * dt)) + randNoiseY;
 
     // Check for corrective microsaccade trigger
     const driftMag = Math.sqrt(this.driftState.x ** 2 + this.driftState.y ** 2);
@@ -188,16 +215,16 @@ class HumanEyeCortex {
     let microsaccadeY = 0;
 
     if (driftMag >= this.MICROSACCADE_THRESH) {
-      // Rapid corrective flick back toward center
-      microsaccadeX = -this.driftState.x * 0.85;
-      microsaccadeY = -this.driftState.y * 0.85;
-      this.driftState.x *= 0.15;
-      this.driftState.y *= 0.15;
+      // Smooth spring restoring return rather than harsh instantaneous flick
+      microsaccadeX = -this.driftState.x * 0.75;
+      microsaccadeY = -this.driftState.y * 0.75;
+      this.driftState.x *= 0.25;
+      this.driftState.y *= 0.25;
     }
 
     return {
-      x: tremorX + this.driftState.x + microsaccadeX,
-      y: tremorY + this.driftState.y + microsaccadeY,
+      x: driftWaveX + this.driftState.x + microsaccadeX,
+      y: driftWaveY + this.driftState.y + microsaccadeY,
       isMicrosaccade: driftMag >= this.MICROSACCADE_THRESH
     };
   }
@@ -482,12 +509,186 @@ class HumanEyeCortex {
   }
 
   // ===========================================================================
-  // 12. MASTER GAZE TICK & STATE INTEGRATION
+  // 12. SPONTANEOUS, REFLEXIVE & COGNITIVE EYELID BLINKING DYNAMICS (Evinger, Stern, Volkmann)
+  // ===========================================================================
+
+  /**
+   * Computes the next inter-blink interval (IBI) using a modulated Gamma renewal process.
+   * Adult human baseline: 12 - 19 blinks/min -> mean IBI ~3.5 - 4.5 seconds.
+   * Cognitive workload or high visual search inhibits blinking (extends IBI up to 8 - 12s).
+   * 
+   * @param {number} [cognitiveLoad=this.estimatedCognitiveLoad]
+   * @returns {number} Interval in milliseconds
+   */
+  sampleNextBlinkInterval(cognitiveLoad = this.estimatedCognitiveLoad) {
+    // Gamma distribution approximation: sum of 3 exponentials with scale theta ~ 1200ms
+    const k = 3;
+    const theta = 1200.0;
+    let gammaSample = 0;
+    for (let i = 0; i < k; i++) {
+      gammaSample += -Math.log(Math.max(1e-6, Math.random())) * theta;
+    }
+    // Modulation by cognitive load & task inhibition (Stern 1984, Siegle 2008)
+    const inhibitionFactor = 1.0 + (1.5 * cognitiveLoad) + (2.0 * this.blinkInhibition);
+    const effInterval = gammaSample * inhibitionFactor;
+    return Math.max(1200, Math.min(12000, Math.round(effInterval)));
+  }
+
+  /**
+   * Triggers an eyelid blink event with biological kinematic parameters.
+   * 
+   * @param {string} [type='spontaneous'] 'spontaneous' | 'reflexive' | 'post_saccadic' | 'micro'
+   * @param {number} [now=Date.now()]
+   */
+  triggerBlink(type = 'spontaneous', now = Date.now()) {
+    this.isBlinking = true;
+    this.blinkStartTime = now;
+    this.blinkType = type;
+
+    // Asymmetric timing: closure is rapid (50-90ms), opening is slower (150-250ms) (Evinger 1991)
+    if (type === 'reflexive') {
+      this.blinkClosingDurationMs = 45.0 + Math.random() * 20.0; // Rapid ~55ms
+      this.blinkOpeningDurationMs = 120.0 + Math.random() * 30.0; // ~135ms
+      this.blinkMinAperture = 0.0;
+      this.isMicroBlink = false;
+    } else if (type === 'micro' || (type === 'spontaneous' && Math.random() < 0.22)) {
+      // ~22% of human spontaneous blinks are incomplete micro-blinks
+      this.blinkClosingDurationMs = 50.0 + Math.random() * 20.0;
+      this.blinkOpeningDurationMs = 130.0 + Math.random() * 30.0;
+      this.blinkMinAperture = 0.20 + Math.random() * 0.15; // Incomplete closure (0.20 - 0.35)
+      this.isMicroBlink = true;
+      this.blinkType = 'micro';
+    } else {
+      // Standard spontaneous / full / post-saccadic blink
+      this.blinkClosingDurationMs = 65.0 + Math.random() * 25.0; // ~75ms
+      this.blinkOpeningDurationMs = 160.0 + Math.random() * 40.0; // ~180ms
+      this.blinkMinAperture = 0.0;
+      this.isMicroBlink = false;
+      this.blinkType = type === 'full' ? 'spontaneous' : type;
+    }
+
+    this.blinkDurationMs = this.blinkClosingDurationMs + this.blinkOpeningDurationMs;
+    this.blinkCount++;
+    this.lastBlinkTime = now;
+    this.nextBlinkIntervalMs = this.sampleNextBlinkInterval();
+
+    this.blinkRateHistory.push(now);
+    const cutoff = now - 60000;
+    while (this.blinkRateHistory.length > 0 && this.blinkRateHistory[0] < cutoff) {
+      this.blinkRateHistory.shift();
+    }
+  }
+
+  /**
+   * Updates eyelid kinematic state, aperture, and visual suppression.
+   * Follows asymmetric cosine velocity profile (Evinger et al. 1991).
+   * 
+   * @param {number} [now=Date.now()]
+   * @returns {Object} Current blink kinematic telemetry
+   */
+  updateBlinkState(now = Date.now()) {
+    // 1. Spontaneous Blink Trigger Check
+    if (!this.isBlinking && (now - this.lastBlinkTime >= this.nextBlinkIntervalMs)) {
+      this.triggerBlink('spontaneous', now);
+    }
+
+    if (!this.isBlinking) {
+      this.blinkAperture = 1.0;
+      this.blinkPhase = 'open';
+      this.blinkSuppressionFactor = 0.0;
+      this.bellsElevationOffset = 0.0;
+      return {
+        isBlinking: false,
+        aperture: 1.0,
+        phase: 'open',
+        type: this.blinkType,
+        durationMs: this.blinkDurationMs,
+        blinkRateBpm: this.getBlinkRateBpm(now),
+        isMicroBlink: false,
+        suppressionFactor: 0.0,
+        bellsElevation: 0.0
+      };
+    }
+
+    // 2. Active Blink Kinematics Progression
+    const elapsed = now - this.blinkStartTime;
+    const tClose = this.blinkClosingDurationMs;
+    const tTotal = this.blinkDurationMs;
+    const minAp = this.blinkMinAperture;
+
+    if (elapsed < tClose) {
+      // Downward rapid closing phase (accelerating/decelerating cosine)
+      this.blinkPhase = 'closing';
+      const progress = elapsed / Math.max(1, tClose);
+      this.blinkAperture = minAp + (1.0 - minAp) * 0.5 * (1.0 + Math.cos(Math.PI * progress));
+    } else if (elapsed < tTotal) {
+      // Upward slower opening phase
+      this.blinkPhase = 'opening';
+      const tOpen = this.blinkOpeningDurationMs;
+      const progress = (elapsed - tClose) / Math.max(1, tOpen);
+      this.blinkAperture = minAp + (1.0 - minAp) * 0.5 * (1.0 - Math.cos(Math.PI * progress));
+    } else {
+      // Blink finished
+      this.isBlinking = false;
+      this.blinkPhase = 'open';
+      this.blinkAperture = 1.0;
+      this.blinkSuppressionFactor = 0.0;
+      this.bellsElevationOffset = 0.0;
+    }
+
+    // 3. Volkmann Saccadic/Blink Visual Suppression
+    this.blinkSuppressionFactor = Math.max(0.0, Math.min(1.0, (1.0 - this.blinkAperture) * 0.95));
+
+    // 4. Bell's Phenomenon Ocular Elevation
+    const apertureDeficit = 1.0 - this.blinkAperture;
+    this.bellsElevationOffset = apertureDeficit > 1e-6 ? -0.035 * apertureDeficit : 0.0;
+
+    return {
+      isBlinking: this.isBlinking,
+      aperture: Math.round(this.blinkAperture * 1000) / 1000,
+      phase: this.blinkPhase,
+      type: this.blinkType,
+      durationMs: this.blinkDurationMs,
+      blinkRateBpm: this.getBlinkRateBpm(now),
+      isMicroBlink: this.isMicroBlink,
+      suppressionFactor: Math.round(this.blinkSuppressionFactor * 1000) / 1000,
+      bellsElevation: Math.abs(this.bellsElevationOffset) < 1e-6 ? 0.0 : Math.round(this.bellsElevationOffset * 1000) / 1000
+    };
+  }
+
+  /**
+   * Calculates rolling blink rate in Blinks Per Minute (BPM).
+   * 
+   * @param {number} [now=Date.now()]
+   * @returns {number} Estimated BPM
+   */
+  getBlinkRateBpm(now = Date.now()) {
+    const cutoff = now - 60000;
+    const recentBlinks = this.blinkRateHistory.filter(t => t >= cutoff).length;
+    if (recentBlinks > 0) {
+      return Math.max(8, Math.min(30, Math.round(recentBlinks * (60000 / Math.max(10000, now - (this.blinkRateHistory[0] || (now - 60000)))))));
+    }
+    return 15;
+  }
+
+  /**
+   * Sets cognitive blink inhibition factor [0, 1].
+   * High cognitive load or visual concentration inhibits blinking (Siegle et al. 2008).
+   * 
+   * @param {number} level [0, 1]
+   */
+  setCognitiveBlinkInhibition(level) {
+    this.blinkInhibition = Math.max(0.0, Math.min(1.0, Number(level) || 0.0));
+    this.nextBlinkIntervalMs = this.sampleNextBlinkInterval();
+  }
+
+  // ===========================================================================
+  // 13. MASTER GAZE TICK & STATE INTEGRATION
   // ===========================================================================
 
   /**
    * Advances the biological eye state by delta time dt (ms).
-   * Executes saccades, pursuit, fixations, and pupillometry in closed-loop.
+   * Executes saccades, pursuit, fixations, blinking, and pupillometry in closed-loop.
    */
   step(now = Date.now()) {
     const dt = Math.max(1, now - this.lastGazeUpdate);
@@ -508,44 +709,61 @@ class HumanEyeCortex {
       const dynamics = this.computeSaccadeDynamics(this.currentGaze.x, this.currentGaze.y, this.targetGaze.x, this.targetGaze.y);
       this.isSaccading = true;
       this.saccadeStartTime = now;
-      this.saccadeDuration = dynamics.durationMs;
+      this.saccadeDuration = Math.max(35, dynamics.durationMs);
       this.saccadicSuppression = dynamics.suppressionFactor;
+      this.saccadeStartX = this.currentGaze.x;
+      this.saccadeStartY = this.currentGaze.y;
+      this.saccadeTargetX = this.targetGaze.x;
+      this.saccadeTargetY = this.targetGaze.y;
     }
 
     if (this.isSaccading) {
       const elapsed = now - this.saccadeStartTime;
       const progress = Math.min(1.0, elapsed / Math.max(1, this.saccadeDuration));
 
-      // Smooth Sigmoidal Saccade Velocity Profile
-      const sCurve = 1.0 / (1.0 + Math.exp(-10.0 * (progress - 0.5)));
-      this.currentGaze.x += dx * sCurve * (dt / this.saccadeDuration);
-      this.currentGaze.y += dy * sCurve * (dt / this.saccadeDuration);
+      // Minimum-Jerk 5th-Order Saccadic Trajectory (Flash & Hogan 1985 / Uno et al. 1989):
+      // p(s) = 10s^3 - 15s^4 + 6s^5 guarantees 0 velocity and 0 acceleration at boundaries.
+      // Eliminates snap, jitter, and flickering completely for butter-smooth biological motion!
+      const p = 10 * Math.pow(progress, 3) - 15 * Math.pow(progress, 4) + 6 * Math.pow(progress, 5);
+      this.currentGaze.x = this.saccadeStartX + (this.saccadeTargetX - this.saccadeStartX) * p;
+      this.currentGaze.y = this.saccadeStartY + (this.saccadeTargetY - this.saccadeStartY) * p;
 
       if (progress >= 1.0) {
         this.isSaccading = false;
         this.saccadicSuppression = 0.0;
-        this.currentGaze.x = this.targetGaze.x;
-        this.currentGaze.y = this.targetGaze.y;
+        this.currentGaze.x = this.saccadeTargetX;
+        this.currentGaze.y = this.saccadeTargetY;
+
+        // Post-Saccadic natural gentle blink (anti-flicker: >= 3000ms refractory and subtle 15% probability)
+        if (!this.isBlinking && (now - this.lastBlinkTime > 3000) && dist > 0.20 && Math.random() < 0.15) {
+          this.triggerBlink('post_saccadic', now);
+        }
       }
     } else {
-      // Fixational Micro-Movements during steady fixation
+      // Fixational Micro-Movements during steady fixation around anchored target gaze
       const fixOffset = this.computeFixationalOffset(now);
-      this.currentGaze.x = Math.max(0, Math.min(1, this.currentGaze.x + fixOffset.x));
-      this.currentGaze.y = Math.max(0, Math.min(1, this.currentGaze.y + fixOffset.y));
+      this.currentGaze.x = Math.max(0.01, Math.min(0.99, this.targetGaze.x + fixOffset.x));
+      this.currentGaze.y = Math.max(0.01, Math.min(0.99, this.targetGaze.y + fixOffset.y));
     }
 
-    // 3. Update Pupillometry
+    // 3. Update Blinking Dynamics (Evinger, Stern, Volkmann)
+    const blink = this.updateBlinkState(now);
+    const effectiveGazeY = Math.max(0, Math.min(1, this.currentGaze.y + (blink.bellsElevation || 0.0)));
+
+    // 4. Update Pupillometry
     const pupil = this.updatePupillometry(this.ambientLuminance, this.estimatedCognitiveLoad, this.bondingVibeFactor);
 
-    // 4. Compute 3D Listing's Orientation & Vergence
+    // 5. Compute 3D Listing's Orientation & Vergence
     const listing3D = this.computeListings3DOrientation(this.currentGaze.x, this.currentGaze.y);
     const vergence = this.computeBinocularVergence();
-    const dva = this.computeDynamicVisualAcuity(pursuit.retinalPositionErrorDeg);
+    const rawDva = this.computeDynamicVisualAcuity(pursuit.retinalPositionErrorDeg);
+    const dva = Math.round(rawDva * (1.0 - (blink.suppressionFactor || 0.0)) * 1000) / 1000;
 
     return {
-      gaze: { x: Math.round(this.currentGaze.x * 1000) / 1000, y: Math.round(this.currentGaze.y * 1000) / 1000 },
+      gaze: { x: Math.round(this.currentGaze.x * 1000) / 1000, y: Math.round(effectiveGazeY * 1000) / 1000 },
       isSaccading: this.isSaccading,
       saccadicSuppression: this.saccadicSuppression,
+      blink,
       deicticAlignmentQuality,
       pupilDiameterMm: pupil.pupilDiameterMm,
       workloadIndex: pupil.workloadIndex,
@@ -558,11 +776,12 @@ class HumanEyeCortex {
 
   /**
    * Activates biological human eye mode, locking dynamics into realistic
-   * foveal attention, saccadic sequences, and fixational micro-movements.
+   * foveal attention, saccadic sequences, blinking, and fixational micro-movements.
    */
   activateHumanEyeMode(options = {}) {
     this.mode = 'human_biological';
     this.humanEyeActive = true;
+    this.butterSmoothActive = true;
     if (options.gaze) {
       this.currentGaze.x = typeof options.gaze.x === 'number' ? Math.max(0, Math.min(1, options.gaze.x)) : 0.5;
       this.currentGaze.y = typeof options.gaze.y === 'number' ? Math.max(0, Math.min(1, options.gaze.y)) : 0.5;
@@ -572,6 +791,8 @@ class HumanEyeCortex {
     if (options.userCursor) {
       this.updateUserInputs(options.userCursor);
     }
+    this.lastBlinkTime = Date.now();
+    this.nextBlinkIntervalMs = this.sampleNextBlinkInterval();
     const state = this.step();
     return {
       active: true,
@@ -581,7 +802,36 @@ class HumanEyeCortex {
       dynamicVisualAcuity: state.dynamicVisualAcuity,
       pupilDiameterMm: state.pupilDiameterMm,
       isSaccading: state.isSaccading,
+      blink: state.blink,
       deicticAlignment: state.deicticAlignmentQuality
+    };
+  }
+
+  /**
+   * Activates butter-smooth human eye dynamics:
+   * 1. 5th-order minimum-jerk saccades (zero snap, zero jitter).
+   * 2. Low-frequency physiological micro-drift (zero 50/75Hz tremor aliasing).
+   * 3. Anti-flicker biological eyelid blinking with gentle cadence.
+   */
+  activateButterSmoothHumanMode() {
+    this.mode = 'butter_smooth_human';
+    this.humanEyeActive = true;
+    this.butterSmoothActive = true;
+    this.isBlinking = false;
+    this.isSaccading = false;
+    this.blinkAperture = 1.0;
+    this.bellsElevationOffset = 0.0;
+    this.blinkSuppressionFactor = 0.0;
+    this.lastBlinkTime = Date.now();
+    this.nextBlinkIntervalMs = this.sampleNextBlinkInterval();
+    const state = this.step();
+    return {
+      active: true,
+      mode: 'butter_smooth_human',
+      saccadeProfile: 'minimum_jerk_5th_order',
+      flickerFree: true,
+      gaze: state.gaze,
+      blink: state.blink
     };
   }
 
@@ -590,7 +840,7 @@ class HumanEyeCortex {
    */
   getEyeContextString() {
     const state = this.step();
-    return `[HumanEyeCortex] Gaze=(${state.gaze.x}, ${state.gaze.y}) | Saccading=${state.isSaccading} | DeicticAlignment=${state.deicticAlignmentQuality} | Pupil=${state.pupilDiameterMm}mm | Load=${state.workloadIndex} | 3D_Torsion=${state.listing3D.torsionZRad}rad | Vergence=${state.vergence.vergenceAngleDeg}°`;
+    return `[HumanEyeCortex] Gaze=(${state.gaze.x}, ${state.gaze.y}) | Saccading=${state.isSaccading} | BlinkRate=${state.blink.blinkRateBpm}bpm | Aperture=${state.blink.aperture} | DeicticAlignment=${state.deicticAlignmentQuality} | Pupil=${state.pupilDiameterMm}mm | Load=${state.workloadIndex} | 3D_Torsion=${state.listing3D.torsionZRad}rad | Vergence=${state.vergence.vergenceAngleDeg}°`;
   }
 }
 

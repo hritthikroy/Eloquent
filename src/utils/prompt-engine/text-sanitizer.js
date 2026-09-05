@@ -83,6 +83,11 @@ class TextSanitizer {
       .replace(/\b(?:kothe\s*bolo|kothe\s*re\s*koro)\b/gi, "kotha bolo")
       .replace(/\b(?:kothe\s*re)\b/gi, "kotha record")
       .replace(/\btaro\s*smooth\b/gi, "aro smooth")
+      // Bangla voice smoothness STT acoustic corrections
+      .replace(/\b(?:smouthly|smuthly)\b/gi, "smoothly")
+      .replace(/\b(?:smouth|smuth)\b/gi, "smooth")
+      .replace(/\b(?:make\s+our\s+bangla\s+voice\s+more\s+smoothly)\b/gi, "make our Bangla voice more smoothly")
+      .replace(/\b(?:fix\s+and\s+make\s+our\s+bangla\s+voice\s+more\s+smoothly)\b/gi, "fix and make our Bangla voice more smoothly")
       .replace(/\b(?:kothe)\b(?=\s*(?:type|bolo|bolte|gula|ta))/gi, "kotha")
       .replace(/\baamadher\b/gi, "amader")
       .replace(/\bbapbe\b/gi, "bhabe")
@@ -98,7 +103,7 @@ class TextSanitizer {
       .replace(/\bwatching\s+need\b/gi, "watch")
       .replace(/\bmy\s+gf\s+not\s+see\s+with\s+me\b/gi, "my gf does not see with me")
       // Whisper STT mishearing normalizations from live conversation audit & human Bangla requests
-      .replace(/\b(?:bngal|bngla|bongal|borgla|bongla|borngla|bengala)\b/gi, "Bangla")
+      .replace(/\b(?:bangal|bngal|bngla|bongal|borgla|bongla|borngla|bengala)\b/gi, "Bangla")
       .replace(/\bho\s+a\s+real\b/gi, "how a real")
       .replace(/\b(?:real\s+bngla|real\s+bngal)\b/gi, "real Bangla")
       .replace(/\b(?:bangla\s+puke[,\s]*koro)\b/gi, "Bangla shuru koro")
@@ -113,7 +118,14 @@ class TextSanitizer {
       .replace(/\b(?:higher|high)\s*(?:lavel|laval|lebel)\b/gi, "higher level")
       .replace(/\b(?:lavel|laval)\b/gi, "level")
       .replace(/\b(?:atumation|autometion|automatation)\b/gi, "automation")
-      .replace(/\bautomations\b/gi, "automation");
+      .replace(/\bautomations\b/gi, "automation")
+      // Fast conversational and turn-taking STT normalizations
+      .replace(/\b(?:fas\s*conversationl\s*issues?|fast\s*conversationl\s*issues?|fas\s*conversational\s*issues?)\b/gi, "fast conversational issues")
+      .replace(/\b(?:fas)\s+(?:conversationl|convesational)\b/gi, "fast conversational")
+      .replace(/\b(?:fas)\s+conversation\b/gi, "fast conversation")
+      .replace(/\b(?:conversationl|convesational|converstional)\b/gi, "conversational")
+      .replace(/\b(?:conversaton)\b/gi, "conversation")
+      .replace(/\b(?:fas)\b(?=\s*(?:reply|response|mode|turn|speed|latency|vad|issues?))/gi, "fast");
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire')
     text = text
