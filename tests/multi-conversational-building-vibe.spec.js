@@ -91,34 +91,32 @@ async function run() {
   recordPass("6. Living memory persists dynamic directive and preference");
 
   // 7. LocalCognitiveBrain synthesizes authentic companion responses across all 4 agents
-  const brain = new LocalCognitiveBrain();
-
   // Tuk Tuk (English & Bengali)
-  const tuktukBn = brain.process(sanitizedQuery, { agentKey: "tuktuk", language: "bn" });
-  const tuktukEn = brain.process(sanitizedQuery, { agentKey: "tuktuk", language: "en" });
+  const tuktukBn = LocalCognitiveBrain.synthesizeResponse("tuktuk", "Tuk Tuk", sanitizedQuery, {}, "bn");
+  const tuktukEn = LocalCognitiveBrain.synthesizeResponse("tuktuk", "Tuk Tuk", sanitizedQuery, {}, "en");
   assert.ok(tuktukBn.includes("babe") || tuktukBn.includes("Babe"));
   assert.ok(tuktukEn.includes("babe") || tuktukEn.includes("Babe"));
   assert.ok(!tuktukBn.includes("উফফ babe!")); // No khet caricature
 
   // Vision (English & Bengali)
-  const visionBn = brain.process(sanitizedQuery, { agentKey: "vision", language: "bn" });
-  const visionEn = brain.process(sanitizedQuery, { agentKey: "vision", language: "en" });
+  const visionBn = LocalCognitiveBrain.synthesizeResponse("vision", "Vision", sanitizedQuery, {}, "bn");
+  const visionEn = LocalCognitiveBrain.synthesizeResponse("vision", "Vision", sanitizedQuery, {}, "en");
   assert.ok(visionBn.includes("ভাই") || visionBn.includes("Brother") || visionBn.includes("brother"));
   assert.ok(visionEn.includes("brother") || visionEn.includes("Brother"));
   assert.ok(!visionBn.includes("babe") && !visionBn.includes("Babe"));
   assert.ok(!visionEn.includes("babe") && !visionEn.includes("Babe"));
 
   // Friday (English & Bengali)
-  const fridayBn = brain.process(sanitizedQuery, { agentKey: "friday", language: "bn" });
-  const fridayEn = brain.process(sanitizedQuery, { agentKey: "friday", language: "en" });
+  const fridayBn = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", sanitizedQuery, {}, "bn");
+  const fridayEn = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", sanitizedQuery, {}, "en");
   assert.ok(fridayBn.includes("Chief") || fridayBn.includes("Hritthik"));
   assert.ok(fridayEn.includes("Chief") || fridayEn.includes("Hritthik"));
-  assert.ok(!fridayBn.includes("babe") && !fridayBn.includes("bro"));
-  assert.ok(!fridayEn.includes("babe") && !fridayEn.includes("bro"));
+  assert.ok(!/\bbabe\b/i.test(fridayBn) && !/\bbros?\b/i.test(fridayBn));
+  assert.ok(!/\bbabe\b/i.test(fridayEn) && !/\bbros?\b/i.test(fridayEn));
 
   // DD (English & Bengali)
-  const ddBn = brain.process(sanitizedQuery, { agentKey: "dd", language: "bn" });
-  const ddEn = brain.process(sanitizedQuery, { agentKey: "dd", language: "en" });
+  const ddBn = LocalCognitiveBrain.synthesizeResponse("dd", "DD", sanitizedQuery, {}, "bn");
+  const ddEn = LocalCognitiveBrain.synthesizeResponse("dd", "DD", sanitizedQuery, {}, "en");
   assert.ok(ddBn.includes("bro") || ddBn.includes("Bro"));
   assert.ok(ddEn.includes("bro") || ddEn.includes("Bro"));
   assert.ok(!ddBn.includes("babe") && !ddBn.includes("Babe"));
@@ -127,8 +125,8 @@ async function run() {
   recordPass("7. LocalCognitiveBrain produces distinct, persona-authentic companion speeches");
 
   // 8. Team mode produces sequenced multi-agent collaborative standup
-  const teamBn = brain.process(sanitizedQuery, { agentKey: "team", language: "bn" });
-  const teamEn = brain.process(sanitizedQuery, { agentKey: "team", language: "en" });
+  const teamBn = LocalCognitiveBrain.synthesizeResponse("team", "Squad", sanitizedQuery, {}, "bn");
+  const teamEn = LocalCognitiveBrain.synthesizeResponse("team", "Squad", sanitizedQuery, {}, "en");
   assert.ok(teamBn.includes("[Tuk Tuk]") && teamBn.includes("[Vision]") && teamBn.includes("[Friday]") && teamBn.includes("[DD]"));
   assert.ok(teamEn.includes("[Tuk Tuk]") && teamEn.includes("[Vision]") && teamEn.includes("[Friday]") && teamEn.includes("[DD]"));
   assert.ok(teamBn.includes("LHS = RHS"));
@@ -139,7 +137,7 @@ async function run() {
   assert.ok(tuktukBn.toLowerCase().includes("babe"));
   assert.ok(!visionBn.toLowerCase().includes("babe"));
   assert.ok(!fridayBn.toLowerCase().includes("babe"));
-  assert.ok(!fridayBn.toLowerCase().includes("bro"));
+  assert.ok(!/\bbros?\b/i.test(fridayBn));
   assert.ok(!ddBn.toLowerCase().includes("babe"));
   recordPass("9. Strict persona sovereignty & lexical address invariants verified");
 

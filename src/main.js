@@ -3450,12 +3450,12 @@ function parseMultiAgentTurns(text) {
     'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'vision': { name: 'Vision', voice: 'en-US-AndrewNeural' },
     'vison': { name: 'Vision', voice: 'en-US-AndrewNeural' },
-    'friday': { name: 'Friday', voice: 'en-US-JennyNeural' },
-    'fry day': { name: 'Friday', voice: 'en-US-JennyNeural' },
-    'fryday': { name: 'Friday', voice: 'en-US-JennyNeural' },
-    'fridya': { name: 'Friday', voice: 'en-US-JennyNeural' },
-    'fridy': { name: 'Friday', voice: 'en-US-JennyNeural' },
-    'fryda': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'friday': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
+    'fry day': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
+    'fryday': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
+    'fridya': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
+    'fridy': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
+    'fryda': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
     'dd': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
     'dee dee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
     'deedee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
@@ -3463,8 +3463,8 @@ function parseMultiAgentTurns(text) {
     'brayn': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
     'টুকটুক': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
     'টুক টুক': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
-    'ভিশন': { name: 'Vision', voice: 'en-US-AndrewNeural' },
-    'ফ্রাইডে': { name: 'Friday', voice: 'en-US-JennyNeural' },
+    'ভিশন': { name: 'Vision', voice: 'bn-BD-PradeepNeural' },
+    'ফ্রাইডে': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
     'ডিডি': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
     'ডি ডি': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' }
   };
@@ -3493,10 +3493,18 @@ function parseMultiAgentTurns(text) {
       } else if (agentInfo.name !== 'Tuk Tuk') {
         speech = speech.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentInfo.name === 'Friday' ? 'Hritthik' : 'bro');
       }
+
+      // Dynamic Bengali neural voice adaptation for Vision
+      let resolvedVoice = agentInfo.voice;
+      if (agentInfo.name === 'Vision') {
+        resolvedVoice = /[\u0980-\u09FF]/.test(speech) ? 'bn-BD-PradeepNeural' : 'en-US-AndrewMultilingualNeural';
+      } else if (agentInfo.name === 'Friday') {
+        resolvedVoice = 'en-US-EmmaMultilingualNeural';
+      }
       
       turns.push({
         agentName: agentInfo.name,
-        voice: agentInfo.voice,
+        voice: resolvedVoice,
         text: speech,
         // Add explicit turn number to enforce sequencing
         turnIndex: turns.length
@@ -3508,16 +3516,17 @@ function parseMultiAgentTurns(text) {
   if (turns.length === 0 && text && text.trim().length > 0) {
     const rawText = text.trim();
     if (/\b(?:brother|bro|bhai)\b|(?<![\u0980-\u09FF])(?:ভাই)(?![\u0980-\u09FF])/i.test(rawText) && !/\b(?:babe|sweetheart|my love)\b/i.test(rawText)) {
+      const isBn = /[\u0980-\u09FF]/.test(rawText);
       turns.push({
         agentName: 'Vision',
-        voice: 'en-US-AndrewNeural',
+        voice: isBn ? 'bn-BD-PradeepNeural' : 'en-US-AndrewMultilingualNeural',
         text: rawText,
         turnIndex: 0
       });
     } else if (/\b(?:Chief)\b/i.test(rawText) && !/\b(?:babe|brother|bro)\b/i.test(rawText)) {
       turns.push({
         agentName: 'Friday',
-        voice: 'en-US-JennyNeural',
+        voice: 'en-US-EmmaMultilingualNeural',
         text: rawText,
         turnIndex: 0
       });

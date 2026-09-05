@@ -466,9 +466,29 @@ class TextSanitizer {
       .replace(/\btaliking\b/gi, "talking")
       .replace(/\bcomunication\b/gi, "communication")
       .replace(/\bpersonalty\b/gi, "personality")
-      .replace(/\b(?:pronounciation|pronuciation|pronunsation)\b/gi, "pronunciation")
+      .replace(/\bpronounciations?\b/gi, "pronunciation")
       .replace(/\b(?:he|she)\s+is\s+not\s+real\s+english\s+like\s+(?:tuk\s*tuk|tuktuk)\b/gi, "she is not real English like Tuk Tuk")
-      .replace(/\bteam\s+leader\s+and\s+all\b/gi, "team leader and all");
+      .replace(/\bteam\s+leader\s+and\s+all\b/gi, "team leader and all")
+      // Test Update & Improvement STT normalizations
+      // Handles: "test this update any improve ment", "any improve ment", "improve ment"
+      .replace(/\b(?:test\s+this\s+update\s+any\s+(?:improve\s+ment|improvement))\b/gi, "test this update, any improvement")
+      .replace(/\b(?:any\s+improve\s+ment)\b/gi, "any improvement")
+      .replace(/\b(?:improve\s+ment)\b/gi, "improvement")
+      .replace(/\b(?:imporvement|imporve\s+ment)\b/gi, "improvement")
+      // Deep Research Test and Update STT normalizations
+      // Handles: "do deeep research test and update", "deeep research", "deeep"
+      .replace(/\b(?:do\s+)?deeep\s+research\s+(?:test\s+and\s+update|test\s+update|test)\b/gi, "Do deep research, test and update")
+      .replace(/\b(?:do\s+)?deep\s+research\s+(?:test\s+and\s+update|test\s+update)\b/gi, "Do deep research, test and update")
+      .replace(/\bdeeep\s+research\b/gi, "deep research")
+      .replace(/\bdeeep\b/gi, "deep")
+      // Continue Deep Research STT normalizations
+      // Handles: "continiue with deep resserch", "contineu deep research", "proseed with deep research",
+      // "continu with deep research", "kuntinue deep research", "continue with deep resurch"
+      .replace(/\b(?:continiue|contineu|continu|continyu|kuntinue|continuew)\s+(?:with\s+)?(?:deeep|deap|deepp|deep)\s+(?:resserch|resurch|reserach|resrch|research)\b/gi, "continue with deep research")
+      .replace(/\b(?:proseed|proceed|procede|proced)\s+(?:with\s+)?(?:deeep|deap|deepp|deep)\s+(?:resserch|resurch|reserach|resrch|research)\b/gi, "continue with deep research")
+      .replace(/\b(?:continiue|contineu|continu|continuew)\s+(?:with\s+)?deep\s+research\b/gi, "continue with deep research")
+      .replace(/\bcontinue\s+(?:with\s+)?(?:deeep|deap|deepp)\s+(?:resserch|resurch|reserach|resrch|research)\b/gi, "continue with deep research")
+      .replace(/\b(?:চালিয়ে\s+যাও|চালু\s+রাখো)\s+(?:ডিপ\s+রিসার্চ|গভীর\s+গবেষণা)\b/gi, "continue with deep research");
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')
     text = text

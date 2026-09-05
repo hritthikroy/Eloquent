@@ -199,7 +199,20 @@ class BanglaVoiceCortex {
       [/\bvibes?\b/gi, "ভাইব"],
       [/\bflows?\b/gi, "ফ্লো"],
       [/\bfeels?\b/gi, "ফিল"],
-      [/\bok(?:ay)?\b/gi, "ওকে"]
+      [/\bok(?:ay)?\b/gi, "ওকে"],
+
+      // Real English, Team Leadership & Diction Terms in Conversational Bengali
+      [/\bcommunications?\b/gi, "কমিউনিকেশন"],
+      [/\bpronunciations?\b/gi, "প্রোনাউনসিয়েশন"],
+      [/\bpersonalit(?:y|ies)\b/gi, "পার্সোনালিটি"],
+      [/\bleaderships?\b/gi, "লিডারশিপ"],
+      [/\bnatives?\b/gi, "নেটিভ"],
+      [/\bnaturals?\b/gi, "ন্যাচারাল"],
+      [/\bcrisp\b/gi, "ক্রিস্প"],
+      [/\breal\b/gi, "রিয়েল"],
+      [/\bcreatives?\b/gi, "ক্রিয়েটিভ"],
+      [/\bsweets?\b/gi, "সুইট"],
+      [/\bconfidents?\b/gi, "কনফিডেন্ট"]
     ];
   }
 

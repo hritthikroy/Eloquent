@@ -47,7 +47,53 @@ class IntentParser {
       }
     }
 
+    // 2.4 Continue Deep Research Directive
+    if (IntentParser.isContinueDeepResearchDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "continue_deep_research",
+        agentDirective
+      };
+    }
+
     // 2.5 Smooth Conversation Intent Detection
+    if (IntentParser.isDeepResearchTestAndUpdateDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.98,
+        target: "deep_research_test_and_update",
+        agentDirective
+      };
+    }
+
+    if (IntentParser.isTestUpdateImprovementDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.98,
+        target: "test_update_improvement",
+        agentDirective
+      };
+    }
+
     if (IntentParser.isMultiConversationalBuildingVibeDirective(lower)) {
       let agentDirective = "team";
       if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
@@ -275,6 +321,23 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Test Update & Improvement inquiries
+   * Handles: "test this update any improve ment", "test this update, any improvement",
+   * "test this update", "any improvement needed in this update", "check this update and improve"
+   */
+  static isTestUpdateImprovementDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:test\s+this\s+update\s+any\s+(?:improve\s*ment|improvement)|test\s+this\s+update|test\s+the\s+update)\b/i.test(lower) &&
+       /\b(?:improve|improvement|improve\s*ment|any|better|status|gap)\b/i.test(lower)) ||
+      (/\b(?:test|check|verify)\b/i.test(lower) && /\b(?:update|change|feature)\b/i.test(lower) && /\b(?:improve|improvement|improve\s*ment)\b/i.test(lower)) ||
+      (/\b(?:any\s+improve\s*ment|any\s+improvements?\s+needed)\b/i.test(lower)) ||
+      (/[\u0980-\u09FF]/.test(lower) && /(?:আপডেট\s*টেস্ট|টেস্ট\s*করো|উন্নতি|ইম্প্রুভমেন্ট)/.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Multi-Conversational Session Fluency & Active Co-Building Vibe
    * Handles: "fix every agent malti conversational sation need fully fluent vibe for working building and updateing anything need real human behabeior on every side",
    * "multi conversational session", "fluent vibe for working building and updating",
@@ -309,6 +372,51 @@ class IntentParser {
       (lower.includes("fix every pronunciation") && (lower.includes("team leader") || lower.includes("tone") || lower.includes("personality") || lower.includes("english")))
     );
   }
+
+  /**
+   * Centralized detector for Deep Research, Test and Update Directive
+   * Handles: "do deeep research test and update", "Do deep research, test and update",
+   * "deep research test and update", "deep research test update", "deep research test",
+   * "run deep research", "audit deep research", "ডিপ রিসার্চ টেস্ট এবং আপডেট"
+   */
+  static isDeepResearchTestAndUpdateDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    if (/\b(?:fase|face|voice|voise|enragy|energy|real\s+one|remeber|remember|speaker|imposter)\b/i.test(lower)) {
+      return false;
+    }
+    return (
+      (/\bdee+p[\s\-]*research\b/i.test(lower) &&
+       /\b(?:test\s+and\s+update|test\s+update|test\s+suite|run\s+test|audit|verify)\b/i.test(lower)) ||
+      /\b(?:do\s+)?dee+p\s+research\s+(?:test\s+and\s+update|test\s+update|test)\b/i.test(lower) ||
+      /(?:ডিপ\s*রিসার্চ\s*(?:টেস্ট|আপডেট))/u.test(lower)
+    );
+  }
+
+  /**
+   * Centralized detector for Continue Deep Research Directive
+   * Handles: "continue with deep research", "proceed with deep research", "continue deep research",
+   * "continue the biometric research", "Phase 2 runtime integration", "চালিয়ে যাও ডিপ রিসার্চ",
+   * "continue with deep research phase 2", "proceed to phase 2"
+   */
+  static isContinueDeepResearchDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    // Must not collide with test-and-update variant
+    if (/\b(?:test\s+and\s+update|test\s+update|test\s+suite|run\s+test|audit|verify)\b/i.test(lower) &&
+        !/\b(?:continue|proceed|phase)\b/i.test(lower)) {
+      return false;
+    }
+    return (
+      /\bcontinue\s+(?:with\s+)?(?:deep|dee+p)\s+research\b/i.test(lower) ||
+      /\bproceed\s+(?:with\s+)?(?:deep|dee+p)\s+research\b/i.test(lower) ||
+      /\bcontinue\s+(?:the\s+)?(?:biometric|identity|trimodal|phase|runtime)\b/i.test(lower) ||
+      /\b(?:phase\s+2|phase\s+two)\s+(?:runtime|biometric|integration|research)\b/i.test(lower) ||
+      /\b(?:runtime\s+biometric|biometric\s+integration|trimodal\s+fusion)\s+(?:continue|proceed|research|phase)\b/i.test(lower) ||
+      /(?:চালিয়ে\s+যাও|চালু\s+রাখো|এগিয়ে\s+যাও)\s+(?:ডিপ\s+রিসার্চ|গভীর\s+গবেষণা|বায়োমেট্রিক)/u.test(lower) ||
+      /\bcontinue\s+(?:with\s+)?deep\s+research\b/i.test(lower)
+    );
+  }
 }
 
 module.exports = {
@@ -320,6 +428,8 @@ module.exports = {
   isUniversalBilingualIdentityParityDirective: IntentParser.isUniversalBilingualIdentityParityDirective,
   isSelfLearningLoopDirective: IntentParser.isSelfLearningLoopDirective,
   isMultiConversationalBuildingVibeDirective: IntentParser.isMultiConversationalBuildingVibeDirective,
-  isTukTukTeamLeaderCommunicationDirective: IntentParser.isTukTukTeamLeaderCommunicationDirective
+  isTestUpdateImprovementDirective: IntentParser.isTestUpdateImprovementDirective,
+  isTukTukTeamLeaderCommunicationDirective: IntentParser.isTukTukTeamLeaderCommunicationDirective,
+  isDeepResearchTestAndUpdateDirective: IntentParser.isDeepResearchTestAndUpdateDirective,
+  isContinueDeepResearchDirective: IntentParser.isContinueDeepResearchDirective
 };
-

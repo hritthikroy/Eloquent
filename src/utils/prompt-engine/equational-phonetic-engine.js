@@ -506,7 +506,7 @@ class EquationalPhoneticEngine {
       [/\b(?:look\s+defret|look\s+difrent)\b/gi, "look different"],
       [/\b(?:sound\s+defret|sound\s+difrent)\b/gi, "sound different"],
       [/\b(?:fix\s+more\s+every\s*thing)\b/gi, "fix more everything"],
-      [/\b(?:fix\s+every\s*ting|fix\s+every\s*thing)\b/gi, "fix everything"],
+      [/\b(?:fix\s+every\s*ting|fix\s+every\s*thing|every\s+ting)\b/gi, "everything"],
       [/\b(?:equational\s+reserch|equational\s+reserach|equatinal\s+research)\b/gi, "equational research"],
       [/\b(?:phonetic\s+corections?|phonetik\s+corrections?)\b/gi, "phonetic corrections"],
       [/\b(?:deaply)\b/gi, "deeply"],
