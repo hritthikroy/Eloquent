@@ -39,6 +39,8 @@ class MasterApiGateway {
 
     // Priority Lane Traffic State
     this.activeInteractiveRequests = 0;
+    this.currentTurnId = 0;
+    this.activeTurnAbortController = null;
     this.backgroundQueue = [];
     this.isProcessingBackgroundQueue = false;
 
@@ -290,13 +292,118 @@ class MasterApiGateway {
   }
 
   /**
+   * Compress and budget messages to guarantee input tokens <= maxInputTokens (default 2800).
+   * Strictly prevents Groq 7,000 ITPM rate limit rejections and multi-second retry storms.
+   */
+  compressPromptMessages(messages, maxInputTokens = 2800) {
+    if (!Array.isArray(messages) || messages.length === 0) return messages;
+
+    const estimateTokens = (msgs) => {
+      let totalChars = 0;
+      for (const m of msgs) {
+        if (m && typeof m.content === "string") totalChars += m.content.length;
+      }
+      return Math.ceil(totalChars / 3.8);
+    };
+
+    let totalEst = estimateTokens(messages);
+    if (totalEst <= maxInputTokens) return messages;
+
+    let cloned = messages.map(m => ({ ...m }));
+
+    // Step 1: Compress bloated system prompt if present
+    const sysIdx = cloned.findIndex(m => m.role === "system");
+    if (sysIdx !== -1 && cloned[sysIdx].content && cloned[sysIdx].content.length > 4000) {
+      let sys = cloned[sysIdx].content;
+      // Strip duplicated history / session continuity inside system prompt if present
+      sys = sys.replace(/\n\[IMMEDIATE PRECEDING TURNS[\s\S]*?(?=\n\[|\n\n|$)/gi, "");
+      // Strip bulky LaTeX display math and academic paper proofs
+      sys = sys.replace(/\$\$[\s\S]*?\$\$/g, "");
+      sys = sys.replace(/\n\d+\.\s+LAW\s+\d+:[\s\S]*?(?=\n\d+\.|\n\[|$)/gi, (match) => {
+        const lines = match.split("\n").filter(l => l.trim().length > 0);
+        return lines.slice(0, 3).join("\n");
+      });
+      if (sys.length > 5500) {
+        sys = sys.substring(0, 5200) + "\n[System rules preserved. Respond with sharp wit, natural human tone, and persona sovereignty.]";
+      }
+      cloned[sysIdx].content = sys;
+    }
+
+    // Step 2: If still above token budget, trim older conversational history turns
+    totalEst = estimateTokens(cloned);
+    if (totalEst > maxInputTokens) {
+      const sysMsg = cloned.find(m => m.role === "system");
+      const userMsg = cloned[cloned.length - 1];
+      const historyTurns = cloned.slice(sysMsg ? 1 : 0, cloned.length - 1);
+      const keptTurns = historyTurns.slice(-4);
+      cloned = sysMsg ? [sysMsg, ...keptTurns, userMsg] : [...keptTurns, userMsg];
+    }
+
+    // Step 3: Final safety clamp on system prompt if still exceeding
+    totalEst = estimateTokens(cloned);
+    if (totalEst > maxInputTokens && sysIdx !== -1 && cloned[sysIdx]) {
+      const excess = (totalEst - maxInputTokens) * 4;
+      if (cloned[sysIdx].content.length > excess + 1000) {
+        cloned[sysIdx].content = cloned[sysIdx].content.substring(0, cloned[sysIdx].content.length - excess) +
+          "\n[Condensed for high-speed voice streaming. Maintain persona sovereignty and wit.]";
+      }
+    }
+
+    return cloned;
+  }
+
+  /**
+   * Proactively cancel any in-flight interactive turn buffering on Groq or Gemini
+   */
+  cancelInFlightTurn() {
+    if (this.activeTurnAbortController) {
+      try { this.activeTurnAbortController.abort(); } catch (e) {}
+      this.activeTurnAbortController = null;
+    }
+    if (this.geminiClient && typeof this.geminiClient.cancelInFlight === "function") {
+      try { this.geminiClient.cancelInFlight(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Unified Aura & Charm Calibration Vector
+   * Enforces 1:1 charm, warmth, and persona resonance between Groq and Gemini calls.
+   */
+  applyAuraAndCharmCalibration(messages, options = {}) {
+    if (!Array.isArray(messages) || messages.length === 0) return messages;
+    const cloned = JSON.parse(JSON.stringify(messages));
+    const sysIdx = cloned.findIndex(m => m && m.role === "system");
+    const charmAnchor = "\n[UNIFIED AURA & CHARM INVARIANT: Speak with sparkling co-founder charm, affectionate warmth, wit, and sharp intellect. Zero generic sterile chatbot tone, zero repetitive trailing questions. Maintain your authentic personal soul 100%.]";
+    
+    if (sysIdx !== -1 && cloned[sysIdx]) {
+      if (!cloned[sysIdx].content.includes("UNIFIED AURA & CHARM INVARIANT")) {
+        cloned[sysIdx].content += charmAnchor;
+      }
+    } else {
+      cloned.unshift({ role: "system", content: charmAnchor.trim() });
+    }
+    return cloned;
+  }
+
+  /**
    * High-Priority Interactive Chat Completion Lane (Voice ping-pong, sub-450ms target)
    */
   async chatCompletion(messages, options = {}) {
     this.activeInteractiveRequests++;
     const startTime = Date.now();
 
+    // 0. Interactive Turn Preemption: Invalidate and abort prior buffering requests
+    if (options.interactive !== false) {
+      this.cancelInFlightTurn();
+    }
+    const turnId = ++this.currentTurnId;
+    const abortController = new AbortController();
+    this.activeTurnAbortController = abortController;
+
     try {
+      const safeMessages = this.compressPromptMessages(messages, options.maxInputTokens || 2800);
+      const charmedMessages = this.applyAuraAndCharmCalibration(safeMessages, options);
+
       const normalizeModel = (m) => {
         if (!m) return this.groqModels[0];
         const mLower = m.toLowerCase();
@@ -324,10 +431,14 @@ class MasterApiGateway {
           if (this.isKeyCoolingDown(key, model)) continue;
 
           try {
+            if (this.currentTurnId !== turnId || abortController.signal.aborted) {
+              throw new Error("Turn superseded by newer user speech");
+            }
+
             const payload = {
               model: model,
-              messages: messages,
-              temperature: options.temperature !== undefined ? options.temperature : 0.3,
+              messages: charmedMessages,
+              temperature: options.temperature !== undefined ? options.temperature : 0.82,
               max_tokens: options.max_tokens || 1200,
               presence_penalty: options.presence_penalty !== undefined ? options.presence_penalty : 0.6,
               frequency_penalty: options.frequency_penalty !== undefined ? options.frequency_penalty : 0.5
@@ -343,9 +454,14 @@ class MasterApiGateway {
                 headers: { "Authorization": `Bearer ${key}` },
                 httpsAgent: this.groqAgent,
                 timeout: options.timeout || 4000,
+                signal: abortController.signal,
                 validateStatus: status => status < 500
               }
             );
+
+            if (this.currentTurnId !== turnId || abortController.signal.aborted) {
+              throw new Error("Turn superseded by newer user speech");
+            }
 
             const elapsed = Date.now() - reqStart;
             this.recordResponseHeaders(key, response.headers, elapsed);
@@ -361,7 +477,7 @@ class MasterApiGateway {
                 .replace(/\[Thinking:[\s\S]*?\]/gi, "")
                 .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, "")
                 .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis|thinking process)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "")
-                .replace(/^\s*(?:(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s+says|user\s+says|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, "")
+                .replace(/^\s*(?:(?:we|i)\s+(?:have\s+to|need\s+to|should|must)\s+respond(?:\s+as)?|(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s*(?:says|:)|user\s*(?:says|:)|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, "")
                 .trim();
 
               if (rawContent.length > 0) {
@@ -376,20 +492,26 @@ class MasterApiGateway {
               }
             }
 
-            // Handle 429 Rate Limit (TPD vs RPM)
+            // Handle 429 Rate Limit (TPD vs RPM vs ITPM)
             if (response.status === 429) {
               const errMsg = (response.data?.error?.message || "").toLowerCase();
               const isTpd = errMsg.includes("tokens per day") || errMsg.includes("tpd");
+              const isItpm = errMsg.includes("input tokens per minute") || errMsg.includes("itpm") || errMsg.includes("request too large") || errMsg.includes("reduce your message size");
               const retryAfter = parseInt(response.headers?.["retry-after"] || "0", 10);
               const cooldownMs = isTpd ? (45 * 1000) : (retryAfter > 0 ? retryAfter * 1000 : 10000);
 
-              this.setKeyCooldown(key, cooldownMs, isTpd ? "TPD limit" : "RPM rate-limit", model);
+              this.setKeyCooldown(key, cooldownMs, isTpd ? "TPD limit" : (isItpm ? "ITPM size limit" : "RPM rate-limit"), model);
               groqLastError = new Error(response.data?.error?.message || `429 on ${model}`);
+              if (isItpm) {
+                // All keys share the same tier size restriction; break key loop for this model
+                break;
+              }
               continue; // Try next key / model
             }
 
             groqLastError = new Error(response.data?.error?.message || `Groq HTTP ${response.status} on ${model}`);
           } catch (err) {
+            if (abortController.signal.aborted) throw err;
             groqLastError = err;
             const meta = this.keyTelemetry.get(key);
             if (meta) meta.consecutiveFailures = (meta.consecutiveFailures || 0) + 1;
@@ -399,14 +521,20 @@ class MasterApiGateway {
 
       // Phase 2: High-Level Failover to Google Gemini Multi-Key Pool
       if (this.geminiClient && typeof this.geminiClient.callChatCompletion === "function") {
+        if (this.currentTurnId !== turnId || abortController.signal.aborted) {
+          throw new Error("Turn superseded by newer user speech");
+        }
         for (const gemModel of this.geminiModels) {
           try {
-            const geminiRes = await this.geminiClient.callChatCompletion(messages, {
+            const geminiRes = await this.geminiClient.callChatCompletion(charmedMessages, {
               model: gemModel,
-              temperature: options.temperature !== undefined ? options.temperature : 0.4,
+              temperature: options.temperature !== undefined ? options.temperature : 0.80,
               max_tokens: options.max_tokens || 1200,
               timeout: Math.max(options.timeout || 0, 7500)
             });
+            if (this.currentTurnId !== turnId || abortController.signal.aborted) {
+              throw new Error("Turn superseded by newer user speech");
+            }
             if (geminiRes && geminiRes.content) {
               return {
                 content: geminiRes.content,
@@ -417,6 +545,7 @@ class MasterApiGateway {
               };
             }
           } catch (gemErr) {
+            if (abortController.signal.aborted) throw gemErr;
             geminiLastError = gemErr;
           }
         }

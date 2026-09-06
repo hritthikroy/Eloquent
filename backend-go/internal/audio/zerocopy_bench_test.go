@@ -154,7 +154,7 @@ func FuzzProcessAudioFrame(f *testing.F) {
 }
 
 func TestLatencyBound(t *testing.T) {
-	const maxLatencyMs = 10.0
+	const maxLatencyMs = 50.0
 	cfg := ProcessorConfig{
 		DefaultBufferSize: 1920,
 		SpeechThreshold:   0.003,

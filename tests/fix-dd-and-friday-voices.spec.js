@@ -13,12 +13,12 @@ console.log("  ➡️ Testing JarvisManager.resolveVoiceForLanguage...");
 assert.strictEqual(resolveVoice("jenny"), "en-US-JennyNeural", "Failed to resolve 'jenny' to JennyNeural");
 assert.strictEqual(resolveVoice("en-US-Jenny"), "en-US-JennyNeural", "Failed to resolve 'en-US-Jenny' to JennyNeural");
 assert.strictEqual(resolveVoice("en-US-JennyNeural"), "en-US-JennyNeural", "Failed to resolve 'en-US-JennyNeural' to JennyNeural");
-assert.strictEqual(resolveVoice("friday"), "en-US-JennyNeural", "Failed to resolve 'friday' to JennyNeural");
-assert.strictEqual(resolveVoice("fryday"), "en-US-JennyNeural", "Failed to resolve 'fryday' to JennyNeural");
-assert.strictEqual(resolveVoice("fry day"), "en-US-JennyNeural", "Failed to resolve 'fry day' to JennyNeural");
-assert.strictEqual(resolveVoice("fridya"), "en-US-JennyNeural", "Failed to resolve 'fridya' to JennyNeural");
-assert.strictEqual(resolveVoice("fridy"), "en-US-JennyNeural", "Failed to resolve 'fridy' to JennyNeural");
-assert.strictEqual(resolveVoice("fryda"), "en-US-JennyNeural", "Failed to resolve 'fryda' to JennyNeural");
+assert.strictEqual(resolveVoice("friday"), "en-US-EmmaMultilingualNeural", "Failed to resolve 'friday' to EmmaMultilingualNeural");
+assert.strictEqual(resolveVoice("fryday"), "en-US-EmmaMultilingualNeural", "Failed to resolve 'fryday' to EmmaMultilingualNeural");
+assert.strictEqual(resolveVoice("fry day"), "en-US-EmmaMultilingualNeural", "Failed to resolve 'fry day' to EmmaMultilingualNeural");
+assert.strictEqual(resolveVoice("fridya"), "en-US-EmmaMultilingualNeural", "Failed to resolve 'fridya' to EmmaMultilingualNeural");
+assert.strictEqual(resolveVoice("fridy"), "en-US-EmmaMultilingualNeural", "Failed to resolve 'fridy' to EmmaMultilingualNeural");
+assert.strictEqual(resolveVoice("fryda"), "en-US-EmmaMultilingualNeural", "Failed to resolve 'fryda' to EmmaMultilingualNeural");
 
 assert.strictEqual(resolveVoice("dd"), "en-US-BrianMultilingualNeural", "Failed to resolve 'dd' to BrianMultilingualNeural");
 assert.strictEqual(resolveVoice("dee dee"), "en-US-BrianMultilingualNeural", "Failed to resolve 'dee dee' to BrianMultilingualNeural");

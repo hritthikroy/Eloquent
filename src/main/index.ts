@@ -447,6 +447,14 @@ try {
   // Headless / non-electron environment
 }
 
+// Delegate lifecycle hooks to src/main/index.js runtime logic
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const mainJs = require('./index.js');
+export const shutdownSequence = mainJs.shutdownSequence;
+export const registerLifecycleHooks = mainJs.registerLifecycleHooks;
+export const registerLifecycleIpc = mainJs.registerLifecycleIpc;
+export const registerShutdownTargets = mainJs.registerShutdownTargets;
+
 export {
   clipboardService,
   ClipboardService,
@@ -472,6 +480,10 @@ if (typeof module !== 'undefined' && module.exports) {
     ClipboardService,
     ZeroCopySerializer,
     serialize,
-    deserialize
+    deserialize,
+    shutdownSequence,
+    registerLifecycleHooks,
+    registerLifecycleIpc,
+    registerShutdownTargets
   };
 }

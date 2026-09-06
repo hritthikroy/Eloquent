@@ -101,7 +101,11 @@ export class AudioBridgeManager extends EventEmitter {
     this.baseUrl = `http://${this.host}:${this.port}`;
     this.spawnBackend = options.spawnBackend ?? true;
     this.backendBinaryPath = options.backendBinaryPath || null;
-    this.backendSourceDir = options.backendSourceDir || path.resolve(__dirname, '../../../backend-go');
+    let root = path.resolve(__dirname, '../../..');
+    if (!fs.existsSync(path.join(root, 'package.json')) && fs.existsSync(path.resolve(__dirname, '../../../../package.json'))) {
+      root = path.resolve(__dirname, '../../../..');
+    }
+    this.backendSourceDir = options.backendSourceDir || path.join(root, 'backend-go');
     this.autoReconnect = options.autoReconnect ?? true;
     this.maxRestarts = options.maxRestarts || 5;
     this.healthCheckIntervalMs = options.healthCheckIntervalMs || 2500;
@@ -174,22 +178,29 @@ export class AudioBridgeManager extends EventEmitter {
     const possibleBinaries = [
       this.backendBinaryPath,
       path.join(this.backendSourceDir, 'eloquent-backend'),
-      path.resolve(__dirname, '../../../go-backend/main.go')
+      path.join(this.backendSourceDir, '../eloquent-audio'),
+      path.resolve(this.backendSourceDir, '../go-backend/main.go')
     ].filter(Boolean) as string[];
 
     let useBinary = false;
     for (const bin of possibleBinaries) {
-      if (bin.endsWith('.go') && fs.existsSync(bin)) {
-        command = 'go';
-        args = ['run', path.basename(bin)];
-        cwd = path.dirname(bin);
-        break;
-      } else if (fs.existsSync(bin)) {
+      if (!bin.endsWith('.go') && fs.existsSync(bin)) {
         command = bin;
         args = [];
         cwd = path.dirname(bin);
         useBinary = true;
         break;
+      }
+    }
+
+    if (!useBinary) {
+      for (const bin of possibleBinaries) {
+        if (bin.endsWith('.go') && fs.existsSync(bin)) {
+          command = 'go';
+          args = ['run', path.basename(bin)];
+          cwd = path.dirname(bin);
+          break;
+        }
       }
     }
 
@@ -421,6 +432,115 @@ export class AudioBridgeManager extends EventEmitter {
   }
 
   /**
+   * Initiates Cozy High lo-fi ambient loop playback on the Go audio backend.
+   */
+  public async playAmbient(options: { mode?: string; volume?: number } = {}): Promise<{
+    success: boolean;
+    isPlaying: boolean;
+    available: boolean;
+    mode: string;
+    volume: number;
+    error?: string;
+  }> {
+    const mode = options.mode || 'cozy-high';
+    const volume = typeof options.volume === 'number' ? options.volume : 0.8;
+
+    const root = path.resolve(__dirname, '../../..');
+    const binPath = path.join(root, 'bin/audio-server');
+    const isBinaryPresent = fs.existsSync(binPath);
+
+    if (!isBinaryPresent && !this.isConnected && !this.customTransport) {
+      const fallbackState = {
+        isPlaying: false,
+        ambientMode: mode,
+        theme: 'warm-earthy',
+        volume,
+        available: false,
+        error: 'Go audio backend binary unavailable — Visual cozy mode active',
+        timestamp: Date.now()
+      };
+      this.broadcast('audio:state', fallbackState);
+      return {
+        success: false,
+        isPlaying: false,
+        available: false,
+        mode,
+        volume,
+        error: 'Go audio backend binary unavailable'
+      };
+    }
+
+    try {
+      if (!this.isConnected && this.spawnBackend) {
+        await this.init();
+      }
+
+      await this.postJson('/audio/ambient', {
+        action: 'start',
+        mode,
+        volume
+      });
+
+      this.isStreaming = true;
+      const state = {
+        isPlaying: true,
+        ambientMode: mode,
+        theme: 'warm-earthy',
+        volume,
+        available: true,
+        timestamp: Date.now()
+      };
+      this.broadcast('audio:state', state);
+      return {
+        success: true,
+        isPlaying: true,
+        available: true,
+        mode,
+        volume
+      };
+    } catch (err: any) {
+      const fallbackState = {
+        isPlaying: false,
+        ambientMode: mode,
+        theme: 'warm-earthy',
+        volume,
+        available: false,
+        error: err?.message || 'Failed to start ambient audio loop',
+        timestamp: Date.now()
+      };
+      this.broadcast('audio:state', fallbackState);
+      return {
+        success: false,
+        isPlaying: false,
+        available: false,
+        mode,
+        volume,
+        error: err?.message
+      };
+    }
+  }
+
+  /**
+   * Stops Cozy High lo-fi ambient loop playback.
+   */
+  public async stopAmbient(): Promise<{ success: boolean; isPlaying: boolean }> {
+    try {
+      await this.postJson('/audio/ambient', { action: 'stop' });
+    } catch (_) {}
+
+    const state = {
+      isPlaying: false,
+      ambientMode: null,
+      volume: this.cachedParameters?.volume ?? 0.8,
+      available: true,
+      timestamp: Date.now()
+    };
+    this.broadcast('audio:state', state);
+    return { success: true, isPlaying: false };
+  }
+
+
+  /**
    * Dispatches parameter updates to `/audio/parameters` without buffer underruns.
    */
   public async updateParameters(params: Partial<AudioParameters>): Promise<{ ok: boolean; parameters: AudioParameters; error?: string }> {
@@ -626,6 +746,7 @@ export class AudioBridgeManager extends EventEmitter {
     });
 
     // 1b. Canonical audio:play alias
+    try { ipcMain.removeHandler('audio:play'); } catch (_) {}
     ipcMain.handle('audio:play', async (_event: any, config?: any) => {
       return this.startStream(typeof config === 'object' ? config : undefined);
     });
@@ -636,6 +757,7 @@ export class AudioBridgeManager extends EventEmitter {
     });
 
     // 2b. Canonical audio:stop alias
+    try { ipcMain.removeHandler('audio:stop'); } catch (_) {}
     ipcMain.handle('audio:stop', async () => {
       return this.stopStream();
     });
@@ -651,6 +773,7 @@ export class AudioBridgeManager extends EventEmitter {
     });
 
     // 4b. Canonical audio:status alias
+    try { ipcMain.removeHandler('audio:status'); } catch (_) {}
     ipcMain.handle('audio:status', async () => {
       return this.getStatus();
     });
@@ -663,6 +786,18 @@ export class AudioBridgeManager extends EventEmitter {
     // 6. Manual Reconnect
     ipcMain.handle('audio:reconnect', async () => {
       return this.init();
+    });
+
+    // 7. Play Ambient Lo-Fi Mode
+    try { ipcMain.removeHandler('audio:play-ambient'); } catch (_) {}
+    ipcMain.handle('audio:play-ambient', async (_event: any, payload?: any) => {
+      return this.playAmbient(payload || {});
+    });
+
+    // 8. Stop Ambient Lo-Fi Mode
+    try { ipcMain.removeHandler('audio:stop-ambient'); } catch (_) {}
+    ipcMain.handle('audio:stop-ambient', async () => {
+      return this.stopAmbient();
     });
 
     console.log('✅ [AudioBridge] Audio IPC handlers registered successfully.');
@@ -678,6 +813,8 @@ export class AudioBridgeManager extends EventEmitter {
         ipcMain.removeHandler('audio:status');
         ipcMain.removeHandler('audio:get-health');
         ipcMain.removeHandler('audio:reconnect');
+        ipcMain.removeHandler('audio:play-ambient');
+        ipcMain.removeHandler('audio:stop-ambient');
       }
     };
   }
@@ -703,5 +840,13 @@ export class AudioBridgeManager extends EventEmitter {
 
     this.isConnected = false;
     this.isStreaming = false;
+  }
+
+  /**
+   * Terminates all active connections, streams, child processes, and listeners.
+   */
+  public async terminate(_options: { timeoutMs?: number } = {}): Promise<{ success: boolean }> {
+    await this.close();
+    return { success: true };
   }
 }

@@ -55,9 +55,9 @@ echo ""
 # 4. Go Backend Compilation, Vetting, and Concurrency Race Detection
 echo "==> [4/6] Compiling Go audio backend and executing race detection..."
 echo "    -> Validating backend/ ..."
-(cd backend && go build -buildvcs=false ./... && go vet ./...)
+(cd backend && GOWORK=off go build -buildvcs=false ./... && GOWORK=off go vet ./...)
 echo "    -> Validating backend-go/ and running race detector..."
-(cd backend-go && go build -buildvcs=false ./... && go vet ./... && go test -race -buildvcs=false ./...)
+(cd backend-go && GOWORK=off go build -buildvcs=false ./... && GOWORK=off go vet ./... && GOWORK=off go test -race -buildvcs=false ./...)
 echo "✅ Go backend compiled without warnings and passed all concurrency checks."
 echo ""
 

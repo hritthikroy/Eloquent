@@ -4,8 +4,8 @@
   "algorithm": "sha256",
   "binaries": {
     "backend-go/eloquent-backend": {
-      "hash": "4ef6bdb7a68dca171eeae778e4bd313cffd31c536dfccc2116a56496dfb3c917",
-      "sizeBytes": 13365634,
+      "hash": "4236e55fb02e3a947e4c6663bcfc568079f933d385ab0eea513b1c20f659b7bc",
+      "sizeBytes": 13650994,
       "platform": "darwin",
       "arch": "arm64",
       "signature": "macho-64"

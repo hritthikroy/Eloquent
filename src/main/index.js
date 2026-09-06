@@ -306,6 +306,241 @@ function registerOptimizedIpcHandlers(ipcMain, stateManager = windowStateManager
 const { SharedMemoryAudioBridge, registerAudioBridgeIpc } = require('./ipc/audioBridge');
 const { registerResilientIpcHandlers, getSystemSubsystemStatus, getAudioDeviceState } = require('./ipc');
 
+// ── Multi-Layered Session Termination & Teardown Protocol ────────────────────
+let activeShutdownPromise = null;
+let registeredGoProcess = null;
+let registeredAudioBridge = null;
+let isLifecycleHooked = false;
+
+/**
+ * Register active Go backend child process and/or AudioBridge instance
+ * so they can be gracefully cleaned up during shutdownSequence.
+ * @param {Object} targets
+ * @param {Object} [targets.childProcess]
+ * @param {Object} [targets.audioBridge]
+ */
+function registerShutdownTargets(targets = {}) {
+  if (targets.childProcess) registeredGoProcess = targets.childProcess;
+  if (targets.audioBridge) registeredAudioBridge = targets.audioBridge;
+}
+
+/**
+ * Orchestrates multi-layered teardown:
+ * 1) Notify renderer to flush state,
+ * 2) Send SIGTERM to the Go audio child process,
+ * 3) Await process exit with a 2-second timeout,
+ * 4) Force kill with SIGKILL if timeout exceeds,
+ * 5) Exit Electron.
+ * 
+ * @param {Object} [options]
+ * @param {number} [options.timeoutMs=2000] - Timeout awaiting Go process exit
+ * @param {Object} [options.childProcess] - Target child process to kill
+ * @param {Object} [options.audioBridge] - Target AudioBridge instance to terminate
+ * @param {Object} [options.app] - Electron app instance
+ * @param {Array} [options.windows] - Open BrowserWindow instances
+ * @param {number} [options.flushWaitMs=50] - Grace wait for renderer state flush
+ * @param {boolean} [options.skipAppExit=false] - If true, do not call app.exit()
+ * @param {boolean} [options.resetPromise=false] - Reset active shutdown promise
+ * @returns {Promise<{success: boolean, forced: boolean, exitCode: number, durationMs: number}>}
+ */
+async function shutdownSequence(options = {}) {
+  if (options.resetPromise === true) {
+    activeShutdownPromise = null;
+  }
+
+  if (activeShutdownPromise) {
+    return activeShutdownPromise;
+  }
+
+  const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 2000;
+  const targetProcess = options.childProcess !== undefined ? options.childProcess : registeredGoProcess;
+  const bridge = options.audioBridge !== undefined ? options.audioBridge : registeredAudioBridge;
+  const electronApp = options.app || (function() {
+    try { return require('electron').app; } catch (_) { return null; }
+  })();
+  const browserWindows = options.windows || (function() {
+    try {
+      const { BrowserWindow } = require('electron');
+      return typeof BrowserWindow.getAllWindows === 'function' ? BrowserWindow.getAllWindows() : [];
+    } catch (_) {
+      return [];
+    }
+  })();
+
+  activeShutdownPromise = (async () => {
+    console.log('🛑 [Lifecycle] Initiating multi-layered shutdown sequence...');
+    const startTime = Date.now();
+    let forced = false;
+
+    // 1. Notify renderer to flush state
+    try {
+      console.log('📡 [Lifecycle:Phase 1] Notifying renderer to flush state...');
+      if (Array.isArray(browserWindows) && browserWindows.length > 0) {
+        for (const win of browserWindows) {
+          if (win && win.webContents && !win.webContents.isDestroyed()) {
+            try {
+              win.webContents.send('app:prepare-shutdown', { timestamp: Date.now() });
+              win.webContents.send('session:flush-state');
+            } catch (_) {}
+          }
+        }
+      }
+      if (options.flushWaitMs !== 0) {
+        await new Promise((resolve) => setTimeout(resolve, options.flushWaitMs || 50));
+      }
+    } catch (err) {
+      console.warn('⚠️ [Lifecycle:Phase 1] Error during renderer state flush:', err.message);
+    }
+
+    // 2. Terminate AudioBridge connections and send SIGTERM to Go audio child process
+    try {
+      console.log('🎙️ [Lifecycle:Phase 2] Terminating AudioBridge & sending SIGTERM to Go process...');
+      if (bridge) {
+        if (typeof bridge.terminate === 'function') {
+          await bridge.terminate().catch((e) => console.warn('⚠️ [Lifecycle] AudioBridge.terminate warning:', e.message));
+        } else if (typeof bridge.close === 'function') {
+          await bridge.close().catch((e) => console.warn('⚠️ [Lifecycle] AudioBridge.close warning:', e.message));
+        }
+      }
+
+      if (targetProcess && typeof targetProcess.kill === 'function') {
+        const isAlreadyExited = targetProcess.killed || targetProcess.exitCode !== null || targetProcess.signalCode !== null;
+        if (!isAlreadyExited) {
+          try {
+            targetProcess.kill('SIGTERM');
+          } catch (killErr) {
+            console.warn('⚠️ [Lifecycle:Phase 2] Error sending SIGTERM to Go process:', killErr.message);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ [Lifecycle:Phase 2] Error in audio bridge teardown:', err.message);
+    }
+
+    // 3 & 4. Await process exit with timeout, force kill if timeout exceeds
+    if (targetProcess && typeof targetProcess.kill === 'function') {
+      const isAlreadyExited = targetProcess.killed || targetProcess.exitCode !== null || targetProcess.signalCode !== null;
+      if (!isAlreadyExited) {
+        console.log(`⏱️ [Lifecycle:Phase 3] Awaiting Go process exit (Timeout: ${timeoutMs}ms)...`);
+        const exitPromise = new Promise((resolve) => {
+          const onExit = () => resolve({ clean: true });
+          if (typeof targetProcess.once === 'function') {
+            targetProcess.once('exit', onExit);
+            targetProcess.once('close', onExit);
+          } else {
+            resolve({ clean: true });
+          }
+        });
+
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => resolve({ clean: false }), timeoutMs);
+        });
+
+        const result = await Promise.race([exitPromise, timeoutPromise]);
+
+        if (!result.clean) {
+          console.warn(`⚠️ [Lifecycle:Phase 4] Go process did not exit within ${timeoutMs}ms. Escalating to SIGKILL!`);
+          forced = true;
+          try {
+            targetProcess.kill('SIGKILL');
+          } catch (fkErr) {
+            console.warn('⚠️ [Lifecycle:Phase 4] SIGKILL escalation warning:', fkErr.message);
+          }
+        } else {
+          console.log('✅ [Lifecycle:Phase 3] Go process exited gracefully.');
+        }
+      }
+    }
+
+    // Explicitly set process.exitCode: 0 on clean exit, 1 on forced escalation
+    if (forced) {
+      process.exitCode = 1;
+    } else {
+      process.exitCode = 0;
+    }
+
+    const durationMs = Date.now() - startTime;
+    console.log(`🏁 [Lifecycle:Phase 5] Teardown complete in ${durationMs}ms (Forced: ${forced}, ExitCode: ${process.exitCode}).`);
+
+    // 5. Exit Electron
+    if (options.skipAppExit !== true && electronApp && typeof electronApp.exit === 'function') {
+      try {
+        electronApp.exit(process.exitCode);
+      } catch (_) {}
+    }
+
+    return {
+      success: true,
+      forced,
+      exitCode: process.exitCode,
+      durationMs
+    };
+  })();
+
+  return activeShutdownPromise;
+}
+
+/**
+ * Register lifecycle hooks (before-quit and window-all-closed) to ensure
+ * clean shutdown and resolve the "stuck final tab" issue.
+ * @param {Electron.App} app
+ * @param {Object} [options]
+ */
+function registerLifecycleHooks(app, options = {}) {
+  if (!app || typeof app.on !== 'function') return;
+  if (isLifecycleHooked) return;
+  isLifecycleHooked = true;
+
+  let isHandlingQuit = false;
+
+  app.on('before-quit', async (event) => {
+    if (isHandlingQuit) return;
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+    isHandlingQuit = true;
+    try {
+      await shutdownSequence({ ...options, app });
+    } catch (err) {
+      console.error('❌ [Lifecycle] Error in before-quit shutdown sequence:', err);
+      process.exitCode = 1;
+      if (typeof app.exit === 'function') app.exit(1);
+    }
+  });
+
+  app.on('window-all-closed', async (event) => {
+    // Resolve "stuck final tab" issue: trigger shutdown sequence when final window/tab closes
+    if (isHandlingQuit) return;
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault();
+    }
+    isHandlingQuit = true;
+    try {
+      await shutdownSequence({ ...options, app });
+    } catch (err) {
+      console.error('❌ [Lifecycle] Error in window-all-closed shutdown sequence:', err);
+      process.exitCode = 1;
+      if (typeof app.exit === 'function') app.exit(1);
+    }
+  });
+}
+
+/**
+ * Register renderer IPC request-shutdown handler.
+ * @param {Electron.IpcMain} ipcMain
+ * @param {Object} [options]
+ */
+function registerLifecycleIpc(ipcMain, options = {}) {
+  if (!ipcMain || typeof ipcMain.handle !== 'function') return;
+  try {
+    ipcMain.removeHandler('app:request-shutdown');
+  } catch (_) {}
+  ipcMain.handle('app:request-shutdown', async () => {
+    console.log('📥 [IPC:app:request-shutdown] Renderer requested application shutdown');
+    return await shutdownSequence(options);
+  });
+}
+
 // Auto-register if Electron app is active
 try {
   const { app, ipcMain } = require('electron');
@@ -315,6 +550,8 @@ try {
       registerOptimizedIpcHandlers(ipcMain);
       registerAudioBridgeIpc(ipcMain);
       registerResilientIpcHandlers(ipcMain);
+      registerLifecycleIpc(ipcMain);
+      registerLifecycleHooks(app);
     };
 
     if (app.isReady()) {
@@ -328,6 +565,10 @@ try {
 }
 
 module.exports = {
+  shutdownSequence,
+  registerLifecycleHooks,
+  registerLifecycleIpc,
+  registerShutdownTargets,
   registerClipboardHandlers,
   registerOptimizedIpcHandlers,
   registerAudioBridgeIpc,

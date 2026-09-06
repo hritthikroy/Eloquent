@@ -31,6 +31,24 @@ class GeminiClient {
       keepAliveMsecs: 30000
     });
     this.keyCooldowns = new Map();
+    this.activeRequests = new Set();
+  }
+
+  /**
+   * Cancel all in-flight Gemini requests immediately.
+   * Enforces zero-overlap invariant when user interrupts or new turn begins.
+   */
+  cancelInFlight() {
+    if (!this.activeRequests || this.activeRequests.size === 0) return 0;
+    let count = 0;
+    for (const req of this.activeRequests) {
+      try {
+        req.destroy();
+        count++;
+      } catch (e) {}
+    }
+    this.activeRequests.clear();
+    return count;
   }
 
   isKeyCoolingDown(key, model = null) {
@@ -206,8 +224,14 @@ class GeminiClient {
       }
     }
 
+    // Anchor Unified Aura & Charm Invariant into Gemini system instructions
+    const auraCharmAnchor = "[UNIFIED AURA & CHARM INVARIANT: Maintain 100% of persona warmth, wit, and charm across all providers. For Tuk Tuk: exclusively address Hritthik as 'babe', zero pure sadhu Bangla, no trailing question marks (?)]";
+    if (!systemInstructionText.includes("UNIFIED AURA & CHARM INVARIANT")) {
+      systemInstructionText = systemInstructionText ? `${systemInstructionText}\n\n${auraCharmAnchor}` : auraCharmAnchor;
+    }
+
     const generationConfig = {
-      temperature: options.temperature !== undefined ? options.temperature : 0.4,
+      temperature: options.temperature !== undefined ? options.temperature : 0.80,
       maxOutputTokens: options.max_tokens ? Math.max(options.max_tokens, 1000) : (options.maxOutputTokens || 1200),
       topP: options.topP || 0.95
     };
@@ -256,7 +280,10 @@ class GeminiClient {
       }, (res) => {
         let responseBody = "";
         res.on("data", chunk => responseBody += chunk);
+        const cleanup = () => this.activeRequests.delete(req);
+        res.on("close", cleanup);
         res.on("end", () => {
+          cleanup();
           try {
             const json = JSON.parse(responseBody);
             if (res.statusCode === 200 && json.candidates && json.candidates[0]?.content) {
@@ -303,7 +330,10 @@ class GeminiClient {
         });
       });
 
+      this.activeRequests.add(req);
+
       req.on("error", (err) => {
+        this.activeRequests.delete(req);
         resolve({
           status: 0,
           error: err.message,
@@ -312,6 +342,7 @@ class GeminiClient {
       });
 
       req.on("timeout", () => {
+        this.activeRequests.delete(req);
         req.destroy();
         resolve({
           status: 408,
@@ -374,10 +405,15 @@ class GeminiClient {
               },
               timeout: options.timeout || 6000
             }, (res) => {
+              const cleanup = () => this.activeRequests.delete(req);
+              res.on("close", cleanup);
               if (res.statusCode !== 200) {
                 let errBody = "";
                 res.on("data", c => errBody += c);
-                res.on("end", () => resolve({ status: res.statusCode, error: errBody }));
+                res.on("end", () => {
+                  cleanup();
+                  resolve({ status: res.statusCode, error: errBody });
+                });
                 return;
               }
 
@@ -400,6 +436,7 @@ class GeminiClient {
               });
 
               res.on("end", () => {
+                cleanup();
                 resolve({
                   status: 200,
                   content: fullText.trim(),
@@ -408,8 +445,14 @@ class GeminiClient {
               });
             });
 
-            req.on("error", (err) => resolve({ status: 0, error: err.message }));
+            this.activeRequests.add(req);
+
+            req.on("error", (err) => {
+              this.activeRequests.delete(req);
+              resolve({ status: 0, error: err.message });
+            });
             req.on("timeout", () => {
+              this.activeRequests.delete(req);
               req.destroy();
               resolve({ status: 408, error: "Stream timed out" });
             });

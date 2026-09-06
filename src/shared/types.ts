@@ -14,7 +14,23 @@ export enum IpcChannels {
   AUDIO_COMMAND_RECOGNIZED = 'audio:command-recognized',
   EXEC_RUN = 'exec:run',
   EXEC_STATUS = 'exec:status',
-  EXEC_ABORT = 'exec:abort'
+  EXEC_ABORT = 'exec:abort',
+  GET_AUDIO_CONFIG = 'get-audio-config',
+  SET_AUDIO_CONFIG = 'set-audio-config'
+}
+
+export interface AudioBackendConfig {
+  sampleRate: number;
+  bufferSize: number;
+  outputDevice: string;
+  channels?: number;
+  volume?: number;
+}
+
+export interface AudioConfigResponse {
+  success: boolean;
+  config: AudioBackendConfig;
+  error?: string;
 }
 
 export interface ClipboardSyncPayload {

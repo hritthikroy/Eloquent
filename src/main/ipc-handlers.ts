@@ -16,6 +16,7 @@ import {
 import { ClipboardManager, clipboardManager } from './clipboard-manager';
 import { AudioManager, audioManager } from './audio-manager';
 import { ExecutionEngine, executionEngine } from './execution-engine';
+import { AudioConfigManager, audioConfigManager } from './audio-config-manager';
 import {
   IpcChannels,
   ClipboardSyncPayload,
@@ -23,7 +24,9 @@ import {
   AudioCaptureConfig,
   AudioCommandRecognizedPayload,
   ExecutionResult,
-  ExecutionStatusPayload
+  ExecutionStatusPayload,
+  AudioBackendConfig,
+  AudioConfigResponse
 } from '../shared/types';
 
 export interface VerifyIntegrityPayload {
@@ -322,6 +325,61 @@ export function registerConversationIpcHandlers(
     }
   });
 
+  // Channel: 'get-audio-config' (IpcChannels.GET_AUDIO_CONFIG)
+  ipcMain.handle(IpcChannels.GET_AUDIO_CONFIG, async (): Promise<AudioConfigResponse> => {
+    try {
+      console.log('⚙️ [IPCHandlers] Processing get-audio-config request...');
+      const config = audioConfigManager.getConfig();
+      return {
+        success: true,
+        config
+      };
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in get-audio-config:', err?.message || err);
+      return {
+        success: false,
+        config: audioConfigManager.getConfig(),
+        error: err?.message || 'Failed to fetch audio configuration'
+      };
+    }
+  });
+
+  // Also support plain string channel 'get-audio-config' if needed
+  if (typeof ipcMain.handle === 'function' && IpcChannels.GET_AUDIO_CONFIG !== 'get-audio-config') {
+    ipcMain.handle('get-audio-config', async () => audioConfigManager.getConfig());
+  }
+
+  // Channel: 'set-audio-config' (IpcChannels.SET_AUDIO_CONFIG)
+  ipcMain.handle(IpcChannels.SET_AUDIO_CONFIG, async (_event: any, payload: any): Promise<AudioConfigResponse> => {
+    try {
+      console.log('⚙️ [IPCHandlers] Processing set-audio-config request...');
+      const inputConfig = payload?.config || payload;
+      const response = await audioConfigManager.setConfig(inputConfig);
+
+      if (response.success && typeof broadcastTargets === 'function') {
+        try {
+          const windows = broadcastTargets();
+          if (Array.isArray(windows)) {
+            for (const win of windows) {
+              if (win && !win.isDestroyed() && win.webContents) {
+                win.webContents.send('audio-config-updated', response.config);
+              }
+            }
+          }
+        } catch (bErr) {}
+      }
+
+      return response;
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in set-audio-config:', err?.message || err);
+      return {
+        success: false,
+        config: audioConfigManager.getConfig(),
+        error: err?.message || 'Failed to update audio configuration'
+      };
+    }
+  });
+
   // Telemetry Broadcast Subscription:
   // Emits 'stateSyncStatus' to renderer windows
   const unsubscribeSync = manager.onSyncStatus((status: StateSyncStatus) => {
@@ -361,7 +419,7 @@ export function registerConversationIpcHandlers(
 
   audioManager.on('command-recognized', commandListener);
 
-  console.log('✅ [IPCHandlers] Registered conversation, clipboard, audio & execution IPC handlers');
+  console.log('✅ [IPCHandlers] Registered conversation, clipboard, audio, execution & audio-config IPC handlers');
 
   return {
     unregister: () => {
@@ -379,6 +437,10 @@ export function registerConversationIpcHandlers(
           ipcMain.removeHandler(IpcChannels.EXEC_RUN);
           ipcMain.removeHandler(IpcChannels.EXEC_STATUS);
           ipcMain.removeHandler(IpcChannels.EXEC_ABORT);
+          ipcMain.removeHandler(IpcChannels.GET_AUDIO_CONFIG);
+          ipcMain.removeHandler(IpcChannels.SET_AUDIO_CONFIG);
+          ipcMain.removeHandler('get-audio-config');
+          ipcMain.removeHandler('set-audio-config');
         }
         unsubscribeSync();
         audioManager.off('command-recognized', commandListener);

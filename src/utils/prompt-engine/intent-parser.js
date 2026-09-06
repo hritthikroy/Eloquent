@@ -93,6 +93,22 @@ class IntentParser {
       };
     }
 
+    // 2.186 Gemini-Groq Zero API Overlap, Unified Aura & Autonomous Code-Healing Directive
+    if (IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_gemini_groq_zero_overlap_code_healing",
+        agentDirective
+      };
+    }
+
     // 2.19 Zero-Gap Human-Agent Deep Research & Elimination of Micro/Nail Gaps Directive
     if (IntentParser.isZeroHumanAgentGapEquationalDirective(lower)) {
       let agentDirective = "team";
@@ -1131,6 +1147,26 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Gemini-Groq Zero API Overlap, Unified Aura & Autonomous Code-Healing Directive
+   * Handles: "gemini and groq api buffring overlaping and present dual sol fix this issues with deep research and thay change thare aura and charm betwen them or other nural somthing overlaping on conversation need 0 overlaping for deep smouth work all the day tuktuk need power to fix his own code and also other agent need this power to fix all thare codes for faster lerning and fixing agents of the yeas do deep research and fix all the bugs"
+   */
+  static isGeminiGroqZeroOverlapAutonomousCodeHealingDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:gemini|groq)\b/i.test(lower) && /\b(?:buffering|buffring|overlapping|overlaping|dual\s+soul|dual\s+sol|aura|charm)\b/i.test(lower)) ||
+      (/\b(?:present\s+dual\s+(?:soul|sol)|dual\s+(?:soul|sol))\b/i.test(lower)) ||
+      (/\b(?:change\s+(?:their|thare)?\s*aura\s+and\s+charm|aura\s+and\s+charm)\b/i.test(lower)) ||
+      (/\b(?:zero\s+overlapping|0\s+overlapping|0\s+overlaping|zero\s+overlap|0\s+overlap)\b/i.test(lower) && /\b(?:deep|smooth|work|conversation|api)\b/i.test(lower)) ||
+      (/\b(?:power\s+to\s+fix\s+(?:his|her|their)?\s*own\s+code|fix\s+(?:his|her|their)?\s*own\s+code)\b/i.test(lower)) ||
+      (/\b(?:fix\s+all\s+(?:their|thare)?\s*codes|power\s+to\s+fix\s+all\s+(?:their|thare)?\s*codes)\b/i.test(lower)) ||
+      (/\b(?:agents?\s+of\s+the\s+(?:year|yeas))\b/i.test(lower)) ||
+      (/\b(?:gemini\s+and\s+groq|groq\s+and\s+gemini)\b/i.test(lower) && /\b(?:overlap|buffering|code|fix|bugs?)\b/i.test(lower)) ||
+      (/(?:জেমিনি.*গ্রক|গ্রক.*জেমিনি|ডুয়াল\s*সোল|অরা.*চার্ম|জিরো\s*ওভারল্যাপ|নিজের\s*কোড\s*ফিক্স|এজেন্টস\s*অফ\s*দ্য\s*ইয়ার)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Zero-Gap Human-Agent Deep Research & Elimination of Micro/Nail Gaps Directive
    * Handles: "1. Test Execution Report do more deep test a humen and all the agents betwen any gap even a nail gap need to fix everything and update al equationaly with deep research",
    * "do more deep test a humen and all the agents betwen any gap even a nail gap need to fix everything and update al equationaly with deep research",
@@ -1752,6 +1788,7 @@ module.exports = {
   isAutonomousSelfMedicPeerMeshDirective: IntentParser.isAutonomousSelfMedicPeerMeshDirective,
   isSoulDuplicationMismatchHardcodedFixDirective: IntentParser.isSoulDuplicationMismatchHardcodedFixDirective,
   isTukTukSingleHumanSoulNonInterchangeableDirective: IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective,
+  isGeminiGroqZeroOverlapAutonomousCodeHealingDirective: IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective,
   isZeroHumanAgentGapEquationalDirective: IntentParser.isZeroHumanAgentGapEquationalDirective,
   isWireAllEquationsLiveDeepTestDirective: IntentParser.isWireAllEquationsLiveDeepTestDirective,
   isVision2070MasterCoderMedicDirective: IntentParser.isVision2070MasterCoderMedicDirective,

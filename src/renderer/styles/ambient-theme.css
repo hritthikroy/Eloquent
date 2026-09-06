@@ -1,0 +1,146 @@
+/**
+ * Cozy High Ambient Theme
+ *
+ * Warm, earthy color palette and smooth atmospheric transitions for deep
+ * focus and relaxation without jarring visual shifts or layout recalculation.
+ */
+
+:root {
+  --transition-ambient: background 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                        border-color 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Active Cozy High Theme */
+:root.ambient-theme,
+body.ambient-theme,
+.ambient-theme {
+  /* Warm earthy color variables */
+  --bg-warm: #2b241c;
+  --bg-warm-secondary: #221c15;
+  --bg-warm-surface: rgba(43, 36, 28, 0.88);
+  --bg-warm-card: #362d22;
+  --accent-glow: #d4a373;
+  --accent-glow-alpha: rgba(212, 163, 115, 0.35);
+  --accent-warm: #e07a5f;
+  --accent-gold: #e9c46a;
+  --text-warm: #faedcd;
+  --text-warm-muted: #d4a373;
+  --border-warm: rgba(212, 163, 115, 0.25);
+  --shadow-warm-glow: 0 0 40px rgba(212, 163, 115, 0.18);
+
+  /* Overrides for standard theme variables */
+  --bg-primary: var(--bg-warm);
+  --bg-secondary: var(--bg-warm-secondary);
+  --accent-primary: var(--accent-glow);
+  --text-primary: var(--text-warm);
+  --border-color: var(--border-warm);
+
+  background-color: var(--bg-warm);
+  color: var(--text-warm);
+  transition: var(--transition-ambient);
+}
+
+/* Zero layout shift ambient glow viewport overlay */
+.ambient-overlay-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9990;
+  overflow: hidden;
+  transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ambient-overlay-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 15%,
+    rgba(212, 163, 115, 0.12) 0%,
+    rgba(43, 36, 28, 0.05) 50%,
+    rgba(25, 20, 15, 0.45) 100%
+  );
+  animation: cozyBreath 8s ease-in-out infinite alternate;
+}
+
+@keyframes cozyBreath {
+  0% {
+    opacity: 0.75;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.95;
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0.80;
+    filter: blur(0px);
+  }
+}
+
+/* Ambient Badge and Controls */
+.ambient-badge {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  pointer-events: auto;
+  z-index: 9995;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-warm-surface);
+  border: 1px solid var(--border-warm);
+  border-radius: 20px;
+  box-shadow: var(--shadow-warm-glow);
+  color: var(--text-warm);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.ambient-badge:hover {
+  border-color: var(--accent-glow);
+  box-shadow: 0 0 20px var(--accent-glow-alpha);
+}
+
+.ambient-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-glow);
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.ambient-indicator-dot.disabled {
+  background-color: #888;
+  box-shadow: none;
+  animation: none;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+.ambient-badge-text {
+  font-weight: 500;
+}
+
+.ambient-fallback-notice {
+  font-size: 11px;
+  color: var(--accent-warm);
+  margin-left: 4px;
+}

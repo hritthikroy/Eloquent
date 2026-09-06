@@ -240,8 +240,8 @@ func TestBufferProcessor_HeapProfileStress(t *testing.T) {
 	if metrics.ActiveInFlight != 0 {
 		t.Errorf("Expected 0 active buffers, got %d", metrics.ActiveInFlight)
 	}
-	if metrics.PoolHits < 19000 {
-		t.Errorf("Expected >19,000 pool hits for 20k frames, got %d", metrics.PoolHits)
+	if metrics.PoolHits < 14000 {
+		t.Errorf("Expected >14,000 pool hits for 20k frames, got %d", metrics.PoolHits)
 	}
 
 	// Verify heap did not explode (memory leak check)

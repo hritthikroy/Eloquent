@@ -401,6 +401,37 @@ class ElectronEyeBridge {
 
       ipcMain.handle('clear-go-cache', async (_event, options = {}) => this.forwardClearGoCache(options));
 
+      // 6. Audio Configuration IPC Channels
+      ipcMain.handle('get-audio-config', async () => {
+        try {
+          const { audioConfigManager } = require('./audio-config-manager');
+          return { success: true, config: audioConfigManager.getConfig() };
+        } catch (err) {
+          return {
+            success: true,
+            config: { sampleRate: 48000, bufferSize: 1024, outputDevice: 'default', channels: 1, volume: 1.0 }
+          };
+        }
+      });
+
+      ipcMain.handle('set-audio-config', async (_event, payload) => {
+        try {
+          const { audioConfigManager } = require('./audio-config-manager');
+          const inputConfig = payload && payload.config ? payload.config : payload;
+          const res = await audioConfigManager.setConfig(inputConfig);
+          if (res.success) {
+            this._broadcast('audio-config-updated', res.config);
+          }
+          return res;
+        } catch (err) {
+          return {
+            success: false,
+            config: { sampleRate: 48000, bufferSize: 1024, outputDevice: 'default', channels: 1, volume: 1.0 },
+            error: err.message
+          };
+        }
+      });
+
       // 6. Camera Permission Request Handler
       ipcMain.handle('eye:request-camera-permission', async () => {
         if (process.platform === 'darwin') {

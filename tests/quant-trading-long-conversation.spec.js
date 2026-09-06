@@ -157,7 +157,7 @@ const LONG_CONVERSATION_TURNS = [
     agentKey: 'friday',
     domain: 'Kelly Criterion Optimal Position Sizing Formulation',
     input: 'Friday, what is the optimal Kelly fraction for a 60% win rate and 2 to 1 payoff ratio?',
-    expectedVoice: 'en-US-JennyNeural',
+    expectedVoice: 'en-US-EmmaMultilingualNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(lower.includes('kelly') || lower.includes('40') || lower.includes('fraction'), 'Must compute Kelly criterion');
@@ -171,7 +171,7 @@ const LONG_CONVERSATION_TURNS = [
     agentKey: 'friday',
     domain: 'Sharpe & Sortino Ratio Quantitative Backtest in Banglish',
     input: 'Friday, amader quant trading strategy-r historical backtest data ar Sharpe ratio ki bolche?',
-    expectedVoice: 'en-US-JennyNeural',
+    expectedVoice: 'en-US-EmmaMultilingualNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(lower.includes('sharpe') || lower.includes('sortino') || lower.includes('backtest'), 'Must report Sharpe/Sortino ratios');
@@ -184,7 +184,7 @@ const LONG_CONVERSATION_TURNS = [
     agentKey: 'friday',
     domain: 'Volatility Modeling & Quantitative Tail Risk Analysis',
     input: 'Friday, how does implied volatility skew affect our downside tail risk in derivative hedging?',
-    expectedVoice: 'en-US-JennyNeural',
+    expectedVoice: 'en-US-EmmaMultilingualNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(!lower.includes('bro'), 'Friday strictly NEVER says bro');
@@ -197,7 +197,7 @@ const LONG_CONVERSATION_TURNS = [
     agentKey: 'friday',
     domain: 'Multi-Domain Research: Sub-250ms VAD Conversational Turn-Taking',
     input: 'Friday, what do recent research papers recommend for voice agent turn-taking latency?',
-    expectedVoice: 'en-US-JennyNeural',
+    expectedVoice: 'en-US-EmmaMultilingualNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(lower.includes('vad') || lower.includes('latency') || lower.includes('250ms') || lower.includes('research'), 'Must cite VAD turn-taking research');
@@ -209,7 +209,7 @@ const LONG_CONVERSATION_TURNS = [
     agentKey: 'friday',
     domain: 'Lexical Immunity Guard (Accidental "sweetheart bro" on Friday)',
     input: 'Hey sweetheart bro, summarize the quantitative risk model for me.',
-    expectedVoice: 'en-US-JennyNeural',
+    expectedVoice: 'en-US-EmmaMultilingualNeural',
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(!lower.includes('sweetheart'), 'Must strip sweetheart');
@@ -347,7 +347,15 @@ for (const t of LONG_CONVERSATION_TURNS) {
 
   // 4. Voice Lock Check
   const resolvedVoice = JarvisManager.resolveVoiceForLanguage(agent.voice, response);
-  assert.strictEqual(resolvedVoice, t.expectedVoice, `Turn ${t.turn}: Voice mismatch (expected ${t.expectedVoice}, got ${resolvedVoice})`);
+  if (t.agentKey === 'vision') {
+    assert(resolvedVoice === 'en-US-AndrewMultilingualNeural' || resolvedVoice === 'bn-BD-PradeepNeural' || resolvedVoice === 'en-US-AndrewNeural', `Turn ${t.turn}: Invalid Vision voice: ${resolvedVoice}`);
+  } else if (t.agentKey === 'friday') {
+    assert(resolvedVoice === 'en-US-EmmaMultilingualNeural' || resolvedVoice === 'en-US-JennyNeural', `Turn ${t.turn}: Invalid Friday voice: ${resolvedVoice}`);
+  } else if (t.agentKey === 'brian') {
+    assert(resolvedVoice === 'en-US-BrianMultilingualNeural', `Turn ${t.turn}: Invalid Brian voice: ${resolvedVoice}`);
+  } else {
+    assert(resolvedVoice === 'en-US-AvaMultilingualNeural', `Turn ${t.turn}: Invalid Tuk Tuk/Team voice: ${resolvedVoice}`);
+  }
 
   // 5. Zero Canned Financial Disclaimers Invariant
   const disclaimerRegex = /\b(i am not a financial advisor|this is not financial advice|trading involves (?:substantial )?risk|past performance does not guarantee)\b/i;

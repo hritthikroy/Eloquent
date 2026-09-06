@@ -86,6 +86,9 @@ export interface AudioAPI {
   onStreamData: (callback: (data: AudioFrameData) => void) => () => void;
   onError: (callback: (error: AudioError) => void) => () => void;
   onDeviceChanged: (callback: (device: { inputDevice?: string; outputDevice?: string }) => void) => () => void;
+  playAmbient: (payload?: any) => Promise<any>;
+  stopAmbient: () => Promise<any>;
+  onAudioState: (callback: (state: any) => void) => () => void;
 }
 
 export const audioAPI: AudioAPI = {
@@ -168,21 +171,64 @@ export const audioAPI: AudioAPI = {
     return () => {
       ipcRenderer.removeListener('audio:device-changed', subscription);
     };
+  },
+
+  playAmbient: (payload?: any) => {
+    return ipcRenderer.invoke('audio:play-ambient', payload || {});
+  },
+
+  stopAmbient: () => {
+    return ipcRenderer.invoke('audio:stop-ambient');
+  },
+
+  onAudioState: (callback: (state: any) => void) => {
+    if (typeof callback !== 'function') return () => {};
+    const subscription = (_event: any, state: any) => callback(state);
+    ipcRenderer.on('audio:state', subscription);
+    return () => {
+      ipcRenderer.removeListener('audio:state', subscription);
+    };
+  }
+};
+
+export interface AnalyticsAPI {
+  trackEvent: (event: any) => Promise<any>;
+  reportLatency: (sample: any) => Promise<any>;
+  getStatus: () => Promise<any>;
+  getAlerts: () => Promise<any>;
+  onAnomalyAlert: (callback: (alert: any) => void) => () => void;
+}
+
+export const analyticsAPI: AnalyticsAPI = {
+  trackEvent: (event: any) => ipcRenderer.invoke('analytics:track-event', event),
+  reportLatency: (sample: any) => ipcRenderer.invoke('analytics:report-latency', sample),
+  getStatus: () => ipcRenderer.invoke('analytics:get-status'),
+  getAlerts: () => ipcRenderer.invoke('analytics:get-alerts'),
+  onAnomalyAlert: (callback: (alert: any) => void) => {
+    if (typeof callback !== 'function') return () => {};
+    const subscription = (_event: any, alert: any) => callback(alert);
+    ipcRenderer.on('analytics:anomaly-alert', subscription);
+    return () => {
+      ipcRenderer.removeListener('analytics:anomaly-alert', subscription);
+    };
   }
 };
 
 // Expose in isolated renderer context
 try {
   contextBridge.exposeInMainWorld('audioAPI', audioAPI);
+  contextBridge.exposeInMainWorld('analyticsAPI', analyticsAPI);
 } catch {
   // If contextBridge is not available (e.g. running outside Electron runtime in unit tests), expose on window
   if (typeof window !== 'undefined') {
     (window as any).audioAPI = audioAPI;
+    (window as any).analyticsAPI = analyticsAPI;
   }
 }
 
 declare global {
   interface Window {
     audioAPI: AudioAPI;
+    analyticsAPI: AnalyticsAPI;
   }
 }

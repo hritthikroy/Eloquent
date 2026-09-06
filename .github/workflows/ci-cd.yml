@@ -1,0 +1,169 @@
+name: CI/CD Pipeline & Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-lint:
+    name: Build, Typecheck & AST Verification
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: backend/go.sum
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Build & Typecheck
+        run: |
+          npm run build:ts
+          npm run typecheck
+
+      - name: AST Syntax Verification
+        run: npm run validate:ast
+
+      - name: Build & Test Go Audio Backend
+        run: |
+          cd backend/go
+          go build -v ./...
+          go test -v ./...
+
+  ux-metrics-validation:
+    name: UX Metrics & Latency Anomaly Validation Gate
+    needs: build-and-lint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run UX Metrics Validation Suite
+        id: run_ux_metrics
+        run: |
+          node tests/ux-metrics-validation.spec.js --ci --report=ux-metrics-report.json
+
+      - name: Parse & Enforce UX Metric Thresholds
+        run: |
+          node -e "
+          const fs = require('fs');
+          if (!fs.existsSync('ux-metrics-report.json')) {
+            console.error('❌ UX Metrics Report missing!');
+            process.exit(1);
+          }
+          const report = JSON.parse(fs.readFileSync('ux-metrics-report.json', 'utf8'));
+          console.log('📊 Staging UX Metrics Report:', JSON.stringify(report, null, 2));
+
+          const completionRate = report.onboardingCompletionRate;
+          const p95Latency = report.p95AudioLatencyMs;
+          const passed = report.passed;
+
+          console.log(\`🎯 Evaluated Completion Rate: \${(completionRate * 100).toFixed(1)}% (Threshold >= 85.0%)\`);
+          console.log(\`⚡ Evaluated p95 Latency: \${p95Latency.toFixed(2)}ms (Baseline <= 50.0ms)\`);
+
+          let failed = false;
+          if (completionRate < 0.85) {
+            console.error(\`❌ Critical Failure: Onboarding completion rate (\${(completionRate * 100).toFixed(1)}%) dropped below the 85.0% baseline threshold!\`);
+            failed = true;
+          }
+          if (p95Latency > 50.0) {
+            console.error(\`❌ Critical Failure: Audio latency p95 (\${p95Latency.toFixed(2)}ms) exceeded the 50.0ms threshold!\`);
+            failed = true;
+          }
+          if (!passed) {
+            console.error('❌ Test suite marked report as failed:', report.failureReasons);
+            failed = true;
+          }
+
+          if (failed) {
+            console.error('🚫 Pipeline deployment rejected due to UX / latency quality gate violation.');
+            process.exit(1);
+          }
+          console.log('✅ All UX metrics and latency baselines passed quality gate.');
+          "
+
+      - name: Upload UX Metrics Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UX-Metrics-Validation-Report
+          path: ux-metrics-report.json
+          retention-days: 30
+
+  build-mac-release:
+    name: Build & Package macOS Artifacts
+    needs: ux-metrics-validation
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eloquent-macOS-DMG
+          path: dist/*.dmg
+          retention-days: 30
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.zip
+            ux-metrics-report.json
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

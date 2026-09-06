@@ -8,6 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { execSync } from 'child_process';
 
 export interface LockMetadata {
   pid: number;
@@ -49,6 +50,15 @@ export interface CachePurgeResult {
   durationMs: number;
 }
 
+export interface DeepCleanResult {
+  locks: LockRemovalResult;
+  cache: CachePurgeResult;
+  singletonsRemoved: string[];
+  goCleaned: string[];
+  goErrors: string[];
+  success: boolean;
+}
+
 export interface CacheManagerOptions {
   rootDir?: string;
   cacheDirs?: string[];
@@ -81,7 +91,13 @@ export class CacheManager {
       'electron-cache',
       '.cache',
       '.turbo',
-      'build-cache'
+      'build-cache',
+      'userData/Cache',
+      'userData/Code Cache',
+      'userData/DawnGraphiteCache',
+      'userData/DawnWebGPUCache',
+      'userData/GPUCache',
+      'userData/blob_storage'
     ];
     this.lockFiles = options.lockFiles || [
       '.build.lock',
@@ -425,6 +441,104 @@ export class CacheManager {
       locks,
       cache,
       success: success && !hasPermissionErrors
+    };
+  }
+
+  /**
+   * Clear orphaned Electron Singleton symlinks (SingletonSocket, SingletonLock, SingletonCookie)
+   * in the userData directory.
+   */
+  public clearOrphanedSingletonSymlinks(userDataDir?: string): string[] {
+    const targetDir = userDataDir || path.resolve(this.rootDir, 'userData');
+    const removed: string[] = [];
+    if (!fs.existsSync(targetDir)) return removed;
+
+    try {
+      const entries = fs.readdirSync(targetDir);
+      for (const entry of entries) {
+        if (entry.startsWith('Singleton')) {
+          const fullPath = path.join(targetDir, entry);
+          try {
+            const lstat = fs.lstatSync(fullPath);
+            if (lstat.isSymbolicLink() || lstat.isFile()) {
+              fs.unlinkSync(fullPath);
+              removed.push(entry);
+              this.logger(`🧹 Removed orphaned Singleton artifact: "${entry}"`);
+            }
+          } catch (e: any) {
+            this.logger(`⚠️ Warning removing Singleton artifact "${entry}": ${e.message}`);
+          }
+        }
+      }
+    } catch (e: any) {
+      this.logger(`⚠️ Warning scanning for Singleton artifacts in "${targetDir}": ${e.message}`);
+    }
+    return removed;
+  }
+
+  /**
+   * Clear Go build, test, and mod caches across all Go backend directories.
+   */
+  public clearGoCaches(goDirs?: string[]): { cleaned: string[]; errors: string[] } {
+    const targets = goDirs || ['backend-go', 'go-backend', 'go'];
+    const cleaned: string[] = [];
+    const errors: string[] = [];
+
+    for (const dir of targets) {
+      const fullDir = path.resolve(this.rootDir, dir);
+      if (!fs.existsSync(fullDir)) continue;
+
+      try {
+        execSync('go clean -cache -testcache', {
+          cwd: fullDir,
+          stdio: 'pipe',
+          timeout: 10000
+        });
+        cleaned.push(dir);
+        this.logger(`🧹 Cleared Go build and test cache in "${dir}"`);
+      } catch (err: any) {
+        errors.push(`${dir}: ${err.message}`);
+        this.logger(`⚠️ Warning clearing Go cache in "${dir}": ${err.message}`);
+      }
+    }
+
+    return { cleaned, errors };
+  }
+
+  /**
+   * Deep multi-layer purge of all old build caches, stale locks, Chromium caches,
+   * orphaned singletons, and Go backend build caches.
+   */
+  public cleanAllDeep(options: {
+    cleanGo?: boolean;
+    cleanSingletons?: boolean;
+    customCacheDirs?: string[];
+  } = {}): DeepCleanResult {
+    this.logger('🚀 Starting deep full-stack build cache cleanup...');
+    const locks = this.clearStaleLocks(true);
+    const cache = this.purgeCache(options.customCacheDirs);
+    let singletonsRemoved: string[] = [];
+    let goCleaned: string[] = [];
+    let goErrors: string[] = [];
+
+    if (options.cleanSingletons !== false) {
+      singletonsRemoved = this.clearOrphanedSingletonSymlinks();
+    }
+
+    if (options.cleanGo !== false) {
+      const goRes = this.clearGoCaches();
+      goCleaned = goRes.cleaned;
+      goErrors = goRes.errors;
+    }
+
+    const success = locks.failed.length === 0 && cache.errors.length === 0 && goErrors.length === 0;
+    return {
+      locks,
+      cache,
+      singletonsRemoved,
+      goCleaned,
+      goErrors,
+      success
     };
   }
 

@@ -3548,20 +3548,14 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
   const startTime = Date.now();
   const agent = activeAgent || jarvisManager.agents.tuktuk;
   const activeLang = languageMode || jarvisManager.currentLanguageMode || "en";
-  let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech, handoffContext, activeLang);
+  let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech, handoffContext, activeLang, { compact: true });
 
   const visionCtx = screenShareManager.getVisionContext();
-  if (visionCtx.isActive) {
-    systemPrompt += `\n\n[LIVE SCREEN SHARE ACTIVE - REAL-TIME VISION FEED]:
-- Frontmost Focused Application: "${visionCtx.appName}".
-- Window / Document Context: "${visionCtx.windowTitle || visionCtx.appName}".
-- Screen Resolution: 1280px optimized (${visionCtx.frameSizeKB}KB).
-- You can directly see his screen, active code, open interview, or browser. Talk to him as if you are standing right beside him looking at his monitor. Suggest code solutions, answer questions on his screen, and execute work!
-- Human Eye Dynamics: You perceive the monitor with natural biological foveation, saccadic shifts, and deictic cursor joint attention, never rigid or static robotic staring.
-- STRICT DIRECTIVE: Never output XML tags, <tool_call>, <function>, or file system commands. Always speak directly in natural, human conversational voice.`;
+  if (visionCtx.isActive && !systemPrompt.includes('[SCREEN')) {
+    systemPrompt += `\n\n[SCREEN CONTEXT]: Frontmost App: "${visionCtx.appName}". Window: "${visionCtx.windowTitle || visionCtx.appName}". Speak directly in natural conversational voice with zero markdown.`;
   }
 
-  if (cameraManager && cameraManager.isActive) {
+  if (cameraManager && cameraManager.isActive && !systemPrompt.includes('[CAMERA')) {
     const ocularCtx = cameraManager.getVisualContext();
     systemPrompt += `\n\n${ocularCtx}`;
   }
@@ -3572,8 +3566,8 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user', activeLang);
 
-    // 8-turn window: 4 full conversational exchanges for podcast-grade continuity & zero repetition
-    const historyMessages = jarvisManager.getHistory(8, agent.key, activeLang);
+    // 6-turn window: 3 full conversational exchanges for podcast-grade continuity & tight token budget
+    const historyMessages = jarvisManager.getHistory(6, agent.key, activeLang);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
     const sanitizedHistory = [];
@@ -3740,18 +3734,18 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     }
 
     if (!reply || reply.length < 2) {
-      if (activeLang === 'bn') {
+      if (activeLang === 'bn' || activeLang === 'banglish') {
         reply = agent.key === 'tuktuk'
-          ? "Babe, আমি তোমার কথাই শুনছি আর বুঝতে পারছি! কী করতে হবে বলো?"
+          ? "Babe, ami tomar kothai shunchi ar bujhte parchi! Let's build together babe."
           : (agent.key === 'friday'
-            ? "আপনার নির্দেশনায় প্রস্তুত, ঋত্বিক। কী সহায়তা প্রয়োজন?"
-            : "আমি রেডি ভাই, কী করতে হবে বলুন।");
+            ? "Ready with research intelligence, Hritthik."
+            : "Ready bro, let's execute.");
       } else {
         reply = agent.key === 'tuktuk'
-          ? "I'm right here with you babe! I heard you loud and clear. Tell me what we should do next."
+          ? "I'm right here with you babe! I heard you loud and clear. Let's make it happen together."
           : (agent.key === 'friday'
-            ? "At your command, Hritthik. How shall we proceed?"
-            : "I'm locked on your directive brother, what's our move?");
+            ? "At your command, Hritthik. Research is aligned."
+            : "I'm locked on your directive brother, let's roll.");
       }
     }
 
@@ -3846,12 +3840,14 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
             .filter(t => t.role === 'assistant')
             .slice(-10)
         : null;
+      const currentActiveApp = (typeof screenShareManager !== 'undefined' && screenShareManager?.lastContext?.appName) || 'Eloquent';
+      const currentWindowTitle = (typeof screenShareManager !== 'undefined' && screenShareManager?.lastContext?.windowTitle) || '';
       reply = antiLoopEquationalCortex.auditAndEnforce(
         reply,
         agent,
         activeLang,
         displaySpeech || userSpeech,
-        { activeApp: activeContext?.activeApp, windowTitle: activeContext?.windowTitle },
+        { activeApp: currentActiveApp, windowTitle: currentWindowTitle },
         historyContext
       );
     }
@@ -6034,6 +6030,7 @@ try {
 // ── Audio Play / Stop / Status Canonical IPC Handlers ───────────────────────
 if (ipcMain && typeof ipcMain.handle === 'function') {
   // 1. audio:play - plays a specified audio file, synthesized audio, or starts the audio stream
+  try { ipcMain.removeHandler('audio:play'); } catch (_) {}
   ipcMain.handle('audio:play', async (_event, payload) => {
     try {
       const filePath = typeof payload === 'string' ? payload : (payload?.filePath || payload?.path || payload?.file);
@@ -6063,6 +6060,7 @@ if (ipcMain && typeof ipcMain.handle === 'function') {
   });
 
   // 2. audio:stop - stops active audio playback or stream
+  try { ipcMain.removeHandler('audio:stop'); } catch (_) {}
   ipcMain.handle('audio:stop', async () => {
     try {
       if (process.platform === 'darwin') {
@@ -6080,6 +6078,7 @@ if (ipcMain && typeof ipcMain.handle === 'function') {
   });
 
   // 3. audio:status - returns current engine and streaming state
+  try { ipcMain.removeHandler('audio:status'); } catch (_) {}
   ipcMain.handle('audio:status', async () => {
     try {
       if (audioBridgeManager) {
@@ -6089,6 +6088,34 @@ if (ipcMain && typeof ipcMain.handle === 'function') {
       return { success: true, status: 'ok', ready: true, isStreaming: false };
     } catch (err) {
       console.error('❌ [Main] audio:status error:', err.message);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // 4. audio:play-ambient - initiates Cozy High ambient lo-fi loop
+  try { ipcMain.removeHandler('audio:play-ambient'); } catch (_) {}
+  ipcMain.handle('audio:play-ambient', async (_event, payload) => {
+    try {
+      if (audioBridgeManager && typeof audioBridgeManager.playAmbient === 'function') {
+        return await audioBridgeManager.playAmbient(payload || {});
+      }
+      return { success: false, isPlaying: false, available: false, error: 'Audio bridge unavailable' };
+    } catch (err) {
+      console.error('❌ [Main] audio:play-ambient error:', err.message);
+      return { success: false, isPlaying: false, available: false, error: err.message };
+    }
+  });
+
+  // 5. audio:stop-ambient - halts ambient lo-fi loop
+  try { ipcMain.removeHandler('audio:stop-ambient'); } catch (_) {}
+  ipcMain.handle('audio:stop-ambient', async () => {
+    try {
+      if (audioBridgeManager && typeof audioBridgeManager.stopAmbient === 'function') {
+        return await audioBridgeManager.stopAmbient();
+      }
+      return { success: true, isPlaying: false };
+    } catch (err) {
+      console.error('❌ [Main] audio:stop-ambient error:', err.message);
       return { success: false, error: err.message };
     }
   });
@@ -6130,15 +6157,58 @@ function logApiRequest(type, status, duration, tokens = null, errorMessage = nul
   saveAdminConfigToFile();
 }
 
+let isTerminatingApp = false;
+
+app.on('before-quit', async (e) => {
+  if (isTerminatingApp) return;
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  isTerminatingApp = true;
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {}
+  try {
+    const { shutdownSequence } = require('./main/index');
+    await shutdownSequence({
+      childProcess: audioBridgeManager?.childProcess,
+      audioBridge: audioBridgeManager,
+      app
+    });
+  } catch (err) {
+    console.error('❌ Error during application before-quit shutdown:', err);
+    process.exitCode = 1;
+    app.exit(1);
+  }
+});
+
 app.on('will-quit', () => {
-  globalShortcut.unregisterAll();
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {}
   if (audioBridgeManager) {
     audioBridgeManager.close().catch(() => {});
   }
 });
 
-app.on('window-all-closed', (e) => {
-  e.preventDefault(); // Keep app running in menu bar
+app.on('window-all-closed', async (e) => {
+  // Resolve "stuck final tab" issue: trigger shutdown sequence when all windows/tabs close
+  if (isTerminatingApp) return;
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  isTerminatingApp = true;
+  try {
+    globalShortcut.unregisterAll();
+  } catch (_) {}
+  try {
+    const { shutdownSequence } = require('./main/index');
+    await shutdownSequence({
+      childProcess: audioBridgeManager?.childProcess,
+      audioBridge: audioBridgeManager,
+      app
+    });
+  } catch (err) {
+    console.error('❌ Error during window-all-closed shutdown:', err);
+    process.exitCode = 1;
+    app.exit(1);
+  }
 });
 
 // Handle custom protocol for OAuth callbacks

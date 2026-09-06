@@ -21,12 +21,12 @@ type PromptProcessor struct {
 
 // ProcessedPrompt represents a validated and sanitized prompt ready for audio engine
 type ProcessedPrompt struct {
-	Content       string   `json:"content"`
-	TokenCount    int      `json:"tokenCount"`
-	Placeholders  []string `json:"placeholders"`
-	Warnings      []string `json:"warnings"`
-	Sanitized     bool     `json:"sanitized"`
-	WithinLimit   bool     `json:"withinLimit"`
+	Content      string   `json:"content"`
+	TokenCount   int      `json:"tokenCount"`
+	Placeholders []string `json:"placeholders"`
+	Warnings     []string `json:"warnings"`
+	Sanitized    bool     `json:"sanitized"`
+	WithinLimit  bool     `json:"withinLimit"`
 }
 
 // ValidationError represents a prompt validation failure

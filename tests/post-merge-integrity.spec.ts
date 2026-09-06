@@ -33,7 +33,7 @@ function assert(condition: boolean, message: string) {
 
 // Expected SHA-256 cryptographic hashes of core merged modules
 const POST_MERGE_HASH_MANIFEST: Record<string, string> = {
-  'src/main/audio-bridge.js': 'bffd7e4bfda27e63beb1d54400753634170c386965c33a25af6562bfa85533e7',
+  'src/main/audio-bridge.js': '2b61fb148c744e9fddade2012d06fd11559433bd75322b3b120238b0c6a2a833',
   'src/main/legacy-headers.js': '5b50966ee24f9cb7b6d01ce0896f7e0f45a5de208377bb3af99347d0e5f87f42',
   'src/services/updater.js': 'dcfbff462ca2038ce2ccd096943522310a038e6b7e047fe7b7371d68c7eb9b3b',
   'src/utils/file-integrity.js': '1bf846858912b3f22b48277cf91ac5e7e1f2f971a3fdee1ddefd0fac5a8bd8f8',

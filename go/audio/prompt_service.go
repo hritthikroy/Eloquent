@@ -1,5 +1,5 @@
 // Package audio provides audio streaming, DSP processing, and prompt audio synthesis for Eloquent.
-package audio
+package main
 
 import (
 	"errors"

@@ -71,3 +71,26 @@ contextBridge.exposeInMainWorld('clipboard', {
     return ipcRenderer.invoke(CLIPBOARD_CHANNELS.CLEAR);
   }
 });
+
+// Expose lifecycle termination API to the renderer process
+contextBridge.exposeInMainWorld('lifecycle', {
+  /**
+   * Request graceful application shutdown, ensuring all in-flight audio requests
+   * and renderer states are flushed before the Go audio backend terminates.
+   * @param {Object} [payload]
+   * @returns {Promise<{success: boolean, forced: boolean, exitCode: number}>}
+   */
+  requestShutdown: (payload = {}) => {
+    return ipcRenderer.invoke('app:request-shutdown', payload);
+  },
+
+  /**
+   * Register listener for shutdown preparation
+   * @param {Function} callback
+   */
+  onPrepareShutdown: (callback) => {
+    if (typeof callback === 'function') {
+      ipcRenderer.on('app:prepare-shutdown', (_event, data) => callback(data));
+    }
+  }
+});

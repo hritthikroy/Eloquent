@@ -1,0 +1,13 @@
+{
+  "timestamp": 1788696813274,
+  "onboardingCompletionRate": 0.91,
+  "targetCompletionRate": 0.85,
+  "p95AudioLatencyMs": 27.371508743356078,
+  "maxAllowedLatencyMs": 50,
+  "anomalyDetectionF1Score": 0.96,
+  "totalSessionsEvaluated": 100,
+  "totalLatencySamplesEvaluated": 1000,
+  "anomaliesDetectedCount": 2,
+  "passed": true,
+  "failureReasons": []
+}

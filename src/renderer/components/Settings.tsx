@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { SettingsDialog } from './SettingsDialog';
 
 export interface CacheClearResult {
   success: boolean;
@@ -43,6 +44,7 @@ export const Settings: React.FC<SettingsProps> = ({
 }) => {
   const [isClearing, setIsClearing] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [showAudioDialog, setShowAudioDialog] = useState<boolean>(false);
   const [skipConfirmation, setSkipConfirmation] = useState<boolean>(false);
   const [autoCleanEnabled, setAutoCleanEnabled] = useState<boolean>(false);
   const [autoCleanTtl, setAutoCleanTtl] = useState<number>(24);
@@ -218,6 +220,53 @@ export const Settings: React.FC<SettingsProps> = ({
           Manage local memory buffers, Chromium session caches, and Go audio backend state.
         </p>
       </div>
+
+      {/* Audio Backend Settings Section */}
+      <div
+        style={{
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          backgroundColor: 'rgba(30, 41, 59, 0.6)',
+          padding: '18px',
+          borderRadius: '12px',
+          border: '1px solid rgba(56, 189, 248, 0.2)'
+        }}
+      >
+        <div>
+          <div style={{ fontSize: '15px', fontWeight: 600, color: '#38bdf8' }}>
+            ⚙️ Go Audio Backend Settings
+          </div>
+          <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '4px' }}>
+            Configure sample rate, buffer size, and hardware output device in real time.
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAudioDialog(true)}
+          style={{
+            backgroundColor: '#0284c7',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '10px 18px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          Open Audio Settings
+        </button>
+      </div>
+
+      {/* SettingsDialog Modal */}
+      <SettingsDialog
+        isOpen={showAudioDialog}
+        onClose={() => setShowAudioDialog(false)}
+        onConfigSaved={() => {
+          showToastNotification('success', 'Audio Configuration Saved', 'Real-time parameters updated in Go backend');
+        }}
+      />
 
       {/* Cache & Memory Optimization Section */}
       <div

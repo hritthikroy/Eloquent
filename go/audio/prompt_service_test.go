@@ -1,4 +1,4 @@
-package audio
+package main
 
 import (
 	"errors"

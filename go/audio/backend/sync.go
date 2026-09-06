@@ -50,14 +50,14 @@ type ForceSyncResponse struct {
 
 // Synchronizer coordinates clock alignments across the Go audio engine and Electron front-end.
 type Synchronizer struct {
-	mu                 sync.RWMutex
-	baseAudioNs        int64
-	baseVisualNs       int64
-	sampleRate         uint32
-	driftCorrections   atomic.Uint64
-	currentDriftUs     atomic.Int64
-	currentState       atomic.Pointer[string]
-	lastSyncTimestamp  atomic.Int64
+	mu                sync.RWMutex
+	baseAudioNs       int64
+	baseVisualNs      int64
+	sampleRate        uint32
+	driftCorrections  atomic.Uint64
+	currentDriftUs    atomic.Int64
+	currentState      atomic.Pointer[string]
+	lastSyncTimestamp atomic.Int64
 }
 
 // NewSynchronizer initializes an active Synchronizer with default parameters.

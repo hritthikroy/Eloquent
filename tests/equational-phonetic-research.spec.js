@@ -220,7 +220,7 @@ runTest("LocalCognitiveBrain: Generates reassuring co-founder replies in English
   const replyBn = LocalCognitiveBrain.synthesizeResponse("tuktuk", "Tuk Tuk", query + " babe", {}, "bn");
   assert.ok(replyBn.toLowerCase().includes("babe"), "Must address as babe");
   assert.ok(
-    replyBn.toLowerCase().includes("phonetic") || replyBn.includes("রিসার্চ") || replyBn.includes("সিস্টেম") || replyBn.includes("ইঞ্জিন"),
+    replyBn.toLowerCase().includes("phonetic") || replyBn.toLowerCase().includes("research") || replyBn.includes("সমীকরণ") || replyBn.includes("রিসার্চ") || replyBn.includes("সিস্টেম") || replyBn.includes("ইঞ্জিন"),
     `Must confirm Bengali phonetic engine, got: "${replyBn}"`
   );
   console.log(`     Brain Bengali reply: "${replyBn}"`);

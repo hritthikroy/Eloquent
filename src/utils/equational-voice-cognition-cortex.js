@@ -103,7 +103,7 @@ class EquationalVoiceCognitionCortex {
         total++;
         const targetVoice = this.EXPECTED_MATRIX[agentKey][lang.code];
         const resolvedVoice = typeof jarvisManager.resolveVoiceForLanguage === "function"
-          ? jarvisManager.resolveVoiceForLanguage(defaultVoice || targetVoice, lang.sample)
+          ? jarvisManager.resolveVoiceForLanguage(agentKey, lang.sample)
           : defaultVoice;
 
         const isMatch = resolvedVoice === targetVoice;
@@ -355,4 +355,6 @@ class EquationalVoiceCognitionCortex {
   }
 }
 
-module.exports = new EquationalVoiceCognitionCortex();
+const equationalVoiceCognitionCortex = new EquationalVoiceCognitionCortex();
+module.exports = equationalVoiceCognitionCortex;
+module.exports.EquationalVoiceCognitionCortex = EquationalVoiceCognitionCortex;

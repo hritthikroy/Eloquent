@@ -28,7 +28,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'eye-move',
       'eye-unavailable',
       'eye-status',
-      'clipboard:copy-prompt'
+      'clipboard:copy-prompt',
+      'analytics:track-event',
+      'analytics:report-latency'
     ];
     
     if (validChannels.includes(channel)) {
@@ -67,7 +69,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'audio:stream-data',
       'audio:error',
       'system:terminating',
-      'ipc:connection-state'
+      'app:prepare-shutdown',
+      'session:flush-state',
+      'ipc:connection-state',
+      'audio:state',
+      'analytics:anomaly-alert',
+      'analytics:metrics-update'
     ];
     
     if (validChannels.includes(channel) && typeof func === 'function') {
@@ -104,7 +111,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'audio:stream-data',
       'audio:error',
       'system:terminating',
-      'ipc:connection-state'
+      'app:prepare-shutdown',
+      'session:flush-state',
+      'ipc:connection-state',
+      'audio:state',
+      'analytics:anomaly-alert',
+      'analytics:metrics-update'
     ];
     
     if (validChannels.includes(channel) && typeof func === 'function') {
@@ -115,10 +127,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   },
+
+  // Ambient Audio APIs ("Cozy High" Mode)
+  playAmbient: (payload) => ipcRenderer.invoke('audio:play-ambient', payload || {}),
+  stopAmbient: () => ipcRenderer.invoke('audio:stop-ambient'),
   
   // Conversational State Management APIs
   requestState: () => ipcRenderer.invoke('state-request'),
   commitState: (state) => ipcRenderer.invoke('state-commit', state),
+  requestShutdown: (payload) => ipcRenderer.invoke('app:request-shutdown', payload || {}),
   onStateUpdate: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('state-updated', subscription);
@@ -153,6 +170,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('locale:changed', subscription);
       return () => {
         ipcRenderer.removeListener('locale:changed', subscription);
+      };
+    }
+  },
+
+  // Real-Time Analytics & Anomaly Detection APIs
+  analytics: {
+    trackEvent: (event) => ipcRenderer.invoke('analytics:track-event', event),
+    reportLatency: (sample) => ipcRenderer.invoke('analytics:report-latency', sample),
+    getStatus: () => ipcRenderer.invoke('analytics:get-status'),
+    getAlerts: () => ipcRenderer.invoke('analytics:get-alerts'),
+    onAnomalyAlert: (callback) => {
+      const subscription = (_event, value) => callback(value);
+      ipcRenderer.on('analytics:anomaly-alert', subscription);
+      return () => {
+        ipcRenderer.removeListener('analytics:anomaly-alert', subscription);
       };
     }
   },

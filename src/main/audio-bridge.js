@@ -272,6 +272,7 @@ class AudioBridge extends EventEmitter {
   registerIpcHandlers(ipcMain) {
     if (!ipcMain || typeof ipcMain.handle !== 'function') return;
 
+    this._registeredIpcMain = ipcMain;
     const { loadConecConfig, saveConecConfig, validateConecConfig } = require('./conec-config');
 
     ipcMain.handle('conec:get-config', async () => {
@@ -307,16 +308,68 @@ class AudioBridge extends EventEmitter {
 
   /**
    * Unregister Conec IPC handlers.
-   * @param {Object} ipcMain
+   * @param {Object} [ipcMain]
    */
   unregisterIpcHandlers(ipcMain) {
-    if (!ipcMain || typeof ipcMain.removeHandler !== 'function') return;
+    const targetIpc = ipcMain || this._registeredIpcMain;
+    if (!targetIpc || typeof targetIpc.removeHandler !== 'function') return;
     try {
-      ipcMain.removeHandler('conec:get-config');
-      ipcMain.removeHandler('conec:update-config');
-      ipcMain.removeHandler('conec:get-status');
-      ipcMain.removeHandler('conec:ping');
+      targetIpc.removeHandler('conec:get-config');
+      targetIpc.removeHandler('conec:update-config');
+      targetIpc.removeHandler('conec:get-status');
+      targetIpc.removeHandler('conec:ping');
     } catch (_) {}
+    if (targetIpc === this._registeredIpcMain) {
+      this._registeredIpcMain = null;
+    }
+  }
+
+  /**
+   * Explicitly closes all active gRPC/HTTP connections to the Go backend,
+   * drains queues, clears timers, and removes pending IPC listeners to prevent
+   * event loop hangs during application teardown.
+   * 
+   * @param {Object} [options]
+   * @param {Object} [options.ipcMain] - Optional ipcMain instance to unregister
+   * @returns {Promise<{success: boolean, framesDrained: number}>}
+   */
+  async terminate(options = {}) {
+    this.stop();
+
+    const framesDrained = this.frameQueue.length;
+    this.frameQueue = [];
+
+    // 1. Explicitly close active gRPC/HTTP stream connections or sockets
+    if (this.ipcSink) {
+      try {
+        if (typeof this.ipcSink.destroy === 'function') {
+          this.ipcSink.destroy();
+        } else if (typeof this.ipcSink.end === 'function') {
+          this.ipcSink.end();
+        } else if (typeof this.ipcSink.close === 'function') {
+          this.ipcSink.close();
+        }
+      } catch (err) {
+        console.warn('⚠️ [AudioBridge] Error closing ipcSink during termination:', err.message);
+      }
+      this.ipcSink = null;
+    }
+
+    // 2. Clear registered IPC handlers if ipcMain provided or cached
+    const ipc = options.ipcMain || this._registeredIpcMain;
+    if (ipc) {
+      this.unregisterIpcHandlers(ipc);
+    }
+
+    // 3. Unhook event listeners to prevent memory leaks and event loop holds
+    this.removeAllListeners();
+
+    this.isTerminated = true;
+
+    return {
+      success: true,
+      framesDrained
+    };
   }
 }
 

@@ -247,7 +247,8 @@ export class BuildPipeline {
     try {
       execSync(`go build -buildvcs=false -o "${this.goBinaryName}" .`, {
         cwd: this.goBackendDir,
-        stdio: 'pipe'
+        stdio: 'pipe',
+        env: { ...process.env, GOWORK: 'off' }
       });
       this.logger('✅ Go audio backend compiled successfully.');
     } catch (err: any) {

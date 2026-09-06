@@ -240,7 +240,7 @@ func TestEstimateTokenCountSimple(t *testing.T) {
 func TestEstimateTokenCountUnicode(t *testing.T) {
 	processor := NewPromptProcessor()
 	count := processor.estimateTokenCount("你好世界") // 4 characters
-	expected := 1 // 4 / 4 = 1
+	expected := 1                                 // 4 / 4 = 1
 	if count != expected {
 		t.Errorf("Expected %d tokens, got %d", expected, count)
 	}
@@ -543,7 +543,7 @@ func TestIsValidationError(t *testing.T) {
 	if !IsValidationError(err) {
 		t.Error("Expected IsValidationError to return true")
 	}
-	
+
 	regularErr := json.SyntaxError{}
 	if IsValidationError(&regularErr) {
 		t.Error("Expected IsValidationError to return false for non-ValidationError")
