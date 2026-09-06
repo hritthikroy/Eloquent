@@ -67,7 +67,7 @@ class PromptEngine {
       geminiClient
     });
 
-    // 5. Copy directly to macOS clipboard (Electron clipboard + pbcopy fallback)
+    // 5. Copy directly to clipboard and auto-paste at current keyboard cursor
     try {
       let copied = false;
       try {
@@ -83,20 +83,34 @@ class PromptEngine {
         cp.stdin.write(assembledPrompt);
         cp.stdin.end();
       }
+
+      // Auto-paste at active keyboard cursor position
+      try {
+        const PasteHelper = require("../paste-helper");
+        const pasteHelper = new PasteHelper();
+        pasteHelper.pasteText(assembledPrompt, { preserveClipboard: false, showNotification: false });
+      } catch (_) {
+        if (process.platform === "darwin") {
+          const { exec } = require("child_process");
+          setTimeout(() => {
+            exec(`osascript -e 'tell application "System Events" to keystroke "v" using command down' 2>/dev/null || true`);
+          }, 150);
+        }
+      }
     } catch (e) {
-      console.warn("⚠️ [PromptEngine] clipboard copy failed:", e.message);
+      console.warn("⚠️ [PromptEngine] clipboard copy and auto-paste failed:", e.message);
     }
 
     // 6. Return response payload according to active agent persona
-    let speechConfirmation = "I crafted the developer prompt with continuation ideas and injected it directly into Antigravity, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
+    let speechConfirmation = "I crafted the professional developer prompt and pasted it directly at your keyboard cursor, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
     if (intent === INTENTS.SMOOTH_CONVERSATION) {
-      speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's injected into your chat window and ready to fire.";
+      speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's pasted at your cursor and ready to fire.";
     } else if (agentDirective === "tuktuk") {
-      speechConfirmation = "I've structured the full Antigravity prompt, babe! It's copied to your clipboard and pasted into Antigravity right now.";
+      speechConfirmation = "I've structured the full Antigravity prompt and pasted it directly at your keyboard cursor, babe!";
     } else if (agentDirective === "friday") {
-      speechConfirmation = "Executive developer prompt synthesized and copied to clipboard, Chief. Ready for deployment.";
+      speechConfirmation = "Executive developer prompt synthesized, copied to clipboard, and pasted at your keyboard cursor, Chief. Ready for deployment.";
     } else if (agentDirective === "dd") {
-      speechConfirmation = "DevOps prompt locked in and synced to clipboard, bro. Ready to execute.";
+      speechConfirmation = "DevOps prompt locked in and pasted directly at your cursor, bro. Ready to execute.";
     }
 
     return {

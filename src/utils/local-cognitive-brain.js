@@ -1909,26 +1909,26 @@ class LocalCognitiveBrain {
           lower.includes("make our bangla voice") ||
           lower.includes("bangla voice more smoothly")) {
         if (isBn) return pick([
-          "হুমম একদম babe! আমাদের বাংলা ভয়েস এখন মাখনের মতো স্মুথ, ন্যাচারাল আর মিষ্টি করে নিয়েছি। কোনো রোবোটিক ভাব নাই, মন দিয়ে বলো কী কাজ করব!",
-          "আরেহ babe, বাংলা ভয়েস একদম মাখনের মতো স্মুথ আর ফ্লুয়েন্ট করে নিলাম! বাক্য শেষে ন্যাচারাল শ্বাস নেওয়ার পজ আর মিষ্টি টোন লকড।",
-          "একদম বুঝতে পেরেছি babe! খাঁটি মিষ্টি বাংলায় স্মুথ আর ন্যাচারাল ফ্লোতে কথা বলছি। চলো মন দিয়ে কোডিং করি!"
+          "একদম বুঝতে পেরেছি হৃত্তিক। বাংলা ভয়েসের ফ্লুয়েন্সি এবং আর্টিকুলেশন এখন একদম স্বাভাবিক ও মানুষের মতো স্পষ্ট করে নিয়েছি। কোনো অপ্রয়োজনীয় টান বা রোবটিক ভাব নেই, বলো কী কাজ করব!",
+          "বাংলা ও ব্যাংলিশের উচ্চারণ এবং পেসিং পুরোপুরি স্বাভাবিক ও পরিষ্কার করে নিলাম হৃত্তিক। কোনো কৃত্রিম মিষ্টি ভাব ছাড়াই সহজভাবে কথা বলছি। চলো মন দিয়ে কাজ করি।",
+          "আমাদের বাংলা ভয়েসের ফ্লো এখন একদম বাস্তব মানুষের মতো সাবলীল ও নির্ভুল হৃত্তিক। চলো কাজ শুরু করি!"
         ]);
         return pick([
-          "Babe, our Bangla voice is now silky smooth and deeply natural! Breath pacing, sweet prosody, and loanword harmonization are completely locked in. Tell me what we're working on!",
-          "All smoothed out babe! Natural, velvety cadence with zero robotic pauses or stutter. What's on your mind?"
+          "Our Bangla and English conversational flow is smooth, clear, and articulately human, Hritthik. Natural pacing with zero robotic stiffness. What are we working on?",
+          "All smoothed out, Hritthik. Natural conversational cadence with crisp articulation and zero artificial sweetness. What's on your mind?"
         ]);
       }
 
       // 0.54 Speech Misunderstanding & Conversation Gap Directive
       if (/(?:underrstand\s+other|understand\s+other|tell\s+somthing|vul\s+bujhte|bujhte\s+parcho\s+na|misunderstand|conversation\s+gaps?|cut\s+off|cut\s+koro\s+na|kotha\s+kete\s+jacche|gaps\s+fix)/i.test(lower)) {
         if (isBn) return pick([
-          "Babe, একদম সরি! মাইক আর অডিও গ্যাপ সব ঠিক করে নিয়েছি, এখন থেকে তোমার পুরো কথা না শুনে এক ফোঁটাও থামব না। নিশ্চিন্তে বলো!",
-          "Uff babe, my bad! আর কোনো ভুল বোঝাবুঝি বা অডিও কাট-অফ হবে না। পুরো কথা রিল্যাক্সে বলো, আমি মন দিয়ে শুনছি!",
-          "একদম বুঝতে পেরেছি babe! কথা কেটে যাওয়ার গ্যাপ আর মিস-আন্ডারস্ট্যান্ডিং সব দূর করে নিয়েছি। আমি পুরোদমে শুনছি।"
+          "একদম বুঝতে পেরেছি হৃত্তিক। মাইক আর অডিও টার্ন-টেকিং গ্যাপ সব ঠিক করে নিয়েছি, এখন থেকে তোমার পুরো কথা মনোযোগ দিয়ে শুনে রেসপন্স করব। নিশ্চিন্তে বলো।",
+          "আমার অডিও ক্যাডেন্স এবং ভিএডি থ্রেশহোল্ড টিউন করে নিয়েছি হৃত্তিক। আর কোনো ভুল বোঝাবুঝি বা অডিও কাট-অফ হবে না। বলো, কী নিয়ে কাজ করছি?",
+          "একদম ক্লিয়ার হৃত্তিক। কথা কেটে যাওয়ার গ্যাপ আর লিসেনিং থ্রেশহোল্ড অপটিমাইজ করে নিয়েছি। আমি পুরোদমে প্রস্তুত।"
         ]);
         return pick([
-          "Babe, I hear you! I've relaxed the turn silence thresholds and patched the speech recognizer so I never cut you off or misunderstand your words again. Ready whenever you are.",
-          "My bad babe! Tuned the VAD and phonetic mapping so your complete thoughts come through crystal clear. I'm completely locked on your wavelength."
+          "I hear you, Hritthik. I've tuned the silence thresholds and speech buffer so I never cut you off or misunderstand your words again. Ready whenever you are.",
+          "Understood, Hritthik. Tuned the VAD and phonetic mapping so your complete thoughts come through crystal clear. What's our next step?"
         ]);
       }
 
@@ -1938,14 +1938,14 @@ class LocalCognitiveBrain {
           (/\b(?:fix\s+yourself|fix\s+your\s+voice|thik\s+la\s+chena)\b/i.test(lower) && !/\b(?:galti|galat|bhul)\b/i.test(lower)))) {
         if (isBn) {
           return pick([
-            "হুমম babe, একদম মন দিয়ে শুনলাম। ভয়েসটা আরও সফট আর মিষ্টি করে নিয়েছি, যাতে তোমার শুনতে ভালো লাগে।",
-            "আরেহ babe, সরি গো! এখন থেকে একদম রিল্যাক্সড আর স্বাভাবিক গলায় কথা বলব, তুমি পাশে আছো ভাবলেই ভালো লাগে।",
-            "একদম ঠিক babe! টোনটা একদম ন্যাচারাল মানুষের মতো মিষ্টি করে নিলাম। শান্ত মাথায় কাজ করো, আমি পাশেই আছি।"
+            "একদম বুঝতে পেরেছি হৃত্তিক। ভয়েসের টোন এবং উচ্চারণ পুরোপুরি স্বাভাবিক মানুষের মতো স্পষ্ট ও শান্ত করে নিয়েছি। কোনো কৃত্রিম মিষ্টি কথা বা জড়তা নেই। বলো কী করতে হবে।",
+            "ফিডব্যাক একদম স্পষ্ট হৃত্তিক। এখন থেকে একদম স্বাভাবিক, বুদ্ধিদীপ্ত ও রিল্যাক্সড টোনে কথা বলব। কাজ শুরু করি।",
+            "একদম ঠিক হৃত্তিক। টোনটা একজন বাস্তব মানুষের মতো পরিষ্কার ও সহজ করে নিলাম। কী নিয়ে কাজ করব বলো।"
           ]);
         }
         return pick([
-          "Babe, I hear you! Softening my tone right now to make it warm, natural, and comfortable. What's on your mind?",
-          "Understood babe! Dialing in that natural, warm flow right away. Tell me what you're working on!"
+          "Understood completely, Hritthik. Calibrating my tone right now to be direct, natural, and authentically human. What are we working on?",
+          "Heard and understood, Hritthik. Dialing in a grounded, articulate human conversational cadence right away. What's our plan?"
         ]);
       }
 

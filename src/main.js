@@ -779,8 +779,20 @@ app.whenReady().then(async () => {
         overlayWindow.webContents.send('set-agent-name', 'Tuk Tuk');
         overlayWindow.webContents.send('jarvis-speaking');
       }
+      const isSingleReal = Boolean(
+        jarvisManager && (
+          (typeof jarvisManager.isSingleRealVoiceMode === 'function' && jarvisManager.isSingleRealVoiceMode()) ||
+          jarvisManager.preferences?.single_real_voice_active ||
+          jarvisManager.singleRealVoiceActive ||
+          jarvisManager.khatiMistiPurged ||
+          jarvisManager.config?.khatiMistiPurged
+        )
+      );
+      const greeting = isSingleReal
+        ? `Hey ${jarvisManager?.userName || 'Hritthik'}, I am online and ready. What are we working on?`
+        : "Hey babe, I am awake and ready. What are we working on?";
       try {
-        await jarvisManager.speak("Hey babe, I am awake and ready. What are we working on?", "en-US-AvaMultilingualNeural");
+        await jarvisManager.speak(greeting, "en-US-AvaMultilingualNeural");
       } catch (speakErr) {}
 
       isJarvisLoopActive = true;
@@ -826,123 +838,124 @@ function promptChangeJarvisName() {
 }
 
 function createTray() {
-  // Prevent unnecessary tray recreations
-  const currentAuthStatus = isAuthenticated;
-  if (tray && tray.lastAuthStatus === currentAuthStatus) {
-    console.log('🎛️ Tray already up to date, skipping recreation');
-    return;
-  }
-  
-  // Destroy existing tray if it exists
-  if (tray) {
-    tray.destroy();
-    tray = null;
-  }
-  
-  console.log('🎛️ Creating system tray icon...');
+  if (!tray || tray.isDestroyed()) {
+    console.log('🎛️ Creating system tray icon...');
 
-  // Create a 32x32 microphone icon using raw RGBA pixel data
-  // This creates a smooth, anti-aliased microphone shape
-  const size = 32;
-  const canvas = Buffer.alloc(size * size * 4);
+    // Create a 32x32 microphone icon using raw RGBA pixel data
+    // This creates a smooth, anti-aliased microphone shape
+    const size = 32;
+    const canvas = Buffer.alloc(size * size * 4);
 
-  // Helper function to draw anti-aliased pixels
-  const setPixel = (x, y, alpha) => {
-    if (x >= 0 && x < size && y >= 0 && y < size) {
-      const idx = (y * size + x) * 4;
-      canvas[idx] = 0;       // R
-      canvas[idx + 1] = 0;   // G
-      canvas[idx + 2] = 0;   // B
-      canvas[idx + 3] = Math.min(255, Math.max(0, Math.round(alpha))); // A
-    }
-  };
-
-  // Draw filled circle (for microphone head)
-  const fillCircle = (cx, cy, r) => {
-    for (let y = cy - r - 1; y <= cy + r + 1; y++) {
-      for (let x = cx - r - 1; x <= cx + r + 1; x++) {
-        const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-        if (dist <= r) {
-          setPixel(Math.round(x), Math.round(y), 255);
-        } else if (dist <= r + 1) {
-          setPixel(Math.round(x), Math.round(y), 255 * (r + 1 - dist));
-        }
+    // Helper function to draw anti-aliased pixels
+    const setPixel = (x, y, alpha) => {
+      if (x >= 0 && x < size && y >= 0 && y < size) {
+        const idx = (y * size + x) * 4;
+        canvas[idx] = 0;       // R
+        canvas[idx + 1] = 0;   // G
+        canvas[idx + 2] = 0;   // B
+        canvas[idx + 3] = Math.min(255, Math.max(0, Math.round(alpha))); // A
       }
-    }
-  };
+    };
 
-  // Draw filled rounded rectangle
-  const fillRoundedRect = (x1, y1, x2, y2, r) => {
-    for (let y = y1; y <= y2; y++) {
-      for (let x = x1; x <= x2; x++) {
-        let inside = false;
-        if (y >= y1 + r && y <= y2 - r) inside = true;
-        else if (x >= x1 + r && x <= x2 - r) inside = true;
-        else {
-          const corners = [
-            [x1 + r, y1 + r], [x2 - r, y1 + r],
-            [x1 + r, y2 - r], [x2 - r, y2 - r]
-          ];
-          for (const [cx, cy] of corners) {
-            if (Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) <= r) {
-              inside = true;
-              break;
-            }
+    // Draw filled circle (for microphone head)
+    const fillCircle = (cx, cy, r) => {
+      for (let y = cy - r - 1; y <= cy + r + 1; y++) {
+        for (let x = cx - r - 1; x <= cx + r + 1; x++) {
+          const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+          if (dist <= r) {
+            setPixel(Math.round(x), Math.round(y), 255);
+          } else if (dist <= r + 1) {
+            setPixel(Math.round(x), Math.round(y), 255 * (r + 1 - dist));
           }
         }
-        if (inside) setPixel(x, y, 255);
       }
+    };
+
+    // Draw filled rounded rectangle
+    const fillRoundedRect = (x1, y1, x2, y2, r) => {
+      for (let y = y1; y <= y2; y++) {
+        for (let x = x1; x <= x2; x++) {
+          let inside = false;
+          if (y >= y1 + r && y <= y2 - r) inside = true;
+          else if (x >= x1 + r && x <= x2 - r) inside = true;
+          else {
+            const corners = [
+              [x1 + r, y1 + r], [x2 - r, y1 + r],
+              [x1 + r, y2 - r], [x2 - r, y2 - r]
+            ];
+            for (const [cx, cy] of corners) {
+              if (Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) <= r) {
+                inside = true;
+                break;
+              }
+            }
+          }
+          if (inside) setPixel(x, y, 255);
+        }
+      }
+    };
+
+    // Draw line with thickness
+    const drawLine = (x1, y1, x2, y2, thickness) => {
+      const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+      const steps = Math.ceil(len * 2);
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const cx = x1 + (x2 - x1) * t;
+        const cy = y1 + (y2 - y1) * t;
+        fillCircle(cx, cy, thickness / 2);
+      }
+    };
+
+    // Draw arc
+    const drawArc = (cx, cy, r, startAngle, endAngle, thickness) => {
+      const steps = 50;
+      for (let i = 0; i <= steps; i++) {
+        const angle = startAngle + (endAngle - startAngle) * (i / steps);
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        fillCircle(x, y, thickness / 2);
+      }
+    };
+
+    // Draw microphone
+    const centerX = 16;
+
+    // Microphone head (rounded rectangle / capsule)
+    fillRoundedRect(10, 4, 22, 16, 6);
+
+    // Microphone arc (U-shape holder)
+    drawArc(centerX, 14, 9, 0, Math.PI, 2);
+
+    // Microphone stand (vertical line)
+    drawLine(centerX, 23, centerX, 27, 2.5);
+
+    // Microphone base (horizontal line)
+    drawLine(10, 27, 22, 27, 2.5);
+
+    let icon = nativeImage.createFromBuffer(canvas, { width: size, height: size });
+    icon = icon.resize({ width: 18, height: 18, quality: 'best' });
+    icon.setTemplateImage(true);
+    
+    try {
+      tray = new Tray(icon);
+      tray.setToolTip('Eloquent - Voice to Text');
+
+      tray.on('click', () => {
+        console.log('🖱️ Tray icon clicked');
+        createDashboard();
+      });
+
+      tray.on('right-click', () => {
+        console.log('🖱️ Tray icon right-clicked');
+        tray.popUpContextMenu();
+      });
+
+      console.log('✅ Tray icon created successfully');
+    } catch (error) {
+      console.error('❌ Failed to create tray icon:', error);
+      return;
     }
-  };
-
-  // Draw line with thickness
-  const drawLine = (x1, y1, x2, y2, thickness) => {
-    const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-    const steps = Math.ceil(len * 2);
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const cx = x1 + (x2 - x1) * t;
-      const cy = y1 + (y2 - y1) * t;
-      fillCircle(cx, cy, thickness / 2);
-    }
-  };
-
-  // Draw arc
-  const drawArc = (cx, cy, r, startAngle, endAngle, thickness) => {
-    const steps = 50;
-    for (let i = 0; i <= steps; i++) {
-      const angle = startAngle + (endAngle - startAngle) * (i / steps);
-      const x = cx + r * Math.cos(angle);
-      const y = cy + r * Math.sin(angle);
-      fillCircle(x, y, thickness / 2);
-    }
-  };
-
-  // Draw microphone
-  const centerX = 16;
-
-  // Microphone head (rounded rectangle / capsule)
-  fillRoundedRect(10, 4, 22, 16, 6);
-
-  // Microphone arc (U-shape holder)
-  drawArc(centerX, 14, 9, 0, Math.PI, 2);
-
-  // Microphone stand (vertical line)
-  drawLine(centerX, 23, centerX, 27, 2.5);
-
-  // Microphone base (horizontal line)
-  drawLine(10, 27, 22, 27, 2.5);
-
-  let icon = nativeImage.createFromBuffer(canvas, { width: size, height: size });
-  icon = icon.resize({ width: 18, height: 18, quality: 'best' });
-  icon.setTemplateImage(true);
-  
-  try {
-    tray = new Tray(icon);
-    console.log('✅ Tray icon created successfully');
-  } catch (error) {
-    console.error('❌ Failed to create tray icon:', error);
-    return;
   }
 
   // Build dynamic menu based on auth state
@@ -1029,7 +1042,6 @@ function createTray() {
       label: screenShareManager.isActive ? '🟢 Screen Share: ACTIVE (Streaming Display)' : '🖥️ Screen Share with AI Team (Alt+S)',
       click: () => {
         const isNowActive = screenShareManager.toggle(overlayWindow);
-        tray = null;
         createTray();
         playSound(isNowActive ? 'start' : 'stop');
         showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Vision & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
@@ -1156,25 +1168,11 @@ function createTray() {
 
   const contextMenu = Menu.buildFromTemplate(menuTemplate);
 
-  if (tray) {
-    tray.setToolTip('Eloquent - Voice to Text');
+  if (tray && !tray.isDestroyed()) {
     tray.setContextMenu(contextMenu);
+    tray.lastAuthStatus = isAuthenticated;
     console.log('✅ Tray menu configured');
     console.log('🔍 Look for the microphone icon in your menu bar (top-right corner)');
-
-    // Add click handler for tray icon
-    tray.on('click', () => {
-      console.log('🖱️ Tray icon clicked');
-      createDashboard();
-    });
-
-    tray.on('right-click', () => {
-      console.log('🖱️ Tray icon right-clicked');
-      tray.popUpContextMenu();
-    });
-    
-    // Track auth status to prevent unnecessary recreations
-    tray.lastAuthStatus = isAuthenticated;
   } else {
     console.error('❌ Tray not created - icon will not be visible');
   }
@@ -1327,7 +1325,6 @@ function registerShortcuts() {
   // Live Screen Share with AI Team toggle (Alt+S)
   const screenShareRegistered = globalShortcut.register('Alt+S', () => {
     const isNowActive = screenShareManager.toggle(overlayWindow);
-    tray = null;
     createTray();
     playSound(isNowActive ? 'start' : 'stop');
     showNotification('🖥️ Screen Share with AI Team', isNowActive ? 'Live continuous screen share is ACTIVE! Vision & Tuk Tuk are viewing your screen.' : 'Screen share paused.');
@@ -2820,8 +2817,11 @@ async function stopRecording() {
           jarvisManager.preferences?.single_voice_tuktuk_exclusive ||
           jarvisManager.singleRealVoiceActive ||
           jarvisManager.multiPersonalityDisabled ||
+          jarvisManager.khatiMistiPurged ||
           jarvisManager.config?.singleRealVoiceActive ||
-          jarvisManager.config?.multiPersonalityDisabled
+          jarvisManager.config?.multiPersonalityDisabled ||
+          jarvisManager.config?.multiPersonVoiceDisabled ||
+          jarvisManager.config?.khatiMistiPurged
         )
       );
 
@@ -3666,8 +3666,11 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       jarvisManager.preferences?.single_voice_tuktuk_exclusive ||
       jarvisManager.singleRealVoiceActive ||
       jarvisManager.multiPersonalityDisabled ||
+      jarvisManager.khatiMistiPurged ||
       jarvisManager.config?.singleRealVoiceActive ||
-      jarvisManager.config?.multiPersonalityDisabled
+      jarvisManager.config?.multiPersonalityDisabled ||
+      jarvisManager.config?.multiPersonVoiceDisabled ||
+      jarvisManager.config?.khatiMistiPurged
     )
   );
   const agent = isSingleRealVoice ? jarvisManager.agents.tuktuk : (activeAgent || jarvisManager.agents.tuktuk);

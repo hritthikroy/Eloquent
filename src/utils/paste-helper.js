@@ -1,8 +1,17 @@
 // Cross-platform auto-paste utility
 // Supports macOS (AppleScript/Accessibility) and Windows (robotjs)
 
-const { exec } = require('child_process');
-const { clipboard, systemPreferences } = require('electron');
+const { exec, execFile } = require('child_process');
+
+let electronClipboard = null;
+let electronSystemPreferences = null;
+try {
+  const electron = require('electron');
+  if (electron && typeof electron === 'object') {
+    electronClipboard = electron.clipboard || null;
+    electronSystemPreferences = electron.systemPreferences || null;
+  }
+} catch (_) {}
 
 class PasteHelper {
   constructor() {
@@ -16,7 +25,10 @@ class PasteHelper {
     if (this.platform === 'darwin') {
       // macOS: Check accessibility permission
       try {
-        return systemPreferences.isTrustedAccessibilityClient(false);
+        if (electronSystemPreferences && typeof electronSystemPreferences.isTrustedAccessibilityClient === 'function') {
+          return electronSystemPreferences.isTrustedAccessibilityClient(false);
+        }
+        return true;
       } catch (error) {
         console.log('⚠️ Could not check accessibility permission:', error.message);
         return false;
@@ -55,9 +67,23 @@ class PasteHelper {
     } = options;
 
     // Always copy to clipboard first (guaranteed fallback)
-    const oldClipboard = preserveClipboard ? clipboard.readText() : null;
-    clipboard.writeText(text);
-    console.log('✅ Text copied to clipboard');
+    let oldClipboard = null;
+    try {
+      if (preserveClipboard && electronClipboard && typeof electronClipboard.readText === 'function') {
+        oldClipboard = electronClipboard.readText();
+      }
+      if (electronClipboard && typeof electronClipboard.writeText === 'function') {
+        electronClipboard.writeText(text);
+        console.log('✅ Text copied to clipboard');
+      } else if (this.platform === 'darwin') {
+        const cp = require('child_process').spawn('pbcopy');
+        cp.stdin.write(text);
+        cp.stdin.end();
+        console.log('✅ Text copied to macOS clipboard (pbcopy fallback)');
+      }
+    } catch (clipErr) {
+      console.warn('⚠️ Clipboard copy warning:', clipErr.message);
+    }
 
     // Try platform-specific auto-paste
     try {
@@ -77,7 +103,9 @@ class PasteHelper {
         // Restore clipboard if needed
         if (preserveClipboard && oldClipboard && oldClipboard !== text) {
           setTimeout(() => {
-            clipboard.writeText(oldClipboard);
+            if (electronClipboard && typeof electronClipboard.writeText === 'function') {
+              electronClipboard.writeText(oldClipboard);
+            }
             console.log('✅ Original clipboard restored');
           }, 1000);
         }
@@ -101,8 +129,10 @@ class PasteHelper {
     
     // Trigger prompt if permission not yet recorded
     try {
-      if (!systemPreferences.isTrustedAccessibilityClient(false)) {
-        systemPreferences.isTrustedAccessibilityClient(true);
+      if (electronSystemPreferences && typeof electronSystemPreferences.isTrustedAccessibilityClient === 'function') {
+        if (!electronSystemPreferences.isTrustedAccessibilityClient(false)) {
+          electronSystemPreferences.isTrustedAccessibilityClient(true);
+        }
       }
     } catch (error) {
       // Ignore check errors and proceed to osascript

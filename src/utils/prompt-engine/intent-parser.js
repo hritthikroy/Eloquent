@@ -51,6 +51,22 @@ class IntentParser {
       }
     }
 
+    // 2.14 Prompt Auto-Paste At Keyboard Cursor & Professional Prompt Engineering Directive
+    if (IntentParser.isPromptAutoPasteAtCursorAndProfessionalEngineeringDirective(lower)) {
+      let agentDirective = "vision";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.GENERATE_PROMPT,
+        confidence: 0.99,
+        target: "prompt_auto_paste_at_cursor_and_professional_engineering_directive",
+        action: "prompt_auto_paste_at_cursor_and_professional_engineering_directive",
+        agentDirective
+      };
+    }
+
     // 2.15 Autonomous Quad-Self & Cross-Agent Medic Peer-Healing Directive
     if (IntentParser.isAutonomousSelfMedicPeerMeshDirective(lower)) {
       let agentDirective = "team";
@@ -942,6 +958,21 @@ class IntentParser {
       confidence: 0.8,
       target: rawText
     };
+  }
+
+  /**
+   * Centralized detector for Prompt Auto-Paste At Cursor & Professional Prompt Engineering Directive
+   * Handles: "prompt not pest on my keybor cursor and all prompt need a profetional prompt enginiaring",
+   * "prompt not paste on my keyboard cursor", "auto paste prompt at cursor", "paste prompt at keyboard cursor",
+   * "all prompts need professional prompt engineering"
+   */
+  static isPromptAutoPasteAtCursorAndProfessionalEngineeringDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:prompt\s+not\s+(?:pest|paste)\s+on\s+my\s+(?:keybor|keyboard)\s+cursor|auto\s*[- ]?paste\s+prompt\s+at\s+cursor|paste\s+prompt\s+at\s+keyboard\s+cursor|paste\s+prompt\s+at\s+cursor|prompt\s+cursor\s+paste|auto\s*[- ]?paste\s+(?:prompt|at\s+cursor))\b/i.test(lower)) ||
+      (/\b(?:all\s+prompt[s]?\s+need\s+(?:a\s+)?profetional\s+prompt\s+enginiaring|all\s+prompt[s]?\s+need\s+professional\s+prompt\s+engineering|professional\s+prompt\s+engineering|profetional\s+prompt\s+enginiaring)\b/i.test(lower))
+    );
   }
 
   /**

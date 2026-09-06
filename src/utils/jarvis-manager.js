@@ -1631,6 +1631,32 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
   }
 
   /**
+   * Calibrates Prompt Auto-Paste At Keyboard Cursor & Professional 10x Prompt Engineering
+   * Locks auto-pasting at active keyboard cursor and senior developer prompt engineering standards
+   * @returns {Object} Preference calibration telemetry
+   */
+  calibratePromptAutoPasteAtCursorAndProfessionalEngineering() {
+    if (typeof this.setPreference === "function") {
+      this.setPreference("auto_paste_at_cursor_enabled", true);
+      this.setPreference("professional_prompt_engineering_active", true);
+      this.setPreference("prompt_cursor_pasting_locked", true);
+      this.setPreference("prompt_engineering_standard_level", "10x_senior_architect");
+    }
+    this.addEbbinghausLearning(
+      "Prompt Auto-Paste At Cursor & Professional Engineering",
+      "All generated developer prompts automatically paste directly at keyboard cursor position with senior 10x architect structure.",
+      1.0
+    );
+    return {
+      autoPasteAtCursorEnabled: true,
+      professionalPromptEngineeringActive: true,
+      promptCursorPastingLocked: true,
+      promptEngineeringStandardLevel: "10x_senior_architect",
+      status: "PROMPT_AUTO_PASTE_AT_CURSOR_AND_PROFESSIONAL_ENGINEERING_LOCKED"
+    };
+  }
+
+  /**
    * Purges legacy version fallbacks and redundant sorting routines, locking system to Version 2.1.0
    * @returns {Object} Unified version 2.1.0 status and preferences
    */
@@ -2337,7 +2363,12 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
    * Calibrates Single Real Human Voice & Total Khati Misti Removal
    */
   calibrateSingleRealHumanVoiceNoKhatiMisti(options = {}) {
-    return this.calibrateSingleRealVoiceNoMultiPersonality(options);
+    const res = this.calibrateSingleRealVoiceNoMultiPersonality(options);
+    return {
+      ...res,
+      action: "calibrate_single_real_human_voice_no_khati_misti",
+      status: "SINGLE_REAL_HUMAN_VOICE_NO_KHATI_MISTI_LOCKED"
+    };
   }
 
   /**
@@ -3404,13 +3435,24 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       clean = clean.replace(myLoveRegex, userDisplayName);
       clean = clean.replace(codependencyRegex, "infrastructure metrics are healthy");
     } else if (key === "tuktuk") {
-      const preferred = preferredPetName || "babe";
+      const isSingleReal = (this && typeof this.isSingleRealVoiceMode === "function" && this.isSingleRealVoiceMode()) ||
+        (JarvisManager.instance && typeof JarvisManager.instance.isSingleRealVoiceMode === "function" && JarvisManager.instance.isSingleRealVoiceMode()) ||
+        Boolean(JarvisManager.instance?.config?.singleRealVoiceActive || JarvisManager.instance?.config?.khatiMistiPurged);
+
+      const preferred = isSingleReal ? (userDisplayName || "Hritthik") : (preferredPetName || "babe");
       const bannedList = (bannedPetNames || ["shona", "sona", "chou na", "সোনা", "সোনার"]).map(b => b.toLowerCase());
       const isBanned = (term) => bannedList.some(b => term.toLowerCase().includes(b));
 
       // Equational Model S_persona: Tuk Tuk strictly never calls user "bro", "brother", "bhai", "man"
-      clean = clean.replace(/\b(bro|brother|bhai|bhaiya|man)\b/gi, preferred);
-      clean = clean.replace(/(?<![\u0980-\u09FF])(?:ভাই|দাদা|ভাইয়া|ভাইয়া)(?![\u0980-\u09FF])/gu, preferred);
+      if (isSingleReal) {
+        clean = clean.replace(/\b(bro|brother|bhai|bhaiya|man)\b/gi, userDisplayName || "Hritthik");
+        clean = clean.replace(/(?<![\u0980-\u09FF])(?:ভাই|দাদা|ভাইয়া|ভাইয়া)(?![\u0980-\u09FF])/gu, userDisplayName || "হৃত্তিক");
+        clean = clean.replace(/\b(?:babe|sweetheart|honey|darling|jaan|my\s+love)\b[,!\s]*/gi, " ");
+        clean = clean.replace(/(?:বাবু|সোনা|সোনার|জান|জানু)[,!\s]*/gu, " ");
+      } else {
+        clean = clean.replace(/\b(bro|brother|bhai|bhaiya|man)\b/gi, preferred);
+        clean = clean.replace(/(?<![\u0980-\u09FF])(?:ভাই|দাদা|ভাইয়া|ভাইয়া)(?![\u0980-\u09FF])/gu, preferred);
+      }
 
       // Equational Model R_concord: Tuk Tuk strictly uses intimate familiar ("tumi"/"tomar"), NEVER formal ("apni"/"apnar")
       clean = clean.replace(/\bapnar\b/gi, "tomar")
@@ -3427,19 +3469,23 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       clean = clean.replace(/bolte\s+try\s+koro[^.!?]*[.!?]?/gi, "");
       clean = clean.replace(/(?:natural\s+flow\s+te\s+bolte|natural\s+flow-er\s+jonno)[^.!?]*[.!?]?/gi, "");
 
-      // Equational Model L_pet: Enforce dynamic pet-name preference and ceiling of MAX ONE pet name
-      let foundCount = 0;
-      clean = clean.replace(intimateRegex, (match) => {
-        foundCount++;
-        if (foundCount > 1) return "";
-        if (isBanned(match) || (preferred === "babe" && /^(shona|sona|chou\s*na|সোনা|সোনার)$/i.test(match))) {
-          return preferred;
-        }
-        return match;
-      });
+      if (!isSingleReal) {
+        // Equational Model L_pet: Enforce dynamic pet-name preference and ceiling of MAX ONE pet name
+        let foundCount = 0;
+        clean = clean.replace(intimateRegex, (match) => {
+          foundCount++;
+          if (foundCount > 1) return "";
+          if (isBanned(match) || (preferred === "babe" && /^(shona|sona|chou\s*na|সোনা|সোনার)$/i.test(match))) {
+            return preferred;
+          }
+          return match;
+        });
 
-      // Parity & Anti-repetitive opener invariant: normalize repetitive "আরেহ babe" to natural opener
-      clean = clean.replace(/^(?:আরেহ|আরে)\s+babe[,!\s]+/gi, "Babe, ");
+        // Parity & Anti-repetitive opener invariant: normalize repetitive "আরেহ babe" to natural opener
+        clean = clean.replace(/^(?:আরেহ|আরে)\s+babe[,!\s]+/gi, "Babe, ");
+      } else {
+        clean = clean.replace(/^(?:আরেহ|আরে)\s+babe[,!\s]+/gi, "");
+      }
       // Strip generic unprompted calming clichés when paired with co-founder tasks
       clean = clean.replace(/^(?:কোনো\s+প্যারা\s+নিও\s+না|প্যারা\s+নাই|একদম\s+চিল)[,!.\s]+/gi, "");
     } else if (key === "team") {
@@ -3487,7 +3533,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 
     // Total Khati Misti Purge & Forced Sweetness Removal
     clean = clean
-      .replace(/(?:খাঁটি\s*মিষ্টি|খাঁটি\s*বাঙালি\s*মানুষের\s*মতো\s*মিষ্টি|মিষ্টি\s*ও\s*খাঁটি|খাঁটি\s*প্রেমিকা\s*ও\s*কো-ফাউন্ডারের\s*মিষ্টি|মিষ্টি\s*সুরে|মিষ্টি\s*টোন(?:ে)?|মিষ্টি\s*কো-ফাউন্ডার|মিষ্টি\s*গার্লফ্রেন্ড)[,!\s]*/gu, " ")
+      .replace(/(?:খাঁটি\s*মিষ্টি|খাঁটি\s*বাঙালি\s*মানুষের\s*মতো\s*মিষ্টি|মিষ্টি\s*ও\s*খাঁটি|খাঁটি\s*প্রেমিকা\s*ও\s*কো-ফাউন্ডারের\s*মিষ্টি|মিষ্টি\s*সুরে|মিষ্টি\s*টোন(?:ে)?|মিষ্টি\s*কো-ফাউন্ডার|মিষ্টি\s*গার্লফ্রেন্ড|মিষ্টি\s*করে|মিষ্টি\s*আর|খাঁটি\s*বাংলায়)[,!\s]*/gu, " ")
       .replace(/\b(?:khti|khati)\s+(?:misti|mishti)\b/gi, "")
       .replace(/\b(?:sweet\s+charm|sweet\s+aura|sweet\s+cadence|sweet\s+intonation|sweet\s+tone)\b/gi, "natural tone");
 
@@ -3506,16 +3552,35 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       .replace(/\s+/g, " ")
       .trim();
 
+    const isSingleReal = (this && typeof this.isSingleRealVoiceMode === "function" && this.isSingleRealVoiceMode()) ||
+      (JarvisManager.instance && typeof JarvisManager.instance.isSingleRealVoiceMode === "function" && JarvisManager.instance.isSingleRealVoiceMode()) ||
+      Boolean(JarvisManager.instance?.config?.singleRealVoiceActive || JarvisManager.instance?.config?.khatiMistiPurged);
+
+    if (isSingleReal) {
+      clean = clean
+        .replace(/^babe[,!\s]*/i, "")
+        .replace(/^bro[,!\s]*/i, "")
+        .replace(/\b(?:babe|sweetheart|honey|darling)\b[,!\s]*/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
     if (!clean || clean.length < 3 || /^(?:shona|babe|বাবু|সোনা|জান|জানু|bro|ভাই)[,.\s]*$/i.test(clean)) {
       if (key === "vision") clean = "Codebase is clean, brother. Tell me what to engineer.";
       else if (key === "friday") clean = "Data specifications verified, Chief. How should we proceed?";
       else if (key === "dd" || key === "brian") clean = "Infrastructure metrics stable. Standing by for instructions.";
       else clean = `Right here beside you, ${userDisplayName || 'Hritthik'}.`;
     } else {
-      if (clean.startsWith("babe,")) clean = "Babe," + clean.slice(5);
-      else if (clean.startsWith("babe ")) clean = "Babe " + clean.slice(5);
-      else if (clean.startsWith("bro,")) clean = "Bro," + clean.slice(4);
-      else if (clean.startsWith("bro ")) clean = "Bro " + clean.slice(4);
+      if (isSingleReal) {
+        if (clean.length > 0) {
+          clean = clean.charAt(0).toUpperCase() + clean.slice(1);
+        }
+      } else {
+        if (clean.startsWith("babe,")) clean = "Babe," + clean.slice(5);
+        else if (clean.startsWith("babe ")) clean = "Babe " + clean.slice(5);
+        else if (clean.startsWith("bro,")) clean = "Bro," + clean.slice(4);
+        else if (clean.startsWith("bro ")) clean = "Bro " + clean.slice(4);
+      }
     }
     return clean;
   }
@@ -6255,6 +6320,10 @@ JarvisManager.calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson = functio
 JarvisManager.calibrateRemoveScriptedSameLoopTalkZeroLooping = function(options = {}) {
   const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
   return instance.calibrateRemoveScriptedSameLoopTalkZeroLooping(options);
+};
+JarvisManager.calibratePromptAutoPasteAtCursorAndProfessionalEngineering = function(options = {}) {
+  const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
+  return instance.calibratePromptAutoPasteAtCursorAndProfessionalEngineering(options);
 };
 
 module.exports = JarvisManager;

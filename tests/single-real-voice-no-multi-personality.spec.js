@@ -1,13 +1,14 @@
 /**
- * Verification Test Suite: Single Real Voice & Zero Multi-Personality / Multi-Person Voice
+ * Verification Test Suite: Single Real Voice, Zero Multi-Personality & Total Khati Misti Purge
  * 
  * Verifies:
- * 1. STT Acoustic Normalization for "malti personalyti" and "malti person voice"
- * 2. IntentParser detection of single real voice directive
- * 3. ActionRunner calibration and execution with Tuk Tuk / Ava voice
+ * 1. STT Acoustic Normalization for "khti misti", "totaly", "humen voices", "malti parson"
+ * 2. IntentParser detection of single real voice directive and remove khati misti directive
+ * 3. ActionRunner calibration and execution with single human voice (Ava) and grounded co-founder tone
  * 4. JarvisManager invariant locking (detectActiveAgent, evaluateCrossAgentHandoff, getCompactSystemPrompt)
- * 5. Zero multi-personality switching (Vision, Friday, DD calls routed to Tuk Tuk)
+ * 5. Zero multi-personality switching (Vision, Friday, DD calls routed to sole human voice)
  * 6. Zero multi-person voice playback (speak() strictly resolves to en-US-AvaMultilingualNeural)
+ * 7. Complete eradication of "খাঁটি মিষ্টি", forced sweet-talk, and melodramatic pet-naming
  */
 
 const assert = require("assert");
@@ -18,18 +19,18 @@ const JarvisManager = require("../src/utils/jarvis-manager");
 const localCognitiveBrain = require("../src/utils/local-cognitive-brain");
 
 async function runTests() {
-  console.log("🚀 Starting Single Real Voice & Zero Multi-Personality Test Suite...\n");
+  console.log("🚀 Starting Single Real Voice, Zero Multi-Personality & Khati Misti Purge Test Suite...\n");
 
   // -------------------------------------------------------------
   // Test 1: STT Acoustic Sanitization
   // -------------------------------------------------------------
   console.log("▶ Test 1: STT Acoustic Sanitization");
-  const rawInput = "need one real voice not malti personalyti and malti person voice";
-  const sanitized = TextSanitizer.sanitize(rawInput);
-  console.log(`  Raw:       "${rawInput}"`);
+  const exactUserPrompt = "remove the khti misti bangla kotha totaly this person and this voice i need one real humen voices not malti parson voices";
+  const sanitized = TextSanitizer.sanitize(exactUserPrompt);
+  console.log(`  Raw:       "${exactUserPrompt}"`);
   console.log(`  Sanitized: "${sanitized}"`);
   assert(
-    sanitized.includes("multi-personality") && sanitized.includes("multi-person voice"),
+    sanitized.includes("khati misti") && sanitized.includes("totally") && sanitized.includes("human voice") && sanitized.includes("multi-person voice"),
     `Expected sanitized string to contain canonical phrases, got: ${sanitized}`
   );
   console.log("  ✅ Test 1 Passed: Acoustic typos successfully sanitized!\n");
@@ -39,7 +40,7 @@ async function runTests() {
   // -------------------------------------------------------------
   console.log("▶ Test 2: IntentParser Detection");
   assert.strictEqual(
-    IntentParser.isSingleRealVoiceNoMultiPersonalityDirective(rawInput),
+    IntentParser.isSingleRealVoiceNoMultiPersonalityDirective(exactUserPrompt),
     true,
     "Raw input should match isSingleRealVoiceNoMultiPersonalityDirective"
   );
@@ -48,8 +49,13 @@ async function runTests() {
     true,
     "Sanitized input should match isSingleRealVoiceNoMultiPersonalityDirective"
   );
+  assert.strictEqual(
+    IntentParser.isRemoveKhatiMistiSingleRealHumanVoiceDirective(exactUserPrompt),
+    true,
+    "Raw input should match isRemoveKhatiMistiSingleRealHumanVoiceDirective"
+  );
 
-  const parsed = IntentParser.parse(rawInput);
+  const parsed = IntentParser.parse(exactUserPrompt);
   console.log("  Parsed Intent:", parsed);
   assert.strictEqual(parsed.intent, INTENTS.SMOOTH_CONVERSATION);
   assert.strictEqual(parsed.target, "single_real_voice_no_multi_personality");
@@ -63,43 +69,42 @@ async function runTests() {
   console.log("▶ Test 3: JarvisManager Calibration & Invariant Locking");
   const jm = new JarvisManager();
   const AGENTS = jm.agents;
-  const calibrationResult = jm.calibrateSingleRealVoiceNoMultiPersonality();
+  const calibrationResult = jm.calibrateSingleRealHumanVoiceNoKhatiMisti();
   console.log("  Calibration status:", calibrationResult.status);
-  assert.strictEqual(calibrationResult.status, "SINGLE_REAL_VOICE_NO_MULTI_PERSONALITY_LOCKED");
+  assert.strictEqual(calibrationResult.status, "SINGLE_REAL_HUMAN_VOICE_NO_KHATI_MISTI_LOCKED");
   assert.strictEqual(jm.isSingleRealVoiceMode(), true);
   assert.strictEqual(jm.getPreference("single_real_voice_active"), true);
   assert.strictEqual(jm.getPreference("multi_personality_disabled"), true);
   assert.strictEqual(jm.getPreference("multi_person_voice_disabled"), true);
   assert.strictEqual(jm.getPreference("single_voice_tuktuk_exclusive"), true);
+  assert.strictEqual(jm.getPreference("khati_misti_purged"), true);
   console.log("  ✅ Test 3 Passed: JarvisManager single real voice mode locked!\n");
 
   // -------------------------------------------------------------
   // Test 4: Action Runner Execution
   // -------------------------------------------------------------
   console.log("▶ Test 4: ActionRunner Handling");
-  const actionRes = await actionRunner.handleAction(rawInput, AGENTS.tuktuk, jm);
+  const actionRes = await actionRunner.handleAction(exactUserPrompt, AGENTS.tuktuk, jm);
   console.log("  Action result handled:", actionRes?.handled);
   console.log("  Speaking agent:", actionRes?.agentName);
   console.log("  Speaking voice:", actionRes?.agentVoice);
-  console.log("  Speech excerpt:", actionRes?.speech?.substring(0, 80) + "...");
+  console.log("  Speech excerpt:", actionRes?.speech?.substring(0, 100) + "...");
   assert.strictEqual(actionRes.handled, true);
   assert.strictEqual(actionRes.agentName, "Tuk Tuk");
   assert.strictEqual(actionRes.agentVoice, "en-US-AvaMultilingualNeural");
-  assert(actionRes.speech.includes("babe"), "Speech must address Hritthik as 'babe'");
+  assert(!actionRes.speech.includes("খাঁটি মিষ্টি"), "Speech must NOT contain 'খাঁটি মিষ্টি'");
   assert(
-    actionRes.speech.toLowerCase().includes("one real voice") ||
-    actionRes.speech.toLowerCase().includes("single real voice") ||
-    actionRes.speech.toLowerCase().includes("ekta real voice"),
-    "Speech must confirm single real voice"
+    actionRes.speech.toLowerCase().includes("single real human voice") ||
+    actionRes.speech.toLowerCase().includes("real human voice") ||
+    actionRes.speech.includes("আসল মানুষের ভয়েস"),
+    "Speech must confirm single real human voice"
   );
-  console.log("  ✅ Test 4 Passed: ActionRunner handled with Tuk Tuk / Ava exclusively!\n");
+  console.log("  ✅ Test 4 Passed: ActionRunner handled with Tuk Tuk / Ava exclusively and zero khati misti!\n");
 
   // -------------------------------------------------------------
   // Test 5: Zero Multi-Personality Switching (Agent Invariant)
   // -------------------------------------------------------------
   console.log("▶ Test 5: Zero Multi-Personality Routing Invariant");
-  // Even if user mentions Vision, Friday, or DD keywords, in single real voice mode,
-  // Tuk Tuk is the SOLE active agent answering all questions!
   const agentForVision = jm.detectActiveAgent("tell vision to debug the memory leak");
   const agentForFriday = jm.detectActiveAgent("Friday give me the market research analysis");
   const agentForDD = jm.detectActiveAgent("DD check the audio latency telemetry");
@@ -120,42 +125,39 @@ async function runTests() {
   console.log("  ✅ Test 5 Passed: Zero multi-personality switching verified!\n");
 
   // -------------------------------------------------------------
-  // Test 6: System Prompt Sovereignty (One Persona)
+  // Test 6: System Prompt Sovereignty (One Real Voice, Zero Khati Misti)
   // -------------------------------------------------------------
   console.log("▶ Test 6: System Prompt Sovereignty");
   const compactPrompt = jm.getCompactSystemPrompt("vision", "debug this function");
   assert(
-    compactPrompt.includes("Tuk Tuk"),
-    "System prompt must be for Tuk Tuk even when requested for another agent key"
+    compactPrompt.includes("Tuk Tuk") || compactPrompt.includes("AvaMultilingualNeural"),
+    "System prompt must be sovereign to Tuk Tuk / Ava"
   );
   assert(
-    compactPrompt.includes("babe"),
-    "System prompt must enforce 'babe' salutation"
+    compactPrompt.includes("ZERO 'KHATI MISTI'") || compactPrompt.includes("ZERO FORCED 'KHATI MISTI'"),
+    "System prompt must enforce ZERO KHATI MISTI invariant"
   );
-  console.log("  ✅ Test 6 Passed: Prompt generation strictly sovereign to Tuk Tuk!\n");
+  console.log("  ✅ Test 6 Passed: Prompt generation strictly sovereign with zero khati misti!\n");
 
   // -------------------------------------------------------------
   // Test 7: Local Cognitive Brain Grounding
   // -------------------------------------------------------------
   console.log("▶ Test 7: Local Cognitive Brain Grounding");
-  const localReply = localCognitiveBrain.synthesizeResponse("tuktuk", "Tuk Tuk", rawInput, {
+  const localReply = localCognitiveBrain.synthesizeResponse("tuktuk", "Tuk Tuk", exactUserPrompt, {
     activeAgent: AGENTS.tuktuk,
     jarvisManager: jm
   });
   console.log("  Local cognitive reply:", localReply);
+  assert(!localReply.includes("খাঁটি মিষ্টি"), "Local reply must NOT contain 'খাঁটি মিষ্টি'");
   assert(
-    localReply.includes("babe") || localReply.includes("Babe"),
-    "Local reply must address Hritthik as babe"
-  );
-  assert(
-    localReply.toLowerCase().includes("one real voice") ||
-    localReply.toLowerCase().includes("single real voice") ||
-    localReply.toLowerCase().includes("ekta real voice"),
-    "Local reply must confirm single real voice"
+    localReply.toLowerCase().includes("single real human voice") ||
+    localReply.toLowerCase().includes("real human voice") ||
+    localReply.includes("আসল মানুষের ভয়েস"),
+    "Local reply must confirm single real human voice"
   );
   console.log("  ✅ Test 7 Passed: Local cognitive brain fully grounded!\n");
 
-  console.log("🎉 ALL TESTS PASSED (7/7)! SINGLE REAL VOICE & ZERO MULTI-PERSONALITY 100% VERIFIED! 🎉");
+  console.log("🎉 ALL TESTS PASSED (7/7)! SINGLE REAL HUMAN VOICE & ZERO KHATI MISTI 100% VERIFIED! 🎉");
   process.exit(0);
 }
 

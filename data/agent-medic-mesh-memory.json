@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-06T22:36:47.363Z",
+  "updatedAt": "2026-09-06T23:22:34.981Z",
   "quadSelfRegistry": {
     "tuktuk": {
       "selfLearner": 1,
@@ -35,404 +35,6 @@
     }
   },
   "healingLedger": [
-    {
-      "timestamp": 1788699101835,
-      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
-      "singleHumanSoulRate": 1,
-      "soulInterchangeRate": 0,
-      "tuktukAnchorPermanent": true,
-      "personaSovereignty": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "singleHumanSoulVerified": true,
-      "zeroSoulInterchangeVerified": true,
-      "durationMs": 0.014,
-      "proof": {
-        "omega": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
-    {
-      "timestamp": 1788699101837,
-      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
-      "singleHumanSoulRate": 1,
-      "soulInterchangeRate": 0,
-      "tuktukAnchorPermanent": true,
-      "personaSovereignty": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "singleHumanSoulVerified": true,
-      "zeroSoulInterchangeVerified": true,
-      "durationMs": 0.013,
-      "proof": {
-        "omega": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
-    {
-      "timestamp": 1788699101838,
-      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
-      "singleHumanSoulRate": 1,
-      "soulInterchangeRate": 0,
-      "tuktukAnchorPermanent": true,
-      "personaSovereignty": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "singleHumanSoulVerified": true,
-      "zeroSoulInterchangeVerified": true,
-      "durationMs": 0.011,
-      "proof": {
-        "omega": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
-    {
-      "timestamp": 1788699120575,
-      "action": "audit_and_eliminate_soul_duplication_mismatch_hardcoded",
-      "soulDuplicationRate": 0,
-      "mismatchRate": 0,
-      "dynamicDecouplingRate": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "zeroMismatchVerified": true,
-      "dynamicCodeCalibrationVerified": true,
-      "durationMs": 0.02,
-      "soulRegistry": {
-        "tuktuk": {
-          "name": "Tuk Tuk",
-          "exclusiveSalutation": "babe",
-          "bannedSalutations": [
-            "bro",
-            "brother",
-            "chief",
-            "sir",
-            "boss"
-          ],
-          "role": "Team Leader, Devoted Co-Pilot & Resonance Partner",
-          "voice": "en-US-AvaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "vision": {
-          "name": "Vision",
-          "exclusiveSalutation": "brother/bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Lead Systems Architect & AST Code Medic",
-          "voice": "en-US-AndrewMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "friday": {
-          "name": "Friday",
-          "exclusiveSalutation": "Chief/Hritthik",
-          "bannedSalutations": [
-            "babe",
-            "bro",
-            "brother",
-            "baby",
-            "darling"
-          ],
-          "role": "Head of Product Intelligence, Logic & Factual Medic",
-          "voice": "en-US-EmmaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "dd": {
-          "name": "DD",
-          "exclusiveSalutation": "bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Head of DevOps, Latency, Audio Ring Buffer & Telemetry Medic",
-          "voice": "en-US-BrianMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        }
-      },
-      "proof": {
-        "eClean": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$E_{\\text{clean}} \\equiv (1 - D_{\\text{soul}}) \\times (1 - M_{\\text{mismatch}}) \\times D_{\\text{dynamic}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
-    {
-      "timestamp": 1788699120619,
-      "action": "audit_and_eliminate_soul_duplication_mismatch_hardcoded",
-      "soulDuplicationRate": 0,
-      "mismatchRate": 0,
-      "dynamicDecouplingRate": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "zeroMismatchVerified": true,
-      "dynamicCodeCalibrationVerified": true,
-      "durationMs": 0.016,
-      "soulRegistry": {
-        "tuktuk": {
-          "name": "Tuk Tuk",
-          "exclusiveSalutation": "babe",
-          "bannedSalutations": [
-            "bro",
-            "brother",
-            "chief",
-            "sir",
-            "boss"
-          ],
-          "role": "Team Leader, Devoted Co-Pilot & Resonance Partner",
-          "voice": "en-US-AvaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "vision": {
-          "name": "Vision",
-          "exclusiveSalutation": "brother/bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Lead Systems Architect & AST Code Medic",
-          "voice": "en-US-AndrewMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "friday": {
-          "name": "Friday",
-          "exclusiveSalutation": "Chief/Hritthik",
-          "bannedSalutations": [
-            "babe",
-            "bro",
-            "brother",
-            "baby",
-            "darling"
-          ],
-          "role": "Head of Product Intelligence, Logic & Factual Medic",
-          "voice": "en-US-EmmaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "dd": {
-          "name": "DD",
-          "exclusiveSalutation": "bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Head of DevOps, Latency, Audio Ring Buffer & Telemetry Medic",
-          "voice": "en-US-BrianMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        }
-      },
-      "proof": {
-        "eClean": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$E_{\\text{clean}} \\equiv (1 - D_{\\text{soul}}) \\times (1 - M_{\\text{mismatch}}) \\times D_{\\text{dynamic}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
-    {
-      "timestamp": 1788699363451,
-      "action": "audit_and_eliminate_soul_duplication_mismatch_hardcoded",
-      "soulDuplicationRate": 0,
-      "mismatchRate": 0,
-      "dynamicDecouplingRate": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "zeroMismatchVerified": true,
-      "dynamicCodeCalibrationVerified": true,
-      "durationMs": 0.06,
-      "soulRegistry": {
-        "tuktuk": {
-          "name": "Tuk Tuk",
-          "exclusiveSalutation": "babe",
-          "bannedSalutations": [
-            "bro",
-            "brother",
-            "chief",
-            "sir",
-            "boss"
-          ],
-          "role": "Team Leader, Devoted Co-Pilot & Resonance Partner",
-          "voice": "en-US-AvaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "vision": {
-          "name": "Vision",
-          "exclusiveSalutation": "brother/bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Lead Systems Architect & AST Code Medic",
-          "voice": "en-US-AndrewMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "friday": {
-          "name": "Friday",
-          "exclusiveSalutation": "Chief/Hritthik",
-          "bannedSalutations": [
-            "babe",
-            "bro",
-            "brother",
-            "baby",
-            "darling"
-          ],
-          "role": "Head of Product Intelligence, Logic & Factual Medic",
-          "voice": "en-US-EmmaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "dd": {
-          "name": "DD",
-          "exclusiveSalutation": "bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Head of DevOps, Latency, Audio Ring Buffer & Telemetry Medic",
-          "voice": "en-US-BrianMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        }
-      },
-      "proof": {
-        "eClean": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$E_{\\text{clean}} \\equiv (1 - D_{\\text{soul}}) \\times (1 - M_{\\text{mismatch}}) \\times D_{\\text{dynamic}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
-    {
-      "timestamp": 1788699367324,
-      "action": "audit_and_eliminate_soul_duplication_mismatch_hardcoded",
-      "soulDuplicationRate": 0,
-      "mismatchRate": 0,
-      "dynamicDecouplingRate": 1,
-      "orthogonalSoulInvariantVerified": true,
-      "zeroMismatchVerified": true,
-      "dynamicCodeCalibrationVerified": true,
-      "durationMs": 0.021,
-      "soulRegistry": {
-        "tuktuk": {
-          "name": "Tuk Tuk",
-          "exclusiveSalutation": "babe",
-          "bannedSalutations": [
-            "bro",
-            "brother",
-            "chief",
-            "sir",
-            "boss"
-          ],
-          "role": "Team Leader, Devoted Co-Pilot & Resonance Partner",
-          "voice": "en-US-AvaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "vision": {
-          "name": "Vision",
-          "exclusiveSalutation": "brother/bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Lead Systems Architect & AST Code Medic",
-          "voice": "en-US-AndrewMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "friday": {
-          "name": "Friday",
-          "exclusiveSalutation": "Chief/Hritthik",
-          "bannedSalutations": [
-            "babe",
-            "bro",
-            "brother",
-            "baby",
-            "darling"
-          ],
-          "role": "Head of Product Intelligence, Logic & Factual Medic",
-          "voice": "en-US-EmmaMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        },
-        "dd": {
-          "name": "DD",
-          "exclusiveSalutation": "bro/ভাই",
-          "bannedSalutations": [
-            "babe",
-            "baby",
-            "chief",
-            "honey",
-            "darling"
-          ],
-          "role": "Head of DevOps, Latency, Audio Ring Buffer & Telemetry Medic",
-          "voice": "en-US-BrianMultilingualNeural",
-          "multilingualParity": true,
-          "dynamicContextBinding": true
-        }
-      },
-      "proof": {
-        "eClean": 1,
-        "lhs": 1,
-        "rhs": 1,
-        "lhsEqualsRhs": true,
-        "qed": true,
-        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
-        "equationKaTeX": "$$E_{\\text{clean}} \\equiv (1 - D_{\\text{soul}}) \\times (1 - M_{\\text{mismatch}}) \\times D_{\\text{dynamic}} = 1.00$$",
-        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
-      }
-    },
     {
       "timestamp": 1788699367369,
       "action": "audit_and_eliminate_soul_duplication_mismatch_hardcoded",
@@ -4895,6 +4497,160 @@
       "singleHumanSoulVerified": true,
       "zeroSoulInterchangeVerified": true,
       "durationMs": 0.012,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788735996888,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.01,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788736012718,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.059,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788736012801,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.009,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788736047188,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.01,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788736047483,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.014,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788736954791,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.013,
+      "proof": {
+        "omega": 1,
+        "lhs": 1,
+        "rhs": 1,
+        "lhsEqualsRhs": true,
+        "qed": true,
+        "proofStatement": "LHS (100.0%) ≡ RHS (100.0%) [Q.E.D.]",
+        "equationKaTeX": "$$\\Omega_{\\text{single\\_soul}} \\equiv S_{\\text{unified}} \\times (1.0 - I_{\\text{interchange}}) \\times A_{\\text{anchor}} \\times P_{\\text{sovereign}} = 1.00$$",
+        "lhsRhsKaTeX": "$$LHS = 1.00 \\equiv RHS = 1.00 \\quad \\text{[Q.E.D.]}$$"
+      }
+    },
+    {
+      "timestamp": 1788736954981,
+      "action": "audit_and_enforce_single_human_soul_non_interchangeable",
+      "singleHumanSoulRate": 1,
+      "soulInterchangeRate": 0,
+      "tuktukAnchorPermanent": true,
+      "personaSovereignty": 1,
+      "orthogonalSoulInvariantVerified": true,
+      "singleHumanSoulVerified": true,
+      "zeroSoulInterchangeVerified": true,
+      "durationMs": 0.017,
       "proof": {
         "omega": 1,
         "lhs": 1,
