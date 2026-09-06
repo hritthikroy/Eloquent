@@ -25,8 +25,8 @@ const SQUAD_CONVERSATIONS = [
     lang: "bn",
     langLabel: "Bengali (Bangla)",
     turns: [
-      { agent: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural", text: "Babe, পুরো স্কোয়াড একদম রেডি! কোডিং আর আর্কিটেকচারে আজ দুর্দান্ত কিছু বানাব!", rate: "+0%", pitch: "+1Hz" },
-      { agent: "Vision", voice: "bn-BD-PradeepNeural", text: "একদম ভাই! সিস্টেম আর্কিটেকচার আর কম্পাইলার পাইপলাইন ফুললি গ্রিন brother।", rate: "+0%", pitch: "+0Hz" },
+      { agent: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural", text: "Hritthik babe, পুরো স্কোয়াড একদম রেডি! কোডিং আর আর্কিটেকচারে আজ দুর্দান্ত কিছু বানাব!", rate: "+0%", pitch: "+1Hz" },
+      { agent: "Vision", voice: "en-US-AndrewMultilingualNeural", text: "একদম ভাই! সিস্টেম আর্কিটেকচার আর কম্পাইলার পাইপলাইন ফুললি গ্রিন brother।", rate: "+0%", pitch: "+0Hz" },
       { agent: "Friday", voice: "en-US-EmmaMultilingualNeural", text: "রিসার্চ ডেটা এবং বেঞ্চমার্ক সম্পূর্ণ প্রস্তুত, Chief।", rate: "+0%", pitch: "+0Hz" },
       { agent: "DD", voice: "en-US-BrianMultilingualNeural", text: "ইনফ্রাস্ট্রাকচার মেট্রিক্স রক সলিড bro, জিরো জিটার।", rate: "+0%", pitch: "+0Hz" }
     ]
@@ -36,7 +36,7 @@ const SQUAD_CONVERSATIONS = [
     langLabel: "Hindi (Hinglish)",
     turns: [
       { agent: "Tuk Tuk", voice: "en-US-AvaMultilingualNeural", text: "Babe, पूरी टीम बिल्कुल तैयार है! बताओ आज क्या नया फीचर बनाना है?", rate: "+0%", pitch: "+1Hz" },
-      { agent: "Vision", voice: "en-US-AndrewMultilingualNeural", text: "सिस्टम आर्किটেকচার और पाइपलाइन्स बिल्कुल सॉलिड हैं भाई।", rate: "+0%", pitch: "+0Hz" },
+      { agent: "Vision", voice: "en-US-AndrewMultilingualNeural", text: "सिस्टम आर्किटेकचार और पाइपलाइन्स बिल्कुल सॉलिड हैं भाई।", rate: "+0%", pitch: "+0Hz" },
       { agent: "Friday", voice: "en-US-EmmaMultilingualNeural", text: "सारे रिसर्च डेटा और सिस्टम मेट्रिक्स पूरी तरह वेरीफाई हो चुके हैं, Chief।", rate: "+0%", pitch: "+0Hz" },
       { agent: "DD", voice: "en-US-BrianMultilingualNeural", text: "सारे सर्वर और इंफ्रास्ट्रक्चर मेट्रिक्स ग्रीन हैं bro! सिस्टम बिल्कुल स्मूथ है।", rate: "+0%", pitch: "+0Hz" }
     ]
