@@ -127,6 +127,23 @@ class IntentParser {
       };
     }
 
+    // 2.1939 Fix Bengali Language Directive
+    if (IntentParser.isFixBengaliLanguageDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_bengali_language_directive",
+        agentDirective
+      };
+    }
+
     // 2.1938 Remove All Other Versions & Other Sorts Directive
     if (IntentParser.isRemoveOtherVersionsAndSortsDirective(lower)) {
       let agentDirective = "team";
@@ -1314,6 +1331,23 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Fix Bengali Language Directive
+   * Handles:
+   * "fix bengali language", "fix bangla language", "bengali language fix", "fix bangal language",
+   * "বাংলা ভাষা ফিক্স করো", "বাংলা ভাষা ঠিক করো"
+   */
+  static isFixBengaliLanguageDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bfix\s+(?:bengali|bangla|bangal)\s+language\b/i.test(lower)) ||
+      (/\b(?:bengali|bangla|bangal)\s+language\s+fix\b/i.test(lower)) ||
+      (/\bfix\s+(?:bangla|bangal)\s+speech\b/i.test(lower)) ||
+      (/(?:বাংলা\s*ভাষা\s*ফিক্স|বাংলা\s*ভাষা\s*ঠিক|বাংলা\s*কথাবার্তা\s*পারফেক্ট)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Remove All Other Versions & Other Sorts Directive
    * Handles:
    * "remove all your other version and other sorts",
@@ -2057,6 +2091,7 @@ module.exports = {
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
   isRemoveBanglaInterruptedSingleSoulDirective: IntentParser.isRemoveBanglaInterruptedSingleSoulDirective,
   isRemoveOtherVersionsAndSortsDirective: IntentParser.isRemoveOtherVersionsAndSortsDirective,
+  isFixBengaliLanguageDirective: IntentParser.isFixBengaliLanguageDirective,
   isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective: IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
 };

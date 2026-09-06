@@ -25,6 +25,16 @@ class TextSanitizer {
       .replace(/\b(?:hey\s+|listen\s+)?vision(?:\s+bhai)?\b/gi, "Vision")
       .replace(/(?:জেনি|जेनी|ফ্রাইডে|फ़्राइডে)/gi, "Friday")
       .replace(/(?:ব্রায়ান|ब्रायन|ডিডি)/gi, "DD")
+      // User Hritthik / Hrita phonetic STT & mishearing normalizations
+      .replace(/\b(?:who\s+is|who's)\s+(?:hrita|hrito|hrithik|hritick)\b/gi, "who is Hritthik")
+      .replace(/\b(?:hrita|hrito|hrithik|hritick)\s+(?:ke|kar|ka)\b/gi, "Hritthik ke")
+      .replace(/\bke\s+(?:hrita|hrito|hrithik|hritick)\b/gi, "ke Hritthik")
+      .replace(/(?:হৃতা\s*কে|কে\s*হৃতা)/giu, "হৃত্তিক কে")
+      .replace(/\b(?:hrita|hrito|hrithik|hritick)\b(?=\s+(?:ke|kar|bolche|dakche|needs|wants|says|asked|said|here|room|profile|rules?|workspace|bhai|bro|babe))\b/gi, "Hritthik")
+      .replace(/\b(?:hey|hi|hello|tell|ask)\s+(?:hrita|hrito)\b/gi, (match) => {
+        const parts = match.split(/\s+/);
+        return `${parts[0]} Hritthik`;
+      })
       .replace(/\b(?:on this course)\b/gi, "on this code")
       .replace(/\b(?:ast\s*tree)\b/gi, "AST")
       .replace(/\b(?:j\s*s)\b/gi, "JavaScript")
@@ -853,6 +863,11 @@ class TextSanitizer {
       .replace(/\bremove\s+all\s+(?:your\s+)?other\s+(?:version|versions)\s+and\s+other\s+(?:sorts?|sortings?)\b/gi, "Remove all other versions and other sorts")
       .replace(/\bremove\s+(?:all\s+)?other\s+(?:version|versions)\s+and\s+(?:other\s+)?(?:sorts?|sortings?)\b/gi, "remove all other versions and other sorts")
       .replace(/\bother\s+(?:version|versions)\s+and\s+other\s+(?:sorts?|sortings?)\b/gi, "other versions and other sorts")
+      // Fix Bengali Language STT Normalizations
+      // Handles: "fix bengali language", "fix bangla language", "bengali language fix", "fix bangal language"
+      .replace(/\bfix\s+(?:bengali|bangla|bangal)\s+language\b/gi, "Fix Bengali language")
+      .replace(/\b(?:bengali|bangla|bangal)\s+language\s+fix\b/gi, "Bengali language fix")
+      .replace(/\bfix\s+(?:bangla|bangal)\s+speech\b/gi, "fix Bangla speech")
       .replace(/\b(?:intrapted)\b/gi, "interrupted")
       .replace(/\b(?:intraption)\b/gi, "interruption");
 
