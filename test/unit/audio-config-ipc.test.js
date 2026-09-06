@@ -157,6 +157,7 @@ async function runTests() {
   }
 
   console.log('\n🌟 All Audio Configuration IPC Unit & Integration Tests Passed Successfully! 🚀');
+  process.exit(0);
 }
 
 runTests().catch(err => {

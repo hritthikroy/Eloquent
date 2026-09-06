@@ -159,9 +159,22 @@ class OfficeActionRunner {
     // HIGH-LEVEL GEMINI COGNITIVE REASONING & MULTIMODAL VISION TASK
     // -------------------------------------------------------------
     const clientToUse = geminiClient || require("./gemini-client").geminiClient;
-    const isGeminiQuery = lower.includes("gemini") || lower.includes("high level task") || lower.includes("deep reasoning") ||
+    const isZeroOverlapDirective = 
+      lower.includes("buffering") || 
+      lower.includes("buffring") || 
+      lower.includes("overlapping") || 
+      lower.includes("overlaping") || 
+      lower.includes("dual sol") || 
+      lower.includes("dual soul") || 
+      lower.includes("aura and charm") || 
+      lower.includes("power to fix") ||
+      (IntentParser && typeof IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective === "function" && IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective(lower));
+
+    const isGeminiQuery = !isZeroOverlapDirective && (
+      lower.includes("gemini") || lower.includes("high level task") || lower.includes("deep reasoning") ||
       lower.includes("analyze my screen") || lower.includes("look at my screen") || lower.includes("what is on my screen") ||
-      lower.includes("check my screen") || lower.includes("inspect screen") || lower.includes("deep architecture review");
+      lower.includes("check my screen") || lower.includes("inspect screen") || lower.includes("deep architecture review")
+    );
 
     if (isGeminiQuery && clientToUse && clientToUse.isConfigured()) {
       console.log(`✨ [ActionRunner] Activating Google Gemini High-Level Engine for: "${speechText}"`);

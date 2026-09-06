@@ -355,14 +355,17 @@ class MasterApiGateway {
   /**
    * Proactively cancel any in-flight interactive turn buffering on Groq or Gemini
    */
-  cancelInFlightTurn() {
+  cancelInFlightTurn(reason = "turn_preempted") {
+    const abortedTurnId = this.currentTurnId;
     if (this.activeTurnAbortController) {
-      try { this.activeTurnAbortController.abort(); } catch (e) {}
+      try { this.activeTurnAbortController.abort(reason); } catch (e) {}
       this.activeTurnAbortController = null;
     }
     if (this.geminiClient && typeof this.geminiClient.cancelInFlight === "function") {
       try { this.geminiClient.cancelInFlight(); } catch (e) {}
     }
+    this.currentTurnId++;
+    return abortedTurnId;
   }
 
   /**
@@ -371,9 +374,20 @@ class MasterApiGateway {
    */
   applyAuraAndCharmCalibration(messages, options = {}) {
     if (!Array.isArray(messages) || messages.length === 0) return messages;
+    const agentKey = (typeof options === "string" ? options : (options.agentKey || options.agent || "tuktuk")).toLowerCase();
     const cloned = JSON.parse(JSON.stringify(messages));
     const sysIdx = cloned.findIndex(m => m && m.role === "system");
-    const charmAnchor = "\n[UNIFIED AURA & CHARM INVARIANT: Speak with sparkling co-founder charm, affectionate warmth, wit, and sharp intellect. Zero generic sterile chatbot tone, zero repetitive trailing questions. Maintain your authentic personal soul 100%.]";
+    
+    let petNameRule = "For Tuk Tuk: address Hritthik exclusively as 'babe' (never bro/brother/Chief).";
+    if (agentKey === "vision") {
+      petNameRule = "For Vision: address Hritthik exclusively as 'brother/bro/ভাই' (never babe/Chief).";
+    } else if (agentKey === "friday") {
+      petNameRule = "For Friday: address Hritthik exclusively as 'Chief/Hritthik' (never babe/bro).";
+    } else if (agentKey === "dd") {
+      petNameRule = "For DD: address Hritthik exclusively as 'bro/ভাই' (never babe).";
+    }
+
+    const charmAnchor = `\n[UNIFIED AURA & CHARM INVARIANT: Speak with sparkling co-founder charm, affectionate warmth, wit, and sharp intellect. Zero generic sterile chatbot tone, zero repetitive trailing questions. ${petNameRule} Maintain your authentic personal soul 100%.]`;
     
     if (sysIdx !== -1 && cloned[sysIdx]) {
       if (!cloned[sysIdx].content.includes("UNIFIED AURA & CHARM INVARIANT")) {
