@@ -12,5 +12,11 @@
     "সোনা",
     "সোনার"
   ],
-  "conversationLanguage": "en"
+  "conversationLanguage": "banglish",
+  "conversationHistory": {
+    "enabled": true,
+    "maxTurns": 50,
+    "autoSave": true,
+    "persistPath": "userData/history.json"
+  }
 }

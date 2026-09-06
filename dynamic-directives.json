@@ -1,32 +1,20 @@
 [
   {
     "id": 1788682985336,
-    "rule": "always: Real Human Feel, Clarity & Pronunciation active: Articulatory Clarity C_clarity = 1.00, Phonetic Pronunciation P_pronounce = 1.00, Affective Warmth A_affect = 1.00, Turn Pacing T_turn <= 180ms, Persona Sovereignty S_sovereign = 1.00 (H_feel ≡ 1.00, LHS ≡ RHS = 100%)",
+    "rule": "always: Real Human Feel, Clarity & Pronunciation active: Articulatory clarity, warm human affect, sub-180ms turn pacing, and 0% robotic behavior across all agents.",
     "target": "all",
     "createdAt": "2026-09-06T08:23:05.336Z"
   },
   {
     "id": 1788688999695,
-    "rule": "always: Zero Loop Behavior & Complete 32-Equation Wiring 100% active: all 32 mathematical equations wired properly with closed-form parity (Omega_cosmological = 1.00), high Shannon token entropy (H >= 3.6), Jaccard distance < 0.20, and zero conversational repetition across all squad members (LHS ≡ RHS = 100%)",
+    "rule": "always: Zero Loop & Natural Conversational Flow active: zero phrase repetition, high conversational freshness, natural turn transitions, and zero canned robotic slogans across all squad members.",
     "target": "all",
     "createdAt": "2026-09-06T10:35:48.973Z"
   },
   {
-    "id": 1788689162889,
-    "rule": "always: All 32 Cosmological Unified Cognitive Field Equations from empirical Consensus research are 100% active, updating multimodal perception, living STDP memory, JAL-turn handoffs, neural AEC, and four-agent persona sovereignty in real-time (LHS ≡ RHS = 100%, Omega_cosmological = 1.00)",
-    "target": "all",
-    "createdAt": "2026-09-06T10:35:50.861Z"
-  },
-  {
-    "id": 1788689167695,
-    "rule": "always: All 7 foundational equations wired into real-time runtime validation with Omega_grand ≡ 1.00 and sub-15ms execution overhead locked across Tuk Tuk, Vision, Friday, and DD (LHS = RHS = 100%)",
-    "target": "all",
-    "createdAt": "2026-09-06T10:35:52.565Z"
-  },
-  {
-    "id": 1788690873772,
-    "rule": "always: Signal processing pipeline equations 100% wired with zero equation overlaps and zero thread lock blockages. Full duplex streaming, neural AEC, adaptive jitter buffer, and vocoder execute in sub-15ms smooth instant pipeline (LHS ≡ RHS = 100%, Omega_pipeline = 1.00)",
-    "target": "all",
-    "createdAt": "2026-09-06T10:35:44.889Z"
+    "id": 1788712830498,
+    "rule": "always: Zero Overlap Invariant Active: zero dual souls, zero overlapping API streams, zero overlapping audio playback. Persona warmth, charm, and wit 100% unified across providers. Tuk Tuk exclusively addresses Hritthik as 'babe'.",
+    "target": "universal",
+    "createdAt": "2026-09-06T18:18:58.818Z"
   }
 ]
