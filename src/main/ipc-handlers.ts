@@ -15,7 +15,16 @@ import {
 } from './conversation-state-manager';
 import { ClipboardManager, clipboardManager } from './clipboard-manager';
 import { AudioManager, audioManager } from './audio-manager';
-import { IpcChannels, ClipboardSyncPayload, ClipboardSyncResponse, AudioCaptureConfig, AudioCommandRecognizedPayload } from '../shared/types';
+import { ExecutionEngine, executionEngine } from './execution-engine';
+import {
+  IpcChannels,
+  ClipboardSyncPayload,
+  ClipboardSyncResponse,
+  AudioCaptureConfig,
+  AudioCommandRecognizedPayload,
+  ExecutionResult,
+  ExecutionStatusPayload
+} from '../shared/types';
 
 export interface VerifyIntegrityPayload {
   uiState?: ConversationalState;
@@ -254,6 +263,65 @@ export function registerConversationIpcHandlers(
     }
   });
 
+  // Channel: 'exec:run' (IpcChannels.EXEC_RUN)
+  ipcMain.handle(IpcChannels.EXEC_RUN, async (_event: any, payload: { intent: string | Record<string, any> }): Promise<ExecutionResult> => {
+    try {
+      console.log('⚡ [IPCHandlers] Processing exec:run request...');
+      const intentInput = typeof payload === 'string' ? payload : (payload?.intent || payload);
+      const plan = executionEngine.parseIntent(intentInput);
+
+      const result = await executionEngine.executePlan(plan.id, (statusPayload: ExecutionStatusPayload) => {
+        if (typeof broadcastTargets === 'function') {
+          try {
+            const windows = broadcastTargets();
+            if (Array.isArray(windows)) {
+              for (const win of windows) {
+                if (win && !win.isDestroyed() && win.webContents) {
+                  win.webContents.send(IpcChannels.EXEC_STATUS, statusPayload);
+                }
+              }
+            }
+          } catch (e) {}
+        }
+      });
+
+      return result;
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in exec:run:', err?.message || err);
+      return {
+        success: false,
+        planId: '',
+        completedSteps: 0,
+        totalSteps: 0,
+        error: err?.message || 'Execution error',
+        logs: [`[IPCHandlers] Exception: ${err?.message}`]
+      };
+    }
+  });
+
+  // Channel: 'exec:status' (IpcChannels.EXEC_STATUS)
+  ipcMain.handle(IpcChannels.EXEC_STATUS, async (_event: any, payload: { planId: string }): Promise<ExecutionStatusPayload | null> => {
+    try {
+      const planId = typeof payload === 'string' ? payload : payload?.planId;
+      return executionEngine.getPlanStatus(planId);
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in exec:status:', err?.message || err);
+      return null;
+    }
+  });
+
+  // Channel: 'exec:abort' (IpcChannels.EXEC_ABORT)
+  ipcMain.handle(IpcChannels.EXEC_ABORT, async (_event: any, payload: { planId: string }): Promise<{ success: boolean }> => {
+    try {
+      const planId = typeof payload === 'string' ? payload : payload?.planId;
+      const success = executionEngine.abortPlan(planId);
+      return { success };
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in exec:abort:', err?.message || err);
+      return { success: false };
+    }
+  });
+
   // Telemetry Broadcast Subscription:
   // Emits 'stateSyncStatus' to renderer windows
   const unsubscribeSync = manager.onSyncStatus((status: StateSyncStatus) => {
@@ -293,7 +361,7 @@ export function registerConversationIpcHandlers(
 
   audioManager.on('command-recognized', commandListener);
 
-  console.log('✅ [IPCHandlers] Registered conversation, clipboard & audio IPC handlers');
+  console.log('✅ [IPCHandlers] Registered conversation, clipboard, audio & execution IPC handlers');
 
   return {
     unregister: () => {
@@ -308,6 +376,9 @@ export function registerConversationIpcHandlers(
           ipcMain.removeHandler(IpcChannels.AUDIO_START_CAPTURE);
           ipcMain.removeHandler(IpcChannels.AUDIO_STOP_CAPTURE);
           ipcMain.removeHandler(IpcChannels.AUDIO_COMMAND_RECOGNIZED);
+          ipcMain.removeHandler(IpcChannels.EXEC_RUN);
+          ipcMain.removeHandler(IpcChannels.EXEC_STATUS);
+          ipcMain.removeHandler(IpcChannels.EXEC_ABORT);
         }
         unsubscribeSync();
         audioManager.off('command-recognized', commandListener);

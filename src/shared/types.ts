@@ -11,7 +11,10 @@ export enum IpcChannels {
   CLIPBOARD_COPY_BENGALI_FIX = 'clipboard:copy-bengali-fix',
   AUDIO_START_CAPTURE = 'audio:start-capture',
   AUDIO_STOP_CAPTURE = 'audio:stop-capture',
-  AUDIO_COMMAND_RECOGNIZED = 'audio:command-recognized'
+  AUDIO_COMMAND_RECOGNIZED = 'audio:command-recognized',
+  EXEC_RUN = 'exec:run',
+  EXEC_STATUS = 'exec:status',
+  EXEC_ABORT = 'exec:abort'
 }
 
 export interface ClipboardSyncPayload {
@@ -40,4 +43,7 @@ export interface AudioCommandRecognizedPayload {
   timestamp: number;
   rawText?: string;
 }
+
+export * from './types/execution';
+
 
