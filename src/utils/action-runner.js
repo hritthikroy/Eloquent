@@ -2149,7 +2149,10 @@ class OfficeActionRunner {
       (/\b(?:scripted|syrepted)\s+same\s+loop\s+talk\b/i.test(lower)) ||
       (/\b0\s+looping\s+(?:behabeior|behabiour|behavior)\b/i.test(lower)) ||
       (/\bzero\s+looping\s+(?:behavior|behabeior|behabiour)\b/i.test(lower)) ||
-      (/\b(?:any|zero)\s+stuck\s+(?:behavior|behabeior|behabiour)\b/i.test(lower));
+      (/\b(?:any|zero)\s+stuck\s+(?:behavior|behabeior|behabiour)\b/i.test(lower)) ||
+      (/\b(?:check|chack|cahck)\s+(?:the\s+)?(?:last|las)?\s*(?:full\s+)?conversation\b/i.test(lower) && /\b(?:fix\s+all\s+issues?|all\s+loop\s+(?:behavior|behabeor|behabiour)|loop\s+(?:behavior|behabeor|behabiour))\b/i.test(lower)) ||
+      (/\b(?:all\s+loop\s+(?:behavior|behabeor|behabiour)|loop\s+(?:behavior|behabeor|behabiour))\s+(?:equationaly|equationally)\b/i.test(lower)) ||
+      (/\bfix\s+all\s+(?:issues?\s+)?(?:all\s+)?loop\s+(?:behavior|behabeor|behabiour)\b/i.test(lower));
 
     if (isRemoveScriptedSameLoopTalkZeroLoopingDirective) {
       if (jarvisManager && typeof jarvisManager.calibrateRemoveScriptedSameLoopTalkZeroLooping === "function") {

@@ -67,6 +67,22 @@ class IntentParser {
       };
     }
 
+    // 2.141 Prompt Engineering Pipeline Resilience, Multi-Agent Intent Parsing & AST Schema Compliance Directive
+    if (IntentParser.isPromptEngineeringPipelineResilienceDirective(lower)) {
+      let agentDirective = "vision";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.GENERATE_PROMPT,
+        confidence: 0.99,
+        target: "Implement prompt engineering pipeline resilience, multi-agent intent parsing, and AST schema compliance, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.",
+        action: "prompt_engineering_pipeline_resilience_directive",
+        agentDirective
+      };
+    }
+
     // 2.15 Autonomous Quad-Self & Cross-Agent Medic Peer-Healing Directive
     if (IntentParser.isAutonomousSelfMedicPeerMeshDirective(lower)) {
       let agentDirective = "team";
@@ -880,6 +896,9 @@ class IntentParser {
       /\b(?:antigravity\s+prompt)\b/i,
       /\b(?:write|craft|create|make|prepare|engineer|draft|generate|assemble)\s+(?:up\s+)?(?:a|the)?\s*prompt\s+for\s+(?:fixing|resolving|handling)?/i,
       /\b(?:prompt\s+engineering\s+pipeline\s+resilience|multi[- ]agent\s+intent\s+parsing|ast\s+schema\s+compliance)\b/i,
+      /\b(?:verify\s+ast\s+schema\s+compliance|token\s+boundaries|antigravity\s+prompts?)\b/i,
+      /\b(?:assemble\s+natural[,\s]+senior[- ]developer\s+antigravity\s+prompts?)\b/i,
+      /\b(?:expand\s+intent\s+detection\s+patterns\s+and\s+multi[- ]agent\s+directives)\b/i,
       // Suffix / Compound / Trailing prompt directives
       /\b(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*prompt\s*(?:for|about|on|of|to)?\s*$/i,
       /\band\s+(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*prompt(?:\s+(?:for|about|on|of|to))?\s*$/i,
@@ -958,6 +977,34 @@ class IntentParser {
       confidence: 0.8,
       target: rawText
     };
+  }
+
+  /**
+   * Centralized detector for Prompt Engineering Pipeline Resilience Directive
+   */
+  static isPromptEngineeringPipelineResilienceDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      /\b(?:prompt\s+engineering\s+pipeline\s+resilience|multi[- ]agent\s+intent\s+parsing|ast\s+schema\s+compliance)\b/i.test(lower) ||
+      (/\b(?:pipeline\s+resilience|prompt\s+pipeline)\b/i.test(lower) && /\b(?:ast|prompt|intent|schema)\b/i.test(lower)) ||
+      (/\b(?:intent\s+parsing|multi[- ]agent\s+intent)\b/i.test(lower) && /\b(?:prompt|resilience|ast)\b/i.test(lower)) ||
+      (/\b(?:ast\s+schema|schema\s+compliance)\b/i.test(lower) && /\b(?:prompt|token|boundary|boundaries)\b/i.test(lower)) ||
+      (/\b(?:assemble\s+natural[,\s]+senior[- ]developer|antigravity\s+prompts?)\b/i.test(lower) && /\b(?:prompt|ast|schema)\b/i.test(lower))
+    );
+  }
+
+  /**
+   * General detector for any Prompt Engineering Directives
+   */
+  static isPromptEngineeringDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      IntentParser.isPromptEngineeringPipelineResilienceDirective(lower) ||
+      IntentParser.isPromptAutoPasteAtCursorAndProfessionalEngineeringDirective(lower) ||
+      /\b(?:prompt\s+engineer(?:ing)?|meta[- ]prompt|ast\s+schema\s+compliance|token\s+boundaries|antigravity\s+prompt)\b/i.test(lower)
+    );
   }
 
   /**
@@ -1486,6 +1533,9 @@ class IntentParser {
       (/\b0\s+looping\s+(?:behabeior|behabiour|behavior)\b/i.test(lower)) ||
       (/\bzero\s+looping\s+(?:behavior|behabeior|behabiour)\b/i.test(lower)) ||
       (/\b(?:any|zero)\s+stuck\s+(?:behavior|behabeior|behabiour)\b/i.test(lower)) ||
+      (/\b(?:check|chack|cahck)\s+(?:the\s+)?(?:last|las)?\s*(?:full\s+)?conversation\b/i.test(lower) && /\b(?:fix\s+all\s+issues?|all\s+loop\s+(?:behavior|behabeior|behabiour)|loop\s+(?:behavior|behabeor|behabiour))\b/i.test(lower)) ||
+      (/\b(?:all\s+loop\s+(?:behavior|behabeor|behabiour)|loop\s+(?:behavior|behabeor|behabiour))\s+(?:equationaly|equationally)\b/i.test(lower)) ||
+      (/\bfix\s+all\s+(?:issues?\s+)?(?:all\s+)?loop\s+(?:behavior|behabeor|behabiour)\b/i.test(lower)) ||
       (/\b(?:scripted|same\s+loop)\b/i.test(lower) && /\b(?:no\s+need|remove|purge|banned|drop)\b/i.test(lower)) ||
       (/(?:স্ক্রিপ্টেড\s*লুপ\s*টপিক\s*বাদ|জিরো\s*লুপিং\s*বিহেভিয়ার|স্টাক\s*বিহেভিয়ার\s*রিমুভ)/u.test(lower))
     );
@@ -2258,5 +2308,7 @@ module.exports = {
   isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective: IntentParser.isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective,
   isRemoveScriptedSameLoopTalkZeroLoopingDirective: IntentParser.isRemoveScriptedSameLoopTalkZeroLoopingDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective,
-  isRemoveKhatiMistiSingleRealHumanVoiceDirective: IntentParser.isRemoveKhatiMistiSingleRealHumanVoiceDirective
+  isRemoveKhatiMistiSingleRealHumanVoiceDirective: IntentParser.isRemoveKhatiMistiSingleRealHumanVoiceDirective,
+  isPromptEngineeringPipelineResilienceDirective: IntentParser.isPromptEngineeringPipelineResilienceDirective,
+  isPromptEngineeringDirective: IntentParser.isPromptEngineeringDirective
 };

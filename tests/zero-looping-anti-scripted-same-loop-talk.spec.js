@@ -77,8 +77,27 @@ assert.strictEqual(telemetry.shannonEntropyMin, 3.6);
 
 const staticTelemetry = JarvisManager.calibrateRemoveScriptedSameLoopTalkZeroLooping();
 assert.strictEqual(staticTelemetry.status, "ZERO_LOOPING_AND_ANTI_SCRIPTED_TALK_VERIFIED");
-console.log("  ✅ [PASS 5/5] JarvisManager calibrated zero looping behavior and static wrapper verified.");
+console.log("  ✅ [PASS 5/6] JarvisManager calibrated zero looping behavior and static wrapper verified.");
+
+// 6. User Specific Prompt STT & Intent Classification Test
+console.log("\n[TEST 6] Testing User Prompt 'chack the las conversation and fix all issues all loop behabeor equationaly'...");
+const userRawInput = "chack the las conversation and fix all issues all loop behabeor equationaly";
+const userSanitized = textSanitizer.sanitize(userRawInput);
+console.log(`  Raw Input:      "${userRawInput}"`);
+console.log(`  Sanitized Text: "${userSanitized}"`);
+assert.strictEqual(
+  userSanitized,
+  "Check the last conversation and fix all issues all loop behavior equationally"
+);
+
+const userParsed = IntentParser.parseIntent(userSanitized);
+console.log(`  Target:     "${userParsed.target}"`);
+console.log(`  Confidence: ${userParsed.confidence}`);
+assert.strictEqual(userParsed.confidence, 0.99);
+assert.strictEqual(userParsed.target, "remove_scripted_same_loop_talk_zero_looping_directive");
+assert.strictEqual(userParsed.action, "remove_scripted_same_loop_talk_zero_looping_directive");
+console.log("  ✅ [PASS 6/6] User prompt correctly sanitized and classified to zero looping directive.");
 
 console.log("\n================================================================================");
-console.log("🎉 ALL 5 SUBTESTS PASSED FLICKER-FREE (5/5 = 100%)");
+console.log("🎉 ALL 6 SUBTESTS PASSED FLICKER-FREE (6/6 = 100%)");
 console.log("================================================================================");

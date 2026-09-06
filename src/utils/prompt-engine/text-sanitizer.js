@@ -901,13 +901,17 @@ class TextSanitizer {
       .replace(/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/gi, "no need pure single Bangla personality person")
       .replace(/\bremove\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/gi, "remove pure single Bangla personality person")
       // Remove Scripted Same Loop Talk, Zero Looping Behavior & Zero Stuck Behavior STT Normalizations
-      // Handles: "no need any syrepted same loop talk need to thak capapble to work in 0 looping behabeior and any stuck behabiour"
+      // Handles: "no need any syrepted same loop talk need to thak capapble to work in 0 looping behabeior and any stuck behabiour",
+      // "chack the las conversation and fix all issues all loop behabeor equationaly"
+      .replace(/\b(?:chack|cahck)\s+(?:the\s+)?(?:las|last)\s+conversation\s+and\s+fix\s+all\s+issues\s+all\s+loop\s+(?:behabeior|behabiour|behavior)\s+(?:equationaly|equationally)\b/gi, "Check the last conversation and fix all issues, all loop behavior equationally")
       .replace(/\bno\s+need\s+(?:any\s+)?(?:syrepted|scripted)\s+same\s+loop\s+talk\s+need\s+to\s+(?:thak|be)\s+(?:capapble|capable)\s+to\s+work\s+in\s+0\s+looping\s+(?:behabeior|behabiour|behavior)\s+and\s+(?:any|zero)\s+stuck\s+(?:behabeior|behabiour|behavior)\b/gi, "No need any scripted same loop talk, need to be capable to work in zero looping behavior and zero stuck behavior")
       .replace(/\b(?:syrepted)\b/gi, "scripted")
       .replace(/\b(?:capapble)\b/gi, "capable")
       .replace(/\b(?:behabeior|behabiour)\b/gi, "behavior")
+      .replace(/\b(?:las|lasst|lahst)\b(?=\s+(?:conversation|turn|chat|history|talk|full))/gi, "last")
       .replace(/\b0\s+looping\s+(?:behabeior|behabiour|behavior)\b/gi, "zero looping behavior")
       .replace(/\b(?:any|zero)\s+stuck\s+(?:behabeior|behabiour|behavior)\b/gi, "zero stuck behavior")
+      .replace(/\b(?:equationaly)\b/gi, "equationally")
       .replace(/\b(?:intrapted)\b/gi, "interrupted")
       .replace(/\b(?:intraption)\b/gi, "interruption")
       // Remove Khati Misti Bangla & Enforce One Real Human Voice STT Normalizations

@@ -19,9 +19,9 @@ export class PromptEngineer {
   private static readonly promptOptimizer = new PromptIntegration(256, false);
 
   /**
-   * Generates an authoritative, 3-section structured developer prompt with
-   * recursive self-correction to guarantee 100% adherence to schema.
-   * Now includes token optimization and validation.
+   * Generates an authoritative, 3-section (or canonical 4-section) structured developer prompt
+   * with recursive self-correction to guarantee 100% adherence to schema.
+   * Includes token optimization, boundary enforcement, and AST schema validation.
    */
   public static async generateMetaPrompt(
     rawIntent: string,
@@ -30,6 +30,11 @@ export class PromptEngineer {
   ): Promise<StructuredMetaPrompt> {
     const maxAttempts = options?.maxCorrectionAttempts || this.DEFAULT_MAX_ATTEMPTS;
     const targetStack = context?.stack || options?.targetStack || 'Node.js, Electron, Go audio backend';
+    const maxTokens = options?.maxTokens || 512;
+    const enforceTokenLimit = options?.enforceTokenLimit || false;
+    const optimizer = (maxTokens === 256 && !enforceTokenLimit)
+      ? this.promptOptimizer
+      : new PromptIntegration(maxTokens, enforceTokenLimit);
 
     let currentPrompt = this.synthesizeInitialCandidate(rawIntent, context, targetStack);
     let attempt = 1;
@@ -40,7 +45,7 @@ export class PromptEngineer {
       currentPrompt = PromptAstValidator.stripCodeFences(currentPrompt);
 
       // Token optimization pass
-      const optimizationResult = this.promptOptimizer.optimizeRawPrompt(currentPrompt);
+      const optimizationResult = optimizer.optimizeRawPrompt(currentPrompt);
       if (optimizationResult.warnings.length > 0 && attempt === 1) {
         console.warn('⚠️ [PromptEngineer] Token optimization warnings:', optimizationResult.warnings);
       }
@@ -55,10 +60,11 @@ export class PromptEngineer {
           ast.iterationAttempts = attempt;
           
           // Final token validation
-          const tokenValidation = this.promptOptimizer.validatePrompt(currentPrompt);
+          const tokenValidation = optimizer.validatePrompt(currentPrompt);
           if (!tokenValidation.withinLimit) {
-            console.warn(`⚠️ [PromptEngineer] Final prompt exceeds token limit: ${tokenValidation.tokenCount} tokens`);
+            console.warn(`⚠️ [PromptEngineer] Final prompt exceeds token limit: ${tokenValidation.tokenCount} > ${maxTokens} tokens`);
           }
+          ast.tokenCount = tokenValidation.tokenCount;
           
           return ast;
         }
@@ -73,6 +79,8 @@ export class PromptEngineer {
     const guaranteedPrompt = this.buildDeterministicMetaPrompt(rawIntent, context, targetStack);
     const finalAst = PromptAstValidator.parseToAst(guaranteedPrompt)!;
     finalAst.iterationAttempts = attempt;
+    const finalTokens = optimizer.validatePrompt(guaranteedPrompt);
+    finalAst.tokenCount = finalTokens.tokenCount;
     return finalAst;
   }
 
@@ -95,9 +103,9 @@ export class PromptEngineer {
     }
     const domain = this.detectPrimaryDomain(sanitizedIntent, context);
 
-    const { objective, files, quality } = this.resolveDomainDirectives(sanitizedIntent, domain, targetStack);
+    const { objective, files, quality, roadmap } = this.resolveDomainDirectives(sanitizedIntent, domain, targetStack);
 
-    return `Clear Technical Objective
+    let candidate = `Clear Technical Objective
 ${objective}
 
 Key Files / Architecture
@@ -105,6 +113,12 @@ ${files.map(f => `- \`${f.path}\`: ${f.description}`).join('\n')}
 
 Quality Requirements & AST Verification
 ${quality.map(q => `- ${q}`).join('\n')}`;
+
+    if (roadmap && roadmap.length > 0) {
+      candidate += `\n\nNext Steps & Continuation Roadmap\n${roadmap.map(r => `- ${r}`).join('\n')}`;
+    }
+
+    return candidate;
   }
 
   /**
@@ -180,6 +194,7 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
     objective: string;
     files: KeyFileArchitectureEntry[];
     quality: string[];
+    roadmap?: string[];
   } {
     if (domain === 'prompt_engine') {
       const isMetaFix = /\b(?:fix|fixing|resolve|remediate)\s+(?:this\s+kind\s+of\s+)?(?:all\s+)?(?:these\s+|the\s+)?issues?\b/i.test(intent) ||
@@ -191,14 +206,19 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
       return {
         objective: objectiveText,
         files: [
-          { path: 'src/utils/prompt-engine/intent-parser.js', description: 'Expand intent detection patterns and multi-agent directives' },
-          { path: 'src/utils/prompt-engine/prompt-assembler.js', description: 'Assemble natural, senior-developer Antigravity prompts' },
-          { path: 'src/core/prompt-engineer.ts', description: 'Verify 100% AST schema compliance and token boundaries' }
+          { path: 'src/utils/prompt-engine/intent-parser.js', description: 'Expand intent detection patterns and multi-agent directives.' },
+          { path: 'src/utils/prompt-engine/prompt-assembler.js', description: 'Assemble natural, senior-developer Antigravity prompts.' },
+          { path: 'src/core/prompt-engineer.ts', description: 'Verify 100% AST schema compliance and token boundaries.' }
         ],
         quality: [
           'Validate 100% AST syntax clean execution via node -c across all modified JavaScript files.',
           'Ensure all automated test suites pass without regression (npm test).',
           'Verify edge cases, graceful degradation, and zero memory leaks across long-running loops.'
+        ],
+        roadmap: [
+          'Monitor real-time telemetry and CPU overhead during active multi-turn interactions.',
+          'Add targeted unit/integration test coverage for newly introduced execution paths.',
+          'Benchmark end-to-end responsiveness and verify zero frame drops in the UI render thread.'
         ]
       };
     }
@@ -217,6 +237,10 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
           'Enforce Go memory heap ceiling under 50MB and safe goroutine synchronization.',
           'Verify that all TypeScript modules pass tsc --noEmit with strict mode enabled.',
           'Confirm clean AST syntax across all modified Node.js files using node -c.'
+        ],
+        roadmap: [
+          'Monitor audio ring buffer throughput under 100 simultaneous simulated connections.',
+          'Profile Go memory allocations and optimize DSP filter latency.'
         ]
       };
     }
@@ -233,6 +257,10 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
           'Ensure 60fps frame rate is maintained during continuous microphone visualizer updates.',
           'Verify that no unhandled IPC messages flood the Chromium bridge.',
           'Verify syntax integrity using node -c on all modified JavaScript modules.'
+        ],
+        roadmap: [
+          'Profile GPU acceleration utilization during continuous overlay rendering.',
+          'Implement batched IPC state synchronizer across auxiliary windows.'
         ]
       };
     }
@@ -252,6 +280,10 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
           'Enforce zero conversational amnesia across 16+ turns without premature history slicing.',
           'Validate that LocalCognitiveBrain resolves previous turn context and user queries cleanly.',
           'Validate 100% AST syntax clean execution via node -c across all modified JavaScript files.'
+        ],
+        roadmap: [
+          'Monitor real-time episodic recall latency and working memory size.',
+          'Validate cross-session persistence across unexpected process restarts.'
         ]
       };
     }
@@ -264,8 +296,12 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
         { path: 'src/utils/behavior-mode-engine.js', description: '24/7 circadian circadian rhythm and operating mode scheduler' }
       ],
       quality: [
-        'Enforce strict persona isolation: Tuk Tuk strictly addresses user as "babe", Vision as "bro", Brian as "Hritthik", Friday as "Hritthik". Intimate tokens strictly forbidden for all non-Tuk Tuk agents.',
+        'Enforce strict persona isolation and single real voice mode invariants across squad interactions.',
         'Verify zero deadlocks during full-duplex turn transitions under simulated load.'
+      ],
+      roadmap: [
+        'Benchmark turn-taking latency across simulated rapid conversational shifts.',
+        'Validate prosodic pitch tracking accuracy across various microphone inputs.'
       ]
     };
   }
@@ -279,7 +315,7 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
   }
 
   /**
-   * Guaranteed deterministic builder for the 3 sections
+   * Guaranteed deterministic builder for the structured sections
    */
   private static buildDeterministicMetaPrompt(
     rawIntent: string,
@@ -296,9 +332,9 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
       sanitizedIntent = context?.activeTask || 'Expand multi-agent directives, prompt engineering resilience, and AST schema compliance';
     }
     const domain = this.detectPrimaryDomain(sanitizedIntent, context);
-    const { objective, files, quality } = this.resolveDomainDirectives(sanitizedIntent, domain, targetStack);
+    const { objective, files, quality, roadmap } = this.resolveDomainDirectives(sanitizedIntent, domain, targetStack);
 
-    return `Clear Technical Objective
+    let prompt = `Clear Technical Objective
 ${objective}
 
 Key Files / Architecture
@@ -306,6 +342,12 @@ ${files.map(f => `- \`${f.path}\`: ${f.description}`).join('\n')}
 
 Quality Requirements & AST Verification
 ${quality.map(q => `- ${q}`).join('\n')}`;
+
+    if (roadmap && roadmap.length > 0) {
+      prompt += `\n\nNext Steps & Continuation Roadmap\n${roadmap.map(r => `- ${r}`).join('\n')}`;
+    }
+
+    return prompt;
   }
 
   /**

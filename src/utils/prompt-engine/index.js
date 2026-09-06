@@ -31,6 +31,25 @@ class PromptEngine {
 
     console.log(`🚀 [PromptEngine] Triggered intent: ${intent} with target: "${target}" (agent: ${agentDirective})`);
 
+    // Check Single Real Voice Mode invariant
+    let isSingleRealVoice = false;
+    let userName = "Hritthik";
+    try {
+      if (jarvisManager && typeof jarvisManager.isSingleRealVoiceMode === "function") {
+        isSingleRealVoice = jarvisManager.isSingleRealVoiceMode();
+        userName = jarvisManager.config?.userName || (typeof jarvisManager.getUserName === "function" ? jarvisManager.getUserName() : "Hritthik");
+      } else {
+        const fs = require("fs");
+        const path = require("path");
+        const cfgPath = path.join(__dirname, "../../userData/jarvis-config.json");
+        if (fs.existsSync(cfgPath)) {
+          const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+          isSingleRealVoice = Boolean(cfg.singleRealVoiceActive || cfg.singleVoiceTukTukExclusive || cfg.multiPersonalityDisabled);
+          userName = cfg.userName || "Hritthik";
+        }
+      }
+    } catch (_) {}
+
     // Handle immediate execution / firing of pending prompt into Antigravity
     if (intent === INTENTS.EXECUTE_PROMPT) {
       if (process.platform === "darwin") {
@@ -40,10 +59,13 @@ class PromptEngine {
           exec(`osascript -e 'tell application "System Events" to key code 36' 2>/dev/null || true`);
         } catch (e) {}
       }
+      const executeSpeech = isSingleRealVoice
+        ? `Fired the prompt into Antigravity, ${userName}! Execution is running now.`
+        : "Fired the prompt into Antigravity, bro! Execution is running now.";
       return {
         handled: true,
         intent,
-        speech: "Fired the prompt into Antigravity, bro! Execution is running now."
+        speech: executeSpeech
       };
     }
 
@@ -101,16 +123,25 @@ class PromptEngine {
       console.warn("⚠️ [PromptEngine] clipboard copy and auto-paste failed:", e.message);
     }
 
-    // 6. Return response payload according to active agent persona
-    let speechConfirmation = "I crafted the professional developer prompt and pasted it directly at your keyboard cursor, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
-    if (intent === INTENTS.SMOOTH_CONVERSATION) {
-      speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's pasted at your cursor and ready to fire.";
-    } else if (agentDirective === "tuktuk") {
-      speechConfirmation = "I've structured the full Antigravity prompt and pasted it directly at your keyboard cursor, babe!";
-    } else if (agentDirective === "friday") {
-      speechConfirmation = "Executive developer prompt synthesized, copied to clipboard, and pasted at your keyboard cursor, Chief. Ready for deployment.";
-    } else if (agentDirective === "dd") {
-      speechConfirmation = "DevOps prompt locked in and pasted directly at your cursor, bro. Ready to execute.";
+    // 6. Return response payload according to active agent persona & single real voice invariant
+    let speechConfirmation = "";
+    if (isSingleRealVoice) {
+      if (intent === INTENTS.SMOOTH_CONVERSATION) {
+        speechConfirmation = `I analyzed our workflow, eliminated the blockages, and engineered the structured developer prompt with continuation roadmap, ${userName}! It's pasted at your cursor and ready to fire.`;
+      } else {
+        speechConfirmation = `I've structured the full Antigravity developer prompt and pasted it directly at your keyboard cursor, ${userName}! Ready to fire.`;
+      }
+    } else {
+      speechConfirmation = "I crafted the professional developer prompt and pasted it directly at your keyboard cursor, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
+      if (intent === INTENTS.SMOOTH_CONVERSATION) {
+        speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's pasted at your cursor and ready to fire.";
+      } else if (agentDirective === "tuktuk") {
+        speechConfirmation = "I've structured the full Antigravity prompt and pasted it directly at your keyboard cursor, babe!";
+      } else if (agentDirective === "friday") {
+        speechConfirmation = "Executive developer prompt synthesized, copied to clipboard, and pasted at your keyboard cursor, Chief. Ready for deployment.";
+      } else if (agentDirective === "dd") {
+        speechConfirmation = "DevOps prompt locked in and pasted directly at your cursor, bro. Ready to execute.";
+      }
     }
 
     return {
