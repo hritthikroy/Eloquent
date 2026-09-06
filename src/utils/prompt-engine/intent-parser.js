@@ -83,16 +83,6 @@ class IntentParser {
       };
     }
 
-    // 2.185 Tuk Tuk Single Human Soul & Zero Soul Interchange Directive
-    if (IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective(lower)) {
-      return {
-        intent: INTENTS.SMOOTH_CONVERSATION,
-        confidence: 0.99,
-        target: "fix_tuktuk_single_human_soul_non_interchangeable",
-        agentDirective: "tuktuk"
-      };
-    }
-
     // 2.186 Gemini-Groq Zero API Overlap, Unified Aura & Autonomous Code-Healing Directive
     if (IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective(lower)) {
       let agentDirective = "team";
@@ -105,7 +95,19 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "fix_gemini_groq_zero_overlap_code_healing",
+        action: "fix_gemini_groq_zero_overlap_code_healing",
         agentDirective
+      };
+    }
+
+    // 2.185 Tuk Tuk Single Human Soul & Zero Soul Interchange Directive
+    if (IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective(lower)) {
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_tuktuk_single_human_soul_non_interchangeable",
+        action: "fix_tuktuk_single_human_soul_non_interchangeable",
+        agentDirective: "tuktuk"
       };
     }
 
@@ -121,6 +123,23 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "zero_human_agent_gap_equational_directive",
+        agentDirective
+      };
+    }
+
+    // 2.1936 Banglish & Modern English Same-Soul Vibe Directive
+    if (IntentParser.isBanglishModernVibeSameSoulDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "banglish_modern_vibe_same_soul",
         agentDirective
       };
     }
@@ -252,6 +271,22 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "bangla_talk_neural_overlap_audit",
+        agentDirective
+      };
+    }
+
+    // 2.201 Purge Scripted & Repetitive Talks Directive (Law 51)
+    if (IntentParser.isRemoveScriptedRepeatedTalksDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_scripted_repeated_talks_directive",
         agentDirective
       };
     }
@@ -1131,6 +1166,9 @@ class IntentParser {
   static isTukTukSingleHumanSoulNonInterchangeableDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective(lower)) {
+      return false;
+    }
     return (
       (/\b(?:tuk\s*tuk|tuktuk|tuck\s*tuck|took\s*took)\b/i.test(lower) && 
        /\b(?:sol|soul|sole|soll)\b/i.test(lower) && 
@@ -1207,6 +1245,29 @@ class IntentParser {
       (/\b(?:banglis|banglish)\s+(?:defult|default)\b/i.test(lower) && /\b(?:istent|instant)\s+(?:respons|responce|responses?)\b/i.test(lower)) ||
       (/\bremove\s+pure\s+(?:bangal|bangla)\b/i.test(lower) && /\b(?:banglis|banglish)\b/i.test(lower)) ||
       (/(?:খাঁটি\s*বাংলা.*(?:বাদ|দরকার\s*নেই|রিমুভ)|বিশুদ্ধ\s*বাংলা.*(?:বাদ|দরকার\s*নেই)|পিওর\s*বাংলা.*রেসপন্স.*বাদ|ব্যাংলিশ\s*ডিফল্ট.*ইনস্ট্যান্ট\s*রেসপন্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Banglish & Modern English Same-Soul Vibe Directive
+   * Handles:
+   * "need bangla english same sol dont use pure bangla remove pure bangal conversation use banglish mordern vibe all the time",
+   * "dont use pure bangla", "remove pure bangla conversation", "use banglish modern vibe all the time",
+   * "bangla english same soul", "banglish modern vibe all the time"
+   */
+  static isBanglishModernVibeSameSoulDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bneed\s+bangla\s+english\s+same\s+so[ul]+\b/i.test(lower)) ||
+      (/\bbangla\s+and\s+english\s+same\s+so[ul]+\b/i.test(lower)) ||
+      (/\bbangla\s+english\s+same\s+(?:sol|soul)\b/i.test(lower)) ||
+      (/\bdont\s+use\s+pure\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bremove\s+pure\s+(?:bangal|bangla|bengali)\s+(?:conversation|talks?)\b/i.test(lower)) ||
+      (/\buse\s+(?:banglis|banglish)\s+(?:mordern|modern)\s+vibe\b/i.test(lower)) ||
+      (/\b(?:banglis|banglish)\s+(?:mordern|modern)\s+vibe\s+all\s+the\s+time\b/i.test(lower)) ||
+      (/\b(?:mordern|modern)\s+vibe\s+all\s+the\s+time\b/i.test(lower)) ||
+      (/(?:বাংলা\s*ইংলিশ\s*সেম\s*সোল|পিওর\s*বাংলা\s*ইউজ\s*কোরো\s*না|ব্যাংলিশ\s*মডার্ন\s*ভাইব|পিওর\s*বাংলা\s*কনভারসেশন\s*বাদ)/u.test(lower))
     );
   }
 
@@ -1365,6 +1426,25 @@ class IntentParser {
       (/\b(?:chack|check|audit)\s+(?:bangal|bangla|bengali)\s+talk\s+(?:overlaping|overlapping)\s+(?:nural|neural)\b/i.test(lower)) ||
       (/\b(?:speaking\s+mutex|speaking\s+lock)\b/i.test(lower) && /\b(?:overlap|zero\s+overlap|audit|check)\b/i.test(lower)) ||
       (/(?:বাংলা\s*(?:কথায়|কথায়|টকে|টক|কনভারসেশনে|ভয়েস|ভয়েস).*(?:নিউরাল|ওভারল্যাপ|স্পিকিং)|বাংলা.*ওভারল্যাপ|স্পিকিং\s*মিউটেক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Purge Scripted & Repetitive Talks Directive (Law 51)
+   * Handles: "remove all screpted repitetd talks", "remove all scripted repeated talks",
+   * "remove scripted talks", "remove repeated talks", "stop scripted repeated talks",
+   * "purge scripted talks", "সব স্ক্রিপ্টেড ও পুনরাবৃত্তিমূলক কথা বাদ দাও", "স্ক্রিপ্টেড কথা বাদ দাও"
+   */
+  static isRemoveScriptedRepeatedTalksDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:remove|stop|purge|drop|clean|clear|kill|ban)\b/i.test(lower) && /\b(?:screpted|scripted)\b/i.test(lower)) ||
+      (/\b(?:remove|stop|purge|drop|clean|clear|kill|ban)\s+all\s+(?:screpted|scripted|repitetd|repeated|repetitive)\b/i.test(lower)) ||
+      (/\b(?:screpted|scripted)\s+(?:repitetd|repeated|repetitive|canned|robotic)\s+(?:talks?|speeches?|replies|words?|lines?)\b/i.test(lower)) ||
+      (/\b(?:remove|stop|purge|drop)\s+(?:all\s+)?(?:repitetd|repeated|repetitive)\s+(?:talks?|speeches?|replies)\b/i.test(lower)) ||
+      (/\b(?:no\s+more|zero)\s+(?:screpted|scripted|canned)\s+(?:talks?|lines?|speeches?)\b/i.test(lower)) ||
+      (/(?:স্ক্রিপ্টেড.*(?:বাদ|বন্ধ|রিমুভ)|পুনরাবৃত্তিমূলক.*(?:বাদ|বন্ধ|রিমুভ)|ক্যানড\s*কথা\s*বাদ)/u.test(lower))
     );
   }
 
@@ -1767,6 +1847,8 @@ class IntentParser {
   }
 }
 
+IntentParser.INTENTS = INTENTS;
+
 module.exports = {
   IntentParser,
   INTENTS,
@@ -1815,5 +1897,7 @@ module.exports = {
   isDeepTestDriveEquationalFixDirective: IntentParser.isDeepTestDriveEquationalFixDirective,
   isBanglishDefaultCodeMixedTukTukToneDirective: IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective,
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
-  isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective
+  isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
+  isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
+  isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
 };

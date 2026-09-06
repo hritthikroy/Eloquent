@@ -1212,6 +1212,7 @@ function handleShortcut(action, mode = 'standard') {
     if (isJarvisLoopActive && (jarvisManager?.isSpeaking || isProcessing)) {
       console.log('⚡ ESC pressed during AI speech/processing - stopping speech and instantly re-arming mic!');
       try { jarvisManager.stopSpeaking(); } catch (e) {}
+      try { if (masterApiGateway && typeof masterApiGateway.cancelInFlightTurn === 'function') masterApiGateway.cancelInFlightTurn('esc_barge_in'); } catch (e) {}
       isProcessing = false;
       isStopRecordingLock = false;
       if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1235,9 +1236,12 @@ function handleShortcut(action, mode = 'standard') {
     isProcessing = false;
     isStopRecordingLock = false;
     
-    // 1. Immediately silence any speech playback or audio synthesis
+    // 1. Immediately silence any speech playback or audio synthesis and abort in-flight queries
     try {
       jarvisManager.stopSpeaking();
+      if (masterApiGateway && typeof masterApiGateway.cancelInFlightTurn === 'function') {
+        masterApiGateway.cancelInFlightTurn('session_aborted');
+      }
     } catch (e) {}
 
     // 2. Hard-kill camera so hardware green indicator LED turns off in <5ms
@@ -2369,6 +2373,7 @@ function startRecording() {
               console.log(`⚡ Natural human conversational barge-in detected (shield=${isShieldActive}, optical=${isLipsMoving}, amp=${amplitude.toFixed(2)}, frames=${jarvisBargeInCounter})! Halting AI speech gracefully...`);
               lastInterruptedUtterance = isShieldActive ? null : jarvisManager.currentUtterance;
               jarvisManager.stopSpeaking();
+              try { if (masterApiGateway && typeof masterApiGateway.cancelInFlightTurn === 'function') masterApiGateway.cancelInFlightTurn('natural_conversational_barge_in'); } catch (e) {}
               jarvisBargeInCounter = 0;
               jarvisSpeechDetected = true;
               jarvisSpeechStartTime = Date.now();
@@ -2499,6 +2504,7 @@ async function stopRecording() {
   isRecording = false;
   console.log('🛑 Stopping recording...');
   stopLiveStreaming();
+  try { if (masterApiGateway && typeof masterApiGateway.cancelInFlightTurn === 'function') masterApiGateway.cancelInFlightTurn('stop_recording_new_turn'); } catch (e) {}
 
   // Instantly hide overlay for standard/rewrite - keep open for Jarvis to show status
   if (currentMode !== 'jarvis' && overlayWindow && !overlayWindow.isDestroyed()) {

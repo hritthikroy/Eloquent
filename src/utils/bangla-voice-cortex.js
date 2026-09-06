@@ -30,6 +30,7 @@
 class BanglaVoiceCortex {
   constructor() {
     this.isActive = true;
+    this.isBanglishOnlyMode = true;
     this.defaultRateOffset = "-4%";
     this.defaultPitchOffset = "+1Hz";
 
@@ -240,6 +241,21 @@ class BanglaVoiceCortex {
       [/(?:আত্মবিশ্বাস)/gu, "confidence"],
       [/(?:উদ্বেগ)/gu, "টেনশন"]
     ];
+  }
+
+  setBanglishOnlyMode(enabled = true) {
+    this.isBanglishOnlyMode = Boolean(enabled);
+  }
+
+  enforceBanglishModernVibe(text = "") {
+    if (!text || typeof text !== "string") return text;
+    let out = text;
+    if (this.isBengali(out)) {
+      out = this.fluidBengaliToRoman(out);
+    }
+    // Remove any leftover Bengali Unicode characters
+    out = out.replace(/[\u0980-\u09FF]/gu, "");
+    return out.replace(/\s+/g, " ").trim();
   }
 
   /**
@@ -518,10 +534,10 @@ class BanglaVoiceCortex {
     // 3. English technical loanwords
     out = this.harmonizeLoanwordsAndCodeSwitching(out);
 
-    // 4. Romanization check for strictly monolingual voices
+    // 4. Romanization check for strictly monolingual voices or Banglish-only mode
     const isMultilingualVoice = /multilingual/i.test(voice) || /ava/i.test(voice) || /emma/i.test(voice) || /brian/i.test(voice) || voice.startsWith("bn-") || /andrew.*multilingual/i.test(voice);
-    if (!isMultilingualVoice && this.isBengali(out)) {
-      out = this.fluidBengaliToRoman(out);
+    if (this.isBanglishOnlyMode || (!isMultilingualVoice && this.isBengali(out))) {
+      out = this.enforceBanglishModernVibe(out);
     }
 
     return out;

@@ -816,7 +816,16 @@ class TextSanitizer {
       .replace(/\b(?:istent)\s+(?:respons|responce)\b/gi, "instant response")
       .replace(/\b(?:istent)\b/gi, "instant")
       .replace(/\b(?:capture\s+middle\s+talk)\b/gi, "capture mid-talk speech")
-      .replace(/\b(?:middle\s+of\s+the\s+talk)\b/gi, "middle of the talk");
+      .replace(/\b(?:middle\s+of\s+the\s+talk)\b/gi, "middle of the talk")
+      // Banglish & Modern English Same-Soul Vibe STT Normalizations
+      // Handles: "need bangla english same sol dont use pure bangla remove pure bangal conversation use banglish mordern vibe all the time"
+      .replace(/\bneed\s+bangla\s+english\s+same\s+sol\s+dont\s+use\s+pure\s+bangla\s+remove\s+pure\s+bangal\s+conversation\s+use\s+banglish\s+mordern\s+vibe\s+all\s+the\s+time\b/gi, "Need Bangla and English same soul, don't use pure Bangla, remove pure Bangla conversation, use Banglish modern vibe all the time")
+      .replace(/\bbangla\s+english\s+same\s+(?:sol|soul)\b/gi, "Bangla and English same soul")
+      .replace(/\bdont\s+use\s+pure\s+(?:bangal|bangla)\b/gi, "don't use pure Bangla")
+      .replace(/\bremove\s+pure\s+(?:bangal|bangla)\s+(?:conversation|conversaion|talks?)\b/gi, "remove pure Bangla conversation")
+      .replace(/\buse\s+(?:banglis|banglish)\s+(?:mordern|modern)\s+vibe\s+all\s+the\s+time\b/gi, "use Banglish modern vibe all the time")
+      .replace(/\b(?:mordern)\s+vibe\b/gi, "modern vibe")
+      .replace(/\b(?:mordern)\b/gi, "modern");
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')
