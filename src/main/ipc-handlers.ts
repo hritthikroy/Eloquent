@@ -14,7 +14,8 @@ import {
   validateSyncCheckpoint
 } from './conversation-state-manager';
 import { ClipboardManager, clipboardManager } from './clipboard-manager';
-import { IpcChannels, ClipboardSyncPayload, ClipboardSyncResponse } from '../shared/types';
+import { AudioManager, audioManager } from './audio-manager';
+import { IpcChannels, ClipboardSyncPayload, ClipboardSyncResponse, AudioCaptureConfig, AudioCommandRecognizedPayload } from '../shared/types';
 
 export interface VerifyIntegrityPayload {
   uiState?: ConversationalState;
@@ -214,6 +215,45 @@ export function registerConversationIpcHandlers(
     }
   });
 
+  // Channel: 'audio:start-capture' (IpcChannels.AUDIO_START_CAPTURE)
+  ipcMain.handle(IpcChannels.AUDIO_START_CAPTURE, async (_event: any, config: AudioCaptureConfig = {}): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('🎙️ [IPCHandlers] Processing audio:start-capture request...');
+      return await audioManager.startCapture(config);
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in audio:start-capture:', err?.message || err);
+      return { success: false, error: err?.message || 'Audio capture start failed' };
+    }
+  });
+
+  // Channel: 'audio:stop-capture' (IpcChannels.AUDIO_STOP_CAPTURE)
+  ipcMain.handle(IpcChannels.AUDIO_STOP_CAPTURE, async (): Promise<{ success: boolean }> => {
+    try {
+      console.log('🛑 [IPCHandlers] Processing audio:stop-capture request...');
+      return audioManager.stopCapture();
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in audio:stop-capture:', err?.message || err);
+      return { success: false };
+    }
+  });
+
+  // Channel: 'audio:command-recognized' (IpcChannels.AUDIO_COMMAND_RECOGNIZED)
+  ipcMain.handle(IpcChannels.AUDIO_COMMAND_RECOGNIZED, async (_event: any, payload: { commandText: string; confidence?: number }): Promise<AudioCommandRecognizedPayload> => {
+    try {
+      const commandText = typeof payload === 'string' ? payload : (payload?.commandText || '');
+      const confidence = typeof payload === 'object' && payload?.confidence !== undefined ? payload.confidence : 0.98;
+      return audioManager.processCommandRecognition(commandText, confidence);
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in audio:command-recognized:', err?.message || err);
+      return {
+        command: 'unknown',
+        confidence: 0,
+        state: 'IDLE',
+        timestamp: Date.now()
+      };
+    }
+  });
+
   // Telemetry Broadcast Subscription:
   // Emits 'stateSyncStatus' to renderer windows
   const unsubscribeSync = manager.onSyncStatus((status: StateSyncStatus) => {
@@ -233,7 +273,27 @@ export function registerConversationIpcHandlers(
     }
   });
 
-  console.log('✅ [IPCHandlers] Registered conversation:verify-integrity, clipboard:sync, stateSyncStatus & validate-bangla-text channels');
+  // Audio Command Broadcast Listener:
+  const commandListener = (payload: AudioCommandRecognizedPayload) => {
+    if (typeof broadcastTargets === 'function') {
+      try {
+        const windows = broadcastTargets();
+        if (Array.isArray(windows)) {
+          for (const win of windows) {
+            if (win && !win.isDestroyed() && win.webContents) {
+              win.webContents.send(IpcChannels.AUDIO_COMMAND_RECOGNIZED, payload);
+            }
+          }
+        }
+      } catch (broadcastErr) {
+        // Safe swallow
+      }
+    }
+  };
+
+  audioManager.on('command-recognized', commandListener);
+
+  console.log('✅ [IPCHandlers] Registered conversation, clipboard & audio IPC handlers');
 
   return {
     unregister: () => {
@@ -245,9 +305,14 @@ export function registerConversationIpcHandlers(
           ipcMain.removeHandler('conversation:ingest-checkpoint');
           ipcMain.removeHandler('validate-bangla-text');
           ipcMain.removeHandler(IpcChannels.CLIPBOARD_SYNC);
+          ipcMain.removeHandler(IpcChannels.AUDIO_START_CAPTURE);
+          ipcMain.removeHandler(IpcChannels.AUDIO_STOP_CAPTURE);
+          ipcMain.removeHandler(IpcChannels.AUDIO_COMMAND_RECOGNIZED);
         }
         unsubscribeSync();
+        audioManager.off('command-recognized', commandListener);
       } catch (e) {}
     }
   };
 }
+

@@ -208,6 +208,124 @@ func (s *AudioService) GetMetrics() AudioServiceMetrics {
 	}
 }
 
+// AudioCommandPayload defines the structured JSON response for recognized voice commands.
+type AudioCommandPayload struct {
+	Command    string  `json:"command"`
+	Confidence float64 `json:"confidence"`
+	State      string  `json:"state"`
+	Timestamp  int64   `json:"timestamp"`
+	RawText    string  `json:"rawText,omitempty"`
+}
+
+// IsSilence performs Voice Activity Detection (VAD) on 16-bit PCM audio samples.
+// Returns true if the RMS energy level is below the silence threshold.
+func (s *AudioService) IsSilence(pcm []byte, threshold float64) bool {
+	if len(pcm) < 2 {
+		return true
+	}
+	if threshold <= 0 {
+		threshold = 300.0 // Default 16-bit PCM RMS energy threshold
+	}
+
+	var sumSquare float64
+	sampleCount := len(pcm) / 2
+
+	for i := 0; i < len(pcm)-1; i += 2 {
+		sample := int16(pcm[i]) | (int16(pcm[i+1]) << 8)
+		val := float64(sample)
+		sumSquare += val * val
+	}
+
+	rms := 0.0
+	if sampleCount > 0 {
+		rms = (sumSquare / float64(sampleCount))
+	}
+
+	return rms < (threshold * threshold)
+}
+
+// DetectChaiChhi analyzes recognized text for the "Chai chhi" / "I'm ready" voice trigger.
+func (s *AudioService) DetectChaiChhi(rawText string) (bool, float64) {
+	if rawText == "" {
+		return false, 0.0
+	}
+	// Case-insensitive regex/matching pattern for phonetic variations of "Chai chhi"
+	lower := rawText
+	for i := 0; i < len(lower); i++ {
+		b := lower[i]
+		if b >= 'A' && b <= 'Z' {
+			lower = lower[:i] + string(b+32) + lower[i+1:]
+		}
+	}
+
+	isTrigger := false
+	confidence := 0.98
+
+	if (contains(lower, "chai") && contains(lower, "chhi")) ||
+		(contains(lower, "chai") && contains(lower, "chi")) ||
+		contains(lower, "chaichhi") ||
+		contains(lower, "i'm here") ||
+		contains(lower, "im here") ||
+		contains(lower, "ready") {
+		isTrigger = true
+	}
+
+	if !isTrigger {
+		confidence = 0.0
+	}
+
+	return isTrigger, confidence
+}
+
+func contains(s, substr string) bool {
+	return bytesContains([]byte(s), []byte(substr))
+}
+
+func bytesContains(b, sub []byte) bool {
+	if len(sub) == 0 {
+		return true
+	}
+	if len(sub) > len(b) {
+		return false
+	}
+	for i := 0; i <= len(b)-len(sub); i++ {
+		match := true
+		for j := 0; j < len(sub); j++ {
+			if b[i+j] != sub[j] {
+				match = false;
+				break
+			}
+		}
+		if match {
+			return true
+		}
+	}
+	return false
+}
+
+// ProcessPhoneticAudio converts text into an AudioCommandPayload and updates internal state.
+func (s *AudioService) ProcessPhoneticAudio(rawText string, defaultConfidence float64) AudioCommandPayload {
+	isTrigger, confidence := s.DetectChaiChhi(rawText)
+	if !isTrigger && defaultConfidence > 0 {
+		confidence = defaultConfidence
+	}
+
+	state := "IDLE"
+	command := "unknown"
+	if isTrigger {
+		state = "READY"
+		command = "chai_chhi"
+	}
+
+	return AudioCommandPayload{
+		Command:    command,
+		Confidence: confidence,
+		State:      state,
+		Timestamp:  time.Now().UnixNano() / 1e6,
+		RawText:    rawText,
+	}
+}
+
 // Close gracefully closes the audio service and releases channels.
 func (s *AudioService) Close() error {
 	if s.isClosed.CompareAndSwap(false, true) {
@@ -216,3 +334,4 @@ func (s *AudioService) Close() error {
 	}
 	return nil
 }
+

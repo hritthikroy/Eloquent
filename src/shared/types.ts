@@ -8,7 +8,10 @@
 export enum IpcChannels {
   CLIPBOARD_SYNC = 'clipboard:sync',
   CONVERSATION_VERIFY_INTEGRITY = 'conversation:verify-integrity',
-  CLIPBOARD_COPY_BENGALI_FIX = 'clipboard:copy-bengali-fix'
+  CLIPBOARD_COPY_BENGALI_FIX = 'clipboard:copy-bengali-fix',
+  AUDIO_START_CAPTURE = 'audio:start-capture',
+  AUDIO_STOP_CAPTURE = 'audio:stop-capture',
+  AUDIO_COMMAND_RECOGNIZED = 'audio:command-recognized'
 }
 
 export interface ClipboardSyncPayload {
@@ -23,3 +26,18 @@ export interface ClipboardSyncResponse {
   timestamp: number;
   error?: string;
 }
+
+export interface AudioCaptureConfig {
+  sampleRate?: number;
+  channels?: number;
+  chunkSizeMs?: number;
+}
+
+export interface AudioCommandRecognizedPayload {
+  command: string;
+  confidence: number;
+  state: 'READY' | 'IDLE';
+  timestamp: number;
+  rawText?: string;
+}
+

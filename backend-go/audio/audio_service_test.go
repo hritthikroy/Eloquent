@@ -90,3 +90,41 @@ func TestAudioServiceDirectIngest(t *testing.T) {
 		t.Fatalf("Frame not delivered to channel")
 	}
 }
+
+func TestVADSilenceFilter(t *testing.T) {
+	service := NewAudioService(AudioServiceConfig{})
+	defer service.Close()
+
+	// Zero / Silent PCM buffer
+	silentPCM := make([]byte, 1024)
+	if !service.IsSilence(silentPCM, 300.0) {
+		t.Errorf("Expected silent PCM buffer to be flagged as silence")
+	}
+
+	// Active signal PCM buffer (simulated sine wave sample values)
+	activePCM := make([]byte, 1024)
+	for i := 0; i < len(activePCM)-1; i += 2 {
+		val := int16(10000)
+		activePCM[i] = byte(val & 0xFF)
+		activePCM[i+1] = byte((val >> 8) & 0xFF)
+	}
+	if service.IsSilence(activePCM, 300.0) {
+		t.Errorf("Expected loud PCM buffer not to be flagged as silence")
+	}
+}
+
+func TestChaiChhiCommandDetection(t *testing.T) {
+	service := NewAudioService(AudioServiceConfig{})
+	defer service.Close()
+
+	payload := service.ProcessPhoneticAudio("Chai chhi", 0.98)
+	if payload.Command != "chai_chhi" || payload.State != "READY" {
+		t.Errorf("Expected chai_chhi and READY, got command=%s state=%s", payload.Command, payload.State)
+	}
+
+	payload2 := service.ProcessPhoneticAudio("random speech", 0.95)
+	if payload2.Command != "unknown" || payload2.State != "IDLE" {
+		t.Errorf("Expected unknown and IDLE, got command=%s state=%s", payload2.Command, payload2.State)
+	}
+}
+
