@@ -1681,6 +1681,8 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
       this.setPreference("zero_persona_shift_in_bangla", true);
       this.setPreference("zero_thinking_tone_leaks", true);
       this.setPreference("zero_other_voice_interruptions", true);
+      this.setPreference("bilingual_single_person_active", true);
+      this.setPreference("zero_communication_gap", true);
       this.setPreference("persona_invariants_locked", true);
     }
     if (banglaVoiceCortex && typeof banglaVoiceCortex.setUnifiedSingleSoulMode === "function") {
@@ -1692,6 +1694,8 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
       zeroPersonaShiftInBangla: true,
       zeroThinkingToneLeaks: true,
       zeroOtherVoiceInterruptions: true,
+      bilingualSinglePersonActive: true,
+      zeroCommunicationGap: true,
       personaInvariantsLocked: true,
       status: "SINGLE_REAL_SOUL_NO_PERSONA_SHIFT_LOCKED"
     };

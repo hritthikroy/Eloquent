@@ -1252,6 +1252,10 @@ class IntentParser {
       return false;
     }
     return (
+      (/\b(?:no\s+bangla\s+person|no\s+other\s+bangla\s+person|no\s+separate\s+bangla\s+person)\b/i.test(lower)) ||
+      (/\b(?:one\s+tone\s+one\s+person|one\s+person\s+one\s+tone)\b/i.test(lower)) ||
+      (/\b(?:use\s+both\s+language\s+like\s+me|using\s+both\s+languages\s+like\s+me|speak\s+both\s+languages?)\b/i.test(lower)) ||
+      (/\b(?:0\s+cmunication\s+gap|0\s+communication\s+gap|zero\s+communication\s+gap)\b/i.test(lower)) ||
       (/\b(?:use\s+real\s+one\s+so[ul]+|real\s+one\s+so[ul]+)\b/i.test(lower)) ||
       (/\b(?:remove\s+all\s+(?:others?|other)\s+voices?)\b/i.test(lower)) ||
       (/\b(?:no\s+need\s+other\s+person\s+shift|no\s+other\s+person\s+shift|no\s+person\s+shift)\b/i.test(lower)) ||
