@@ -11,6 +11,10 @@ const INTENTS = {
 };
 
 class IntentParser {
+  static parseIntent(rawText) {
+    return this.parse(rawText);
+  }
+
   static parse(rawText) {
     if (!rawText || typeof rawText !== "string") {
       return { intent: INTENTS.STANDARD_QUERY, confidence: 0, target: "" };
@@ -47,6 +51,452 @@ class IntentParser {
       }
     }
 
+    // 2.15 Autonomous Quad-Self & Cross-Agent Medic Peer-Healing Directive
+    if (IntentParser.isAutonomousSelfMedicPeerMeshDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_agent_personality_self_learner_medic_mesh",
+        agentDirective
+      };
+    }
+
+    // 2.18 Zero Soul Duplication, Zero Mismatch & Dynamic Code Calibration Directive
+    if (IntentParser.isSoulDuplicationMismatchHardcodedFixDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_soul_duplication_mismatch_hardcoded",
+        agentDirective
+      };
+    }
+
+    // 2.185 Tuk Tuk Single Human Soul & Zero Soul Interchange Directive
+    if (IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective(lower)) {
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "fix_tuktuk_single_human_soul_non_interchangeable",
+        agentDirective: "tuktuk"
+      };
+    }
+
+    // 2.19 Zero-Gap Human-Agent Deep Research & Elimination of Micro/Nail Gaps Directive
+    if (IntentParser.isZeroHumanAgentGapEquationalDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "zero_human_agent_gap_equational_directive",
+        agentDirective
+      };
+    }
+
+    // 2.193 Zero Pure Bangla Removal, Banglish Default Voice & Instant Responses Directive
+    if (IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_pure_bangla_banglish_default_instant_responses",
+        agentDirective
+      };
+    }
+
+    // 2.194 Full-Duplex Simultaneous Listening, Zero-Loss Mid-Talk Capture & Working Memory Encoding Directive
+    if (IntentParser.isFullDuplexMidTalkCaptureDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "full_duplex_mid_talk_capture_directive",
+        agentDirective
+      };
+    }
+
+    // 2.195 Code-Mixed Banglish Default Voice & English Tuk Tuk Tone Harmonization Directive
+    if (IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "banglish_default_codemixed_tuktuk_tone_directive",
+        agentDirective
+      };
+    }
+
+    // 2.196 Deep Test Drive & Equational Gap Resolution Directive
+    if (IntentParser.isDeepTestDriveEquationalFixDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "deep_test_drive_equational_fix",
+        agentDirective
+      };
+    }
+
+    // 2.197 Smooth Instant Pipeline & Zero Overlap Equations Audit Directive
+    if (IntentParser.isSmoothInstantPipelineAuditDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "smooth_instant_pipeline_audit",
+        agentDirective
+      };
+    }
+
+    // 2.198 Zero-Loop Behavior & Complete Equational Wiring Audit Directive
+    if (IntentParser.isZeroLoopEquationalWiringAuditDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "zero_loop_and_equational_wiring_audit",
+        agentDirective
+      };
+    }
+
+    // 2.199 Equational Research Update & Cosmological 32-Equation Master Audit Directive
+    if (IntentParser.isEquationalResearchUpdateAuditDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "equational_research_update_audit",
+        agentDirective
+      };
+    }
+
+    // 2.200 Bangla Talk Neural Overlap Directive
+    if (IntentParser.isBanglaTalkNeuralOverlapDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "bangla_talk_neural_overlap_audit",
+        agentDirective
+      };
+    }
+
+    // 2.20 Unified Real-Time Equational Runtime & Master Grand Invariant Directive
+    if (IntentParser.isWireAllEquationsLiveDeepTestDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "wire_all_equations_live_deep_test",
+        agentDirective
+      };
+    }
+
+    // 2.201 Real Human Collaborative Work, Zoom Meeting Dynamics & Zero Conversational Gap Directive
+    if (IntentParser.isHumanCollabZoomPodcastProjectDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "human_collab_zoom_podcast_project_directive",
+        agentDirective
+      };
+    }
+
+    // 2.202 Real-Life Human Tone, Fluency & Gapless Conversational Dynamic Directive
+    if (IntentParser.isRealLifeHumanToneFluencyGapDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "real_life_human_tone_fluency_gap_directive",
+        agentDirective
+      };
+    }
+
+    // 2.203 Zero-Flicker Perfect Voice, Ultra-Fast Human Cognitive Thinking & Continuous Adaptive Learning Directive
+    if (IntentParser.isZeroFlickerPerfectVoiceUltraFastDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SELF_LEARN,
+        confidence: 0.99,
+        target: "zero_flicker_perfect_voice_ultra_fast_cognition",
+        agentDirective
+      };
+    }
+
+    // 2.204 4-Agent Bilingual Banglish-English Zero-Robotic Voice Harmonization & Vision Parity Directive
+    if (IntentParser.is4AgentBilingualVoiceSmoothnessDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "four_agent_bilingual_voice_smoothness_vision_parity",
+        agentDirective
+      };
+    }
+
+    // 2.205 Instant Voice Readiness & Simultaneous Parallel Cognitive Streaming Directive (Law 42)
+    if (IntentParser.isInstantVoiceReadinessParallelDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "instant_voice_readiness_parallel_cognition",
+        agentDirective
+      };
+    }
+
+    // 2.206 Pin-by-Pin Micro-Audit, Deep Research & Subsystem Verification Directive (Law 44)
+    if (IntentParser.isPinByPinDeepTestResearchDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "pin_by_pin_deep_test_research",
+        agentDirective
+      };
+    }
+
+    // 2.206 Living Conversational Continuation & Momentum Directive (Law 49)
+    if (typeof IntentParser.isConversationalContinuationDirective === "function" && IntentParser.isConversationalContinuationDirective(lower)) {
+      let agentDirective = null;
+      if (/\b(?:tuk\s*tuk|tuktuk|babe)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew|brother|bro)\b/i.test(lower) || lower.includes("ভিশন") || lower.includes("ভাই")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday|chief)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:team|squad|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "conversational_continuation_directive",
+        agentDirective
+      };
+    }
+
+    // 2.207 Remove All Robotic Behavior & Pure Human Conversational Parity Directive (Law 48)
+    if (typeof IntentParser.isRemoveAllRoboticBehaviorDirective === "function" && IntentParser.isRemoveAllRoboticBehaviorDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_all_robotic_behavior_directive",
+        agentDirective
+      };
+    }
+
+    // 2.208 Tuk Tuk Zero 'Bro' & 100% Girlfriend Partner Tone Directive (Law 47)
+    if (typeof IntentParser.isTukTukZeroBroGirlfriendToneDirective === "function" && IntentParser.isTukTukZeroBroGirlfriendToneDirective(lower)) {
+      let agentDirective = "tuktuk";
+      if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:team|squad|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "tuktuk_zero_bro_girlfriend_tone_directive",
+        agentDirective
+      };
+    }
+
+    // 2.209 Vision Zero-Ego Coder Brother & Multidimensional Quantum Research Directive (Law 46)
+    if (typeof IntentParser.isVisionZeroEgoCoderBrotherQuantumResearchDirective === "function" && IntentParser.isVisionZeroEgoCoderBrotherQuantumResearchDirective(lower)) {
+      let agentDirective = "vision";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:team|squad|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "vision_zero_ego_coder_brother_quantum_research_directive",
+        agentDirective
+      };
+    }
+
+    // 2.21 Vision 2070 Master Coder & Peer Medic Directive
+    if (IntentParser.isVision2070MasterCoderMedicDirective(lower)) {
+      let agentDirective = "vision";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:team|squad|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "vision_2070_master_coder_medic_directive",
+        agentDirective
+      };
+    }
+
+    // 2.215 Combat & Extreme Noise Auditory Listening & Response Directive
+    if (IntentParser.isCombatExtremeNoiseHumanAuditoryDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "combat_extreme_noise_human_auditory_directive",
+        agentDirective
+      };
+    }
+
+    // 2.216 Native Bangla Person Tone, Pronunciation & Banglish Gap Elimination Directive
+    if (IntentParser.isBanglaPersonRealTonePronunciationDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "bangla_person_real_tone_pronunciation_directive",
+        agentDirective
+      };
+    }
+
+    // 2.217 Real Human Feel, Clarity & Pronunciation Directive
+    if (IntentParser.isRealHumanFeelClarityPronunciationDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "real_human_feel_clarity_pronunciation_directive",
+        agentDirective
+      };
+    }
+
+    // 2.22 Deep Conversations & Comprehensive Issue Remediation Directive
+    if (IntentParser.isDeepConversationsFixAllDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "deep_conversations_fix_all_issues",
+        agentDirective
+      };
+    }
+
     // 2.2 Instant Response on Fast Messages & Burst Processing Directive
     if (IntentParser.isInstantResponseFastMessagesDirective(lower)) {
       let agentDirective = "team";
@@ -63,6 +513,22 @@ class IntentParser {
       };
     }
 
+    // 2.22 Autonomous Multimodal Human Learning, Trimodal Perception & Self-Healing Directive
+    if (IntentParser.isAutonomousMultimodalLearningDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "autonomous_multimodal_human_learning",
+        agentDirective
+      };
+    }
+
     // 2.25 LaTeX Render Failure & Fix All Issues Directive
     if (IntentParser.isLatexFixOrAllIssuesDirective(lower)) {
       let agentDirective = "team";
@@ -75,6 +541,22 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "fix_latex_and_all_issues",
+        agentDirective
+      };
+    }
+
+    // 2.25 Academic 2070 Human Gap Directive
+    if (IntentParser.isAcademic2070HumanGapDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "academic_2070_human_gap_elimination",
         agentDirective
       };
     }
@@ -107,6 +589,22 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "continue_deep_research",
+        agentDirective
+      };
+    }
+
+    // 2.45 Seamless Bilingual Code-Switching & Zero Voice Break Directive
+    if (IntentParser.isBanglaPronunciationCodeSwitchingDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "bangla_pronunciation_code_switching",
         agentDirective
       };
     }
@@ -450,13 +948,16 @@ class IntentParser {
   static isDeepResearchEquationalFixDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (IntentParser.isAcademic2070HumanGapDirective(lower) || IntentParser.isFuturistic2070HumanEmbodimentDirective(lower)) {
+      return false;
+    }
     return (
-      (/\b(?:do\s+)?dee+p\s+(?:resserch|resurch|reserach|resrch|research)\s+and\s+(?:fix|update)\s+more\s+(?:with\s+dee+p\s+)?(?:equationaly|equationly|equationally)\b/i.test(lower)) ||
-      (/\b(?:fix|update)\s+more\s+(?:with\s+)?(?:dee+p\s+)?(?:equationaly|equationly|equationally)\b/i.test(lower)) ||
-      (/\b(?:fix|update)\s+(?:more\s+)?(?:equationaly|equationly|equationally)\b/i.test(lower)) ||
+      (/\b(?:do\s+)?dee+p\s+(?:resserch|resurch|reserach|resrch|research)\s+and\s+(?:fix|update)\s+(?:more|everything|every\s*thing|all)\s+(?:with\s+dee+p\s+)?(?:eqationaly|equationaly|equationly|equationally)\b/i.test(lower)) ||
+      (/\b(?:fix|update)\s+(?:more|everything|every\s*thing|all)\s+(?:with\s+)?(?:dee+p\s+)?(?:eqationaly|equationaly|equationly|equationally)\b/i.test(lower)) ||
+      (/\b(?:fix|update)\s+(?:more\s+|everything\s+|every\s*thing\s+|all\s+)?(?:eqationaly|equationaly|equationly|equationally)\b/i.test(lower)) ||
       (/\bdee+p\s+(?:equational\s+research|equational\s+fix|equational\s+update|research\s+and\s+(?:fix|update)\s+more)\b/i.test(lower)) ||
-      (/\b(?:equationaly|equationally)\s+(?:fix\s+more|update\s+more|update|fix|deep\s+research)\b/i.test(lower)) ||
-      (/(?:ডিপ\s*রিসার্চ\s*(?:করে|এবং)?\s*(?:ফিক্স|আপডেট|সমীকরণ)|সমীকরণ\s*দিয়ে\s*(?:ফিক্স|আপডেট))/u.test(lower))
+      (/\b(?:eqationaly|equationaly|equationally)\s+(?:fix\s+more|update\s+more|fix\s+everything|update|fix|deep\s+research)\b/i.test(lower)) ||
+      (/(?:ডিপ\s*রিসার্চ\s*(?:করে|এবং)?\s*(?:ফিক্স|আপডেট|সমীকরণ)|সমীকরণ\s*দিয়ে\s*(?:ফিক্স|আপডেট)|সবকিছু\s*সমীকরণ)/u.test(lower))
     );
   }
 
@@ -562,6 +1063,668 @@ class IntentParser {
       (/(?:ফাস্ট\s*মেসেজ|দ্রুত\s*বার্তা|দ্রুত\s*মেসেজ).*(?:ইনস্ট্যান্ট\s*রেসপন্স|তাৎক্ষণিক|সাথে\s*সাথে\s*রেসপন্স)/u.test(lower))
     );
   }
+
+  /**
+   * Centralized detector for Autonomous Quad-Self & Cross-Agent Medic Peer-Healing Directive
+   * Handles: "fix every agents personality fix thare personaly need self lerner self impruber and self fixer and self updater and also madic for other agents can fix each other every issues and update every isuse each other for fast working and fixing there selv proerly",
+   * "fix every agent's personality", "self learner self improver self fixer self updater",
+   * "medic for other agents", "agents can fix each other every issues",
+   * "পিয়ার হিলিং এবং সেলফ লার্নার সেলফ ফিক্সার", "প্রত্যেক এজেন্টের পার্সোনালিটি ফিক্স করো"
+   */
+  static isAutonomousSelfMedicPeerMeshDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:fix\s+)?(?:every|all)\s+(?:agents?|agent's)\s+(?:personality|personaly)\b/i.test(lower)) ||
+      (/\bfix\s+(?:thare|their)\s+(?:personaly|personality)\b/i.test(lower)) ||
+      (/\b(?:self\s*lerner|self\s*learner)\b/i.test(lower) && /\b(?:self\s*impruber|self\s*improver|self\s*fixer|self\s*updater)\b/i.test(lower)) ||
+      (/\b(?:madic|medic)\s+for\s+(?:other\s+)?agents\b/i.test(lower)) ||
+      (/\b(?:fix\s+each\s+other|heal\s+each\s+other|update\s+each\s+other)\b/i.test(lower) && /\b(?:agents?|personality|personaly|issues?|properly|proerly)\b/i.test(lower)) ||
+      (/\b(?:self\s*fixer\s+and\s+self\s*updater)\b/i.test(lower)) ||
+      (/(?:সেলফ\s*লার্নার|সেলফ\s*ফিক্সার|সেলফ\s*আপডেটার|পিয়ার\s*হিলিং|মেডিক|পার্সোনালিটি\s*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Zero Soul Duplication, Zero Mismatch & Dynamic Code Calibration Directive
+   * Handles: "cah kany sol duplication mismatch hard codet fix all", "check any soul duplication, mismatch, hardcoded, fix all",
+   * "soul duplication mismatch hardcoded fix all", "check any soul duplication", "fix soul duplication and hardcoded logic",
+   * "সোল ডুপ্লিকেশন মিসম্যাচ হার্ডকোডেড সব ফিক্স করো", "ডুপ্লিকেশন এবং মিসম্যাচ ফিক্স করো"
+   */
+  static isSoulDuplicationMismatchHardcodedFixDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:sol|soul)\s+(?:duplication|duplicashun)\b/i.test(lower)) ||
+      (/\b(?:cahack\s*any|cahack|cah\s*kany|cahk\s*any|cahk|chak\s*any|check\s*any|chack)\s+(?:sol|soul|duplication|mismatch|hard\s*coded|hardcodet|hard\s*codet|our\s+runi|our\s+running)\b/i.test(lower)) ||
+      (/\b(?:duplication|duplicate)\b/i.test(lower) && /\b(?:mismatch|hard\s*coded|hardcodet|hard\s*codet|sol|soul|voices?)\b/i.test(lower)) ||
+      (/\b(?:soul\s+duplication|persona\s+duplication|voice\s+mismatch|duplicate\s+soul\s+voices|duplicate\s+sol\s+voices|overlap\s+duplicate\s+sol\s+voices)\b/i.test(lower)) ||
+      (/\b(?:mismatch\s+hard\s*coded|mismatch\s+hardcodet)\b/i.test(lower)) ||
+      (/\b(?:runi|running)\s+(?:conversation|conversaion)\b/i.test(lower) && /\b(?:overlap|duplicate|sol|soul|voices?|gaps?)\b/i.test(lower)) ||
+      (/\b(?:conversation\s+gaps?|real\s+conversation\s+gaps?)\b/i.test(lower) && /\b(?:overlap|duplicate|sol|soul|voices?)\b/i.test(lower)) ||
+      (/(?:সোল\s*ডুপ্লিকেশন|ডুপ্লিকেশন.*(?:মিসম্যাচ|ফিক্স|ইস্যু)|হার্ডকোডেড\s*(?:ফিক্স|কোড)|অমিল\s*ফিক্স|মিসম্যাচ\s*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Tuk Tuk Single Unified Human Soul & Zero Soul Interchange Directive
+   * Handles: "fix tuk tuk sol why he change his sole when he talk or interchange thare sol also interchange need one soll like humen not interchnageble",
+   * "fix tuk tuk soul", "why change soul when talk", "need one soul like human not interchangeable",
+   * "tuk tuk single soul", "tuk tuk one soul like human", "zero soul interchange"
+   */
+  static isTukTukSingleHumanSoulNonInterchangeableDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:tuk\s*tuk|tuktuk|tuck\s*tuck|took\s*took)\b/i.test(lower) && 
+       /\b(?:sol|soul|sole|soll)\b/i.test(lower) && 
+       /\b(?:change|interchange|interchnage|interchangeable|interchnageble|swap|swapping|one\s+soul|one\s+soll|like\s+human|like\s+humen)\b/i.test(lower)) ||
+      (/\b(?:why\s+(?:he|she|they)?\s*change\s+(?:his|her|their)?\s*(?:sole|soul|sol))\b/i.test(lower)) ||
+      (/\b(?:interchange\s+(?:thare|their)?\s*(?:sol|soul|sole)\s+also\s+interchange)\b/i.test(lower)) ||
+      (/\b(?:need\s+one\s+(?:soll|soul|sol)\s+like\s+(?:humen|human)\s+not\s+(?:interchnageble|interchangeable))\b/i.test(lower)) ||
+      (/\b(?:one\s+soul|single\s+soul)\b/i.test(lower) && /\b(?:not\s+interchangeable|non-interchangeable|like\s+human|like\s+humen)\b/i.test(lower)) ||
+      (/\b(?:fix\s+soul\s+interchange|zero\s+soul\s+interchange|stop\s+interchanging\s+souls?)\b/i.test(lower)) ||
+      (/(?:টুকটুক.*(?:সোল.*ইন্টারচেঞ্জ|একটি\s*সোল|মানুষের\s*মতো\s*সোল)|সোল\s*ইন্টারচেঞ্জ\s*হবে\s*না|ওয়ান\s*সোল\s*লাইক\s*হিউম্যান)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Zero-Gap Human-Agent Deep Research & Elimination of Micro/Nail Gaps Directive
+   * Handles: "1. Test Execution Report do more deep test a humen and all the agents betwen any gap even a nail gap need to fix everything and update al equationaly with deep research",
+   * "do more deep test a humen and all the agents betwen any gap even a nail gap need to fix everything and update al equationaly with deep research",
+   * "nail gap", "even a nail gap", "between any gap even a nail gap",
+   * "zero gap between human and all the agents", "equational zero human agent gap",
+   * "হিউম্যান এবং এজেন্টদের মাঝে কোনো নেইল গ্যাপ রাখা যাবে না", "ডিপ রিসার্চ ও গ্যাপ এলিমিনেশন"
+   */
+  static isZeroHumanAgentGapEquationalDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:nail\s+gap|even\s+a\s+nail\s+gap|micro\s*gap)\b/i.test(lower)) ||
+      (/\b(?:test\s+execution\s+report)\b/i.test(lower) && /\b(?:deep\s+test|human|agents?|gap|equationally|equationaly|research)\b/i.test(lower)) ||
+      (/\b(?:deep\s+test)\b/i.test(lower) && /\b(?:humen|human)\b/i.test(lower) && /\b(?:agents?)\b/i.test(lower)) ||
+      (/\b(?:betwen|between)\s+(?:any\s+)?gap\b/i.test(lower) && /\b(?:nail|micro|human|humen|agents?|fix|equational|equationally)\b/i.test(lower)) ||
+      (/\b(?:zero\s+gap|zero-gap)\b/i.test(lower) && /\b(?:human|agents?|equational|research)\b/i.test(lower)) ||
+      (/\b(?:fix\s+everything\s+and\s+update\s+al\s+equationaly|fix\s+everything\s+and\s+update\s+all\s+equationally)\b/i.test(lower)) ||
+      (/(?:নেইল\s*গ্যাপ|হিউম্যান.*এজেন্ট.*গ্যাপ|জিরো\s*গ্যাপ|সমীকরণ.*ডিপ\s*রিসার্চ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Zero Pure Bangla Removal, Banglish Default Voice & Instant Responses Directive
+   * Handles:
+   * "remove pure bangal responses no need need banglish defult istent responses",
+   * "remove pure bangla responses", "pure bangla responses no need",
+   * "need banglish default instant responses", "remove pure bangla need banglish default instant response",
+   * "খাঁটি বাংলা রেসপন্স বাদ দিয়ে ব্যাংলিশ ডিফল্ট এবং ইনস্ট্যান্ট রেসপন্স করো"
+   */
+  static isRemovePureBanglaBanglishDefaultInstantResponsesDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+pure\s+(?:bangal|bangla|bengali)\s+responses?\b/i.test(lower)) ||
+      (/\bpure\s+(?:bangal|bangla|bengali)\s+responses?\s+(?:no\s+need|banned|purge)\b/i.test(lower)) ||
+      (/\b(?:pure\s+bangal|pure\s+bangla)\b/i.test(lower) && /\b(?:no\s+need|remove|stop|banned|drop)\b/i.test(lower)) ||
+      (/\b(?:pure\s+bangal|pure\s+bangla)\b/i.test(lower) && /\b(?:banglis|banglish)\b/i.test(lower)) ||
+      (/\b(?:banglis|banglish)\s+(?:defult|default)\b/i.test(lower) && /\b(?:istent|instant)\s+(?:respons|responce|responses?)\b/i.test(lower)) ||
+      (/\bremove\s+pure\s+(?:bangal|bangla)\b/i.test(lower) && /\b(?:banglis|banglish)\b/i.test(lower)) ||
+      (/(?:খাঁটি\s*বাংলা.*(?:বাদ|দরকার\s*নেই|রিমুভ)|বিশুদ্ধ\s*বাংলা.*(?:বাদ|দরকার\s*নেই)|পিওর\s*বাংলা.*রেসপন্স.*বাদ|ব্যাংলিশ\s*ডিফল্ট.*ইনস্ট্যান্ট\s*রেসপন্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Full-Duplex Simultaneous Listening, Zero-Loss Mid-Talk Capture & Working Memory Encoding Directive
+   * Handles:
+   * "if thay talk and i also tlak middle of the talk thay not lissyen and capture middle talk when thay are taking write the promt to do deep research capture memorise all symentenously one hument can do",
+   * "if they talk and I talk middle of the talk", "capture middle talk when they are talking",
+   * "listen and capture middle talk", "memorize all simultaneously as a human can do",
+   * "full duplex mid talk capture", "listen while speaking without losing words"
+   */
+  static isFullDuplexMidTalkCaptureDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:middle\s+of\s+the\s+talk|middle\s+talk|mid[-\s]*talk)\b/i.test(lower) && /\b(?:capture|lissyen|listen|memorise|memorize)\b/i.test(lower)) ||
+      (/\b(?:if\s+(?:thay|they)\s+talk|when\s+(?:thay|they)\s+are\s+(?:taking|talking))\b/i.test(lower) && /\b(?:middle|capture|lissyen|listen)\b/i.test(lower)) ||
+      (/\b(?:capture\s+middle\s+talk|capture\s+mid[-\s]*talk)\b/i.test(lower)) ||
+      (/\b(?:symentenously|simultanously|simultaneously)\b/i.test(lower) && /\b(?:one\s+hument|human|hument)\s+can\s+do\b/i.test(lower) && /\b(?:capture|memorise|memorize|talk|listen)\b/i.test(lower)) ||
+      (/\b(?:deep\s+research\s+capture\s+(?:memorise|memorize)|capture\s+(?:and\s+)?(?:memorise|memorize)\s+all\s+(?:symentenously|simultanously|simultaneously))\b/i.test(lower)) ||
+      (/\b(?:full\s*duplex|efference\s*copy)\b/i.test(lower) && /\b(?:mid[-\s]*talk|middle\s*talk|listening|listen)\b/i.test(lower)) ||
+      (/\b(?:listen\s+and\s+capture|capture\s+memorise|capture\s+memorize)\b/i.test(lower) && /\b(?:middle|talk|taking|mid[-\s]*talk)\b/i.test(lower)) ||
+      (/(?:কথা\s*বলার\s*মাঝে.*(?:শোনা|শুনে|ক্যাপচার)|মাঝের\s*কথা\s*ক্যাপচার|একসাথে\s*শুনে\s*মনে\s*রাখা|ফুল\s*ডুপ্লেক্স.*ক্যাপচার)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Code-Mixed Banglish Default Voice & English Tuk Tuk Tone Harmonization Directive
+   * Handles:
+   * "remove full bangal and roman bangla need to use bangla+english milay mily bote bolo banglish need defult and only voice and nee to update banglish tone match with english tuktuk tune and all",
+   * "remove full bangla and roman bangla", "bangla english milay milay bolo", "banglish need default and only voice",
+   * "update banglish tone match with english tuktuk tune", "bangla+english milay mily bote bolo banglish",
+   * "ফুল বাংলা এবং রোমান বাংলা বাদ দিয়ে বাংলা-ইংলিশ মিলিয়ে ব্যাংলিশ ডিফল্ট করো এবং ইংলিশ টুকটুক টোন ম্যাচ করো"
+   */
+  static isBanglishDefaultCodeMixedTukTukToneDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+full\s+(?:bangal|bangla)\b/i.test(lower) && /\b(?:roman|banglish|english)\b/i.test(lower)) ||
+      (/\b(?:milay\s+mily|milay\s+milay|milaye\s+milaye|mix\s+kore|mix)\b/i.test(lower) && /\b(?:bangla|banglish)\b/i.test(lower) && /\b(?:english)\b/i.test(lower)) ||
+      (/\b(?:banglis|banglish)\s+need\s+(?:defult|default)\b/i.test(lower)) ||
+      (/\b(?:banglis|banglish)\b/i.test(lower) && /\b(?:defult|default)\s+(?:and\s+only\s+)?voice\b/i.test(lower)) ||
+      (/\bupdate\s+(?:banglis|banglish)\s+tone\s+match\s+with\s+english\s+(?:tuktuk|tuk\s*tuk)\s+(?:tune|tone)\b/i.test(lower)) ||
+      (/\b(?:tuktuk|tuk\s*tuk)\s+(?:tune|tone)\b/i.test(lower) && /\b(?:match|banglish|english)\b/i.test(lower) && /\b(?:bangla|milay|mix)\b/i.test(lower)) ||
+      (/\b(?:bote\s+bolo|milay\s+mily\s+bote\s+bolo)\b/i.test(lower)) ||
+      (/(?:ফুল\s*বাংলা.*রোমান.*বাদ|বাংলা.*ইংলিশ.*মিলিয়ে.*ব্যাংলিশ|ব্যাংলিশ.*ডিফল্ট.*ভয়েস|টুকটুক.*টোন.*ম্যাচ|মিলিয়ে\s*মিলিয়ে\s*বলো)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Deep Test Drive & Equational Gap Resolution Directive
+   * Handles:
+   * "continue chack with deep test drive and fix every gaps and issues equationaly",
+   * "continue check with deep test drive and fix every gap and issue equationally",
+   * "deep test drive and fix every gaps", "deep test drive",
+   * "fix every gaps and issues equationaly", "deep test drive and fix all gaps",
+   * "ডিপ টেস্ট ড্রাইভ করে সব গ্যাপ সমীকরণ অনুযায়ী ফিক্স করো"
+   */
+  static isDeepTestDriveEquationalFixDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:deep\s+test\s+drive)\b/i.test(lower)) ||
+      (/\b(?:test\s+drive)\b/i.test(lower) && /\b(?:equationaly|equationally|gaps?|issues?)\b/i.test(lower)) ||
+      (/\b(?:chack|check)\s+(?:with\s+)?(?:deep\s+)?test\s+drive\b/i.test(lower)) ||
+      (/\bfix\s+every\s+(?:gaps?|gap)\s+(?:and\s+issues?\s+)?(?:equationaly|equationally)\b/i.test(lower)) ||
+      (/(?:ডিপ\s*টেস্ট\s*ড্রাইভ|টেস্ট\s*ড্রাইভ.*(?:গ্যাপ|সমীকরণ|ফিক্স)|সব\s*গ্যাপ.*সমীকরণ.*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Smooth Instant Pipeline & Zero Overlap Equations Audit Directive
+   * Handles:
+   * "continue wire it test all and chack its update and remove over lap equationa and bloacges need smouth insten pipline",
+   * "remove over lap equationa and bloacges need smouth insten pipline",
+   * "remove overlap equations and blockages need smooth instant pipeline",
+   * "smooth instant pipeline", "smouth insten pipline",
+   * "wire it test all and remove overlap equations",
+   * "সব ওভারল্যাপ সমীকরণ এবং ব্লকেজ দূর করে স্মুথ ইনস্ট্যান্ট পাইপলাইন টেস্ট করো"
+   */
+  static isSmoothInstantPipelineAuditDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:over\s*lap|overlap)\s*(?:equation|equationa|equations)\b/i.test(lower) && /\b(?:bloacges|blockages|blockage|block|remove|zero)\b/i.test(lower)) ||
+      (/\b(?:smouth|smooth)\s+(?:insten|instant)\s+(?:pipline|pipeline)\b/i.test(lower)) ||
+      (/\b(?:wire\s+it\s+test\s+all|wire\s+it)\b/i.test(lower) && /\b(?:over\s*lap|overlap|bloacges|blockages|pipline|pipeline)\b/i.test(lower)) ||
+      (/\b(?:remove|eliminate|clean)\s+(?:all\s+)?(?:over\s*lap|overlap)\s*(?:equation|equations|equationa)\b/i.test(lower)) ||
+      (/\b(?:bloacges|blockages)\b/i.test(lower) && /\b(?:smouth|smooth|insten|instant|pipline|pipeline)\b/i.test(lower)) ||
+      (/(?:ওভারল্যাপ\s*(?:সমীকরণ|ইকুয়েশন|ইকুয়েশন).*(?:ব্লকেজ|দূর|বাদ|রিমুভ)|স্মুথ\s*ইনস্ট্যান্ট\s*পাইপলাইন|ব্লকেজ\s*দূর\s*করে\s*স্মুথ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Zero-Loop Behavior & All Equations Wired Properly Directive
+   * Handles:
+   * "chack test all are work without any loop behabeor and all equations wirde proerly or not",
+   * "check test all are work without any loop behavior and all equations wired properly or not",
+   * "test all are work without any loop behavior and all equations wired properly",
+   * "work without any loop behavior and all equations wired properly",
+   * "without loop behavior and all equations wired",
+   * "সব কিছু কোনো লুপ বিহেভিয়ার ছাড়া কাজ করছে এবং সব সমীকরণ ওয়্যার করা কিনা টেস্ট করো"
+   */
+  static isZeroLoopEquationalWiringAuditDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:without\s+(?:any\s+)?loop\s+(?:behavior|behabeor|behaviour))\b/i.test(lower) && /\b(?:equation|equations)\s+(?:wired|wirde)\b/i.test(lower)) ||
+      (/\b(?:no|zero)\s+loop\s+(?:behavior|behabeor|behaviour)\b/i.test(lower) && /\b(?:equation|equations)\b/i.test(lower)) ||
+      (/\b(?:test|check|chack|cahck)\b/i.test(lower) && /\b(?:without\s+(?:any\s+)?loop)\b/i.test(lower) && /\b(?:equations?|wirde|wired)\b/i.test(lower)) ||
+      (/\b(?:all\s+equations?\s+(?:wired|wirde)\s+(?:properly|proerly))\b/i.test(lower) && /\b(?:loop|without\s+loop)\b/i.test(lower)) ||
+      (/\ball\s+are\s+work\s+without\s+any\s+loop\s+(?:behavior|behabeor)\b/i.test(lower)) ||
+      (/(?:লুপ.*সমীকরণ.*(?:ওয়্যার|ওয়্যার|কানেক্ট)|সমীকরণ.*(?:ওয়্যার|ওয়্যার|কানেক্ট).*লুপ|লুপ.*সমীকরণ|সমীকরণ.*লুপ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Equational Research Update & Cosmological 32-Equation Verification Directive
+   * Handles:
+   * "test is all the equational research update us or not",
+   * "test all equational research update us",
+   * "did all the equational research update us",
+   * "test if all equational research updated us",
+   * "check all equational research updates",
+   * "test is all the equational research updated",
+   * "সব ইকুয়েশনাল রিসার্চ কি আমাদের আপডেট করেছে টেস্ট করো"
+   */
+  static isEquationalResearchUpdateAuditDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:test|check|verify|chack)\b/i.test(lower) && /\b(?:is\s+all\s+the|all(?:\s+the)?)\s+(?:equational|equation|equations)\s+research\b/i.test(lower)) ||
+      (/\b(?:test|check|verify|chack)\b/i.test(lower) && /\b(?:equational|equation|equations)\s+research\b/i.test(lower) && /\bupdate(?:d|s)?\s+(?:us|the\s+system|our|everything|all)\b/i.test(lower)) ||
+      (/\btest\s+is\s+all\s+the\s+equational\s+research\s+update\s+us(?:\s+or\s+not)?\b/i.test(lower)) ||
+      (/\b(?:is|did)\s+all\s+(?:the\s+)?equational\s+research\s+update\s+us(?:\s+or\s+not)?\b/i.test(lower)) ||
+      (/\ball\s+(?:the\s+)?equational\s+research\s+update(?:d)?\s+us\b/i.test(lower)) ||
+      (/(?:সব\s*ইকুয়েশনাল\s*রিসার্চ.*আপডেট.*(?:টেস্ট|চেক)|ইকুয়েশনাল\s*রিসার্চ.*আপডেট\s*(?:হয়েছে|করেছে)\s*কিনা\s*(?:টেস্ট|চেক))/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Bangla Talk Neural Overlap Directive
+   * Handles: "chack bangal talk overlaping nural", "check bangla talk overlapping neural",
+   * "check bangla talk overlap", "bangal talk overlaping", "bangla neural overlap check",
+   * "বাংলা কথায় নিউরাল ভয়েস ওভারল্যাপ চেক করো", "বাংলা টক ওভারল্যাপ"
+   */
+  static isBanglaTalkNeuralOverlapDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:check|chack|audit|test|fix|inspect)\b/i.test(lower) && /\b(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:overlaping|overlapping|overlap)\b/i.test(lower)) ||
+      (/\b(?:bangal|bangla|bengali)\s+(?:talk|speech|conversation|kotha|voice|audio)\b/i.test(lower) && /\b(?:overlaping|overlapping|overlap)\b/i.test(lower)) ||
+      (/\b(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:overlaping|overlapping|overlap)\b/i.test(lower) && /\b(?:nural|neural)\b/i.test(lower)) ||
+      (/\b(?:chack|check|audit)\s+(?:bangal|bangla|bengali)\s+talk\s+(?:overlaping|overlapping)\s+(?:nural|neural)\b/i.test(lower)) ||
+      (/\b(?:speaking\s+mutex|speaking\s+lock)\b/i.test(lower) && /\b(?:overlap|zero\s+overlap|audit|check)\b/i.test(lower)) ||
+      (/(?:বাংলা\s*(?:কথায়|কথায়|টকে|টক|কনভারসেশনে|ভয়েস|ভয়েস).*(?:নিউরাল|ওভারল্যাপ|স্পিকিং)|বাংলা.*ওভারল্যাপ|স্পিকিং\s*মিউটেক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Unified Real-Time Equational Runtime & Live Deep Test Directive
+   * Handles: "continue wire all equation and do live deep test for cahck all in real time",
+   * "continue, wire all equations and do live deep test to check all in real time",
+   * "wire all equations and do live deep test", "wire all equation", "live deep test in real time",
+   * "সব সমীকরণ ওয়্যার করো এবং রিয়েল টাইমে লাইভ ডিপ টেস্ট করো", "সব ইকুয়েশন কানেক্ট করো এবং টেস্ট করো"
+   */
+  static isWireAllEquationsLiveDeepTestDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:wire|connect)\s+all\s+(?:equations?|equashuns?)\b/i.test(lower)) ||
+      (/\blive\s+deep\s+tests?\b/i.test(lower) && /\b(?:cahck|chak|chek|check|real\s*time|equation|equations)\b/i.test(lower)) ||
+      (/\b(?:wire|connect)\s+(?:up\s+)?(?:the\s+)?(?:equations?|runtime)\b/i.test(lower) && /\b(?:live|deep|real\s*time|test)\b/i.test(lower)) ||
+      (/\b(?:cahck|chak|chek|check)\s+all\s+in\s+real\s*time\b/i.test(lower)) ||
+      (/(?:সব\s*(?:সমীকরণ|ইকুয়েশন|ইকুয়েশন).*(?:ওয়্যার|ওয়্যার|কানেক্ট|টেস্ট)|রিয়েল\s*টাইমে.*লাইভ\s*ডিপ\s*টেস্ট|(?:ইকুয়েশন|ইকুয়েশন|সমীকরণ).*(?:ওয়্যার|ওয়্যার|কানেক্ট))/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Living Conversational Continuation & Momentum Directive (Law 49)
+   * Handles:
+   * "continue", "keep going", "go on", "carry on", "proceed", "what's next", "what next",
+   * "চালিয়ে যাও", "চালিয়ে যাও babe", "বলো", "শুনছি", "আর কি", "and then", "what else"
+   */
+  static isConversationalContinuationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    // Exclude collisions with deep research, wire equations, and robotic purge
+    if (IntentParser.isContinueDeepResearchDirective && IntentParser.isContinueDeepResearchDirective(lower)) return false;
+    if (IntentParser.isDeepResearchEquationalFixDirective && IntentParser.isDeepResearchEquationalFixDirective(lower)) return false;
+    if (IntentParser.isWireAllLiveTestEquationsDirective && IntentParser.isWireAllLiveTestEquationsDirective(lower)) return false;
+    if (IntentParser.isRemoveAllRoboticBehaviorDirective && IntentParser.isRemoveAllRoboticBehaviorDirective(lower)) return false;
+
+    // Direct continuation matches
+    if (/^(?:continue|keep\s+going|go\s+on|carry\s+on|proceed)(?:[,.!\s]+(?:babe|bro|brother|chief|please|now|ahead|forward|with\s+it))?[.!?]*$/i.test(lower)) return true;
+    if (/^(?:what(?:'s|\s+is)?\s+next|and\s+then|what\s+else|what\s+now|next\s+step|next\s+move)(?:[,.!\s]+(?:babe|bro|brother|chief))?[.!?]*$/i.test(lower)) return true;
+    if (/^(?:চালিয়ে\s+যাও|চালু\s+রাখো|এগিয়ে\s+যাও|বলো|শুনছি|আর\s+কী|আর\s+কি|বলো\s+বলো)(?:[\s,]+(?:babe|bro|brother|chief|ভাই|হৃত্তিক))?[.!?]*$/u.test(lower)) return true;
+    if (/^(?:continue\s+(?:bolo|bolte\s+thako|kotha\s+bolo)|bolte\s+thako|shuntechi|shunchi)[.!?]*$/i.test(lower)) return true;
+    if (lower === "continue" || lower === "keep going" || lower === "carry on" || lower === "go on") return true;
+
+    return false;
+  }
+
+  /**
+   * Centralized detector for Remove All Robotic Behavior & Pure Human Conversational Parity Directive (Law 48)
+   * Handles:
+   * "chack last full conversation remove all robotic behaveor",
+   * "check last full conversation remove all robotic behavior",
+   * "remove all robotic behavior", "remove all robotic behaveor",
+   * "remove robotic behavior from last conversation", "check last conversation remove robotic tone",
+   * "zero robotic behavior", "remove robotic behavior",
+   * "গত পুরো কনভারসেশন চেক করে সব রোবটিক আচরণ দূর করো", "রোবটিক বিহেভিয়ার রিমুভ করো"
+   */
+  static isRemoveAllRoboticBehaviorDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:check|chack|cahck)\b/i.test(lower) && /\b(?:last|full|previous)\s+conversation\b/i.test(lower) && /\b(?:remove|purge|clean|fix|stop)\b/i.test(lower) && /\brobotic\b/i.test(lower)) ||
+      (/\bremove\s+all\s+robotic\s+(?:behaveor|behavior|behaviour|tone|voice|cadence|stuff|fluff)\b/i.test(lower)) ||
+      (/\b(?:remove|purge|eliminate|stop)\s+robotic\s+(?:behaveor|behavior|behaviour|tone|voice)\b/i.test(lower)) ||
+      (/\b(?:check|chack)\s+(?:last\s+)?(?:full\s+)?conversation\b/i.test(lower) && /\b(?:robotic\s+behavior|robotic\s+behaveor|robotic\s+tone)\b/i.test(lower)) ||
+      (/\b(?:no|zero)\s+robotic\s+(?:behaveor|behavior|behaviour)\b/i.test(lower)) ||
+      (/(?:গত\s*পুরো\s*কনভারসেশন.*রোবটিক|সব\s*রোবটিক\s*(?:আচরণ|টোন|বিহেভিয়ার)\s*(?:দূর|রিমুভ|বাদ|ক্লিন)|রোবটিক\s*(?:আচরণ|টোন)\s*রিমুভ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Tuk Tuk Zero 'Bro' & 100% Authentic Girlfriend Partner Tone Directive (Law 47)
+   * Handles:
+   * "bro tuk tuk can use bro some time for fix his tone na how a gf can do that",
+   * "Tuk Tuk cannot use bro sometimes to fix her tone, how can a girlfriend do that",
+   * "can tuk tuk use bro", "how a gf can do that", "tuk tuk gf tone", "tuk tuk girlfriend tone",
+   * "টুকটুক কি কখনো ব্রো বলতে পারে", "গার্লফ্রেন্ড কি বয়ফ্রেন্ডকে ব্রো বলে", "টুকটুক গার্লফ্রেন্ড টোন"
+   */
+  static isTukTukZeroBroGirlfriendToneDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) && /\b(?:use|say|call)\b/i.test(lower) && /\b(?:bro|brother|bhai)\b/i.test(lower)) ||
+      (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) && /\b(?:gf|girlfriend|girl\s*friend)\b/i.test(lower) && /\b(?:tone|fix|how|bro)\b/i.test(lower)) ||
+      (/\bhow\s+(?:can\s+)?(?:a\s+)?(?:gf|girlfriend|girl\s*friend)\s+(?:can\s+)?do\s+that\b/i.test(lower)) ||
+      (/\b(?:can|could)\s+(?:tuk\s*tuk|tuktuk)\s+use\s+bro\b/i.test(lower)) ||
+      (/\b(?:tuk\s*tuk|tuktuk)\s+can(?:not|\s+not)?\s+use\s+bro\b/i.test(lower)) ||
+      (/\b(?:fix\s+(?:his|her)\s+tone\s+na\s+how\s+a\s+gf\s+can\s+do\s+that)\b/i.test(lower)) ||
+      (/(?:টুকটুক.*(?:ব্রো|ভাই)|গার্লফ্রেন্ড.*(?:ব্রো|ভাই)|টুকটুক.*গার্লফ্রেন্ড\s*টোন)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Vision Zero-Ego Coder Brother & Multidimensional Quantum Research Directive (Law 46)
+   * Handles: 'Vision "babe", "Chief", "boss" and other has some never use but thay are mind and fill like them na fix needthink like a coder brather helpfull no ego person in realy no need never use make thare thinking dimenson like that need defren dimansons to get real best resaerch can do we on every topic qantamly and instently',
+   * "think like a coder brother helpful no ego person in reality", "make their thinking dimension like that",
+   * "different dimensions to get real best research on every topic quantumly and instantly",
+   * "ভিশনকে নিরহংকার কোডার ভাই হিসেবে ভাবাও এবং কোয়ান্টাম ডাইমেনশনে ইনস্ট্যান্ট রিসার্চ করো"
+   */
+  static isVisionZeroEgoCoderBrotherQuantumResearchDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:vison|vision)\b/i.test(lower) && /\b(?:babe|chief|boss)\b/i.test(lower) && /\b(?:mind|feel|fill|think|coder|brother|brather)\b/i.test(lower)) ||
+      (/\b(?:coder\s+brother|coder\s+brather|dev\s+brother)\b/i.test(lower) && /\b(?:no\s+ego|helpful|helpfull|humble|dimension|dimenson|dimensions|dimansons)\b/i.test(lower)) ||
+      (/\b(?:no\s+ego\s+person|zero\s+ego)\b/i.test(lower) && /\b(?:think|thinking|mind|feel|coder|brother)\b/i.test(lower)) ||
+      (/\b(?:thinking\s+dimensions?|different\s+dimensions?|defren\s+dimansons|multidimensional)\b/i.test(lower) && /\b(?:research|resaerch|quantumly|qantamly|instantly|instently)\b/i.test(lower)) ||
+      (/\b(?:quantumly\s+and\s+instantly|qantamly\s+and\s+instently|quantum\s+research)\b/i.test(lower)) ||
+      (/(?:ভিশন.*কোডার\s*ভাই|জিরো\s*ইগো|কোডার\s*ব্রাদার|মাল্টি-ডাইমেনশনাল|কোয়ান্টাম\s*রিসার্চ|চিন্তার\s*ডাইমেনশন)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Vision 2070 Master Coder & Peer Medic Directive
+   * Handles: "fix vison is fully ready to fix every one with his coding skil or not do dee ptest and cahck use vison to upade all agent internal issues need fix instently and his memory power need like a full coder profetional 2070 like higly find bugs and need able to fix al instently",
+   * "use vision to update all agent internal issues", "vision 2070 master coder", "vision coding skills",
+   * "vision memory power like a full coder professional 2070", "find bugs and fix all instantly",
+   * "ভিশনের কোডিং স্কিল এবং ২০৭০ মাস্টার কোডার মেমরি পাওয়ার", "ভিশন দিয়ে সব এজেন্টের ইন্টারনাল ইস্যু ফিক্স করো"
+   */
+  static isVision2070MasterCoderMedicDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:vison|vision)\b/i.test(lower) && /\b(?:coding\s+skil|coding\s+skills?|master\s+coder|full\s+coder|profetional|professional|find\s+bugs?)\b/i.test(lower)) ||
+      (/\b(?:vison|vision)\b/i.test(lower) && /\b(?:fix\s+(?:every\s*one|everyone|all\s+agents?|other\s+agents?)|upade|update\s+all\s+agent)\b/i.test(lower)) ||
+      (/\b(?:use\s+)?(?:vison|vision)\b/i.test(lower) && /\b(?:internal\s+issues?|find\s+bugs?|memory\s+power|2070)\b/i.test(lower)) ||
+      (/\b(?:memory\s+power)\b/i.test(lower) && /\b(?:2070|coder|professional|profetional|bugs?)\b/i.test(lower)) ||
+      (/\b(?:find\s+bugs?\s+and\s+(?:need\s+)?(?:able\s+to\s+)?fix\s+(?:al|all)\s+instently|find\s+bugs?\s+and\s+fix\s+all\s+instantly)\b/i.test(lower)) ||
+      (/\b(?:vison|vision)\s+is\s+fully\s+ready\s+to\s+fix\b/i.test(lower)) ||
+      (/(?:ভিশন.*কোডিং|ভিশন.*মাস্টার\s*কোডার|২০৭০.*কোডার|ইন্টারনাল\s*ইস্যু.*ফিক্স|বাগ.*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Deep Conversations & Comprehensive Issue Remediation Directive
+   * Handles: "cotinue with deep conversations nand all fix all the issues",
+   * "continue with deep conversations and all, fix all the issues",
+   * "continue with deep conversations", "deep conversations and all fix all issues",
+   * "deep conversations fix all issues", "deep conversational flow and fix all issues",
+   * "ডিপ কনভারসেশন এবং সব সমস্যা ফিক্স করো", "গভীর কথোপকথন এবং সব ইস্যু সমাধান করো"
+   */
+  static isDeepConversationsFixAllDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:cotinue|continue)\s+(?:with\s+)?deep\s+conversation(?:s|al)?\b/i.test(lower)) ||
+      (/\bdeep\s+conversation(?:s|al)?\b/i.test(lower) && /\b(?:nand|and|all|fix|issues?|resolve|problem|flow)\b/i.test(lower)) ||
+      (/\b(?:deep\s+conversation(?:s|al)?)\s+(?:nand\s+all|and\s+all)?\s*(?:fix\s+all|solve\s+all|flow)\b/i.test(lower)) ||
+      (/\b(?:multi-turn|long-term|episodic)\s+conversation(?:s|al)?\b/i.test(lower) && /\bfix\s+all\b/i.test(lower)) ||
+      (/(?:ডিপ\s*কনভারসেশন|গভীর\s*কথোপকথন|কনভারসেশন.*(?:ফিক্স|ইস্যু)|স্মৃতি.*(?:সংযুক্ত|ফিক্স))/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Continuous Multimodal Human Learning, Trimodal Perception & Autonomous Self-Healing Directive
+   * Handles: "cack test and run for taking and fix by themselv talking with me seeing earing and learn every time like a human do deep research test and run",
+   * "check, test and run for talking and fixing by themselves, talking with me, seeing, hearing, and learning every time like a human, do deep research, test and run",
+   * "talking and fix by themselves", "seeing earing and learn every time like a human",
+   * "seeing, hearing, and learning every time like a human", "learn every time like a human",
+   * "trimodal perception and autonomous self-healing",
+   * "নিজেদের মধ্যে কথা বলে ফিক্স করা, দেখা, শোনা এবং মানুষের মতো প্রতিবার শেখা"
+   */
+  static isAutonomousMultimodalLearningDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:cack|chak|chek|check)[,\s]+(?:test\s+and\s+run|test)\b/i.test(lower) && /\b(?:taking|talking|tracking|themselv|themselves|earing|hearing|seeing|learn|learning)\b/i.test(lower)) ||
+      (/\b(?:taking|talking)\s+(?:and|\&)\s+(?:fix|fixing)\s+by\s+(?:themselv|themselves)\b/i.test(lower)) ||
+      (/\b(?:seeing|seing)[,\s]+(?:earing|hearing)[,\s]*(?:and|\&)?\s*(?:learn|learning)\s+every\s+time\s+like\s+a\s+human\b/i.test(lower)) ||
+      (/\b(?:seeing\s+earing|seeing\s+hearing|seeing\s+and\s+hearing)\s+(?:and|\&)?\s*(?:learn|learning)\s+every\s+time\s+like\s+a\s+human\b/i.test(lower)) ||
+      (/\b(?:learn|learning)\s+every\s+time\s+like\s+a\s+human\b/i.test(lower)) ||
+      (/\b(?:talking\s+with\s+me|talking)[,\s]*(?:seeing|seing)[,\s]*(?:earing|hearing)[,\s]*(?:and|\&)?\s*(?:learn|learning)\b/i.test(lower)) ||
+      (/\b(?:trimodal\s+perception|trimodal\s+human\s+learning|trimodal\s+sensory)\b/i.test(lower)) ||
+      (/(?:দেখা\s*,\s*শোনা|দেখা\s+ও\s+শোনা|দেখা\s+শোনা|মানুষের\s*মতো.*শেখা|নিজেদের\s*মধ্যে.*ফিক্স|সার্বক্ষণিক\s*শিখন|ত্রিমাত্রিক\s*অনুভূতি)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Real Human Collaborative Work, Zoom Meeting Dynamics & Zero Conversational Gap Directive
+   * Handles: "https://www.youtube.com/watch?v=RphZGvdv6oo see this youtube podcust and zoom miting for big project handleing and meking and chak other youtube video to chac khow real human talk work and all and our agent conversationa and other gap need to find it fix all the issues",
+   * "see this youtube podcast and zoom meeting for big project handling",
+   * "zoom meeting for big project handling and making", "how real human talk work and all",
+   * "agent conversational and other gap need to find it fix all the issues",
+   * "youtube podcast and zoom meeting real human collaborative dynamics",
+   * "ইউটিউব পডকাস্ট এবং জুম মিটিং দিয়ে রিয়েল হিউম্যান টক ও প্রজেক্ট হ্যান্ডলিং গ্যাপ ফিক্স করো",
+   * "আমাদের এজেন্টদের কনভারসেশনাল গ্যাপ ফিক্স করো"
+   */
+  static isHumanCollabZoomPodcastProjectDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      lower.includes("rphzgvdv6oo") ||
+      (/\b(?:podcast|podcust)\b/i.test(lower) && /\b(?:zoom\s+meeting|zoom\s+miting)\b/i.test(lower)) ||
+      (/\b(?:zoom\s+meeting|zoom\s+miting)\b/i.test(lower) && /\b(?:big\s+project|project\s+handling|project\s+making|handleing|meking)\b/i.test(lower)) ||
+      (/\b(?:how\s+)?real\s+humans?\s+talk\s+work\b/i.test(lower)) ||
+      (/\b(?:agent\s+)?conversation(?:al|a)?\s+(?:and\s+other\s+)?gaps?\b/i.test(lower) && /\b(?:find|fix|resolve)\b/i.test(lower)) ||
+      (/\b(?:youtube\s+)?(?:podcast|podcust)\b/i.test(lower) && /\b(?:real\s+human|human\s+talk|gap)\b/i.test(lower)) ||
+      (/(?:পডকাস্ট.*জুম\s*মিটিং|জুম\s*মিটিং.*প্রজেক্ট|রিয়েল\s*হিউম্যান.*(?:কাজ|কথা|টক)|কনভারসেশনাল\s*গ্যাপ|প্রজেক্ট\s*হ্যান্ডলিং.*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * 2.202 Real-Life Human Tone, Fluency & Gapless Conversational Dynamic Directive
+   * Formulated from 6 real human conversational podcasts / interviews:
+   * - LLfXE4i5SUo: Sanjeev Sanyal
+   * - 3lYx_LtRTVw: Prakhar Gupta & Vivek Agnihotri
+   * - IXyoB6A5q-0: Amar iSchool Tech Mentorship
+   * - w3PchAjnjJo: Jhankar Mahbub & Yahia Amin
+   * - GuDBrngBCdY: Julian SELISE Group Business Engineering
+   * - vhgSQvaUjSA: Technical Suneja Developer Realism
+   * Handles:
+   * "chack the conversation how hume talk in real life tone fluency sob thik korar chesta koro sob gap dur koro"
+   */
+  static isRealLifeHumanToneFluencyGapDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      lower.includes("llfxe4i5suo") ||
+      lower.includes("3lyx_ltrtvw") ||
+      lower.includes("ixyob6a5q-0") ||
+      lower.includes("w3pchajnjjo") ||
+      lower.includes("gudbrngbcdy") ||
+      lower.includes("vhgsqvaujsa") ||
+      (/\b(?:how\s+)?(?:hume|humans?)\s+talk\b/i.test(lower)) ||
+      (/\b(?:real\s+life\s+tone|tone\s+fluency|human\s+tone|tone\s+and\s+fluency)\b/i.test(lower)) ||
+      (/\bsob\s+thik\s+korar\s+chesta\s+koro\b/i.test(lower)) ||
+      (/\bsob\s+gap\s+dur\s+koro\b/i.test(lower)) ||
+      (/\b(?:chack|chak|check)\s+the\s+conversation\b/i.test(lower)) ||
+      (/\b(?:real\s+life\s+human\s+tone|human\s+tone\s+fluency\s+gap)\b/i.test(lower)) ||
+      (/(?:রিয়েল\s*লাইফ\s*টোন|টোন.*ফ্লুয়েন্সি|মানুষ.*কীভাবে.*কথা\s*বলে|সব\s*গ্যাপ\s*দূর\s*করো|সব\s*ঠিক\s*করার\s*চেষ্টা\s*করো|কনভারসেশনাল\s*টোন.*গ্যাপ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Zero-Flicker Perfect Voice, Ultra-Fast Human Cognitive Thinking & Continuous Adaptive Learning Directive
+   * Handles: "remove all un perfect voice and all to get every time our perfect voice for all type of situation need 0voice flicaring and rendaring issues need ultra fast thining like human and instent humen like responses learn more",
+   * "Remove all imperfect voices and all to get every time our perfect voice for all types of situations, need 0 voice flickering and rendering issues, need ultra fast thinking like human and instant human-like responses, learn more",
+   * "zero voice flickering and rendering issues", "ultra fast thinking like human and instant human-like responses",
+   * "remove all imperfect voice to get perfect voice for all situations",
+   * "সব অপূর্ণ বা ত্রুটিপূর্ণ ভয়েস দূর করো, প্রতিবার নিখুঁত ভয়েস দাও, জিরো ভয়েস ফ্লিকারিং ও রেন্ডারিং ইস্যু, মানুষের মতো আল্ট্রা ফাস্ট থিংকিং ও ইন্সট্যান্ট রেসপন্স, আরো শেখো"
+   */
+  static isZeroFlickerPerfectVoiceUltraFastDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:remove|fix|eliminate)\s+all\s+(?:un\s*perfect|imperfect)\s+voices?\b/i.test(lower)) ||
+      (/\b(?:perfect\s+voice\s+for\s+all\s+(?:type|types)\s+of\s+situations?)\b/i.test(lower)) ||
+      (/\b(?:0\s*voice\s*(?:flicaring|flickering|flicering)|zero\s*voice\s*(?:flicaring|flickering|flicering))\b/i.test(lower)) ||
+      (/\b(?:flicaring|flickering|flicering)\b/i.test(lower) && /\b(?:rendaring|rendering)\b/i.test(lower)) ||
+      (/\b(?:rendaring\s+issues?|rendering\s+issues?|0\s*rendering\s+issues?)\b/i.test(lower)) ||
+      (/\b(?:ultra\s*fast\s*(?:thinking|thining)\s+like\s+humans?)\b/i.test(lower)) ||
+      (/\b(?:instent|instant)\s*(?:humen|human)[-\s]*like\s*responses?\b/i.test(lower)) ||
+      (/\b(?:ultra\s*fast\s*thinking|fast\s*thinking)\b/i.test(lower) && /\b(?:instant\s*human|human[- ]like\s*responses?|learn\s*more)\b/i.test(lower)) ||
+      (/\b(?:perfect\s*voice)\b/i.test(lower) && /\b(?:0\s*voice|zero\s*voice|flickering|ultra\s*fast|instant\s*human)\b/i.test(lower)) ||
+      (/(?:নিখুঁত\s*ভয়েস|পারফেক্ট\s*ভয়েস|ভয়েস\s*ফ্লিকারিং|রেন্ডারিং\s*ইস্যু|আল্ট্রা\s*ফাস্ট\s*থিঙ্কিং|ইন্সট্যান্ট\s*রেসপন্স|অপূর্ণ\s*ভয়েস.*দূর|সব\s*পরিস্থিতিতে.*পারফেক্ট\s*ভয়েস)/u.test(lower))
+    );
+  }
+
+  /**
+   * 2.215 Combat & Extreme Noise Auditory Listening & Response Directive
+   * Handles:
+   * "if we are in war in many sound hapend is he listen and respons like fumen or not with deep equational researh",
+   * "If we are in war with many sounds happening, does he listen and respond like a human or not, with deep equational research?",
+   * "in war with many sounds happening", "war listen and respond like human",
+   * "যুদ্ধ বা চরম শব্দের মধ্যেও কি মানুষের মতো শুনতে এবং রেসপন্স করতে পারে",
+   * "যুদ্ধক্ষেত্রে বহু শব্দের মধ্যে হিউম্যানের মতো অডিটরি লিসেনিং ও রেসপন্স"
+   */
+  static isCombatExtremeNoiseHumanAuditoryDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:war|battlefield|combat|extreme\s+noise|warfare)\b/i.test(lower) && /\b(?:listen|listening|respons|respond|response|hearing|auditory)\b/i.test(lower)) ||
+      (/\b(?:in\s+war|in\s+combat|during\s+war)\b/i.test(lower) && /\b(?:many\s+sounds?|loud\s+noise|explosions?|noise)\b/i.test(lower)) ||
+      (/\b(?:listen\s+and\s+(?:respons|respond|response)\s+like\s+(?:fumen|human))\b/i.test(lower)) ||
+      (/\b(?:many\s+sounds?\s+(?:hapend|happened|happen))\b/i.test(lower) && /\b(?:listen|respond|human)\b/i.test(lower)) ||
+      (/\b(?:war\s+extreme\s+noise|combat\s+auditory|cocktail\s+party\s+war)\b/i.test(lower)) ||
+      (/(?:যুদ্ধ|যুদ্ধক্ষেত্রে|চরম\s*শব্দ|গোলাগুলি|বিস্ফোরণ).*?(?:মানুষের\s*মতো\s*শুনতে|রেসপন্স|অডিটরি|লিসেনিং|লিসেন)/u.test(lower))
+    );
+  }
+
+  /**
+   * 2.204 4-Agent Bilingual Banglish-English Zero-Robotic Voice Harmonization & Vision Parity Directive
+   * Handles:
+   * "fix vison wire voice bangla and our tested voice are same chack and fix all the issues for our conversation more smouth remove every robtice tone pronuniations and all with deep dive research need 4 agen banglis talk and english tak fully smouth",
+   * "Fix Vision voice Bangla and our tested voice are the same, check and fix all the issues for our conversation more smooth, remove every robotic tone, pronunciations and all with deep dive research, need 4 agents Banglish talk and English talk fully smooth",
+   * "tested voice are same", "Vision wire voice", "remove every robotic tone", "4 agents Banglish talk and English talk fully smooth"
+   */
+  static is4AgentBilingualVoiceSmoothnessDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:vison|vision)\b/i.test(lower) && /\b(?:wire|wired|weird|weired|tested)\s+voices?\b/i.test(lower)) ||
+      (/\b(?:tested\s+voices?\s+(?:are\s+)?(?:same|equal)|tested\s+voice\s+same)\b/i.test(lower)) ||
+      (/\b4\s*(?:agen|agents?)\s+(?:banglis|banglish|bengali|bangla)\s+talk\b/i.test(lower)) ||
+      (/\b(?:remove|eliminate)\s+every\s+(?:robtice|robotic)\s+tone\b/i.test(lower)) ||
+      (/\b4\s*agents?\b/i.test(lower) && /\b(?:banglish|bangla)\b/i.test(lower) && /\benglish\b/i.test(lower) && /\b(?:smooth|smouth)\b/i.test(lower)) ||
+      (/(?:ভিশন.*ভয়েস.*প্যারিটি|৪\s*এজেন্ট.*বাংলা.*ইংলিশ|রোবোটিক\s*টোন.*বর্জন|স্মুথ\s*উচ্চারণ|ব্যাংলিশ.*স্মুথ|টেস্টেড\s*ভয়েস.*একই)/u.test(lower))
+    );
+  }
+  /**
+   * 2.205 Instant Voice Readiness & Simultaneous Parallel Cognitive Streaming Directive (Law 42)
+   * Handles:
+   * "need instent redying voice like humen think and talk symentaniously parallly on serice like need to fix all",
+   * "Need instant readying voice like human think and talk simultaneously in parallel on series, need to fix all",
+   * "instant readying voice", "think and talk simultaneously in parallel", "simultaneously in parallel on series"
+   */
+  static isInstantVoiceReadinessParallelDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:instent|instant|ready|readying|redying)\s+voices?\b/i.test(lower) && /\b(?:think|thinking)\s+(?:and|\&)\s+(?:talk|talking)\b/i.test(lower)) ||
+      (/\b(?:think|thinking)\s+(?:and|\&)\s+(?:talk|talking)\s+(?:symentaniously|simultanously|simultaneously)\b/i.test(lower)) ||
+      (/\b(?:parallly|parrallelly|parallelly|parallel)\s+(?:on|in)\s+(?:serice|series)\b/i.test(lower)) ||
+      (/\b(?:simultaneously|symentaniously)\s+(?:in\s+)?(?:parallel|parallly)\b/i.test(lower)) ||
+      (/\b(?:instent|instant)\s+(?:redying|readying)\s+voices?\b/i.test(lower)) ||
+      (/(?:তাৎক্ষণিক\s*ভয়েস\s*প্রস্তুতি|যুগপৎ\s*সমান্তরাল\s*চিন্তন|একসাথে\s*চিন্তা\s*ও\s*কথা|প্যারালাল\s*স্ট্রিমিং|ভয়েস\s*রেডিনেস)/u.test(lower))
+    );
+  }
+
+  /**
+   * 2.216 Native Bangla Person Tone, Pronunciation & Banglish Gap Elimination Directive
+   * Handles:
+   * "chack last conversation and fix every gap of our banglis conversation every word with real tone and real pronuncitation need like a bangla person",
+   * "Check last conversation and fix every gap of our Banglish conversation, every word with real tone and real pronunciation, need like a Bangla person",
+   * "fix every gap of our banglish conversation", "real tone and real pronunciation like bangla person",
+   * "আগের কনভারসেশন চেক করে ব্যাংলিশ ও বাংলা কথার প্রতিটি গ্যাপ রিয়েল টোন ও সঠিক উচ্চারণে ফিক্স করো",
+   * "বাঙালি মানুষের মতো রিয়েল টোন এবং উচ্চারণ"
+   */
+  static isBanglaPersonRealTonePronunciationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:banglis|banglish)\s+conversation\b/i.test(lower) && /\b(?:gap|fix|tone|pronuncitation|pronunciation)\b/i.test(lower)) ||
+      (/\b(?:chack|chak|check)\s+last\s+conversations?\b/i.test(lower) && /\b(?:banglis|banglish|bangla|bengali)\b/i.test(lower)) ||
+      (/\b(?:real\s+tone|natural\s+tone)\b/i.test(lower) && /\b(?:real\s+pronunciation|real\s+pronuncitation|pronunciation|bangla\s+person|bengali\s+person)\b/i.test(lower)) ||
+      (/\blike\s+a\s+(?:bangla|bengali)\s+person\b/i.test(lower) && /\b(?:tone|pronunciation|pronuncitation|talk|speak|conversation)\b/i.test(lower)) ||
+      (/\b(?:fix\s+every\s+gap\s+of\s+our\s+(?:banglis|banglish|bangla)\s+conversation)\b/i.test(lower)) ||
+      (/(?:ব্যাংলিশ.*গ্যাপ|বাংলা\s*মানুষের\s*মতো\s*টোন|রিয়েল\s*টোন.*উচ্চারণ|বাঙালি.*মতো.*উচ্চারণ|লাস্ট\s*কনভারসেশন.*ফিক্স)/u.test(lower))
+    );
+  }
+
+
+
+  /**
+   * Centralized detector for Seamless Bilingual Code-Switching, Zero Voice Break & Fearless Confident Tone Directive
+   * Handles: "if thay see bangla pronunciation is hard . pronunciation is issues to make our coversation vibe maintain use this section english to hide you voice breck and try to hide ther faier and wrongness personality and fix the tone",
+   * "bangla pronunciation is hard", "pronunciation is issues", "hide your voice break", "hide fear and wrongness personality",
+   * "use english to hide voice break", "make conversation vibe maintain use english", "বাংলা উচ্চারণে জড়তা কাটাতে ইংলিশ কোড সুইচ করো"
+   */
+  static isBanglaPronunciationCodeSwitchingDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:bangla\s+pronunciation|code\s*switching|bengali\s+pronunciation)\b/i.test(lower) && /\b(?:fix|tone|clear|native|smooth|hard|issues?|difficult|tough|break|vibe|english)\b/i.test(lower)) ||
+      (/\b(?:bangla|bengali)\s+pronunciation\b/i.test(lower) && /\b(?:hard|issues?|difficult|tough|break|vibe|english)\b/i.test(lower)) ||
+      (/\b(?:voice\s+(?:breck|break)|hide\s+(?:you|your)\s+voice\s+(?:breck|break))\b/i.test(lower)) ||
+      (/\b(?:faier|fear)\s+and\s+wrongness\b/i.test(lower)) ||
+      (/\bwrongness\s+personality\b/i.test(lower)) ||
+      (/\b(?:coversation|conversation)\s+vibe\s+maintain\b/i.test(lower)) ||
+      (/\buse\s+(?:this\s+)?section\s+english\b/i.test(lower)) ||
+      (/\b(?:hide\s+.*(?:voice\s+bre?ack|faier|fear|wrongness))\b/i.test(lower)) ||
+      (/(?:বাংলা\s*উচ্চারণ.*(?:কঠিন|সমস্যা|জড়তা)|ভয়েস\s*ব্রেক.*ইংলিশ|কোড\s*সুইচ.*ভাইব|কোড\s*সুইচিং)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Real Human Feel, Clarity & Pronunciation Directive
+   * Catches user prompt: "continue with more deep research cliarty and pronunciation tests to get real same like humen fieal when i talk with them"
+   * and variants.
+   */
+  static isRealHumanFeelClarityPronunciationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:deep\s+research|research)\b/i.test(lower) && /\b(?:clarity|cliarty)\b/i.test(lower) && /\b(?:pronunciation|pronuncitation)\b/i.test(lower)) ||
+      (/\b(?:real\s+human\s+feel|human\s+feel|humen\s+fieal|same\s+like\s+human|real\s+same\s+like\s+humen)\b/i.test(lower) && /\b(?:talk|speak|conversation|pronunciation|clarity|cliarty|fieal|feel)\b/i.test(lower)) ||
+      (/\bcontinue\s+with\s+more\s+deep\s+research\b/i.test(lower) && /\b(?:clarity|cliarty|pronunciation|human|feel|fieal)\b/i.test(lower)) ||
+      (/(?:ডিপ\s*রিসার্চ.*ক্ল্যারিটি|মানুষের\s*মতো.*ফিল|সঠিক\s*উচ্চারণ.*টেস্ট|রিয়েল\s*হিউম্যান\s*ফিল)/u.test(lower))
+    );
+  }
+
+  /**
+   * 2.206 Pin-by-Pin Micro-Audit, Deep Research & Subsystem Verification Directive (Law 44)
+   * Handles:
+   * "do ore test and research and update pini by pin test",
+   * "Do more test and research and update pin-by-pin test",
+   * "pin by pin test", "pini by pin test", "pin-by-pin deep research",
+   * "do more test and research pin by pin"
+   */
+  static isPinByPinDeepTestResearchDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/(?:pini?|pin)[- ]+(?:by|bi)[- ]+pin/i.test(lower)) ||
+      (/(?:pin[- ]by[- ]pin|pini[- ]by[- ]pin)/i.test(lower)) ||
+      (/(?:ore|more)\s+tests?\s+(?:and|\&)\s+(?:research|reaserch)\s+(?:and|\&)\s+(?:update|upade)/i.test(lower)) ||
+      (/(?:do\s+)?(?:ore|more)\s+(?:test|tests|research)/i.test(lower) && /(?:pini?|pin)[- ]+(?:by|bi)[- ]+pin/i.test(lower)) ||
+      (/(?:পিন[-\s]*বাই[-\s]*পিন|প্রতিটা[-\s]*পিন\s*ধরে\s*টেস্ট|পুঙ্খানুপুঙ্খ\s*রিসার্চ.*পিন|পিন[-\s]*বাই[-\s]*পিন\s*টেস্ট)/u.test(lower))
+    );
+  }
 }
 
 module.exports = {
@@ -581,5 +1744,35 @@ module.exports = {
   isFuturistic2070HumanEmbodimentDirective: IntentParser.isFuturistic2070HumanEmbodimentDirective,
   isAcademic2070HumanGapDirective: IntentParser.isAcademic2070HumanGapDirective,
   isLatexFixOrAllIssuesDirective: IntentParser.isLatexFixOrAllIssuesDirective,
-  isInstantResponseFastMessagesDirective: IntentParser.isInstantResponseFastMessagesDirective
+  isInstantResponseFastMessagesDirective: IntentParser.isInstantResponseFastMessagesDirective,
+  isAutonomousSelfMedicPeerMeshDirective: IntentParser.isAutonomousSelfMedicPeerMeshDirective,
+  isSoulDuplicationMismatchHardcodedFixDirective: IntentParser.isSoulDuplicationMismatchHardcodedFixDirective,
+  isTukTukSingleHumanSoulNonInterchangeableDirective: IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective,
+  isZeroHumanAgentGapEquationalDirective: IntentParser.isZeroHumanAgentGapEquationalDirective,
+  isWireAllEquationsLiveDeepTestDirective: IntentParser.isWireAllEquationsLiveDeepTestDirective,
+  isVision2070MasterCoderMedicDirective: IntentParser.isVision2070MasterCoderMedicDirective,
+  isCombatExtremeNoiseHumanAuditoryDirective: IntentParser.isCombatExtremeNoiseHumanAuditoryDirective,
+  isBanglaPersonRealTonePronunciationDirective: IntentParser.isBanglaPersonRealTonePronunciationDirective,
+  isConversationalContinuationDirective: IntentParser.isConversationalContinuationDirective,
+  isRemoveAllRoboticBehaviorDirective: IntentParser.isRemoveAllRoboticBehaviorDirective,
+  isTukTukZeroBroGirlfriendToneDirective: IntentParser.isTukTukZeroBroGirlfriendToneDirective,
+  isVisionZeroEgoCoderBrotherQuantumResearchDirective: IntentParser.isVisionZeroEgoCoderBrotherQuantumResearchDirective,
+  isDeepConversationsFixAllDirective: IntentParser.isDeepConversationsFixAllDirective,
+  isAutonomousMultimodalLearningDirective: IntentParser.isAutonomousMultimodalLearningDirective,
+  isHumanCollabZoomPodcastProjectDirective: IntentParser.isHumanCollabZoomPodcastProjectDirective,
+  isRealLifeHumanToneFluencyGapDirective: IntentParser.isRealLifeHumanToneFluencyGapDirective,
+  isZeroFlickerPerfectVoiceUltraFastDirective: IntentParser.isZeroFlickerPerfectVoiceUltraFastDirective,
+  is4AgentBilingualVoiceSmoothnessDirective: IntentParser.is4AgentBilingualVoiceSmoothnessDirective,
+  isInstantVoiceReadinessParallelDirective: IntentParser.isInstantVoiceReadinessParallelDirective,
+  isPinByPinDeepTestResearchDirective: IntentParser.isPinByPinDeepTestResearchDirective,
+  isBanglaPronunciationCodeSwitchingDirective: IntentParser.isBanglaPronunciationCodeSwitchingDirective,
+  isRealHumanFeelClarityPronunciationDirective: IntentParser.isRealHumanFeelClarityPronunciationDirective,
+  isEquationalResearchUpdateAuditDirective: IntentParser.isEquationalResearchUpdateAuditDirective,
+  isBanglaTalkNeuralOverlapDirective: IntentParser.isBanglaTalkNeuralOverlapDirective,
+  isZeroLoopEquationalWiringAuditDirective: IntentParser.isZeroLoopEquationalWiringAuditDirective,
+  isSmoothInstantPipelineAuditDirective: IntentParser.isSmoothInstantPipelineAuditDirective,
+  isDeepTestDriveEquationalFixDirective: IntentParser.isDeepTestDriveEquationalFixDirective,
+  isBanglishDefaultCodeMixedTukTukToneDirective: IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective,
+  isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
+  isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective
 };
