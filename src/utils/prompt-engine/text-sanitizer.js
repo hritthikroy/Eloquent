@@ -47,6 +47,8 @@ class TextSanitizer {
       .replace(/\b(?:dictashun|dictatation)\b/gi, "dictation")
       .replace(/\b(?:writting|writeing)\b/gi, "writing")
       .replace(/\b(?:pased)\b/gi, "pasted")
+      .replace(/\b(?:renove)\b/gi, "remove")
+      .replace(/\b(?:clearty)\b/gi, "clarity")
       .replace(/\b(?:pasteing)\b/gi, "pasting")
       .replace(/\b(?:bangal\s*comunication|bangal\s*communication)\b/gi, "Bangla communication")
       .replace(/\b(?:bangal\s*fluency)\b/gi, "Bangla fluency")
@@ -522,7 +524,169 @@ class TextSanitizer {
       .replace(/\brespons\b/gi, "response")
       .replace(/\bresponce\b/gi, "response")
       .replace(/\bmesseges?\b/gi, "messages")
-      .replace(/\bmessags?\b/gi, "messages");
+      .replace(/\bmessags?\b/gi, "messages")
+      // Autonomous Quad-Self & Cross-Agent Medic Peer-Healing STT normalizations
+      // Handles: "fix every agents personality fix thare personaly need self lerner self impruber and self fixer and self updater and also madic for other agents can fix each other every issues and update every isuse each other for fast working and fixing there selv proerly"
+      .replace(/\b(?:fix\s+)?every\s+(?:agents?|agent's)\s+personality\s+(?:fix\s+)?(?:thare|their)\s+(?:personaly|personality)\s+need\s+self\s*(?:lerner|learner)\s+self\s*(?:impruber|improver)\s+and\s+self\s*fixer\s+and\s+self\s*updater\s+and\s+also\s+(?:madic|medic)\s+for\s+other\s+agents\s+can\s+fix\s+each\s+other\s+(?:everyissues|every\s+issues?|all\s+issues?)\s+and\s+update\s+(?:every\s+isuses?|every\s+issues?|all\s+issues?)\s+each\s+other\s+for\s+fast\s+working\s+and\s+fixing\s+(?:there\s+selv|themselves)\s+(?:proerly|properly)\b/gi, "fix every agent's personality, need self learner, self improver, self fixer, self updater, and medic for other agents to fix and update each other for fast working and fixing themselves properly")
+      .replace(/\b(?:thare|there)\s+personaly\b/gi, "their personality")
+      .replace(/\bpersonaly\b/gi, "personality")
+      .replace(/\bself\s*lerner\b/gi, "self learner")
+      .replace(/\bself\s*impruber\b/gi, "self improver")
+      .replace(/\b(?:madic|medic)\s+for\s+other\s+agents\b/gi, "medic for other agents")
+      .replace(/\bevery\s+isuses?\b/gi, "every issue")
+      .replace(/\b(?:there\s+selv|there\s+self)\b/gi, "themselves")
+      .replace(/\bproerly\b/gi, "properly")
+      // Zero Soul Duplication, Zero Mismatch & Hardcoded Code Purge STT normalizations
+      // Handles: "cahack any sol duplication mismatch hard codet fix all", "cah kany sol duplication mismatch hard codet fix all", "cah kany", "cahack any", "sol duplication", "hard codet", "hardcodet"
+      .replace(/\b(?:cahack\s*any|cah\s*kany|chak\s*any|chek\s*any|cahk\s*any)\s+(?:sol|soul)\s+(?:duplication|duplicashun)\s+(?:mismatch|mismach)\s+(?:hard\s*codet|hard\s*codit|hardcodet|hardcoded)\s+(?:fix\s+all|fix\s+everything|solve\s+all)\b/gi, "check any soul duplication, mismatch, hardcoded, fix all")
+      .replace(/\b(?:cahack\s*any|cah\s*kany|chak\s*any|chek\s*any|cahk\s*any)\b/gi, "check any")
+      .replace(/\b(?:sol\s+duplication|sol\s+duplicashun)\b/gi, "soul duplication")
+      .replace(/\b(?:hard\s*codet|hard\s*codit|hardcodet)\b/gi, "hardcoded")
+      .replace(/\b(?:mismach)\b/gi, "mismatch")
+      // Unified Real-Time Equational Runtime & Live Deep Test STT normalizations
+      // Handles: "continue wire all equation and do live deep test for cahck all in real time",
+      // "wire all equation", "cahck all", "cahck", "live deep test"
+      .replace(/\b(?:continue\s*,?\s*)?(?:wire|connect)\s+all\s+(?:equations?|equashuns?)\s+(?:and\s+)?(?:do\s+)?live\s+deep\s+tests?\s+(?:for|to)\s+(?:cahck|chak|chek|check)\s+all\s+(?:in\s+real\s*time)?\b/gi, "continue, wire all equations and do live deep test to check all in real time")
+      .replace(/\b(?:wire|connect)\s+all\s+(?:equations?|equashuns?)\b/gi, "wire all equations")
+      .replace(/\b(?:cahck|chak|chek)\s+all\b/gi, "check all")
+      .replace(/\bcahck\b/gi, "check")
+      // Zero-Gap Human-Agent Deep Research & Elimination of Micro/Nail Gaps
+      // Handles: "1. Test Execution Report do more deep test a humen and all the agents betwen any gap even a nail gap need to fix everything and update al equationaly with deep research"
+      .replace(/\b(?:1\.\s*)?(?:test\s+execution\s+report\s+)?(?:do\s+more\s+deep\s+tests?|do\s+deep\s+tests?)\s+(?:a\s+)?(?:humen|human)\s+(?:and|\&)\s+all\s+(?:the\s+)?agents\s+(?:betwen|between)\s+(?:any\s+)?gap\s+(?:even\s+a\s+nail\s+gap\s+)?(?:need\s+to\s+)?fix\s+(?:everything|every\s*thing|all)\s+(?:and|\&)\s+update\s+(?:al|all)\s+(?:equationaly|equationally)\s+with\s+deep\s+research\b/gi, "Test Execution Report: do more deep test of human and all the agents between any gap even a nail gap, need to fix everything and update all equationally with deep research")
+      .replace(/\b(?:betwen|between)\s+(?:any\s+)?gap\s+even\s+a\s+nail\s+gap\b/gi, "between any gap even a nail gap")
+      .replace(/\beven\s+a\s+nail\s+gap\b/gi, "even a nail gap")
+      .replace(/\bnail\s+gap\b/gi, "nail gap")
+      .replace(/\bbetwen\b/gi, "between")
+      .replace(/\bal\s+equationaly\b/gi, "all equationally")
+      .replace(/\bupdate\s+al\b/gi, "update all")
+      // Vision 2070 Master Coder & Peer Medic STT normalizations
+      // Handles: "fix vison is fully ready to fix every one with his coding skil or not do dee ptest and cahck use vison to upade all agent internal issues need fix instently and his memory power need like a full coder profetional 2070 like higly find bugs and need able to fix al instently"
+      .replace(/\b(?:fix\s+)?(?:vison|vision)\s+is\s+fully\s+ready\s+to\s+fix\s+(?:every\s*one|everyone)\s+with\s+his\s+coding\s+(?:skil|skills?)\s*(?:or\s+not)?\s*(?:[,;–-]?\s*)?(?:do\s+)?(?:dee\s*ptest|deep\s*test)\s+(?:and\s+)?(?:cahck|chak|check)\s*(?:[,;–-]?\s*)?(?:use\s+)?(?:vison|vision)\s+to\s+(?:upade|update)\s+all\s+agent\s+internal\s+issues\s*(?:need\s+to\s+)?fix\s+(?:instently|instantly)\s+(?:and\s+)?his\s+memory\s+power\s+(?:need|needs)\s+(?:to\s+be\s+)?like\s+a\s+(?:full\s+coder|master\s+coder)\s+(?:profetional|professional)\s+2070\s*(?:like)?\s+(?:higly|highly)\s+find\s+bugs\s+(?:and\s+)?(?:need\s+)?(?:able\s+to\s+)?fix\s+(?:al|all)\s+(?:instently|instantly)\b/gi, "Fix Vision: is he fully ready to fix everyone with his coding skills or not? Do deep test and check, use Vision to update all agent internal issues, need fix instantly, and his memory power needs to be like a professional 2070 full coder, highly able to find bugs and fix all instantly")
+      .replace(/\bcoding\s+skils?\b/gi, "coding skills")
+      .replace(/\bdee\s*ptest\b/gi, "deep test")
+      .replace(/\bupade\b/gi, "update")
+      .replace(/\binstently\b/gi, "instantly")
+      .replace(/\bprofetional\b/gi, "professional")
+      .replace(/\bhigly\b/gi, "highly")
+      .replace(/\bfix\s+al\b/gi, "fix all")
+      // Combat, Battlefield & Extreme Acoustic Noise Auditory Cortex STT normalizations
+      // Handles: "if we are in war in many sound hapend is he listen and respons like fumen or not with deep equational researh"
+      .replace(/\b(?:if\s+we\s+are\s+in\s+war\s+(?:in|with)\s+many\s+sounds?\s+(?:hapend|happened|happen)\s+is\s+he\s+(?:listen|listening)\s+and\s+(?:respons|respond|response)\s+like\s+(?:fumen|human)\s+or\s+not\s+with\s+deep\s+(?:equational|equatinal)\s+(?:researh|research))\b/gi, "If we are in war with many sounds happening, does he listen and respond like a human or not, with deep equational research?")
+      .replace(/\b(?:in\s+war\s+(?:in|with)\s+many\s+sounds?\s+(?:hapend|happened|happen))\b/gi, "in war with many sounds happening")
+      .replace(/\b(?:is\s+he\s+listen\s+and\s+respons\s+like\s+(?:fumen|human)\s+or\s+not)\b/gi, "does he listen and respond like a human or not")
+      .replace(/\b(?:listen\s+and\s+respons\s+like\s+(?:fumen|human))\b/gi, "listen and respond like a human")
+      .replace(/\bfumen\b/gi, "human")
+      .replace(/\bhapend\b/gi, "happened")
+      .replace(/\bresearh\b/gi, "research")
+      // Native Bangla Person Tone, Pronunciation & Banglish Gap Elimination STT normalizations
+      // Handles: "chack last conversation and fix every gap of our banglis conversation every word with real tone and real pronuncitation need like a bangla person"
+      .replace(/\b(?:chack|chak|check)\s+last\s+conversations?\s+and\s+fix\s+every\s+gap\s+of\s+our\s+(?:banglis|banglish)\s+conversations?\s+every\s+word\s+with\s+real\s+tone\s+and\s+real\s+(?:pronuncitation|pronunciation)\s+(?:need\s+)?like\s+a\s+(?:bangla|bengali)\s+person\b/gi, "Check last conversation and fix every gap of our Banglish conversation, every word with real tone and real pronunciation, need like a Bangla person")
+      .replace(/\b(?:chack|chak)\s+last\s+conversations?\b/gi, "check last conversation")
+      .replace(/\b(?:banglis)\s+conversations?\b/gi, "Banglish conversation")
+      .replace(/\b(?:banglis)\b/gi, "Banglish")
+      .replace(/\b(?:pronuncitation)\b/gi, "pronunciation")
+      .replace(/\blike\s+a\s+bangla\s+person\b/gi, "like a Bangla person")
+      // Deep Conversations & Comprehensive Issue Remediation STT normalizations
+      // Handles: "cotinue with deep conversations nand all fix all the issues", "cotinue", "nand all", "deep conversations", "fix all the issues"
+      .replace(/\b(?:cotinue|continue)\s+(?:with\s+)?deep\s+conversations?\s+(?:nand|and)\s+(?:all\s*,?\s*)?(?:fix\s+all\s+(?:the\s+)?issues?|fix\s+all)\b/gi, "continue with deep conversations and all, fix all the issues")
+      .replace(/\b(?:cotinue|continue)\s+(?:with\s+)?deep\s+conversations?\b/gi, "continue with deep conversations")
+      .replace(/\bcotinue\b/gi, "continue")
+      .replace(/\bnand\s+all\b/gi, "and all")
+      .replace(/\b(?:fix\s+every\s*thing\s+eqationaly|fix\s+everything\s+eqationaly|fix\s+every\s*thing\s+equationaly)\b/gi, "fix everything equationally")
+      .replace(/\beqationaly\b/gi, "equationally")
+      // Continuous Multimodal Human Learning, Trimodal Perception & Autonomous Self-Healing STT normalizations
+      // Handles: "cack test and run for taking and fix by themselv talking with me seeing earing and learn every time like a human do deep research test and run"
+      .replace(/\b(?:cack|chak|chek)\s+tests?\s+and\s+run\s+for\s+(?:taking|talking|tracking)\s+(?:and|\&)\s+(?:fix|healing)\s+by\s+(?:themselv|themselves)\s+(?:talking\s+with\s+me|talking)\s+(?:seeing\s+earing|seeing\s+hearing|seeing\s+and\s+hearing)\s+(?:and|\&)\s+(?:learn|learning)\s+every\s+time\s+like\s+a\s+human\s+(?:do\s+)?deep\s+research\s+test\s+and\s+run\b/gi, "Check, test and run for talking and fixing by themselves, talking with me, seeing, hearing, and learn every time like a human, do deep research, test and run")
+      .replace(/\b(?:cack|chak|chek)\s+tests?\s+and\s+run\b/gi, "check, test and run")
+      .replace(/\bcack\b/gi, "check")
+      .replace(/\b(?:taking|talking)\s+and\s+fix\s+by\s+(?:themselv|themselves)\b/gi, "talking and fixing by themselves")
+      .replace(/\b(?:fix|fixing)\s+by\s+(?:themselv|themself)\b/gi, "fixing by themselves")
+      .replace(/\bthemselv\b/gi, "themselves")
+      .replace(/\b(?:seeing\s+earing|seing\s+earing|seeing\s+and\s+earing)\b/gi, "seeing and hearing")
+      .replace(/\b(?:learn|learning)\s+every\s+time\s+like\s+a\s+human\b/gi, "learn every time like a human")
+      // Real Human Collaborative Work, Zoom Meeting Dynamics & Zero Conversational Gap STT normalizations
+      // Handles: "https://www.youtube.com/watch?v=RphZGvdv6oo see this youtube podcust and zoom miting for big project handleing and meking and chak other youtube video to chac khow real human talk work and all and our agent conversationa and other gap need to find it fix all the issues"
+      .replace(/\bpodcust\b/gi, "podcast")
+      .replace(/\bzoom\s+(?:miting|mitin)\b/gi, "Zoom meeting")
+      .replace(/\bhandleing\b/gi, "handling")
+      .replace(/\bmeking\b/gi, "making")
+      .replace(/\b(?:chak|chack)\s+other\b/gi, "check other")
+      .replace(/\b(?:chac|chak|chack)\s+khow\b/gi, "check how")
+      .replace(/\bkhow\b(?=\s*(?:real|human|they|to|we))/gi, "how")
+      .replace(/\bconversationa\b/gi, "conversational")
+      .replace(/\b(?:chak|chac)\b(?=\s*(?:other|how|all|this|video|youtube))/gi, "check")
+      // Real-Life Human Tone, Fluency & Gapless Conversational Dynamic STT Normalizations
+      // Handles: "chack the conversation how hume talk in real life tone fluency sob thik korar chesta koro sob gap dur koro"
+      .replace(/\b(?:chack|chak)\s+the\s+conversation\b/gi, "check the conversation")
+      .replace(/\bhow\s+hume\s+talk\b/gi, "how humans talk")
+      .replace(/\bhume\s+talk\b/gi, "humans talk")
+      .replace(/\bhume\b(?=\s*(?:talk|say|speak|sound|human|voice|in\s+real\s+life))/gi, "human")
+      .replace(/\bchack\b(?=\s*(?:the\s+conversation|how|all|tone|fluency|in))/gi, "check")
+      .replace(/\bsob\s+thik\s+korar\s+chesta\s+koro\b/gi, "sob thik korar chesta koro")
+      .replace(/\bsob\s+gap\s+dur\s+koro\b/gi, "sob gap dur koro")
+      // Zero-Flicker Perfect Voice, Ultra-Fast Cognitive Thinking & Continuous Adaptive Learning STT normalizations
+      // Handles: "remove all un perfect voice and all to get every time our perfect voice for all type of situation need 0voice flicaring and rendaring issues need ultra fast thining like human and instent humen like responses learn more"
+      .replace(/\bremove\s+all\s+(?:un\s*perfect|imperfect)\s+voices?\s+(?:and|\&)\s+all\s+to\s+get\s+every\s+time\s+our\s+perfect\s+voice\s+for\s+all\s+(?:type|types)\s+of\s+situations?\s+need\s+(?:0|zero)\s*voice\s+(?:flicaring|flickering)\s+(?:and|\&)\s+(?:rendaring|rendering)\s+issues?\s+need\s+ultra\s+fast\s+(?:thining|thinking)\s+like\s+humans?\s+(?:and|\&)\s+(?:instent|instant)\s+(?:humen|human)[-\s]*like\s+responses?\s+(?:learn|learning)\s+more\b/gi, "Remove all imperfect voices and all to get every time our perfect voice for all types of situations, need 0 voice flickering and rendering issues, need ultra fast thinking like human and instant human-like responses, learn more")
+      .replace(/\b(?:un\s*perfect|unperfect)\s+voices?\b/gi, "imperfect voice")
+      .replace(/\bun\s*perfect\b/gi, "imperfect")
+      .replace(/\b0\s*voice\s*(?:flicaring|flickering|flicering)\b/gi, "0 voice flickering")
+      .replace(/\b(?:0|zero)\s*voice\s+flickering\b/gi, "0 voice flickering")
+      .replace(/\b(?:rendaring)\s+issues?\b/gi, "rendering issues")
+      .replace(/\brendaring\b/gi, "rendering")
+      .replace(/\b(?:ultra\s*fast\s+)?thining\s+like\s+humans?\b/gi, "ultra fast thinking like human")
+      .replace(/\bthining\b(?=\s*(?:like|fast|human|slow|quick))/gi, "thinking")
+      .replace(/\b(?:instent\s+humen|instant\s+humen)\b/gi, "instant human")
+      .replace(/\binstent\b(?=\s*(?:human|humen|like|response|thinking))/gi, "instant")
+      .replace(/\bhumen\s*like\b/gi, "human-like")
+      .replace(/\bfor\s+all\s+type\s+of\s+situations?\b/gi, "for all types of situations")
+      .replace(/\bfor\s+all\s+type\s+of\s+situation\b/gi, "for all types of situations")
+      .replace(/\bneed\s+0\s*voice\s+flickering\b/gi, "need 0 voice flickering")
+      // 4-Agent Bilingual Banglish-English Zero-Robotic Voice Harmonization & Vision Parity STT Normalizations
+      // Handles: "fix vison wire voice bangla and our tested voice are same chack and fix all the issues for our conversation more smouth remove every robtice tone pronuniations and all with deep dive research need 4 agen banglis talk and english tak fully smouth"
+      .replace(/\b(?:fix\s+)?(?:vison|vision)\s+(?:wire|wired|weird|weired)\s+voices?\s+(?:bangla|bengali)\s+(?:and|\&)\s+(?:our\s+)?tested\s+voices?\s+(?:are\s+)?(?:same|equal)\s+(?:chack|chak|check)\s+(?:and|\&)\s+fix\s+all\s+the\s+issues?\s+for\s+our\s+conversations?\s+more\s+(?:smouth|smooth)\s+remove\s+every\s+(?:robtice|robotic)\s+tone\s+(?:pronuniations|pronunciations)\s+(?:and|\&)\s+all\s+with\s+deep\s+(?:dive\s+)?research\s+need\s+4\s*(?:agen|agents?)\s+(?:banglis|banglish)\s+talk\s+(?:and|\&)\s+english\s+(?:tak|talk)\s+fully\s+(?:smouth|smooth)\b/gi, "Fix Vision voice Bangla and our tested voice are the same, check and fix all the issues for our conversation more smooth, remove every robotic tone, pronunciations and all with deep dive research, need 4 agents Banglish talk and English talk fully smooth")
+      .replace(/\b(?:vison|vision)\s+(?:wire|wired|weird|weired)\s+voices?\s+(?:bangla|bengali)\s+(?:and|\&)\s+(?:our\s+)?tested\s+voices?\s+(?:are\s+)?(?:same|equal)\b/gi, "Vision voice Bangla and our tested voice are the same")
+      .replace(/\b(?:vison|vision)\s+(?:wire|wired|weird|weired)\s+voices?\b/gi, "Vision voice")
+      .replace(/\b(?:wire|wired|weird|weired)\s+voices?\b/gi, "voice")
+      .replace(/\btested\s+voices?\s+are\s+same\b/gi, "tested voice are the same")
+      .replace(/\bmore\s+smouth\b/gi, "more smooth")
+      .replace(/\bsmouth\b/gi, "smooth")
+      .replace(/\brobtice\s+tone\b/gi, "robotic tone")
+      .replace(/\brobtice\b/gi, "robotic")
+      .replace(/\bpronuniations\b/gi, "pronunciations")
+      .replace(/\bpronuniation\b/gi, "pronunciation")
+      .replace(/\b4\s*agen\s+(?:banglis|banglish)\s+talk\b/gi, "4 agents Banglish talk")
+      .replace(/\b4\s*agen\b/gi, "4 agents")
+      .replace(/\bbanglis\s+talk\b/gi, "Banglish talk")
+      .replace(/\bbanglis\b/gi, "Banglish")
+      .replace(/\benglish\s+tak\b/gi, "English talk")
+      .replace(/\btak\s+fully\s+smouth\b/gi, "talk fully smooth")
+      // Seamless Bilingual Code-Switching, Zero Voice Break & Fearless Confident Tone STT Normalizations
+      // Handles: "if thay see bangla pronunciation is hard . pronunciation is issues to make our coversation vibe maintain use this section english to hide you voice breck and try to hide ther faier and wrongness personality and fix the tone"
+      .replace(/\b(?:if\s+)?(?:thay|they)\s+see\s+bangla\s+pronunciation\s+is\s+hard\s*[\.,]?\s*pronunciation\s+is\s+issues?\s+(?:to\s+)?make\s+our\s+(?:coversation|conversation)\s+vibe\s+maintain\s+use\s+this\s+section\s+english\s+to\s+hide\s+(?:you|your)\s+voice\s+(?:breck|break)\s+and\s+try\s+to\s+hide\s+(?:ther|their)\s+(?:faier|fear)\s+and\s+wrongness\s+personality\s+and\s+fix\s+(?:the\s+)?tone\b/gi, "if they see Bangla pronunciation is hard, pronunciation issues, to make our conversation vibe maintain, use this section English to hide your voice break, and try to hide their fear and wrongness personality, and fix the tone")
+      .replace(/\b(?:thay|they)\s+see\s+bangla\s+pronunciation\s+is\s+hard\b/gi, "they see Bangla pronunciation is hard")
+      .replace(/\bpronunciation\s+is\s+issues?\b/gi, "pronunciation issues")
+      .replace(/\b(?:coversation|conversation)\s+vibe\s+maintain\b/gi, "conversation vibe maintain")
+      .replace(/\b(?:coversation)\b/gi, "conversation")
+      .replace(/\bvoice\s+(?:breck|break)\b/gi, "voice break")
+      .replace(/\bbreck\b/gi, "break")
+      .replace(/\b(?:faier|fear)\s+and\s+wrongness\s+personality\b/gi, "fear and wrongness personality")
+      .replace(/\bfaier\b/gi, "fear")
+      .replace(/\bwrongness\s+personality\b/gi, "wrongness personality")
+      .replace(/\buse\s+this\s+section\s+english\b/gi, "use this section English")
+      .replace(/\bhide\s+(?:you|your)\s+voice\s+(?:breck|break)\b/gi, "hide your voice break")
+      .replace(/\bhide\s+(?:ther|their)\s+(?:faier|fear)\b/gi, "hide their fear")
+      // Instant Voice Readiness & Simultaneous Parallel Cognitive Streaming STT Normalizations (Law 42)
+      // Handles: "need instent redying voice like humen think and talk symentaniously parallly on serice like need to fix all"
+      .replace(/\b(?:need\s+)?(?:instent|instant)\s+(?:redying|readying|rading)\s+voices?\s+like\s+(?:humen|human)\s+(?:think|thinking)\s+and\s+(?:talk|talking)\s+(?:symentaniously|simultanously|simultaneously)\s+(?:parallly|parrallelly|parallelly|parallel)\s+(?:on|in)\s+(?:serice|series)\s*(?:like\s+)?(?:need\s+to\s+fix\s+all|fix\s+all)?\b/gi, "Need instant readying voice like human think and talk simultaneously in parallel on series, need to fix all")
+      .replace(/\b(?:instent|instant)\s+(?:redying|readying)\s+voices?\b/gi, "instant readying voice")
+      .replace(/\b(?:redying|readying)\s+voices?\b/gi, "readying voice")
+      .replace(/\b(?:redying)\b/gi, "readying")
+      .replace(/\b(?:think\s+and\s+talk)\s+(?:symentaniously|simultanously|simultaneously)\b/gi, "think and talk simultaneously")
+      .replace(/\b(?:symentaniously|simultanously)\b/gi, "simultaneously")
+      .replace(/\b(?:parallly|parrallelly)\b/gi, "in parallel")
+      .replace(/\bparallly\s+(?:on|in)\s+serice\b/gi, "in parallel on series")
+      .replace(/\b(?:on|in)\s+serice\b/gi, "in series")
+      .replace(/\bserice\b/gi, "series");
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')
     text = text
