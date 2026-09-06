@@ -248,6 +248,67 @@ class BanglaVoiceCortex {
     this.isBanglishOnlyMode = Boolean(enabled);
   }
 
+  restoreCleanEnglishLoanwords(text = "") {
+    if (!text || typeof text !== "string") return text;
+    let out = text;
+    const loanwordRestorations = [
+      [/\boyeb\s*risarch\b/gi, "web research"],
+      [/\brisarch\b/gi, "research"],
+      [/\bintelijens\b/gi, "intelligence"],
+      [/\bojanalaisiser\b/gi, "analysis-er"],
+      [/\banalaisis\b/gi, "analysis"],
+      [/\bekses\b/gi, "access"],
+      [/\bdeta\b/gi, "data"],
+      [/\blojik\b/gi, "logic"],
+      [/\bsistem\b/gi, "system"],
+      [/\barkitekochar\b/gi, "architecture"],
+      [/\barkitechar\b/gi, "architecture"],
+      [/\bphul\b/gi, "full"],
+      [/\bpaipolain\b/gi, "pipeline"],
+      [/\bpaipolainos\b/gi, "pipelines"],
+      [/\bstriming\b/gi, "streaming"],
+      [/\bbyakograund\b/gi, "background"],
+      [/\bdemonos\b/gi, "daemons"],
+      [/\bonolain\b/gi, "online"],
+      [/\bopotaimo\b/gi, "uptime"],
+      [/\btarminal\b/gi, "terminal"],
+      [/\btarminaler\b/gi, "terminal-er"],
+      [/\bkod\b/gi, "code"],
+      [/\bsoliushon\b/gi, "solution"],
+      [/\bpior\b/gi, "pure"],
+      [/\bojanalitikyal\b/gi, "analytical"],
+      [/\bdijain\b/gi, "design"],
+      [/\btelemetri\b/gi, "telemetry"],
+      [/\bmetrik\b/gi, "metrics"],
+      [/\bmetriks\b/gi, "metrics"],
+      [/\bpariti\b/gi, "parity"],
+      [/\bdimenshon\b/gi, "dimension"],
+      [/\bshipt\b/gi, "shift"],
+      [/\bsentinel\b/gi, "sentinel"],
+      [/\briporting\b/gi, "reporting"],
+      [/\blatensi\b/gi, "latency"],
+      [/\boverhed\b/gi, "overhead"],
+      [/\belokeshon\b/gi, "allocation"],
+      [/\bmonitoring\b/gi, "monitoring"],
+      [/\bkonfigureshon\b/gi, "configuration"],
+      [/\bperphormens\b/gi, "performance"],
+      [/\bphidbyak\b/gi, "feedback"],
+      [/\bkomplexiti\b/gi, "complexity"],
+      [/\bkonphidermeshon\b/gi, "confirmation"],
+      [/\bkonphidense\b/gi, "confidence"],
+      [/\btenshon\b/gi, "tension"],
+      [/\bproseting\b/gi, "processing"],
+      [/\bprosetor\b/gi, "processor"],
+      [/\bchyanel\b/gi, "channel"],
+      [/\bchyanelos\b/gi, "channels"]
+    ];
+
+    for (const [regex, replacement] of loanwordRestorations) {
+      out = out.replace(regex, replacement);
+    }
+    return out;
+  }
+
   enforceBanglishModernVibe(text = "") {
     if (!text || typeof text !== "string") return text;
     let out = text;
@@ -272,6 +333,8 @@ class BanglaVoiceCortex {
     if (this.isBengali(out)) {
       out = this.fluidBengaliToRoman(out);
     }
+
+    out = this.restoreCleanEnglishLoanwords(out);
 
     return out.replace(/[\u0980-\u09FF]+/g, "").replace(/\s+/g, " ").trim();
   }
