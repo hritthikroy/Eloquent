@@ -113,6 +113,10 @@ class TextSanitizer {
       // Gemini & Groq API Zero Overlap, Dual Soul & Code Self-Healing STT Normalizations
       .replace(/\bbuffring\b/gi, "buffering")
       .replace(/\boverlaping\b/gi, "overlapping")
+      .replace(/\b(?:use\s+real\s+one\s+so[ul]+|real\s+one\s+so[ul]+)\b/gi, "Use real one soul")
+      .replace(/\b(?:remove\s+all\s+(?:others?|other)\s+voices?)\b/gi, "remove all other voices")
+      .replace(/\b(?:no\s+need\s+other\s+person\s+shift)\b/gi, "no need other person shift")
+      .replace(/\b(?:when\s+i\s+tell\s+lets\s+talk\s+in\s+bngla|when\s+i\s+tell\s+lets\s+talk\s+in\s+bangla)\b/gi, "when I tell let's talk in Bangla")
       .replace(/\b(?:present\s+)?dual\s+(?:sol|sole|soll)\b/gi, "dual soul")
       .replace(/\bthay\s+change\s+thare\s+aura\s+and\s+charm\s+betwen\s+them\b/gi, "they change their aura and charm between them")
       .replace(/\baura\s+and\s+charm\s+betwen\b/gi, "aura and charm between")

@@ -894,8 +894,26 @@ class LocalCognitiveBrain {
       (/\b(?:amra\s+ki\s+niye\s+kotha\s+bolchilam|amar\s+aager\s+kotha\s+mone\s+ache|ami\s+matro\s+ki\s+bollam|aager\s+kotha\s+mone\s+ache)\b/i.test(lower)) ||
       (/(?:আমরা\s*কী\s*নিয়ে\s*কথা\s*বলছিলাম|আমার\s*আগের\s*কথা\s*মনে\s*আছে|আমি\s*মাত্র\s*কী\s*বললাম)/u.test(lower));
 
-    if (isContextRecallQuery && context && Array.isArray(context.conversationHistory) && context.conversationHistory.length > 0) {
-      const historyList = context.conversationHistory;
+    if (isContextRecallQuery) {
+      let historyList = (context && Array.isArray(context.conversationHistory) && context.conversationHistory.length > 0)
+        ? context.conversationHistory
+        : [];
+
+      if (historyList.length === 0) {
+        try {
+          const fs = require("fs");
+          const path = require("path");
+          const defaultUserPath = path.join(process.cwd(), "userData");
+          const historyFile = path.join(defaultUserPath, "history.json");
+          if (fs.existsSync(historyFile)) {
+            const data = JSON.parse(fs.readFileSync(historyFile, "utf8"));
+            if (Array.isArray(data) && data.length > 0) {
+              historyList = data.map(d => ({ role: "user", content: d.originalText || "" }));
+            }
+          }
+        } catch (_) {}
+      }
+
       const priorUserTurns = historyList.filter(t => {
         const text = typeof t === "string" ? t : (t.content || "");
         return (t.role === "user" || typeof t === "string") && text.trim().toLowerCase() !== lower;

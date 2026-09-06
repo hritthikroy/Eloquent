@@ -1252,6 +1252,10 @@ class IntentParser {
       return false;
     }
     return (
+      (/\b(?:use\s+real\s+one\s+so[ul]+|real\s+one\s+so[ul]+)\b/i.test(lower)) ||
+      (/\b(?:remove\s+all\s+(?:others?|other)\s+voices?)\b/i.test(lower)) ||
+      (/\b(?:no\s+need\s+other\s+person\s+shift|no\s+other\s+person\s+shift|no\s+person\s+shift)\b/i.test(lower)) ||
+      (/\b(?:when\s+i\s+tell\s+let'?s\s+talk\s+in\s+bangla|let'?s\s+talk\s+in\s+bangla)\b/i.test(lower) && /\b(?:no\s+shift|single\s+soul|one\s+soul|no\s+other)\b/i.test(lower)) ||
       (/\b(?:tuk\s*tuk|tuktuk|tuck\s*tuck|took\s*took)\b/i.test(lower) && 
        /\b(?:sol|soul|sole|soll)\b/i.test(lower) && 
        /\b(?:change|interchange|interchnage|interchangeable|interchnageble|swap|swapping|one\s+soul|one\s+soll|like\s+human|like\s+humen)\b/i.test(lower)) ||

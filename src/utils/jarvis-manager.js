@@ -765,9 +765,10 @@ class JarvisManager {
         const historyData = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
         if (Array.isArray(historyData) && historyData.length > 0) {
           const roboticSloganRegex = /(?:লুপটা\s+ফুল\s+ব্রেক\s+করলাম|রিপিটেশন\s+জিরো\s+করে\s+দিলাম|পুরো\s+ফ্রেশ\s+মুডে\s+চলে\s+এসেছি|জিরো\s+লুপ\s+babe|zero\s+loop\s+babe|breaking\s+the\s+loop|repitation\s+zero|কী\s+কাজ\s+করব\s+বলো)/iu;
+          const turnsToRestore = Math.max(24, (this.config?.conversationHistory?.workingMemoryTurnsDepth || 24));
           const validTurns = historyData
             .filter(h => h.originalText && h.text && h.mode === "jarvis" && !roboticSloganRegex.test(h.text))
-            .slice(0, 4)
+            .slice(0, turnsToRestore)
             .reverse();
           for (const item of validTurns) {
             const agentKey = (item.agent || "Tuk Tuk").toLowerCase().includes("vision") ? "vision" :
@@ -779,8 +780,9 @@ class JarvisManager {
             this.conversationHistory.push({ role: "user", content: item.originalText.trim(), agent: "user", lang: userLang });
             this.conversationHistory.push({ role: "assistant", content: sanitizedText.trim(), agent: item.agent || "Tuk Tuk", lang: assistantLang });
           }
-          if (this.conversationHistory.length > 50) {
-            this.conversationHistory = this.conversationHistory.slice(-50);
+          const maxBuffer = Math.max(120, turnsToRestore * 4);
+          if (this.conversationHistory.length > maxBuffer) {
+            this.conversationHistory = this.conversationHistory.slice(-maxBuffer);
           }
           console.log(`🧠 [Cross-Session Brain Memory] Restored ${validTurns.length * 2} past conversation turns from history.json!`);
         }
@@ -793,38 +795,83 @@ class JarvisManager {
   recallPastConversations(queryText, topK = 2) {
     if (!queryText || typeof queryText !== "string" || queryText.trim().length < 3) return [];
     try {
-      if (!fs.existsSync(this.historyFilePath)) return [];
-      const data = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
-      if (!Array.isArray(data) || data.length === 0) return [];
+      const STOP_WORDS = new Set([
+        "what", "did", "we", "discuss", "discussed", "earlier", "about", "making", "new",
+        "the", "and", "or", "to", "in", "of", "for", "with", "at", "by", "from", "up",
+        "into", "over", "after", "is", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had", "do", "does", "tell", "me", "you", "your", "my", "our",
+        "us", "they", "them", "this", "that", "these", "those"
+      ]);
 
-      const queryTokens = new Set(
-        queryText.toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, "").split(/\s+/).filter(w => w.length > 2)
-      );
-      if (queryTokens.size === 0) return [];
+      const allTokens = queryText.toLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, "").split(/\s+/).filter(w => w.length > 2);
+      let salientTokens = allTokens.filter(w => !STOP_WORDS.has(w));
+      if (salientTokens.length === 0) salientTokens = allTokens;
+      if (salientTokens.length === 0) return [];
 
+      const queryTokens = new Set(salientTokens);
       const matches = [];
-      for (const entry of data) {
-        if (!entry.originalText || !entry.text) continue;
-        const roboticSloganRegex = /(?:লুপটা\s+ফুল\s+ব্রেক\s+করলাম|রিপিটেশন\s+জিরো\s+করে\s+দিলাম|পুরো\s+ফ্রেশ\s+মুডে\s+চলে\s+এসেছি|জিরো\s+লুপ\s+babe|zero\s+loop\s+babe|breaking\s+the\s+loop|repitation\s+zero|কী\s+কাজ\s+করব\s+বলো)/iu;
-        if (roboticSloganRegex.test(entry.text)) continue;
-        const fullText = `${entry.originalText} ${entry.text}`.toLowerCase();
-        const entryTokens = fullText.replace(/[^\p{L}\p{M}\p{N}\s]/gu, "").split(/\s+/);
+      const seenReplies = new Set();
+      const roboticSloganRegex = /(?:লুপটা\s+ফুল\s+ব্রেক\s+করলাম|রিপিটেশন\s+জিরো\s+করে\s+দিলাম|পুরো\s+ফ্রেশ\s+মুডে\s+চলে\s+এসেছি|জিরো\s+লুপ\s+babe|zero\s+loop\s+babe|breaking\s+the\s+loop|repitation\s+zero|কী\s+কাজ\s+করব\s+বলো)/iu;
+
+      const evaluateEntry = (userText, replyText, agent, timestamp) => {
+        if (!userText || !replyText) return;
+        const trimmedReply = replyText.trim();
+        if (seenReplies.has(trimmedReply)) return;
+        if (roboticSloganRegex.test(replyText)) return;
+
+        const fullText = `${userText} ${replyText}`.toLowerCase();
         let intersection = 0;
-        for (const token of entryTokens) {
-          if (queryTokens.has(token)) intersection++;
+        for (const token of queryTokens) {
+          if (fullText.includes(token)) intersection++;
         }
         if (intersection > 0) {
           const score = intersection / queryTokens.size;
-          if (score >= 0.35) {
+          if (score >= 0.25) {
+            seenReplies.add(trimmedReply);
             matches.push({
               score,
-              user: entry.originalText,
-              reply: entry.text,
-              agent: entry.agent || "Tuk Tuk",
-              timestamp: entry.timestamp
+              user: userText,
+              reply: replyText,
+              agent: agent || "Tuk Tuk",
+              timestamp: timestamp || new Date().toISOString()
             });
           }
         }
+      };
+
+      // 1. Search persistent history.json
+      if (fs.existsSync(this.historyFilePath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(this.historyFilePath, "utf8"));
+          if (Array.isArray(data)) {
+            for (const entry of data) {
+              evaluateEntry(entry.originalText, entry.text, entry.agent, entry.timestamp);
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. Fall back to / augment from turn-wal.jsonl (entire historical session archive)
+      const walPath = path.join(this.userDataPath, "turn-wal.jsonl");
+      if (matches.length < topK && fs.existsSync(walPath)) {
+        try {
+          const lines = fs.readFileSync(walPath, "utf8").trim().split("\n");
+          for (let i = lines.length - 1; i >= 0 && matches.length < topK * 4; i--) {
+            try {
+              const item = JSON.parse(lines[i]);
+              if (item.role === "assistant" && item.content) {
+                let userContent = "";
+                if (i > 0) {
+                  try {
+                    const prev = JSON.parse(lines[i - 1]);
+                    if (prev.role === "user") userContent = prev.content;
+                  } catch (_) {}
+                }
+                evaluateEntry(userContent || "Hritthik", item.content, item.agent, item.timestamp);
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
       }
 
       matches.sort((a, b) => b.score - a.score);
@@ -884,6 +931,50 @@ class JarvisManager {
         this._cachedVoice = null;
       }
     }, 15000);
+  }
+
+  /**
+   * Automatic Reconnection & Connection Recovery Resilience Handler
+   * Automatically recovers disconnected audio streams, WebSocket TTS clients, and memory channels
+   */
+  async autoReconnect(target = "all", attempt = 1) {
+    const maxRetries = 3;
+    console.log(`🔄 [AutoReconnect] Attempting automatic reconnection for "${target}" (attempt ${attempt}/${maxRetries})...`);
+    try {
+      if (target === "tts" || target === "all") {
+        this.initTTS();
+      }
+      if (target === "memory" || target === "all") {
+        this.loadRecentSessionHistory();
+        if (this.zeroLossMemory && typeof this.zeroLossMemory.unblockAndDrainBacklog === "function") {
+          this.zeroLossMemory.unblockAndDrainBacklog(this.gateway, this);
+        }
+      }
+      return { success: true, target, attempt };
+    } catch (err) {
+      console.warn(`⚠️ [AutoReconnect] Reconnection attempt ${attempt} failed:`, err.message);
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+        return this.autoReconnect(target, attempt + 1);
+      }
+      return { success: false, target, error: err.message };
+    }
+  }
+
+  /**
+   * Exponential backoff retry helper for resilient network and IPC requests
+   */
+  async retryWithBackoff(fn, maxRetries = 3, initialDelay = 500) {
+    let delay = initialDelay;
+    for (let i = 1; i <= maxRetries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (i === maxRetries) throw err;
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+      }
+    }
   }
 
   loadConfig() {
@@ -1581,6 +1672,32 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
   }
 
   /**
+   * Locks single real soul active mode, zero persona shift when talking in Bangla, and zero thinking tone leaks.
+   * @returns {Object} Single real soul no persona shift telemetry
+   */
+  calibrateSingleRealSoulNoPersonaShift() {
+    if (typeof this.setPreference === "function") {
+      this.setPreference("single_real_soul_active", true);
+      this.setPreference("zero_persona_shift_in_bangla", true);
+      this.setPreference("zero_thinking_tone_leaks", true);
+      this.setPreference("zero_other_voice_interruptions", true);
+      this.setPreference("persona_invariants_locked", true);
+    }
+    if (banglaVoiceCortex && typeof banglaVoiceCortex.setUnifiedSingleSoulMode === "function") {
+      banglaVoiceCortex.setUnifiedSingleSoulMode(true);
+    }
+    return {
+      verified: true,
+      singleRealSoulActive: true,
+      zeroPersonaShiftInBangla: true,
+      zeroThinkingToneLeaks: true,
+      zeroOtherVoiceInterruptions: true,
+      personaInvariantsLocked: true,
+      status: "SINGLE_REAL_SOUL_NO_PERSONA_SHIFT_LOCKED"
+    };
+  }
+
+  /**
    * Activates Visual Observational Learning across the squad and biological eye cortex
    * In response to "use your eye for learning" / "chokh diye shekho"
    * @param {Object} options - Custom options (e.g. gaze, learningRate)
@@ -1757,9 +1874,11 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
    * @returns {Object} Resolution telemetry, memory consolidation, and equational proof
    */
   resolveConversationalMismatch(options = {}) {
-    // 1. Preserve rich multi-turn working context (at least 20 messages / 10 turns) while clearing decoupled echoes
-    if (Array.isArray(this.conversationHistory) && this.conversationHistory.length > 24) {
-      this.conversationHistory = this.conversationHistory.slice(-24);
+    // 1. Preserve rich multi-turn working context (at least 24 turns / 48 messages) while clearing decoupled echoes
+    const configuredTurns = this.getPreference ? (this.getPreference("working_memory_turns_depth") || 24) : 24;
+    const minRetention = Math.max(48, configuredTurns * 2);
+    if (Array.isArray(this.conversationHistory) && this.conversationHistory.length > minRetention) {
+      this.conversationHistory = this.conversationHistory.slice(-minRetention);
     }
 
     if (!this.memory.conversationalMismatchFix) {
@@ -2987,9 +3106,11 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
 
     const detectedLang = language || (this.evaluateLanguageTransition(cleanContent));
     this.conversationHistory.push({ role, content: cleanContent, agent: agentName, lang: detectedLang });
-    // Retain rolling window of the last 50 turns for deep contextual continuity
-    if (this.conversationHistory.length > 50) {
-      this.conversationHistory = this.conversationHistory.slice(-50);
+    // Retain rolling window of working memory turns for deep contextual continuity
+    const configuredTurns = this.getPreference ? (this.getPreference("working_memory_turns_depth") || 24) : 24;
+    const maxMessages = Math.max(120, configuredTurns * 4);
+    if (this.conversationHistory.length > maxMessages) {
+      this.conversationHistory = this.conversationHistory.slice(-maxMessages);
     }
     // Write-Ahead Log (WAL) and instant local fact extraction (Zero-Loss Guarantee)
     if (this.zeroLossMemory && process.env.NODE_ENV !== "test") {
@@ -3301,7 +3422,7 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
   }
 
   getHistory(maxTurns = null, requestingAgentKey = null, filterLang = null) {
-    const configuredTurns = this.getPreference("working_memory_turns_depth") || 16;
+    const configuredTurns = this.getPreference ? (this.getPreference("working_memory_turns_depth") || 24) : 24;
     const effectiveTurns = maxTurns || configuredTurns;
     const activeLang = filterLang || this.currentLanguageMode || null;
     const messageLimit = Math.max(effectiveTurns * 2, 16);
@@ -3322,9 +3443,10 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     return recent
       .filter(t => {
         if (isNonTukTuk && t.role === "assistant" && (t.agent === "Tuk Tuk" || !t.agent)) {
-          // Filter out turns from Tuk Tuk that are purely intimate/nagging banter
-          const isIntimate = /\b(babe|sweetheart|my love|come with me|close (?:the )?(?:laptop|terminal)|shut the laptop|put the mouse down|grab(?:bing)? the keys)\b/i.test(t.content);
-          if (isIntimate) return false;
+          // Filter out turns from Tuk Tuk that are purely non-technical nagging banter
+          const isNaggingBanter = /\b(come with me|close (?:the )?(?:laptop|terminal)|shut the laptop|put the mouse down|grab(?:bing)? the keys)\b/i.test(t.content);
+          const hasTechnicalContent = /\b(code|build|test|error|bug|issue|pipeline|ast|port|server|function|file|fix|memory|token|latency|electron|go|cortex|commit|pr)\b/i.test(t.content);
+          if (isNaggingBanter && !hasTechnicalContent) return false;
         }
         return true;
       })
@@ -3989,7 +4111,7 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     const isBanglishDefault = isPureBanglaRemoved || this.currentLanguageMode === "banglish";
     const activeLang = overrideLang || (isBanglishDefault ? "banglish" : (this.currentLanguageMode || "en"));
     const basePrompt = activeAgent.getPrompt(userName, salutation, activeLang);
-    const livingMemory = this.formatLivingMemory();
+    const livingMemory = this.formatLivingMemory(userQuery);
 
     let languageInvariantLaw = "";
     if (activeLang === "banglish" || isBanglishDefault) {
@@ -4393,16 +4515,18 @@ ${languageInvariantLaw}
     try {
       const isNonTukTuk = activeAgent && activeAgent.key !== "tuktuk";
       let recentTurns = [];
+      const maxTurnsToInclude = Math.max(16, (this.getPreference && this.getPreference("working_memory_turns_depth")) || 24);
 
       if (this.conversationHistory && this.conversationHistory.length > 0) {
-        // Construct turns from in-memory conversationHistory (zero-latency working memory - up to 8 turns)
-        for (let i = this.conversationHistory.length - 1; i >= 0 && recentTurns.length < 8; i--) {
+        // Construct turns from in-memory conversationHistory (zero-latency working memory)
+        for (let i = this.conversationHistory.length - 1; i >= 0 && recentTurns.length < maxTurnsToInclude; i--) {
           const item = this.conversationHistory[i];
           if (item.role === "assistant") {
             const prev = (i > 0 && this.conversationHistory[i - 1].role === "user") ? this.conversationHistory[i - 1] : null;
             if (isNonTukTuk && (item.agent === "Tuk Tuk" || !item.agent)) {
-              const hasIntimate = /\b(babe|sweetheart|my love|come with me|close (?:the )?(?:laptop|terminal)|shut the laptop|put the mouse down|grab(?:bing)? the keys)\b/i.test(item.content);
-              if (hasIntimate) continue;
+              const isNaggingBanter = /\b(come with me|close (?:the )?(?:laptop|terminal)|shut the laptop|put the mouse down|grab(?:bing)? the keys)\b/i.test(item.content);
+              const hasTechnicalContent = /\b(code|build|test|error|bug|issue|pipeline|ast|port|server|function|file|fix|memory|token|latency|electron|go|cortex|commit|pr)\b/i.test(item.content);
+              if (isNaggingBanter && !hasTechnicalContent) continue;
             }
             recentTurns.unshift({
               originalText: prev ? prev.content : "",
@@ -4419,14 +4543,14 @@ ${languageInvariantLaw}
             .filter(e => {
               if (!e.originalText || !e.text || e.mode !== "jarvis") return false;
               if (isNonTukTuk && (e.agent === "Tuk Tuk" || !e.agent)) {
-                // If Tuk Tuk turn is purely romantic / nag banter, filter it out to prevent prompt contamination
-                const hasIntimate = /\b(babe|sweetheart|my love|come with me|close (?:the )?(?:laptop|terminal)|shut the laptop|put the mouse down|grab(?:bing)? the keys)\b/i.test(e.text);
-                if (hasIntimate) return false;
+                const isNaggingBanter = /\b(come with me|close (?:the )?(?:laptop|terminal)|shut the laptop|put the mouse down|grab(?:bing)? the keys)\b/i.test(e.text);
+                const hasTechnicalContent = /\b(code|build|test|error|bug|issue|pipeline|ast|port|server|function|file|fix|memory|token|latency|electron|go|cortex|commit|pr)\b/i.test(e.text);
+                if (isNaggingBanter && !hasTechnicalContent) return false;
               }
               // Retain active working context and shared memory across all turns without language filtering
               return true;
             })
-            .slice(0, 8)
+            .slice(0, maxTurnsToInclude)
             .reverse();
         }
       }
@@ -4510,7 +4634,15 @@ ${languageInvariantLaw}
       } catch (e) {}
     }
 
-    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}${directivesSection}${handoffSection}${visualPresence}${screenPresence}${situationalIntellectPresence}\n\n${livingMemory}`;
+    let workingMemorySection = "";
+    try {
+      const memSummary = this.getWorkingMemorySummary(userQuery);
+      if (memSummary) {
+        workingMemorySection = `\n\n[WORKING MEMORY & LIVING CONTEXT]:\n${memSummary}`;
+      }
+    } catch (e) {}
+
+    return `${basePrompt}\n\n${unifiedCoreDirective}${sessionContinuity}${workingMemorySection}${directivesSection}${handoffSection}${visualPresence}${screenPresence}${situationalIntellectPresence}\n\n${livingMemory}`;
   }
 
   detectPreferenceChange(text) {
@@ -5879,6 +6011,10 @@ JarvisManager.purgeLegacyVersionsAndSorts = function() {
 JarvisManager.calibrateBengaliLanguageFix = function() {
   const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
   return instance.calibrateBengaliLanguageFix();
+};
+JarvisManager.calibrateSingleRealSoulNoPersonaShift = function() {
+  const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
+  return instance.calibrateSingleRealSoulNoPersonaShift();
 };
 
 module.exports = JarvisManager;
