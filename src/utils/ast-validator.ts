@@ -33,6 +33,9 @@ export class PromptAstValidator {
   private static readonly SECTION_QUALITY_REGEX =
     /^(#+\s*)?Quality\s+Requirements\s*(&|and)\s*AST\s+Verification[:\s]*$/im;
 
+  private static readonly SECTION_ROADMAP_REGEX =
+    /^(#+\s*)?Next\s+Steps\s*(&|and)\s*Continuation\s+Roadmap[:\s]*$/im;
+
   // Valid Eloquent stack prefixes to prevent out-of-domain hallucinations
   private static readonly VALID_STACK_PREFIXES = [
     'src/',
@@ -96,7 +99,7 @@ export class PromptAstValidator {
         detectedFiller: [],
         hasCodeBlockWrapper: false,
         hasPreamble: false,
-        sectionsFound: { objective: false, architecture: false, quality: false }
+        sectionsFound: { objective: false, architecture: false, quality: false, roadmap: false }
       };
     }
 
@@ -120,10 +123,11 @@ export class PromptAstValidator {
       }
     }
 
-    // Check for exact 3 required sections
+    // Check for required sections (and optional canonical roadmap section)
     const hasObjective = this.SECTION_OBJECTIVE_REGEX.test(trimmed);
     const hasArchitecture = this.SECTION_ARCHITECTURE_REGEX.test(trimmed);
     const hasQuality = this.SECTION_QUALITY_REGEX.test(trimmed);
+    const hasRoadmap = this.SECTION_ROADMAP_REGEX.test(trimmed);
 
     if (!hasObjective) errors.push('Missing required section: "Clear Technical Objective"');
     if (!hasArchitecture) errors.push('Missing required section: "Key Files / Architecture"');
@@ -162,7 +166,8 @@ export class PromptAstValidator {
       sectionsFound: {
         objective: hasObjective,
         architecture: hasArchitecture,
-        quality: hasQuality
+        quality: hasQuality,
+        roadmap: hasRoadmap
       }
     };
   }
@@ -174,10 +179,11 @@ export class PromptAstValidator {
     const cleaned = this.stripCodeFences(promptText);
     const lines = cleaned.split('\n');
 
-    let currentSection: 'NONE' | 'OBJECTIVE' | 'ARCHITECTURE' | 'QUALITY' = 'NONE';
+    let currentSection: 'NONE' | 'OBJECTIVE' | 'ARCHITECTURE' | 'QUALITY' | 'ROADMAP' = 'NONE';
     const objectiveLines: string[] = [];
     const architectureEntries: KeyFileArchitectureEntry[] = [];
     const qualityLines: string[] = [];
+    const roadmapLines: string[] = [];
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -190,6 +196,9 @@ export class PromptAstValidator {
         continue;
       } else if (this.SECTION_QUALITY_REGEX.test(trimmed)) {
         currentSection = 'QUALITY';
+        continue;
+      } else if (this.SECTION_ROADMAP_REGEX.test(trimmed)) {
+        currentSection = 'ROADMAP';
         continue;
       }
 
@@ -217,6 +226,12 @@ export class PromptAstValidator {
         } else if (trimmed.length > 0) {
           qualityLines.push(trimmed);
         }
+      } else if (currentSection === 'ROADMAP') {
+        if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
+          roadmapLines.push(trimmed.replace(/^[-*]\s*/, '').trim());
+        } else if (trimmed.length > 0) {
+          roadmapLines.push(trimmed);
+        }
       }
     }
 
@@ -224,6 +239,7 @@ export class PromptAstValidator {
       clearTechnicalObjective: objectiveLines.join(' ').trim(),
       keyFilesArchitecture: architectureEntries,
       qualityRequirementsAndAstVerification: qualityLines,
+      nextStepsContinuationRoadmap: roadmapLines.length > 0 ? roadmapLines : undefined,
       rawText: cleaned,
       generatedAt: new Date().toISOString(),
       iterationAttempts: 1

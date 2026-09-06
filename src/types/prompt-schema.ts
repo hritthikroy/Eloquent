@@ -1,9 +1,10 @@
 /**
  * Prompt Schema Definitions
- * Enforces the strict 3-section structured developer prompt format:
+ * Enforces the strict structured developer prompt format:
  * 1. Clear Technical Objective
  * 2. Key Files / Architecture
  * 3. Quality Requirements & AST Verification
+ * 4. Next Steps & Continuation Roadmap (Optional / Canonical Extension)
  */
 
 export interface KeyFileArchitectureEntry {
@@ -15,9 +16,11 @@ export interface StructuredMetaPrompt {
   clearTechnicalObjective: string;
   keyFilesArchitecture: KeyFileArchitectureEntry[];
   qualityRequirementsAndAstVerification: string[];
+  nextStepsContinuationRoadmap?: string[];
   rawText: string;
   generatedAt: string;
   iterationAttempts: number;
+  tokenCount?: number;
 }
 
 export interface PromptValidationResult {
@@ -31,6 +34,7 @@ export interface PromptValidationResult {
     objective: boolean;
     architecture: boolean;
     quality: boolean;
+    roadmap?: boolean;
   };
 }
 
@@ -39,5 +43,7 @@ export interface PromptEngineerOptions {
   strictArchitectureCheck?: boolean;
   targetStack?: string;
   activeDomain?: string;
+  maxTokens?: number;
+  enforceTokenLimit?: boolean;
   callLlm?: (messages: Array<{ role: string; content: string }>) => Promise<string>;
 }

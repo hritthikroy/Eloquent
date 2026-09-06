@@ -42,6 +42,22 @@ async function runTests() {
 
   const testUserDataDir = path.join(projectRoot, 'userData');
   const jarvis = new JarvisManager(testUserDataDir);
+  if (jarvis.config) {
+    jarvis.config.singleRealVoiceActive = false;
+    jarvis.config.multiPersonalityDisabled = false;
+    jarvis.config.multiPersonVoiceDisabled = false;
+    jarvis.config.khatiMistiPurged = false;
+  }
+  jarvis.singleRealVoiceActive = false;
+  jarvis.multiPersonalityDisabled = false;
+  jarvis.multiPersonVoiceDisabled = false;
+  if (jarvis.memory && jarvis.memory.preferences) {
+    jarvis.memory.preferences.single_real_voice_active = false;
+    jarvis.memory.preferences.multi_personality_disabled = false;
+    jarvis.memory.preferences.multi_person_voice_disabled = false;
+    jarvis.memory.preferences.single_voice_tuktuk_exclusive = false;
+    jarvis.memory.preferences.no_other_voice_interruption = false;
+  }
 
   // -------------------------------------------------------------
   // TEST GROUP 1: Mathematical Specialist Resonance Utility R_k(u_t)
