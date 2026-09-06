@@ -138,6 +138,15 @@ class TextSanitizer {
       .replace(/\byeas\b(?=\s*(?:do|and|agents|year))/gi, "year")
       .replace(/\blerning\b/gi, "learning")
       .replace(/\bthare\s+codes?\b/gi, "their codes")
+      // Single Real Voice & Zero Multi-Personality STT Normalizations
+      .replace(/\b(?:need\s+)?(?:one|1)\s+real\s+voice\s+not\s+(?:malti|multi)[-\s]*(?:personalyti|personality)\s+and\s+(?:malti|multi)[-\s]*(?:person)\s+voice\b/gi, "Need one real voice, not multi-personality and multi-person voice")
+      .replace(/\bmalti\s+personalyti\b/gi, "multi-personality")
+      .replace(/\bmalti\s+personality\b/gi, "multi-personality")
+      .replace(/\bmulti\s+personalyti\b/gi, "multi-personality")
+      .replace(/\bmalti\s+person\s+voice\b/gi, "multi-person voice")
+      .replace(/\bmalti\s+person\b/gi, "multi-person")
+      .replace(/\bmalti\b(?=\s*(?:personality|personalities|person|voice))/gi, "multi")
+      .replace(/\bpersonalyti\b/gi, "personality")
       // STT acoustic collisions for agent delegation and Banglish terms
       .replace(/\b(?:the\s+)?television(?=\s+(?:to|the|write|fix|check|run|code|look|help|listen|bro|brother|bhai|problem|error|issue|status))\b/gi, "Tell Vision")
       .replace(/\b(?:tell\s+)?television\b/gi, "Tell Vision")
@@ -884,6 +893,14 @@ class TextSanitizer {
       .replace(/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+talk\s+(?:sol|soul)\b/gi, "no need pure single Bangla talk soul")
       .replace(/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/gi, "no need pure single Bangla personality person")
       .replace(/\bremove\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/gi, "remove pure single Bangla personality person")
+      // Remove Scripted Same Loop Talk, Zero Looping Behavior & Zero Stuck Behavior STT Normalizations
+      // Handles: "no need any syrepted same loop talk need to thak capapble to work in 0 looping behabeior and any stuck behabiour"
+      .replace(/\bno\s+need\s+(?:any\s+)?(?:syrepted|scripted)\s+same\s+loop\s+talk\s+need\s+to\s+(?:thak|be)\s+(?:capapble|capable)\s+to\s+work\s+in\s+0\s+looping\s+(?:behabeior|behabiour|behavior)\s+and\s+(?:any|zero)\s+stuck\s+(?:behabeior|behabiour|behavior)\b/gi, "No need any scripted same loop talk, need to be capable to work in zero looping behavior and zero stuck behavior")
+      .replace(/\b(?:syrepted)\b/gi, "scripted")
+      .replace(/\b(?:capapble)\b/gi, "capable")
+      .replace(/\b(?:behabeior|behabiour)\b/gi, "behavior")
+      .replace(/\b0\s+looping\s+(?:behabeior|behabiour|behavior)\b/gi, "zero looping behavior")
+      .replace(/\b(?:any|zero)\s+stuck\s+(?:behabeior|behabiour|behavior)\b/gi, "zero stuck behavior")
       .replace(/\b(?:intrapted)\b/gi, "interrupted")
       .replace(/\b(?:intraption)\b/gi, "interruption");
 

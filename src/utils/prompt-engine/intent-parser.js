@@ -100,6 +100,17 @@ class IntentParser {
       };
     }
 
+    // 2.184 Single Real Voice & Zero Multi-Personality / Multi-Person Voice Directive
+    if (IntentParser.isSingleRealVoiceNoMultiPersonalityDirective(lower)) {
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "single_real_voice_no_multi_personality",
+        action: "single_real_voice_no_multi_personality",
+        agentDirective: "tuktuk"
+      };
+    }
+
     // 2.185 Tuk Tuk Single Human Soul & Zero Soul Interchange Directive
     if (IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective(lower)) {
       return {
@@ -236,6 +247,24 @@ class IntentParser {
         confidence: 0.99,
         target: "remove_single_bangla_talk_pure_soul_personality_person_directive",
         action: "remove_single_bangla_talk_pure_soul_personality_person_directive",
+        agentDirective
+      };
+    }
+
+    // 2.1937 Remove Scripted Same Loop Talk, Zero Looping Behavior & Zero Stuck Behavior Directive
+    if (IntentParser.isRemoveScriptedSameLoopTalkZeroLoopingDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_scripted_same_loop_talk_zero_looping_directive",
+        action: "remove_scripted_same_loop_talk_zero_looping_directive",
         agentDirective
       };
     }
@@ -1258,6 +1287,33 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Single Real Voice & Zero Multi-Personality / Multi-Person Voice Directive
+   * Handles:
+   * - "need one real voice not malti personalyti and malti person voice"
+   * - "need one real voice not multi-personality and multi-person voice"
+   * - "one real voice not multi personality"
+   * - "no multi personality and multi person voice"
+   * - "need 1 real voice no multi personality"
+   * - "remove multi personality and multi person voice"
+   * - "disable multi personality and multi person voice"
+   * - "one real voice no multi person voice"
+   * - "একটাই রিয়েল ভয়েস মাল্টি পার্সোনালিটি না"
+   */
+  static isSingleRealVoiceNoMultiPersonalityDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:need\s+)?(?:one|1|single)\s+real\s+voice\b/i.test(lower) && /\b(?:not|no|stop|remove|disable|zero)\s+(?:multi|malti)[-\s]*(?:personality|personalyti|person|voices?)\b/i.test(lower)) ||
+      (/\b(?:multi|malti)[-\s]*(?:personality|personalyti)\b/i.test(lower) && /\b(?:multi|malti)[-\s]*(?:person)\s+voice\b/i.test(lower)) ||
+      (/\b(?:one|1|single)\s+real\s+voice\b/i.test(lower) && /\b(?:not|no|without|zero)\s+(?:multi|malti)\b/i.test(lower)) ||
+      (/\b(?:stop|disable|remove|kill|turn\s*off)\s+(?:multi|malti)[-\s]*(?:personality|personalities|person\s+voices?)\b/i.test(lower)) ||
+      (/\b(?:no\s+more|zero)\s+(?:multi|malti)[-\s]*(?:personality|personalities|person\s+voices?)\b/i.test(lower)) ||
+      (/\b(?:need\s+)?(?:one|1|single)\s+real\s+voice\s+not\s+(?:multi|malti)\b/i.test(lower)) ||
+      (/(?:একটাই\s*রিয়েল\s*ভয়েস.*মাল্টি|মাল্টি\s*পার্সোনালিটি.*(?:বন্ধ|না|চাই\s*না)|একটাই\s*(?:আসল|রিয়েল)\s*ভয়েস)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Tuk Tuk Single Unified Human Soul & Zero Soul Interchange Directive
    * Handles: "fix tuk tuk sol why he change his sole when he talk or interchange thare sol also interchange need one soll like humen not interchnageble",
    * "fix tuk tuk soul", "why change soul when talk", "need one soul like human not interchangeable",
@@ -1373,6 +1429,25 @@ class IntentParser {
       (/\bremove\s+pure\s+single\s+(?:bangal|bangla)\s+(?:talk|soul|personality|person)\b/i.test(lower)) ||
       (/\b(?:single\s+bangla\s+talk|pure\s+single\s+bangla)\b/i.test(lower) && /\b(?:remove|no\s+need|purge|banned|drop)\b/i.test(lower)) ||
       (/(?:সিঙ্গেল\s*বাংলা\s*টক\s*বাদ|পিওর\s*সিঙ্গেল\s*বাংলা\s*পার্সোনালিটি\s*বাদ|বাংলা\s*পার্সন\s*বাদ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Remove Scripted Same Loop Talk, Zero Looping Behavior & Zero Stuck Behavior Directive
+   * Handles:
+   * "no need any syrepted same loop talk need to thak capapble to work in 0 looping behabeior and any stuck behabiour",
+   * "no need any scripted same loop talk", "zero looping behavior", "zero stuck behavior"
+   */
+  static isRemoveScriptedSameLoopTalkZeroLoopingDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:scripted|syrepted)\s+same\s+loop\s+talk\b/i.test(lower)) ||
+      (/\b0\s+looping\s+(?:behabeior|behabiour|behavior)\b/i.test(lower)) ||
+      (/\bzero\s+looping\s+(?:behavior|behabeior|behabiour)\b/i.test(lower)) ||
+      (/\b(?:any|zero)\s+stuck\s+(?:behavior|behabeior|behabiour)\b/i.test(lower)) ||
+      (/\b(?:scripted|same\s+loop)\b/i.test(lower) && /\b(?:no\s+need|remove|purge|banned|drop)\b/i.test(lower)) ||
+      (/(?:স্ক্রিপ্টেড\s*লুপ\s*টপিক\s*বাদ|জিরো\s*লুপিং\s*বিহেভিয়ার|স্টাক\s*বিহেভিয়ার\s*রিমুভ)/u.test(lower))
     );
   }
 
@@ -2106,6 +2181,7 @@ module.exports = {
   isAutonomousSelfMedicPeerMeshDirective: IntentParser.isAutonomousSelfMedicPeerMeshDirective,
   isSoulDuplicationMismatchHardcodedFixDirective: IntentParser.isSoulDuplicationMismatchHardcodedFixDirective,
   isTukTukSingleHumanSoulNonInterchangeableDirective: IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective,
+  isSingleRealVoiceNoMultiPersonalityDirective: IntentParser.isSingleRealVoiceNoMultiPersonalityDirective,
   isGeminiGroqZeroOverlapAutonomousCodeHealingDirective: IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective,
   isZeroHumanAgentGapEquationalDirective: IntentParser.isZeroHumanAgentGapEquationalDirective,
   isWireAllEquationsLiveDeepTestDirective: IntentParser.isWireAllEquationsLiveDeepTestDirective,
@@ -2140,5 +2216,6 @@ module.exports = {
   isFixBengaliLanguageDirective: IntentParser.isFixBengaliLanguageDirective,
   isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective: IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective,
   isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective: IntentParser.isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective,
+  isRemoveScriptedSameLoopTalkZeroLoopingDirective: IntentParser.isRemoveScriptedSameLoopTalkZeroLoopingDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
 };
