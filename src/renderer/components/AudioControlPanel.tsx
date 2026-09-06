@@ -82,6 +82,9 @@ export const AudioControlPanel: React.FC<AudioControlPanelProps> = ({
 
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingProgress, setLoadingProgress] = useState<number>(0);
+  const [audioFilePath, setAudioFilePath] = useState<string>('');
 
   // Debounce timers to prevent flooding the IPC channel
   const volumeDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -94,6 +97,50 @@ export const AudioControlPanel: React.FC<AudioControlPanelProps> = ({
     }
     return null;
   }, []);
+
+  // Safe loader for MP3/WAV audio files with loading progress and error handling
+  const handleLoadAndPlayFile = async (filePathToLoad?: string) => {
+    const targetPath = filePathToLoad || audioFilePath || 'demo.wav';
+    const api = getAudioAPI();
+
+    setIsLoading(true);
+    setLoadingProgress(10);
+    setErrorMessage(null);
+
+    try {
+      setLoadingProgress(30);
+      if (api && typeof api.send === 'function') {
+        const response = await api.send('audio:load', { path: targetPath });
+        setLoadingProgress(70);
+
+        if (response && response.status === 'error') {
+          throw new Error(response.error || 'Failed to load audio file');
+        }
+      }
+
+      setLoadingProgress(100);
+      setTelemetry((prev) => ({
+        ...prev,
+        isStreaming: true,
+        statusText: `Playing ${targetPath}`
+      }));
+      onStreamStateChange?.(true);
+    } catch (err: any) {
+      const msg = err.message || `Failed to load audio file: ${targetPath}`;
+      setErrorMessage(msg);
+      onError?.(msg);
+      setTelemetry((prev) => ({
+        ...prev,
+        statusText: 'File Load Error'
+      }));
+    } finally {
+      setTimeout(() => {
+        setIsLoading(false);
+        setLoadingProgress(0);
+      }, 400);
+    }
+  };
+
 
   // Fetch initial backend state
   const refreshBackendStatus = useCallback(async () => {
@@ -417,6 +464,62 @@ export const AudioControlPanel: React.FC<AudioControlPanelProps> = ({
           ⚠️ {errorMessage}
         </div>
       )}
+
+      {/* File Loading Progress Indicator */}
+      {isLoading && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8b949e', marginBottom: '4px' }}>
+            <span>Loading Audio File...</span>
+            <span>{loadingProgress}%</span>
+          </div>
+          <div style={{ height: '6px', background: '#21262d', borderRadius: '3px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${loadingProgress}%`,
+                background: accentColor,
+                transition: 'width 200ms ease-in-out'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* MP3/WAV File Loader Controls */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <input
+          type="text"
+          placeholder="Path to MP3 or WAV file (e.g. /tmp/audio.wav)"
+          value={audioFilePath}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAudioFilePath(e.target.value)}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            background: '#161b22',
+            border: '1px solid #30363d',
+            borderRadius: '6px',
+            color: '#c9d1d9',
+            fontSize: '13px'
+          }}
+        />
+        <button
+          onClick={() => handleLoadAndPlayFile()}
+          disabled={isLoading || isProcessing}
+          style={{
+            padding: '8px 16px',
+            background: accentColor,
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            fontWeight: 600,
+            fontSize: '13px',
+            cursor: (isLoading || isProcessing) ? 'wait' : 'pointer'
+          }}
+        >
+          {isLoading ? 'Loading...' : 'Load & Play File'}
+        </button>
+      </div>
+
 
       {/* Real-time Telemetry Metrics HUD */}
       <div

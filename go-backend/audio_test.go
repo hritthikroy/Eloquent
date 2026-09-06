@@ -114,3 +114,50 @@ func TestRunCommandLoop(t *testing.T) {
 		t.Errorf("Expected both responses to have status 'ok'")
 	}
 }
+
+func TestValidateAudioHeader(t *testing.T) {
+	// WAV header
+	wavHeader := []byte("RIFF1234WAVEfmt ")
+	fmtWav, err := ValidateAudioHeader(wavHeader)
+	if err != nil || fmtWav != "wav" {
+		t.Errorf("Expected wav format, got %s (err: %v)", fmtWav, err)
+	}
+
+	// MP3 ID3 header
+	mp3ID3 := []byte("ID3\x03\x00\x00")
+	fmtMp3, err := ValidateAudioHeader(mp3ID3)
+	if err != nil || fmtMp3 != "mp3" {
+		t.Errorf("Expected mp3 format, got %s (err: %v)", fmtMp3, err)
+	}
+
+	// Invalid / Corrupted header
+	corrupted := []byte("CORRUPTED_HEADER_DATA")
+	_, errCorrupt := ValidateAudioHeader(corrupted)
+	if errCorrupt == nil {
+		t.Errorf("Expected error for corrupted header, got nil")
+	}
+}
+
+func TestLoadAudio_InvalidPath(t *testing.T) {
+	_, err := LoadAudio("")
+	if err == nil {
+		t.Errorf("Expected error for empty path, got nil")
+	}
+
+	_, errNonExistent := LoadAudio("/non/existent/file.wav")
+	if errNonExistent == nil {
+		t.Errorf("Expected error for non-existent file, got nil")
+	}
+}
+
+func TestPlayAudio_NilAndEmpty(t *testing.T) {
+	if err := PlayAudio(nil); err == nil {
+		t.Errorf("Expected error for nil buffer, got nil")
+	}
+
+	emptyBuf := &AudioBuffer{Path: "empty.wav", DataLength: 0}
+	if err := PlayAudio(emptyBuf); err == nil {
+		t.Errorf("Expected error for empty buffer, got nil")
+	}
+}
+
