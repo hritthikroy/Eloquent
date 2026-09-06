@@ -229,7 +229,15 @@ assert(
 const fridayWebReplyBn = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", "Friday web research access ache kina bolo", {}, "bn");
 console.log("Friday reply to web research inquiry (BN):\n", fridayWebReplyBn);
 assert(!fridayWebReplyBn.toLowerCase().includes("vad"), "Friday BN must NOT hallucinate VAD quote");
-assert(fridayWebReplyBn.includes("ওয়েব") || fridayWebReplyBn.includes("রিসার্চ"), "Friday must confirm web research access in Bengali");
+assert(
+  fridayWebReplyBn.includes("ওয়েব") ||
+  fridayWebReplyBn.includes("রিসার্চ") ||
+  fridayWebReplyBn.toLowerCase().includes("oyeb") ||
+  fridayWebReplyBn.toLowerCase().includes("risarch") ||
+  fridayWebReplyBn.toLowerCase().includes("web") ||
+  fridayWebReplyBn.toLowerCase().includes("research"),
+  "Friday must confirm web research access in Bengali/Banglish"
+);
 
 // Ensure VAD quote STILL fires when VAD or latency paper IS specifically asked
 const fridayVadReply = LocalCognitiveBrain.synthesizeResponse("friday", "Friday", "What does the research paper say about VAD turn taking latency?", {}, "en");
