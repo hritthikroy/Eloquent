@@ -10,6 +10,7 @@
 
 import { CLIPBOARD_CHANNELS } from '../shared/constants/ipc-channels';
 import { ZeroCopySerializer, serialize, deserialize } from '../utils/zero-copy-serializer';
+import { registerIpcHandlers } from './ipc';
 
 // Import clipboard service with Node CommonJS fallback for hybrid runtime (src/ vs dist-ts/)
 let clipboardServiceModule: any;
@@ -431,16 +432,31 @@ try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { app, ipcMain } = require('electron');
   if (app && ipcMain) {
-    const registerAll = () => {
+    const registerAll = (win?: any) => {
       registerClipboardHandlers(ipcMain);
       registerOptimizedIpcHandlers(ipcMain);
       registerAudioBridgeIpc(ipcMain);
+      try {
+        const { BrowserWindow } = require('electron');
+        const targetWin = win || (BrowserWindow && typeof BrowserWindow.getAllWindows === 'function' ? BrowserWindow.getAllWindows()[0] : undefined);
+        registerIpcHandlers(targetWin);
+      } catch (_) {
+        registerIpcHandlers();
+      }
     };
 
     if (app.isReady()) {
       registerAll();
     } else {
-      app.whenReady().then(registerAll);
+      app.whenReady().then(() => {
+        try {
+          const { BrowserWindow } = require('electron');
+          const win = BrowserWindow && typeof BrowserWindow.getAllWindows === 'function' ? BrowserWindow.getAllWindows()[0] : undefined;
+          registerAll(win);
+        } catch (_) {
+          registerAll();
+        }
+      });
     }
   }
 } catch (e) {
@@ -462,7 +478,8 @@ export {
   serialize,
   deserialize,
   SharedMemoryAudioBridge,
-  registerAudioBridgeIpc
+  registerAudioBridgeIpc,
+  registerIpcHandlers
 };
 
 // CommonJS compatibility for Node require()
@@ -475,6 +492,7 @@ if (typeof module !== 'undefined' && module.exports) {
     registerOptimizedIpcHandlers,
     registerClipboardHandlers,
     registerAudioBridgeIpc,
+    registerIpcHandlers,
     SharedMemoryAudioBridge,
     clipboardService,
     ClipboardService,

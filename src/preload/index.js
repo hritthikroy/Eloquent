@@ -85,6 +85,14 @@ contextBridge.exposeInMainWorld('lifecycle', {
   },
 
   /**
+   * Immediately triggers a hard stop of all background media/device services.
+   * @returns {Promise<any>}
+   */
+  forceTeardown: () => {
+    return ipcRenderer.invoke('app:force-teardown');
+  },
+
+  /**
    * Register listener for shutdown preparation
    * @param {Function} callback
    */
@@ -94,3 +102,11 @@ contextBridge.exposeInMainWorld('lifecycle', {
     }
   }
 });
+
+// Also ensure electronAPI exposes forceTeardown if not already exposed
+try {
+  contextBridge.exposeInMainWorld('electronAPI', {
+    forceTeardown: () => ipcRenderer.invoke('app:force-teardown'),
+    requestShutdown: (payload = {}) => ipcRenderer.invoke('app:request-shutdown', payload),
+  });
+} catch (_) {}

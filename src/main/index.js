@@ -304,7 +304,7 @@ function registerOptimizedIpcHandlers(ipcMain, stateManager = windowStateManager
 }
 
 const { SharedMemoryAudioBridge, registerAudioBridgeIpc } = require('./ipc/audioBridge');
-const { registerResilientIpcHandlers, getSystemSubsystemStatus, getAudioDeviceState } = require('./ipc');
+const { registerResilientIpcHandlers, registerIpcHandlers, getSystemSubsystemStatus, getAudioDeviceState } = require('./ipc');
 
 // ── Multi-Layered Session Termination & Teardown Protocol ────────────────────
 let activeShutdownPromise = null;
@@ -549,7 +549,11 @@ try {
       registerClipboardHandlers(ipcMain);
       registerOptimizedIpcHandlers(ipcMain);
       registerAudioBridgeIpc(ipcMain);
-      registerResilientIpcHandlers(ipcMain);
+      if (typeof registerIpcHandlers === 'function') {
+        registerIpcHandlers();
+      } else {
+        registerResilientIpcHandlers(ipcMain);
+      }
       registerLifecycleIpc(ipcMain);
       registerLifecycleHooks(app);
     };
@@ -572,6 +576,7 @@ module.exports = {
   registerClipboardHandlers,
   registerOptimizedIpcHandlers,
   registerAudioBridgeIpc,
+  registerIpcHandlers,
   registerResilientIpcHandlers,
   getSystemSubsystemStatus,
   getAudioDeviceState,

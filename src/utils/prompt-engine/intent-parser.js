@@ -1289,6 +1289,7 @@ class IntentParser {
   /**
    * Centralized detector for Single Real Voice & Zero Multi-Personality / Multi-Person Voice Directive
    * Handles:
+   * - "remove the khti misti bangla kotha totaly this person and this voice i need one real humen voices not malti parson voices"
    * - "need one real voice not malti personalyti and malti person voice"
    * - "need one real voice not multi-personality and multi-person voice"
    * - "one real voice not multi personality"
@@ -1303,14 +1304,22 @@ class IntentParser {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
     return (
-      (/\b(?:need\s+)?(?:one|1|single)\s+real\s+voice\b/i.test(lower) && /\b(?:not|no|stop|remove|disable|zero)\s+(?:multi|malti)[-\s]*(?:personality|personalyti|person|voices?)\b/i.test(lower)) ||
-      (/\b(?:multi|malti)[-\s]*(?:personality|personalyti)\b/i.test(lower) && /\b(?:multi|malti)[-\s]*(?:person)\s+voice\b/i.test(lower)) ||
-      (/\b(?:one|1|single)\s+real\s+voice\b/i.test(lower) && /\b(?:not|no|without|zero)\s+(?:multi|malti)\b/i.test(lower)) ||
-      (/\b(?:stop|disable|remove|kill|turn\s*off)\s+(?:multi|malti)[-\s]*(?:personality|personalities|person\s+voices?)\b/i.test(lower)) ||
-      (/\b(?:no\s+more|zero)\s+(?:multi|malti)[-\s]*(?:personality|personalities|person\s+voices?)\b/i.test(lower)) ||
-      (/\b(?:need\s+)?(?:one|1|single)\s+real\s+voice\s+not\s+(?:multi|malti)\b/i.test(lower)) ||
-      (/(?:একটাই\s*রিয়েল\s*ভয়েস.*মাল্টি|মাল্টি\s*পার্সোনালিটি.*(?:বন্ধ|না|চাই\s*না)|একটাই\s*(?:আসল|রিয়েল)\s*ভয়েস)/u.test(lower))
+      (/\b(?:khti|khati)\s+(?:misti|mishti)\b/i.test(lower)) ||
+      (/(?:খাঁটি\s*মিষ্টি|মিষ্টি\s*বাংলা\s*কথা.*(?:বাদ|মুছে|রিমুভ)|মিষ্টি\s*টোন.*(?:বাদ|বন্ধ))/u.test(lower)) ||
+      (/\bremove\s+(?:the\s+)?(?:khti|khati)\s+(?:misti|mishti)\b/i.test(lower)) ||
+      (/\b(?:need\s+)?(?:one|1|single)\s+real\s+(?:humen|human\s+)?voices?\b/i.test(lower) && /\b(?:not|no|stop|remove|disable|zero)\s+(?:multi|malti|multy)[-\s]*(?:personality|personalyti|person|parson|voices?)\b/i.test(lower)) ||
+      (/\b(?:multi|malti|multy)[-\s]*(?:personality|personalyti)\b/i.test(lower) && /\b(?:multi|malti|multy)[-\s]*(?:person|parson)\s+voices?\b/i.test(lower)) ||
+      (/\b(?:one|1|single)\s+real\s+(?:humen|human\s+)?voices?\b/i.test(lower) && /\b(?:not|no|without|zero)\s+(?:multi|malti|multy)\b/i.test(lower)) ||
+      (/\b(?:stop|disable|remove|kill|turn\s*off)\s+(?:multi|malti|multy)[-\s]*(?:personality|personalities|person\s+voices?|parson\s+voices?)\b/i.test(lower)) ||
+      (/\b(?:no\s+more|zero)\s+(?:multi|malti|multy)[-\s]*(?:personality|personalities|person\s+voices?|parson\s+voices?)\b/i.test(lower)) ||
+      (/\b(?:need\s+)?(?:one|1|single)\s+real\s+(?:humen|human\s+)?voices?\s+not\s+(?:multi|malti|multy)\b/i.test(lower)) ||
+      (/\b(?:one|1|single)\s+real\s+(?:humen|human\s+)?voices?\b/i.test(lower) && /\bnot\s+(?:malti|multi)[-\s]*(?:parson|person)\b/i.test(lower)) ||
+      (/(?:একটাই\s*রিয়েল\s*ভয়েস.*মাল্টি|মাল্টি\s*পার্সোনালিটি.*(?:বন্ধ|না|চাই\s*না)|একটাই\s*(?:আসল|রিয়েল)\s*ভয়েস|মাল্টি\s*পার্সন\s*ভয়েস.*(?:বন্ধ|না))/u.test(lower))
     );
+  }
+
+  static isRemoveKhatiMistiSingleRealHumanVoiceDirective(text = "") {
+    return IntentParser.isSingleRealVoiceNoMultiPersonalityDirective(text);
   }
 
   /**
@@ -2217,5 +2226,6 @@ module.exports = {
   isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective: IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective,
   isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective: IntentParser.isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective,
   isRemoveScriptedSameLoopTalkZeroLoopingDirective: IntentParser.isRemoveScriptedSameLoopTalkZeroLoopingDirective,
-  isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
+  isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective,
+  isRemoveKhatiMistiSingleRealHumanVoiceDirective: IntentParser.isRemoveKhatiMistiSingleRealHumanVoiceDirective
 };

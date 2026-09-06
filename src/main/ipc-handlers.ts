@@ -17,6 +17,7 @@ import { ClipboardManager, clipboardManager } from './clipboard-manager';
 import { AudioManager, audioManager } from './audio-manager';
 import { ExecutionEngine, executionEngine } from './execution-engine';
 import { AudioConfigManager, audioConfigManager } from './audio-config-manager';
+import { lifecycleManager } from './lifecycle-manager';
 import {
   IpcChannels,
   ClipboardSyncPayload,
@@ -227,26 +228,69 @@ export function registerConversationIpcHandlers(
     }
   });
 
-  // Channel: 'audio:start-capture' (IpcChannels.AUDIO_START_CAPTURE)
-  ipcMain.handle(IpcChannels.AUDIO_START_CAPTURE, async (_event: any, config: AudioCaptureConfig = {}): Promise<{ success: boolean; error?: string }> => {
+  // Channel: 'audio:start-capture' & 'audio:start'
+  const handleAudioStart = async (_event: any, payload: any = {}): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🎙️ [IPCHandlers] Processing audio:start-capture request...');
+      console.log('🎙️ [IPCHandlers] Processing audio:start request...');
+      const config: AudioCaptureConfig = typeof payload === 'object' && payload ? payload.config || payload : {};
       return await audioManager.startCapture(config);
     } catch (err: any) {
-      console.error('❌ [IPCHandlers] Error in audio:start-capture:', err?.message || err);
+      console.error('❌ [IPCHandlers] Error in audio:start:', err?.message || err);
       return { success: false, error: err?.message || 'Audio capture start failed' };
     }
-  });
+  };
+  ipcMain.handle(IpcChannels.AUDIO_START_CAPTURE, handleAudioStart);
+  if ((IpcChannels.AUDIO_START_CAPTURE as string) !== 'audio:start') {
+    ipcMain.handle('audio:start', handleAudioStart);
+  }
 
-  // Channel: 'audio:stop-capture' (IpcChannels.AUDIO_STOP_CAPTURE)
-  ipcMain.handle(IpcChannels.AUDIO_STOP_CAPTURE, async (): Promise<{ success: boolean }> => {
+  // Channel: 'audio:stop-capture' & 'audio:stop'
+  // Refactored to include releaseResources flag and health check verification before resolving
+  const handleAudioStop = async (_event: any, payload: any = {}): Promise<{ success: boolean; released: boolean; devicesReleased?: number; verified?: boolean }> => {
     try {
-      console.log('🛑 [IPCHandlers] Processing audio:stop-capture request...');
-      return audioManager.stopCapture();
+      console.log('🛑 [IPCHandlers] Processing audio:stop request with device release check...');
+      const releaseResources = payload?.releaseResources !== false; // defaults to true
+
+      const stopResult = audioManager.stopCapture();
+
+      if (releaseResources) {
+        // 1. Terminate camera hardware immediately
+        lifecycleManager.stopCameraImmediate();
+
+        // 2. Dispatch release RPC to Go backend
+        const releaseRes = await lifecycleManager.releaseGoDeviceHandles();
+
+        // 3. Verify via health check that Go process has actually released the device handles
+        const verified = await lifecycleManager.verifyDevicesReleased();
+        console.log(`🔌 [IPCHandlers] Verified Go device handle release: ${verified} (devices closed: ${releaseRes.devicesReleased})`);
+
+        return {
+          success: stopResult.success !== false,
+          released: true,
+          devicesReleased: releaseRes.devicesReleased,
+          verified,
+        };
+      }
+
+      return {
+        success: stopResult.success !== false,
+        released: false,
+      };
     } catch (err: any) {
-      console.error('❌ [IPCHandlers] Error in audio:stop-capture:', err?.message || err);
-      return { success: false };
+      console.error('❌ [IPCHandlers] Error in audio:stop:', err?.message || err);
+      return { success: false, released: false };
     }
+  };
+  ipcMain.handle(IpcChannels.AUDIO_STOP_CAPTURE, handleAudioStop);
+  if ((IpcChannels.AUDIO_STOP_CAPTURE as string) !== 'audio:stop') {
+    ipcMain.handle('audio:stop', handleAudioStop);
+  }
+
+  // Channel: 'app:force-teardown'
+  // Allows renderer to force a hard stop of all background services when window is closed
+  ipcMain.handle('app:force-teardown', async () => {
+    console.log('⚡ [IPCHandlers] app:force-teardown invoked by renderer');
+    return await lifecycleManager.forceTeardown();
   });
 
   // Channel: 'audio:command-recognized' (IpcChannels.AUDIO_COMMAND_RECOGNIZED)
@@ -433,6 +477,9 @@ export function registerConversationIpcHandlers(
           ipcMain.removeHandler(IpcChannels.CLIPBOARD_SYNC);
           ipcMain.removeHandler(IpcChannels.AUDIO_START_CAPTURE);
           ipcMain.removeHandler(IpcChannels.AUDIO_STOP_CAPTURE);
+          ipcMain.removeHandler('audio:start');
+          ipcMain.removeHandler('audio:stop');
+          ipcMain.removeHandler('app:force-teardown');
           ipcMain.removeHandler(IpcChannels.AUDIO_COMMAND_RECOGNIZED);
           ipcMain.removeHandler(IpcChannels.EXEC_RUN);
           ipcMain.removeHandler(IpcChannels.EXEC_STATUS);
@@ -448,4 +495,6 @@ export function registerConversationIpcHandlers(
     }
   };
 }
+
+export const registerIpcHandlers = registerConversationIpcHandlers;
 

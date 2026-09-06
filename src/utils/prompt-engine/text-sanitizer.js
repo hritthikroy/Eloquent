@@ -902,7 +902,18 @@ class TextSanitizer {
       .replace(/\b0\s+looping\s+(?:behabeior|behabiour|behavior)\b/gi, "zero looping behavior")
       .replace(/\b(?:any|zero)\s+stuck\s+(?:behabeior|behabiour|behavior)\b/gi, "zero stuck behavior")
       .replace(/\b(?:intrapted)\b/gi, "interrupted")
-      .replace(/\b(?:intraption)\b/gi, "interruption");
+      .replace(/\b(?:intraption)\b/gi, "interruption")
+      // Remove Khati Misti Bangla & Enforce One Real Human Voice STT Normalizations
+      // Handles: "remove the khti misti bangla kotha totaly this person and this voice i need one real humen voices not malti parson voices"
+      .replace(/\b(?:khti|khati)\s+(?:misti|mishti)\b/gi, "khati misti")
+      .replace(/\b(?:totaly)\b/gi, "totally")
+      .replace(/\b(?:humen)\s+voices?\b/gi, "human voice")
+      .replace(/\b(?:humen)\b/gi, "human")
+      .replace(/\b(?:malti|multy)\s+(?:parson|person)\s+voices?\b/gi, "multi-person voice")
+      .replace(/\b(?:malti|multy)\s+(?:parson|person)\b/gi, "multi-person")
+      .replace(/\b(?:parson)\b/gi, "person")
+      .replace(/\bremove\s+(?:the\s+)?(?:khti|khati)\s+(?:misti|mishti)\s+bangla\s+(?:kotha|katha|tone|words?)\s+totally\b/gi, "remove the khati misti bangla kotha totally")
+      .replace(/\bi\s+need\s+(?:one|1|single)\s+real\s+(?:humen|human)\s+voices?\s+not\s+(?:malti|multi)[-\s]*(?:parson|person)\s+voices?\b/gi, "I need one real human voice not multi-person voices");
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')

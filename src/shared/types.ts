@@ -60,6 +60,40 @@ export interface AudioCommandRecognizedPayload {
   rawText?: string;
 }
 
+/**
+ * AudioChunk represents a verified binary frame transmitted to the Go audio backend.
+ */
+export interface AudioChunk {
+  data: Buffer | Uint8Array | string;
+  sequenceNumber?: number;
+  timestamp?: number;
+  checksum?: string;
+  sampleRate?: number;
+  channels?: number;
+}
+
+/**
+ * AudioStatus represents the structured status returned from the Go audio backend.
+ */
+export interface AudioStatus {
+  status: 'ok' | 'error';
+  latency_ms: number;
+  message?: string;
+  bytesReceived?: number;
+  sequenceNumber?: number;
+  timestamp?: number;
+}
+
+/**
+ * Standard IPC channels for resilient audio bridge transmission and telemetry.
+ */
+export const AUDIO_IPC_CHANNELS = {
+  SEND_CHUNK: 'audio:send-chunk',
+  STATUS: 'audio:status',
+  STREAM_ERROR: 'audio:stream-error',
+  GET_STATUS: 'audio:get-status',
+} as const;
+
 export * from './types/execution';
 
 

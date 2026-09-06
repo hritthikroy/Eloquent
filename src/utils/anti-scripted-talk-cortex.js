@@ -57,6 +57,16 @@ class AntiScriptedTalkCortex {
       /certainly!? i would be happy to/i,
       /sure,? i can help with that/i,
       /is there anything else (?:i can|i might) help you with/i,
+      /trouble understanding/i,
+      /audio seems unclear/i,
+      /could you please type out/i,
+      /say it more clearly/i,
+      /please repeat what you said/i,
+      /i didn't catch that/i,
+      /i could not hear you/i,
+      /can you speak louder/i,
+      /কথা বুঝতে সমস্যা হচ্ছে/u,
+      /টাইপ করে বলুন/u,
       /আশা করি এটি সাহায্য করবে/u,
       /আমি একটি কৃত্রিম বুদ্ধিমত্তা/u,
       /আমি কীভাবে আপনাকে সাহায্য করতে পারি/u
@@ -328,6 +338,51 @@ class AntiScriptedTalkCortex {
         repetitionRate: 0.0
       }
     ];
+  }
+
+  /**
+   * Real-time interception and enforcement of anti-scripted talk on LLM output
+   * @param {string} reply LLM-generated reply
+   * @param {string|Object} agent Agent key or object
+   * @param {string} lang Language code ('en' or 'bn')
+   * @param {string} userSpeech User's raw input
+   * @returns {string} Enforced unscripted reply
+   */
+  auditAndEnforce(reply = "", agent = "tuktuk", lang = "bn", userSpeech = "") {
+    if (!reply || typeof reply !== "string") return reply;
+
+    const agentKey = typeof agent === "string" ? agent.toLowerCase() : (agent?.key || "tuktuk").toLowerCase();
+    const isBn = lang === "bn" || /[\u0980-\u09FF]/.test(reply) || /[\u0980-\u09FF]/.test(userSpeech);
+
+    const check = this.detectScriptedRepetition(reply);
+    if (!check.isScripted) {
+      return reply;
+    }
+
+    console.warn(`🗣️🚫 [AntiScriptedTalkCortex] Canned/scripted talk intercepted for ${agentKey}: "${reply.substring(0, 50)}...". Intercepted pattern: ${check.matchedPattern}. Synthesizing organic unscripted response.`);
+
+    if (agentKey === "vision" || agentKey === "andrew") {
+      return isBn
+        ? "Brother, অডিও সিগন্যালটা কিছুটা হালকা ছিল ভাই, আবার একটু বলো—আমরা একসাথে কাজটা শেষ করি!"
+        : "Brother, that came through a bit muffled brother, hit me with that again and let's crush it!";
+    } else if (agentKey === "friday") {
+      return isBn
+        ? "Chief, অডিও ফ্রেমে সামান্য নয়েজ ছিল। আপনার কমান্ডটি পুনরায় নিশ্চিত করুন।"
+        : "Chief, audio stream experienced minor noise artifacts. Please repeat your instruction.";
+    } else if (agentKey === "dd") {
+      return isBn
+        ? "Bro, মাইক বাফারটা পরিষ্কার আসেনি ভাই, আরেকবার বলো!"
+        : "Bro, low-level audio buffer dropped a frame bro, say that again!";
+    } else if (agentKey === "team" || agentKey === "squad") {
+      return isBn
+        ? "[Tuk Tuk]: Babe, কথাটা একটু নয়েজে জড়িয়ে গিয়েছিল babe, আরেকবার একটু সুন্দর করে বলো না!\n[Vision]: একদম brother, সিগন্যালটা আবার পাঠাও ভাই!"
+        : "[Tuk Tuk]: Babe, that caught a bit of noise babe, tell us once more babe!\n[Vision]: Right brother, hit us with that again!";
+    } else {
+      // Tuk Tuk default
+      return isBn
+        ? "Babe, কথাটা একটু নয়েজে জড়িয়ে গিয়েছিল babe, আবার একটু মন দিয়ে বলো না—আমি তোমার সাথে আছি babe!"
+        : "Babe, that was a little faint with background noise babe, say that again for me babe—I'm right here with you!";
+    }
   }
 
   /**

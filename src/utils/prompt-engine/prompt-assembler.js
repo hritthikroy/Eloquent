@@ -81,8 +81,9 @@ Assemble the structured Antigravity developer prompt:`;
 
     // 3. Domain-Aware Dynamic Deterministic Assembler
     let cleanObjective = (sanitizedText || "").trim().replace(/\.$/, '');
-    // Strip any lingering trailing directives and hanging prepositions
+    // Strip leading and trailing prompt generation commands and hanging prepositions
     cleanObjective = cleanObjective
+      .replace(/^(?:implement\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble|build)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*(?:prompt|প্রম্পট)\s*(?:for|about|on|of|to)?\s*/i, '')
       .replace(/[,;\s]*(?:and\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*prompt\s*(?:for|about|on|of|to)?\s*$/i, '')
       .replace(/[,;\s]*(?:er\s+upor|niye)?\s*prompt\s*(?:banao|dao|likho|ready\s*koro|banie\s*dao)\s*$/i, '')
       .replace(/[,;\s]+(?:for|about|on|to|with|in)\s*$/i, '')
@@ -95,6 +96,7 @@ Assemble the structured Antigravity developer prompt:`;
       if (!t) return true;
       if (/^(?:this|it|that|for\s+this|for\s+it|next|next\s+task|next\s+step|the\s+next\s+task|the\s+next\s+step|the\s+next\s+prompt|the\s+prompt|prompt|task)$/i.test(t)) return true;
       if (/^(?:so|well|okay|ok|now|and|then|yeah)?\s*(?:i|we)?\s*(?:am|m|are|re|will|ll)?\s*(?:going|about|trying|planning|ready|preparing)?\s*(?:to)?$/i.test(t)) return true;
+      if (/^(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:prompt)?$/i.test(t)) return true;
       return false;
     };
 
@@ -113,9 +115,18 @@ Assemble the structured Antigravity developer prompt:`;
       } else if (historyStr.includes("eye") || historyStr.includes("camera") || historyStr.includes("vision") || historyStr.includes("posture")) {
         cleanObjective = "autonomous squad ocular vision tracking, offscreen camera frame capture, and posture telemetry sync";
       } else {
-        cleanObjective = "multi-agent directives, prompt engineering resilience, and AST schema compliance";
+        cleanObjective = "prompt engineering pipeline resilience, multi-agent intent parsing, and AST schema compliance";
       }
     }
+
+    // Normalize gerund prefixes into imperative form to avoid clumsy formulations
+    cleanObjective = cleanObjective
+      .replace(/^fixing\s+/i, "Fix ")
+      .replace(/^implementing\s+/i, "Implement ")
+      .replace(/^refactoring\s+/i, "Refactor ")
+      .replace(/^building\s+/i, "Build ")
+      .replace(/^optimizing\s+/i, "Optimize ")
+      .replace(/^enhancing\s+/i, "Enhance ");
 
     const lower = cleanObjective.toLowerCase();
     let domainFiles = [
@@ -126,7 +137,29 @@ Assemble the structured Antigravity developer prompt:`;
 
     let technicalObjective = "";
 
-    if (lower.includes("kana") || lower.includes("wohndraja") || lower.includes("ondhoraja") || (lower.includes("reading") && lower.includes("fix"))) {
+    const isShortTermMemoryLoss =
+      /\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:loss|lost|issues?|drops?|fail|failing|wipe|wiped|leak|leaks|leaking)\b/i.test(cleanObjective) ||
+      /\b(?:memory\s+loss|memory\s+lost)\b/i.test(cleanObjective);
+
+    const isMetaIssueRemediation =
+      /\b(?:fix|resolve|remediate)\s+(?:this\s+kind\s+of\s+)?(?:all\s+)?(?:these\s+|the\s+)?issues?\b/i.test(cleanObjective) ||
+      /\b(?:prompt\s+engineering\s+pipeline\s+resilience|multi[- ]agent\s+intent\s+parsing|ast\s+schema\s+compliance)\b/i.test(cleanObjective);
+
+    if (isShortTermMemoryLoss) {
+      domainFiles = [
+        "- `src/utils/jarvis-manager.js`: Expand active working memory window, prevent destructive history truncation, and inject living memory into compact prompts.",
+        "- `src/utils/zero-loss-memory.js`: Ensure zero-loss Write-Ahead Logging and instant local fact extraction without cloud latency.",
+        "- `src/utils/local-cognitive-brain.js`: Wire multi-turn working memory recall into local cognitive fallbacks to eliminate short-term conversational amnesia."
+      ];
+      technicalObjective = `Implement short-term working memory persistence, multi-turn episodic retention, and zero-loss context synchronization, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`;
+    } else if (isMetaIssueRemediation) {
+      domainFiles = [
+        "- `src/utils/prompt-engine/intent-parser.js`: Expand intent detection patterns and multi-agent directives.",
+        "- `src/utils/prompt-engine/prompt-assembler.js`: Assemble natural, senior-developer Antigravity prompts.",
+        "- `src/core/prompt-engineer.ts`: Verify 100% AST schema compliance and token boundaries."
+      ];
+      technicalObjective = `Implement prompt engineering pipeline resilience, multi-agent intent parsing, and AST schema compliance, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`;
+    } else if (lower.includes("kana") || lower.includes("wohndraja") || lower.includes("ondhoraja") || (lower.includes("reading") && lower.includes("fix"))) {
       domainFiles = [
         "- `src/utils/prompt-engine/intent-parser.js`: Expand intent detection patterns and multi-agent directives.",
         "- `src/utils/prompt-engine/prompt-assembler.js`: Assemble natural, senior-developer Antigravity prompts.",
@@ -151,7 +184,7 @@ Assemble the structured Antigravity developer prompt:`;
         "- `backend/audio/buffer.go`: Maintain ring-buffer thread-safety, zero data-race guarantees, and clean audio teardown.",
         "- `src/core/audio/ringbuffer.js`: Optimize fast-path IPC audio streaming with 16.66ms render budget compliance."
       ];
-    } else if (lower.includes("prompt") || lower.includes("antigravity") || lower.includes("engineer") || lower.includes("intent") || lower.includes("ast")) {
+    } else if (lower.includes("prompt") || lower.includes("antigravity") || lower.includes("engineer") || lower.includes("intent") || lower.includes("ast") || lower.includes("issue")) {
       domainFiles = [
         "- `src/utils/prompt-engine/intent-parser.js`: Expand intent detection patterns and multi-agent directives.",
         "- `src/utils/prompt-engine/prompt-assembler.js`: Assemble natural, senior-developer Antigravity prompts.",
@@ -160,7 +193,7 @@ Assemble the structured Antigravity developer prompt:`;
     }
 
     if (!technicalObjective) {
-      if (/^(?:implement|refactor|build|optimize|enhance|fix|architect|harden|create)\b/i.test(cleanObjective)) {
+      if (/^(?:implement|refactor|build|optimize|enhance|fix|architect|harden|create|remediate|resolve)\b/i.test(cleanObjective)) {
         technicalObjective = `${cleanObjective}, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`;
       } else {
         technicalObjective = `Implement ${cleanObjective}, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`;
@@ -183,6 +216,11 @@ Next Steps & Continuation Roadmap
 - Add targeted unit/integration test coverage for newly introduced execution paths.
 - Benchmark end-to-end responsiveness and verify zero frame drops in the UI render thread.`;
   }
+
+  static assemblePrompt(text) {
+    return this.assemble({ sanitizedText: text });
+  }
 }
 
+PromptAssembler.PromptAssembler = PromptAssembler;
 module.exports = PromptAssembler;

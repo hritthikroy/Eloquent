@@ -69,7 +69,7 @@ class HumanIdentityRecognitionCortex {
   initializeIdentityProfiles() {
     return {
       hritthik: {
-        id: "hritthik", name: "Hritthik", role: "creator_partner", category: "primary_creator", prior: 0.70,
+        id: "hritthik", name: "Hritthik", aliases: ["Hrita", "Hrito", "hrita", "hrito", "হৃতা", "ঋত্বিক"], role: "creator_partner", category: "primary_creator", prior: 0.70,
         voiceprint: {
           f0Mean: 122.0, f0Variance: 18.5, harmonicity: 0.78, spectralCentroid: 1450.0, cadenceWpm: 155.0,
           mfcc: [12.5, -1.2, 3.8, -0.5, 1.9, -0.3, 0.8, -0.2, 0.5, -0.1, 0.3, -0.05, 0.15]
@@ -322,7 +322,7 @@ class HumanIdentityRecognitionCortex {
         else if (cand.id === "vision" && /\b(?:brother|bhai|bro|ast|compiler|go|daemon)\b/i.test(lower)) lingBoost = 1.4;
         else if (cand.id === "friday" && /\b(?:chief|research|empirical|benchmark)\b/i.test(lower)) lingBoost = 1.4;
         else if (cand.id === "dd" && /\b(?:bro|uptime|telemetry|sentinel|devops)\b/i.test(lower)) lingBoost = 1.3;
-        else if (cand.id === "room_guest" && /\b(?:who\s+are\s+you|is\s+hritthik|excuse\s+me|hello)\b/i.test(lower)) lingBoost = 2.0;
+        else if (cand.id === "room_guest" && /\b(?:who\s+are\s+you|is\s+(?:hritthik|hrita|hrito)|excuse\s+me|hello)\b/i.test(lower)) lingBoost = 2.0;
       }
       const joint = (cand.prior || 0.1) * pVoice * pFace * pEnergy * lingBoost;
       unnormalized[cand.id] = joint;
@@ -337,8 +337,8 @@ class HumanIdentityRecognitionCortex {
       if (p > maxPosterior) { maxPosterior = p; bestId = cand.id; }
     }
 
-    const isExplicitGuestCue = /\b(?:who\s+are\s+you|is\s+hritthik\s+(?:here|in|home)|excuse\s+me)\b/i.test(text) ||
-                               /(?:হৃত্তিক\s*(?:আসে|আছে|কই)|তুমি\s*কে|আপনি\s*কে)/iu.test(text);
+    const isExplicitGuestCue = /\b(?:who\s+are\s+you|is\s+(?:hritthik|hrita|hrito)\s+(?:here|in|home)|excuse\s+me)\b/i.test(text) ||
+                               /(?:(?:হৃত্তিক|হৃতা)\s*(?:আসে|আছে|কই)|তুমি\s*কে|আপনি\s*কে)/iu.test(text);
     if (isExplicitGuestCue && maxPosterior < 0.65) bestId = "room_guest";
 
     const livenessResult = this.computeLivenessScore(voiceObs, faceObs, energyObs, bestId);

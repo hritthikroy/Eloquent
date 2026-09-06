@@ -52,6 +52,7 @@ class SpeakerPersonalityCortex {
       hritthik: {
         id: "hritthik",
         name: "Hritthik",
+        aliases: ["Hrita", "Hrito", "hrita", "hrito", "হৃতা", "ঋত্বিক"],
         role: "creator_partner",
         category: "primary_creator",
         prior: 0.70,
@@ -78,7 +79,8 @@ class SpeakerPersonalityCortex {
           keywords: [
             "tuktuk", "tuk tuk", "vision", "friday", "dd", "babe", "architecture", "arcitecture",
             "fix", "code", "run", "test", "build", "pipeline", "terminal", "system", "dekho",
-            "koro", "bolo", "thik", "shono", "amar", "tomra", "amader", "status", "screen"
+            "koro", "bolo", "thik", "shono", "amar", "tomra", "amader", "status", "screen",
+            "hrita", "hrito", "হৃতা"
           ]
         },
         permissions: {
@@ -463,7 +465,14 @@ class SpeakerPersonalityCortex {
     const text = input.text || "";
     const observedAcoustics = input.forcedAcoustics || this.extractAcousticFeatures(input.audioSource);
 
-    const candidates = Object.values(this.profiles);
+    // Software squad agents (Vision, Friday, DD) never speak into the physical microphone
+    const allowSquad = Boolean(input.allowSquadCandidates || (input.forcedAcoustics && !input.isMicrophoneInput));
+    const candidates = Object.values(this.profiles).filter(cand => {
+      if (!allowSquad && (cand.category === "squad_agent" || cand.role === "squad_agent")) {
+        return false;
+      }
+      return true;
+    });
     const unnormalizedScores = {};
     let totalScore = 0.0;
 
@@ -505,10 +514,15 @@ class SpeakerPersonalityCortex {
 
     // Detect guest phrasing or external person cues
     const isExplicitGuestCue =
-      /\b(?:who\s+are\s+you|is\s+hritthik\s+(?:here|in|home)|excuse\s+me|can\s+i\s+speak|hello\s+is\s+anyone\s+there)\b/i.test(text) ||
-      /\b(?:হৃত্তিক\s*(?:আসে|আছে|কই)|তুমি\s*কে|আপনি\s*কে)\b/iu.test(text);
+      /\b(?:who\s+are\s+you|is\s+(?:hritthik|hrita|hrito)\s+(?:here|in|home)|excuse\s+me|can\s+i\s+speak|hello\s+is\s+anyone\s+there)\b/i.test(text) ||
+      /\b(?:(?:হৃত্তিক|হৃতা)\s*(?:আসে|আছে|কই)|তুমি\s*কে|আপনি\s*কে)\b/iu.test(text);
 
-    if ((isAcousticOutlier || isLowConfidence || isExplicitGuestCue) && finalSpeakerId === "hritthik" && isExplicitGuestCue) {
+    if (input.isMicrophoneInput && !isExplicitGuestCue && !allowSquad) {
+      // Physical microphone input belongs strictly to Hritthik unless an explicit guest cue is detected
+      finalSpeakerId = "hritthik";
+      isGuest = false;
+      maxPosterior = 1.0;
+    } else if ((isAcousticOutlier || isLowConfidence || isExplicitGuestCue) && finalSpeakerId === "hritthik" && isExplicitGuestCue) {
       finalSpeakerId = "room_guest";
       isGuest = true;
     } else if (finalSpeakerId === "room_guest") {

@@ -196,7 +196,7 @@ func ExecuteCommand(cmd *AudioCommand) AudioResponse {
 			target = "synthesized_text"
 		}
 
-		if target != "" && target != "synthesized_text" && target != "demo" {
+		if target != "" && target != "synthesized_text" && !strings.HasPrefix(target, "demo") && !strings.HasPrefix(target, "sample") {
 			buf, err := LoadAudio(target)
 			if err != nil {
 				return AudioResponse{

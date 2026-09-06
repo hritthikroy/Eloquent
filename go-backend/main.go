@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"eloquent-audio/api"
 )
 
 // isStreaming tracks whether the audio pipeline is active (0 = stopped, 1 = started).
@@ -59,6 +61,9 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+
+	// ── Antiquity REST Handlers ──────────────────────────────────────────────
+	api.RegisterAntiquityHandlers(mux)
 
 	// ── Bengali TTS endpoint ────────────────────────────────────────────────
 	mux.HandleFunc("/api/tts/bangla", TTSHandler)

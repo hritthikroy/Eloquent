@@ -282,9 +282,22 @@ function unregisterHandlers(ipcMain) {
   console.log('ℹ️ [Main/IPC] Resilient IPC handlers unregistered');
 }
 
+/**
+ * Explicit registerIpcHandlers matching (win?: BrowserWindow) => void interface.
+ */
+function registerIpcHandlers(win) {
+  let electronIpcMain;
+  try {
+    electronIpcMain = require('electron').ipcMain;
+  } catch (_) {}
+  return registerResilientIpcHandlers(electronIpcMain, win);
+}
+
 module.exports = {
+  registerIpcHandlers,
   registerResilientIpcHandlers,
   getSystemSubsystemStatus,
   getAudioDeviceState,
   resetResilientIpcState
 };
+

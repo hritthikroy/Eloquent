@@ -5,4 +5,5 @@ use (
 	./backend-go
 	./go
 	./go-backend
+	./src/go
 )

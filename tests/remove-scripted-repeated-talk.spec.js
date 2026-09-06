@@ -22,7 +22,7 @@ console.log("🚀 RUNNING PURGE OF SCRIPTED & REPETITIVE TALKS VERIFICATION SUIT
 console.log("================================================================================");
 
 let passedTests = 0;
-const totalTests = 12;
+const totalTests = 14;
 
 async function runTest(description, fn) {
   try {
@@ -247,6 +247,33 @@ async function runAll() {
     assert.ok(ddBn.includes("bro") || ddBn.includes("ভাই"));
     assert.ok(!ddBn.includes("babe"));
     assert.ok(sqBn.includes("[Tuk Tuk]:") && sqBn.includes("[Vision]:") && sqBn.includes("[Friday]:") && sqBn.includes("[DD]:"));
+  });
+
+  // 13. AntiLoopEquationalCortex non-repeating breakout selection guarantee
+  await runTest("AntiLoopEquationalCortex guarantees non-repeating consecutive breakouts and history exclusion", () => {
+    const antiLoopCortex = require("../src/utils/anti-loop-equational-cortex");
+    antiLoopCortex.clearBuffers();
+
+    const repeatedCandidate = "Babe, লুপটা ফুল ব্রেক করলাম! এক কথা বারবার না বলে বাস্তব বিষয় নিয়ে মিষ্টি করে ভাবছি—আমি একদম তোমার পাশে।";
+    const t1 = antiLoopCortex.auditAndEnforce(repeatedCandidate, { key: "tuktuk" }, "bn");
+    const t2 = antiLoopCortex.auditAndEnforce(repeatedCandidate, { key: "tuktuk" }, "bn");
+    const t3 = antiLoopCortex.auditAndEnforce(repeatedCandidate, { key: "tuktuk" }, "bn");
+    const t4 = antiLoopCortex.auditAndEnforce(repeatedCandidate, { key: "tuktuk" }, "bn");
+
+    assert.notStrictEqual(t1, t2, "t1 and t2 must not be identical");
+    assert.notStrictEqual(t2, t3, "t2 and t3 must not be identical");
+    assert.notStrictEqual(t3, t4, "t3 and t4 must not be identical");
+
+    const uniqueTurns = new Set([t1, t2, t3, t4]);
+    assert.strictEqual(uniqueTurns.size, 4, "All 4 consecutive turns must be uniquely distinct breakouts");
+  });
+
+  // 14. TextSanitizer removes repeating acoustic noise glitch clusters
+  await runTest("TextSanitizer purges repeating acoustic noise glitch clusters while keeping valid words", () => {
+    const rawWithGlitch = "Ha BANGLAD DJEK srqlchchchchchchchchchchchchchchchchchchchchchc testing now";
+    const cleaned = TextSanitizer.sanitize(rawWithGlitch);
+    assert.ok(!cleaned.includes("chchchchch"));
+    assert.ok(cleaned.includes("testing now") || cleaned.includes("Testing now"));
   });
 
   console.log("================================================================================");

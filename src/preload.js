@@ -136,6 +136,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   requestState: () => ipcRenderer.invoke('state-request'),
   commitState: (state) => ipcRenderer.invoke('state-commit', state),
   requestShutdown: (payload) => ipcRenderer.invoke('app:request-shutdown', payload || {}),
+  forceTeardown: () => ipcRenderer.invoke('app:force-teardown'),
   onStateUpdate: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('state-updated', subscription);
@@ -356,7 +357,9 @@ contextBridge.exposeInMainWorld('electronInvoke', {
       'locale:get-telemetry',
       'clear-app-cache',
       'clear-go-cache',
-      'validate-bangla-text'
+      'validate-bangla-text',
+      'app:force-teardown',
+      'app:request-shutdown'
     ];
     
     if (validChannels.includes(channel)) {

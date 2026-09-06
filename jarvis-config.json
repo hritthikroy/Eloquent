@@ -3,5 +3,16 @@
   "salutation": "Hritthik",
   "voice": "en-US-AvaMultilingualNeural",
   "speed": "0%",
-  "personality": "brilliant co-founder, equal peer, trusted teammate, sharp, warm, direct"
+  "personality": "brilliant co-founder, equal peer, trusted teammate, sharp, grounded, direct, authentic human",
+  "conversationHistory": {
+    "enabled": true,
+    "maxEntries": 1000,
+    "workingMemoryTurnsDepth": 24,
+    "persistence": true
+  },
+  "singleRealVoiceActive": true,
+  "multiPersonalityDisabled": true,
+  "multiPersonVoiceDisabled": true,
+  "singleVoiceTukTukExclusive": true,
+  "khatiMistiPurged": true
 }

@@ -295,7 +295,7 @@ class MasterApiGateway {
    * Compress and budget messages to guarantee input tokens <= maxInputTokens (default 2800).
    * Strictly prevents Groq 7,000 ITPM rate limit rejections and multi-second retry storms.
    */
-  compressPromptMessages(messages, maxInputTokens = 2800) {
+  compressPromptMessages(messages, maxInputTokens = 1400) {
     if (!Array.isArray(messages) || messages.length === 0) return messages;
 
     const estimateTokens = (msgs) => {
@@ -313,39 +313,47 @@ class MasterApiGateway {
 
     // Step 1: Compress bloated system prompt if present
     const sysIdx = cloned.findIndex(m => m.role === "system");
-    if (sysIdx !== -1 && cloned[sysIdx].content && cloned[sysIdx].content.length > 4000) {
+    if (sysIdx !== -1 && cloned[sysIdx].content && cloned[sysIdx].content.length > 2500) {
       let sys = cloned[sysIdx].content;
-      // Strip duplicated history / session continuity inside system prompt if present
       sys = sys.replace(/\n\[IMMEDIATE PRECEDING TURNS[\s\S]*?(?=\n\[|\n\n|$)/gi, "");
-      // Strip bulky LaTeX display math and academic paper proofs
       sys = sys.replace(/\$\$[\s\S]*?\$\$/g, "");
       sys = sys.replace(/\n\d+\.\s+LAW\s+\d+:[\s\S]*?(?=\n\d+\.|\n\[|$)/gi, (match) => {
         const lines = match.split("\n").filter(l => l.trim().length > 0);
         return lines.slice(0, 3).join("\n");
       });
-      if (sys.length > 5500) {
-        sys = sys.substring(0, 5200) + "\n[System rules preserved. Respond with sharp wit, natural human tone, and persona sovereignty.]";
+      if (sys.length > 3000) {
+        sys = sys.substring(0, 2800) + "\n[System rules preserved. Respond with sharp wit, natural human tone, and persona sovereignty.]";
       }
       cloned[sysIdx].content = sys;
     }
 
-    // Step 2: If still above token budget, trim older conversational history turns
-    totalEst = estimateTokens(cloned);
-    if (totalEst > maxInputTokens) {
-      const sysMsg = cloned.find(m => m.role === "system");
-      const userMsg = cloned[cloned.length - 1];
-      const historyTurns = cloned.slice(sysMsg ? 1 : 0, cloned.length - 1);
-      const keptTurns = historyTurns.slice(-4);
-      cloned = sysMsg ? [sysMsg, ...keptTurns, userMsg] : [...keptTurns, userMsg];
+    // Step 2: Bound individual message lengths (voice conversational context needs <=800 chars per turn)
+    for (let i = (sysIdx !== -1 ? 1 : 0); i < cloned.length; i++) {
+      if (cloned[i].content && cloned[i].content.length > 800) {
+        cloned[i].content = cloned[i].content.slice(0, 800) + "... [truncated for voice context]";
+      }
     }
 
-    // Step 3: Final safety clamp on system prompt if still exceeding
+    // Step 3: If still above token budget, drop older turns from history
     totalEst = estimateTokens(cloned);
-    if (totalEst > maxInputTokens && sysIdx !== -1 && cloned[sysIdx]) {
-      const excess = (totalEst - maxInputTokens) * 4;
-      if (cloned[sysIdx].content.length > excess + 1000) {
-        cloned[sysIdx].content = cloned[sysIdx].content.substring(0, cloned[sysIdx].content.length - excess) +
-          "\n[Condensed for high-speed voice streaming. Maintain persona sovereignty and wit.]";
+    if (totalEst > maxInputTokens) {
+      const sysMsg = sysIdx !== -1 ? cloned[sysIdx] : null;
+      const userMsg = cloned[cloned.length - 1];
+      let historyTurns = cloned.slice(sysMsg ? 1 : 0, cloned.length - 1);
+      while (historyTurns.length > 0 && estimateTokens(sysMsg ? [sysMsg, ...historyTurns, userMsg] : [...historyTurns, userMsg]) > maxInputTokens) {
+        historyTurns.shift();
+      }
+      cloned = sysMsg ? [sysMsg, ...historyTurns, userMsg] : [...historyTurns, userMsg];
+    }
+
+    // Step 4: Final clamp on system prompt if still exceeding
+    totalEst = estimateTokens(cloned);
+    if (totalEst > maxInputTokens && sysIdx !== -1 && cloned[0]) {
+      const nonSysTokens = estimateTokens(cloned.slice(1));
+      const targetSysChars = Math.max(400, Math.floor((maxInputTokens - nonSysTokens) * 3.8));
+      if (cloned[0].content.length > targetSysChars) {
+        cloned[0].content = cloned[0].content.substring(0, targetSysChars) +
+          "\n[Condensed for voice streaming. Maintain persona sovereignty.]";
       }
     }
 
@@ -492,6 +500,8 @@ class MasterApiGateway {
                 .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, "")
                 .replace(/^\s*(?:\*\*)?(?:analyze user input|internal reasoning|reasoning|thought process|thoughts?|chain of thought|analysis|thinking process)(?:\*\*)?:?[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F]))/i, "")
                 .replace(/^\s*(?:(?:we|i)\s+(?:have\s+to|need\s+to|should|must)\s+respond(?:\s+as)?|(?:we|i)\s+need\s+to|must\s+respond\s+in|the\s+user\s*(?:says|:)|user\s*(?:says|:)|user\s+is\s+asking|following\s+all\s+rules|react\s+first|as\s+[a-z0-9\s]+,\s*i\s+(?:need|should|must)|let\s+me\s+analyze|here\s+is\s+(?:my|the)\s+response)[\s\S]*?(?:\n\n|\r\n\r\n|\n(?=[A-Z\u0980-\u09FF\u0900-\u097F])|$)/i, "")
+                .replace(/^\s*(?:(?:we|i)\s+have\s+a\s+conflict|(?:the\s+)?developer\s+instructions\s+(?:forbid|require|specify)|under\s+(?:my|the)\s+instructions|the\s+user\s+says[\s\S]*?(?:developer\s+instructions|must\s+respond)|must\s+respond\s+in\s+[a-z]+:?|(?:we|i)\s+(?:need|have)\s+to\s+respond\s+in\s+[a-z]+:?|following\s+(?:all\s+)?rules|as\s+an\s+ai\s+model)[\s\S]*?(?=[.!?]|\n|$)/gim, "")
+                .replace(/\b(?:We\s+have\s+a\s+conflict[\s\S]*?Must\s+respond\s+in\s+[a-zA-Z]+:?)/gi, "")
                 .trim();
 
               if (rawContent.length > 0) {
@@ -550,8 +560,17 @@ class MasterApiGateway {
               throw new Error("Turn superseded by newer user speech");
             }
             if (geminiRes && geminiRes.content) {
+              let cleanGemini = (geminiRes.content || "")
+                .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "")
+                .replace(/<thought>[\s\S]*?(?:<\/thought>|$)/gi, "")
+                .replace(/<\/?(?:think|thought)>/gi, "")
+                .replace(/\[Thinking:[\s\S]*?\]/gi, "")
+                .replace(/\*(?:thinking|thought process|internal monologue|reasoning)\*[\s\S]*?(?:\n\n|$)/gi, "")
+                .replace(/^\s*(?:(?:we|i)\s+have\s+a\s+conflict|(?:the\s+)?developer\s+instructions\s+(?:forbid|require|specify)|under\s+(?:my|the)\s+instructions|the\s+user\s+says[\s\S]*?(?:developer\s+instructions|must\s+respond)|must\s+respond\s+in\s+[a-z]+:?|(?:we|i)\s+(?:need|have)\s+to\s+respond\s+in\s+[a-z]+:?|following\s+(?:all\s+)?rules|as\s+an\s+ai\s+model)[\s\S]*?(?=[.!?]|\n|$)/gim, "")
+                .replace(/\b(?:We\s+have\s+a\s+conflict[\s\S]*?Must\s+respond\s+in\s+[a-zA-Z]+:?)/gi, "")
+                .trim();
               return {
-                content: geminiRes.content,
+                content: cleanGemini || geminiRes.content,
                 model: `gemini/${geminiRes.model}`,
                 provider: "gemini",
                 usage: geminiRes.usage,

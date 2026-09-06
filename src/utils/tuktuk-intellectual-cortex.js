@@ -52,10 +52,10 @@ class TukTukIntellectualCortex {
       return "MUSIC_VIBING";
     }
 
-    // 3. Deep Coding & AST Debugging
+    // 3. Deep Coding & AST Debugging / Prompt Engineering
     if (
-      /\b(bug|error|exception|fail|crash|debug|syntax\s*error|stack\s*trace|ast|compiler|build\s*fail|null\s*pointer|segfault|panic|test\s*failing|lint|typecheck)\b/i.test(raw) ||
-      /(?:বাগ|এরর|ক্র্যাশ|ডিবাগ|কম্পাইল|কোডের\s*বাগ|বিল্ড\s*ফেইল)/iu.test(raw) ||
+      /\b(bugs?|prompts?|fix|fixing|error|errors?|exception|fail|crash|debug|debugging|syntax\s*error|stack\s*trace|ast|compiler|build\s*fail|null\s*pointer|segfault|panic|test\s*failing|lint|typecheck)\b/i.test(raw) ||
+      /(?:বাগ|প্রম্পট|এরর|ক্র্যাশ|ডিবাগ|কম্পাইল|কোডের\s*বাগ|বিল্ড\s*ফেইল|ফিক্স)/iu.test(raw) ||
       ((activeApp.includes("code") || activeApp.includes("cursor") || activeApp.includes("terminal") || activeApp.includes("iterm")) &&
        /\b(fix|check|why|error|failing|break|run|issue)\b/i.test(raw))
     ) {
@@ -172,24 +172,24 @@ class TukTukIntellectualCortex {
     if (this.situationHistory.length > 20) this.situationHistory.shift();
 
     // Default configuration for standard rapid voice chatter
-    let recommendedModel = "llama-3.1-8b-instant";
-    let maxTokens = 90;
-    let wordCap = 18;
+    let recommendedModel = "qwen/qwen3.8-27b";
+    let maxTokens = 200;
+    let wordCap = 35;
 
     if (isTukTuk && this.intellectualBoostEnabled) {
       if (isIntellectual) {
-        // High-Intelligence Cognitive Escalation: 70B parameter frontier model with expanded cognitive budget
-        recommendedModel = "llama-3.3-70b-versatile";
-        maxTokens = 320;
-        wordCap = 55;
+        // High-Intelligence Cognitive Escalation: reliable 20B parameter model with expanded cognitive budget
+        recommendedModel = "openai/gpt-oss-20b";
+        maxTokens = 420;
+        wordCap = 65;
       } else if (situation === "EMOTIONAL_GROUNDING") {
-        recommendedModel = "llama-3.1-8b-instant";
-        maxTokens = 180;
-        wordCap = 38;
+        recommendedModel = "qwen/qwen3.8-27b";
+        maxTokens = 240;
+        wordCap = 40;
       } else if (situation === "MEDIA_REEL_CO_WATCHING" || situation === "MUSIC_VIBING") {
-        recommendedModel = "llama-3.1-8b-instant";
-        maxTokens = 120;
-        wordCap = 22;
+        recommendedModel = "qwen/qwen3.8-27b";
+        maxTokens = 180;
+        wordCap = 30;
       }
     }
 

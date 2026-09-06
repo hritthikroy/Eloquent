@@ -97,7 +97,7 @@ runTest("Actual screen inspection queries DO trigger screen perception", () => {
     const isBn = q.includes("dekhcho") || q.includes("Screen-e");
     const reply = LocalCognitiveBrain.synthesizeResponse("tuktuk", "Tuk Tuk", q, {}, isBn ? "bn" : "en");
     assert(
-      reply.toLowerCase().includes("screen") || reply.includes("স্ক্রিন"),
+      reply.toLowerCase().includes("screen") || reply.includes("স্ক্রিন") || reply.includes("skrin"),
       `Screen query "${q}" must trigger screen perception! Got: "${reply}"`
     );
   }

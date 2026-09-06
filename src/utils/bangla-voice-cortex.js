@@ -32,8 +32,8 @@ class BanglaVoiceCortex {
     this.isActive = true;
     this.isBanglishOnlyMode = true;
     this.isUnifiedSingleSoulMode = true;
-    this.defaultRateOffset = "-4%";
-    this.defaultPitchOffset = "+1Hz";
+    this.defaultRateOffset = "+0%";
+    this.defaultPitchOffset = "+0Hz";
 
     // 120+ High-Frequency English Loanwords in Tech, System, and Conversational Bengali
     this.loanwordMap = [
@@ -708,17 +708,14 @@ class BanglaVoiceCortex {
     const isTukTuk = agentKey === "tuktuk" || agentKey === "ava";
 
     if (!this.isBengali(text)) {
-      if (isTukTuk) {
-        return { rate: "+0%", pitch: "+1Hz" }; // 1:1 Girlfriend warmth in English
-      }
       return { rate: "+0%", pitch: "+0Hz" };
     }
 
     // Zero Robotic Voice Across Codebase (English & Bengali for All Agents):
-    // All agents calibrated to crisp, native human conversational tempo (+0% rate).
-    // Zero negative rate stretching, zero flat monotone.
+    // All agents calibrated to crisp, native human conversational tempo (+0% rate, +0Hz natural human pitch).
+    // Zero negative rate stretching, zero flat monotone, zero artificial sweet high-pitch lilt.
     if (isTukTuk) {
-      return { rate: "+0%", pitch: "+1Hz" }; // Sweet, affectionate partner warmth
+      return { rate: "+0%", pitch: "+0Hz" }; // Natural, grounded real human tone
     }
     if (agentKey === "vision" || agentKey === "andrew" || agentKey === "pradeep") {
       return { rate: "+0%", pitch: "+0Hz" }; // Fluent, crisp brotherly cadence

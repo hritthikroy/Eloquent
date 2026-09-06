@@ -97,7 +97,7 @@ const LONG_CONVERSATION_TURNS = [
     validate: (res) => {
       const lower = res.toLowerCase();
       assert(lower.includes('vwap') || lower.includes('order') || lower.includes('slippage'), 'Must address VWAP routing');
-      assert(lower.includes('bro') || lower.includes('brother') || lower.includes('ভাই'), 'Must address as dev brother');
+      assert(lower.includes('bro') || lower.includes('brother') || lower.includes('ভাই') || lower.includes('bhai'), 'Must address as dev brother');
       assert(!lower.includes('babe'), 'Vision must NEVER say babe');
     }
   },

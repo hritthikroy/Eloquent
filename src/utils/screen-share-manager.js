@@ -143,7 +143,9 @@ class ScreenShareManager {
         }
         sendUpdate(this._cachedAppName || "Active Workspace");
       });
-    } catch (e) {}
+    } catch (error) {
+      console.error("⚠️ [Screen Share Error] Failed to process captured frame:", error.message || error);
+    }
   }
 
   captureInstantFrame(sync = false) {

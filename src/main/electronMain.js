@@ -653,11 +653,13 @@ class ElectronEyeBridge {
         this.ipcMain.removeListener('eye-move', () => {});
         this.ipcMain.removeListener('eye-unavailable', () => {});
         this.ipcMain.removeListener('eye-status', () => {});
+        this.ipcMain.removeListener('fast-learner:toggle', () => {});
       }
       if (typeof this.ipcMain.removeAllListeners === 'function') {
         this.ipcMain.removeAllListeners('eye-move');
         this.ipcMain.removeAllListeners('eye-unavailable');
         this.ipcMain.removeAllListeners('eye-status');
+        this.ipcMain.removeAllListeners('fast-learner:toggle');
       }
       if (typeof this.ipcMain.removeHandler === 'function') {
         try {
@@ -668,8 +670,11 @@ class ElectronEyeBridge {
           this.ipcMain.removeHandler('go:memdiag');
           this.ipcMain.removeHandler('go:memdiag-snapshot');
           this.ipcMain.removeHandler('agent:sync-pipeline');
+          this.ipcMain.removeHandler('fast-learner:toggle');
           this.ipcMain.removeHandler('clear-app-cache');
           this.ipcMain.removeHandler('clear-go-cache');
+          this.ipcMain.removeHandler('get-audio-config');
+          this.ipcMain.removeHandler('set-audio-config');
           this.ipcMain.removeHandler('eye:request-camera-permission');
         } catch (e) {
           /* ignore */

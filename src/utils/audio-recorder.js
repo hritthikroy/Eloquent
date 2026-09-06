@@ -12,7 +12,7 @@ class AudioRecorder {
     this.recordingProcess = null;
     this.isRecording = false;
     this.audioFilePath = null;
-    this.bufferSize = options.bufferSize !== undefined ? options.bufferSize : (process.env.ELOQUENT_AUDIO_BUFFER_SIZE || 32);
+    this.bufferSize = options.bufferSize !== undefined ? options.bufferSize : (process.env.ELOQUENT_AUDIO_BUFFER_SIZE || 512);
   }
 
   /**
@@ -161,15 +161,15 @@ class AudioRecorder {
       throw new Error('Sox/rec not found. Please install: brew install sox (macOS) or sudo apt-get install sox (Linux)');
     }
     
-    // 0-buffer instant streaming: minimum hardware threshold 32 bytes (1ms at 16kHz mono)
-    const rawBuffer = this.bufferSize !== undefined ? this.bufferSize : (process.env.ELOQUENT_AUDIO_BUFFER_SIZE || 32);
-    const bufferBytes = Math.max(32, parseInt(rawBuffer, 10) || 32);
+    // Ultra-low latency streaming buffer: 512 bytes (16ms at 16kHz mono) prevents CoreAudio buffer overruns
+    const rawBuffer = this.bufferSize !== undefined ? this.bufferSize : (process.env.ELOQUENT_AUDIO_BUFFER_SIZE || 512);
+    const bufferBytes = Math.max(512, parseInt(rawBuffer, 10) || 512);
 
-    console.log(`🎤 Using recording binary: ${recBinary} (0-buffer mode: ${bufferBytes} bytes / instant streaming)`);
+    console.log(`🎤 Using recording binary: ${recBinary} (low-latency streaming: ${bufferBytes} bytes / 16ms buffer)`);
 
-    // Clean recording with explicit -S progress updates and 0-buffer instant streaming for real-time VAD
+    // Clean recording with explicit -S progress updates and stabilized buffer for real-time VAD
     this.recordingProcess = spawn(recBinary, [
-      '--buffer', String(bufferBytes), // 0-buffer / 32-byte 1ms instant audio pass-through
+      '--buffer', String(bufferBytes), // 512-byte 16ms stable audio pass-through (zero overrun)
       '-S',            // Force progress & VU meter bar output on stderr in non-TTY pipe
       '-r', '16000',   // Requested; CoreAudio may use 48000 — Whisper handles both
       '-c', '1',       // Mono

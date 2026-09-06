@@ -161,9 +161,11 @@ if (process.argv.length >= 2) {
 if (app) {
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     // Someone tried to run a second instance, focus our window instead
-    if (dashboardWindow) {
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
       if (dashboardWindow.isMinimized()) dashboardWindow.restore();
       dashboardWindow.focus();
+    } else {
+      createDashboard();
     }
     
     // Check if there's a protocol URL in the command line
@@ -449,9 +451,15 @@ async function reportUsageToBackend(durationSeconds, mode, language) {
   }
 }
 
-// Hide dock icon (menu bar app)
-if (app.dock) {
-  app.dock.hide();
+// Hide dock icon (menu bar app) safely once app is ready to prevent NSOSStatusErrorDomain -50
+if (app && app.dock) {
+  if (app.isReady()) {
+    try { app.dock.hide(); } catch (e) {}
+  } else {
+    app.whenReady().then(() => {
+      try { app.dock.hide(); } catch (e) {}
+    });
+  }
 }
 
 // Request microphone permission
@@ -787,6 +795,12 @@ app.whenReady().then(async () => {
     }, 1500);
   } catch (err) {
     console.warn('⚠️ Autonomous Vision eyes & care initialization note:', err.message);
+  }
+
+  const shouldOpenDashboard = process.argv.includes('--dashboard') || process.argv.includes('--settings') || process.env.OPEN_DASHBOARD === 'true';
+  if (shouldOpenDashboard) {
+    console.log('🖥️ Dashboard startup requested via CLI/env flag');
+    createDashboard();
   }
 });
 
@@ -1448,8 +1462,9 @@ function initOverlayWindow() {
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setAlwaysOnTop(true, 'floating', 1);
 
-  overlayWindow.webContents.on('console-message', (event, level, message) => {
-    console.log('🖥️ [Overlay Console]:', message);
+  overlayWindow.webContents.on('console-message', (event, ...args) => {
+    const msg = (event && typeof event === 'object' && 'message' in event) ? event.message : (args[1] !== undefined ? args[1] : args[0]);
+    console.log('🖥️ [Overlay Console]:', msg);
   });
 
   overlayWindow.loadFile(path.join(__dirname, 'ui', 'overlay.html'));
@@ -1604,6 +1619,11 @@ function createDashboard() {
       
       console.log('🚀 Dashboard performance optimizations applied');
     `);
+  });
+
+  dashboardWindow.webContents.on('console-message', (event, ...args) => {
+    const msg = (event && typeof event === 'object' && 'message' in event) ? event.message : (args[1] !== undefined ? args[1] : args[0]);
+    console.log('🖥️ [Dashboard Console]:', msg);
   });
 
   dashboardWindow.loadFile(path.join(__dirname, 'ui', 'dashboard.html'));
@@ -2782,8 +2802,8 @@ async function stopRecording() {
 
       // Human-Like Speaker Tone & Personality Differentiation
       const speakerInfo = (speakerPersonalityCortex && typeof speakerPersonalityCortex.identifySpeaker === 'function')
-        ? speakerPersonalityCortex.identifySpeaker({ audioSource: targetAudioFile, text: originalText })
-        : { speakerId: 'hritthik', speakerName: 'Hritthik', role: 'creator_partner', confidence: 1.0, isGuest: false };
+        ? speakerPersonalityCortex.identifySpeaker({ audioSource: targetAudioFile, text: originalText, isMicrophoneInput: true, allowSquadCandidates: false })
+        : { speakerId: 'hritthik', speakerName: (jarvisManager && typeof jarvisManager.isUserName === 'function' && jarvisManager.isUserName(originalText)) ? (jarvisManager.config?.userName || 'Hritthik') : 'Hritthik', role: 'creator_partner', confidence: 1.0, isGuest: false };
       console.log(`🎙️ Speaker Identified: ${speakerInfo.speakerName} (${speakerInfo.role || 'creator'}, confidence: ${speakerInfo.confidence || 1.0})`);
 
       // Check for voice preference change or explicit language command (e.g. "call me Hritthik", "talk in English", "speak in Bangla")
@@ -2791,13 +2811,29 @@ async function stopRecording() {
       const activeLanguageMode = jarvisManager.evaluateLanguageTransition(originalText);
       let jarvisReply = '';
 
+      const isSingleRealVoice = Boolean(
+        jarvisManager && (
+          (typeof jarvisManager.isSingleRealVoiceMode === 'function' && jarvisManager.isSingleRealVoiceMode()) ||
+          jarvisManager.preferences?.single_real_voice_active ||
+          jarvisManager.preferences?.multi_personality_disabled ||
+          jarvisManager.preferences?.multi_person_voice_disabled ||
+          jarvisManager.preferences?.single_voice_tuktuk_exclusive ||
+          jarvisManager.singleRealVoiceActive ||
+          jarvisManager.multiPersonalityDisabled ||
+          jarvisManager.config?.singleRealVoiceActive ||
+          jarvisManager.config?.multiPersonalityDisabled
+        )
+      );
+
       // Evaluate equational cross-agent handoff (e.g., "See, Andrew not listen", "tell Andrew to fix")
-      const crossHandoff = jarvisManager.evaluateCrossAgentHandoff(originalText);
+      const crossHandoff = isSingleRealVoice ? null : jarvisManager.evaluateCrossAgentHandoff(originalText);
 
       // Pre-detect the active agent NOW before any async work, so overlay label is correct immediately
-      let activeAgent = (crossHandoff && crossHandoff.delegated)
-        ? crossHandoff.sourceAgent
-        : jarvisManager.detectActiveAgent(originalText);
+      let activeAgent = isSingleRealVoice
+        ? (jarvisManager?.agents?.tuktuk || jarvisManager.detectActiveAgent('tuktuk'))
+        : ((crossHandoff && crossHandoff.delegated)
+            ? crossHandoff.sourceAgent
+            : jarvisManager.detectActiveAgent(originalText));
       currentActiveAgent = activeAgent;
       let standupAlreadySpoken = false;
       let actionResult = null;
@@ -2814,22 +2850,26 @@ async function stopRecording() {
         if (prefChange.type === 'language') {
           jarvisReply = prefChange.value;
         } else if (prefChange.type === 'name') {
-          jarvisReply = `Understood. I will call you ${prefChange.value} from now on.`;
+          jarvisReply = prefChange.isAlias
+            ? `Understood, ${prefChange.value}. Recognized you as our Creator and Chief Architect.`
+            : `Understood. I will call you ${prefChange.value} from now on.`;
         } else if (prefChange.type === 'salutation') {
           jarvisReply = `Got it. I will address you as ${prefChange.value}.`;
         } else if (prefChange.type === 'rule') {
+          const targetUserName = jarvisManager.config?.userName || 'Hritthik';
           jarvisReply = activeAgent.name === 'Tuk Tuk'
             ? `Got it, babe. I've committed that new rule to our team directives.`
             : (activeAgent.name === 'Friday'
-              ? `Understood, Hritthik. Locked that new rule into my directives.`
+              ? `Understood, ${targetUserName}. Locked that new rule into my directives.`
               : (activeAgent.name === 'DD' || activeAgent.name === 'Brian'
-                ? `Understood, Hritthik. System rule updated.`
+                ? `Understood, ${targetUserName}. System rule updated.`
                 : `Understood, bro. Locked that new rule into my directives.`));
         } else if (prefChange.type === 'clear_rules') {
+          const targetUserName = jarvisManager.config?.userName || 'Hritthik';
           jarvisReply = activeAgent.name === 'Tuk Tuk'
             ? `All custom team directives have been cleared, babe.`
             : (activeAgent.name === 'Friday' || activeAgent.name === 'DD' || activeAgent.name === 'Brian'
-              ? `All custom directives cleared, Hritthik.`
+              ? `All custom directives cleared, ${targetUserName}.`
               : `All custom directives cleared, bro.`);
         }
       } else if (crossHandoff && crossHandoff.delegated) {
@@ -2887,18 +2927,31 @@ async function stopRecording() {
         if (actionResult && actionResult.handled) {
           if (actionResult.isStandup) {
             console.log('🎙️ Remote Office Zoom Standup sequence initiated!');
-            for (const step of actionResult.steps) {
-              if (!isJarvisLoopActive || isSessionAborted) break;
+            if (isSingleRealVoice) {
+              // In Single Real Voice Mode, Tuk Tuk delivers the unified squad briefing herself in her Ava voice!
+              const unifiedBriefing = actionResult.steps.map(s => `${s.agent}: ${s.speech}`).join(' ');
               if (overlayWindow && !overlayWindow.isDestroyed()) {
-                overlayWindow.webContents.send('set-agent-name', step.agent);
-                overlayWindow.webContents.send('jarvis-speaking', { agent: step.agent });
+                overlayWindow.webContents.send('set-agent-name', 'Tuk Tuk');
+                overlayWindow.webContents.send('jarvis-speaking', { agent: 'Tuk Tuk' });
               }
-              showNotification(`💼 ${step.agent} (${step.role})`, step.speech);
-              await jarvisManager.speak(step.speech, step.voice);
-              await new Promise(r => setTimeout(r, 200));
+              showNotification('💼 Tuk Tuk (Co-Founder & Partner)', `Babe, here is our full squad briefing: ${unifiedBriefing}`);
+              await jarvisManager.speak(`Babe, here is our full team briefing: ${unifiedBriefing}`, 'en-US-AvaMultilingualNeural', 'tuktuk');
+              jarvisReply = `Babe, here is our full team briefing: ${unifiedBriefing}`;
+              standupAlreadySpoken = true;
+            } else {
+              for (const step of actionResult.steps) {
+                if (!isJarvisLoopActive || isSessionAborted) break;
+                if (overlayWindow && !overlayWindow.isDestroyed()) {
+                  overlayWindow.webContents.send('set-agent-name', step.agent);
+                  overlayWindow.webContents.send('jarvis-speaking', { agent: step.agent });
+                }
+                showNotification(`💼 ${step.agent} (${step.role})`, step.speech);
+                await jarvisManager.speak(step.speech, step.voice);
+                await new Promise(r => setTimeout(r, 200));
+              }
+              jarvisReply = actionResult.steps[actionResult.steps.length - 1].speech;
+              standupAlreadySpoken = true;
             }
-            jarvisReply = actionResult.steps[actionResult.steps.length - 1].speech;
-            standupAlreadySpoken = true;
           } else {
             const executorName = (actionResult && actionResult.agentName) || activeAgent.name;
             console.log(`⚡ Office Action Executed by ${executorName}: "${actionResult.speech}"`);
@@ -2976,16 +3029,26 @@ async function stopRecording() {
         }
 
         let multiTurns = parseMultiAgentTurns(jarvisReply);
-        const isNoOtherVoiceInterruption = jarvisManager && (
-          jarvisManager.getPreference("no_other_voice_interruption") ||
-          jarvisManager.getPreference("single_voice_tuktuk_exclusive")
-        );
-        const isExplicitSquadRequest = /\b(?:squad|standup|meeting|all\s+agents|everyone)\b/i.test(originalText);
+        if (isSingleRealVoice) {
+          // Collapse all multi-agent turns into ONE single turn by Tuk Tuk in her Ava voice
+          const consolidatedText = multiTurns.map(t => t.text).join(' ');
+          multiTurns = [{
+            agentName: 'Tuk Tuk',
+            voice: 'en-US-AvaMultilingualNeural',
+            text: consolidatedText || jarvisReply
+          }];
+        } else {
+          const isNoOtherVoiceInterruption = jarvisManager && (
+            jarvisManager.getPreference("no_other_voice_interruption") ||
+            jarvisManager.getPreference("single_voice_tuktuk_exclusive")
+          );
+          const isExplicitSquadRequest = /\b(?:squad|standup|meeting|all\s+agents|everyone)\b/i.test(originalText);
 
-        if (multiTurns.length > 1 && isNoOtherVoiceInterruption && !isExplicitSquadRequest) {
-          console.log(`🌸 [Zero Voice Interruption Active]: Suppressing squad interruption. Preserving Tuk Tuk solo voice.`);
-          const tuktukTurn = multiTurns.find(t => t.agentName === 'Tuk Tuk') || multiTurns[0];
-          multiTurns = [tuktukTurn];
+          if (multiTurns.length > 1 && isNoOtherVoiceInterruption && !isExplicitSquadRequest) {
+            console.log(`🌸 [Zero Voice Interruption Active]: Suppressing squad interruption. Preserving Tuk Tuk solo voice.`);
+            const tuktukTurn = multiTurns.find(t => t.agentName === 'Tuk Tuk') || multiTurns[0];
+            multiTurns = [tuktukTurn];
+          }
         }
 
         if (multiTurns.length > 1) {
@@ -3038,12 +3101,12 @@ async function stopRecording() {
         } else {
           // Single agent turn — clean text and voice extraction
           let singleSpeechText = jarvisReply;
-          let singleVoice = speakingVoice;
-          let agentDisplayName = speakingAgentName;
+          let singleVoice = isSingleRealVoice ? 'en-US-AvaMultilingualNeural' : speakingVoice;
+          let agentDisplayName = isSingleRealVoice ? 'Tuk Tuk' : speakingAgentName;
           if (multiTurns.length === 1) {
             singleSpeechText = multiTurns[0].text;
-            singleVoice = multiTurns[0].voice;
-            agentDisplayName = multiTurns[0].agentName;
+            singleVoice = isSingleRealVoice ? 'en-US-AvaMultilingualNeural' : multiTurns[0].voice;
+            agentDisplayName = isSingleRealVoice ? 'Tuk Tuk' : multiTurns[0].agentName;
             if (overlayWindow && !overlayWindow.isDestroyed()) {
               overlayWindow.webContents.send('set-agent-name', agentDisplayName);
               overlayWindow.webContents.send('jarvis-synthesizing', { agent: agentDisplayName });
@@ -3053,7 +3116,8 @@ async function stopRecording() {
           if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
             singleSpeechText = jarvisManager.sanitizeAgentLexicon(singleSpeechText, agentDisplayName, singleVoice);
           } else if (agentDisplayName !== 'Tuk Tuk') {
-            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentDisplayName === 'Friday' ? 'Hritthik' : 'bro');
+            const defaultUser = (jarvisManager && jarvisManager.config?.userName) || 'Hritthik';
+            singleSpeechText = singleSpeechText.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentDisplayName === 'Friday' ? defaultUser : 'bro');
           }
 
           showNotification(`🤖 ${agentDisplayName}`, singleSpeechText);
@@ -3124,13 +3188,13 @@ async function stopRecording() {
         if (overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
         }
-        console.log('🎙️ Speech complete. Acoustic decay grace period (180ms) before re-arming mic...');
+        console.log('🎙️ Speech complete. Acoustic decay grace period (400ms) before re-arming mic (0 overlap)...');
         setTimeout(() => {
-          if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted) {
+          if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted && (!jarvisManager || !jarvisManager.isSpeaking)) {
             console.log('🎙️ Hands-free listening re-armed on clean acoustic buffer.');
             startRecording();
           }
-        }, 180);
+        }, 400);
       } else {
         hideOverlay();
       }
@@ -3418,6 +3482,12 @@ async function transcribe(filePath) {
       throw new Error('No speech detected. Please try again.');
     }
 
+    // Filter out acoustic noise fragments like "P,.", ".", "...", single punctuation or isolated noise chars
+    const lettersOnly = text.replace(/[^a-zA-Z\u0980-\u09FF0-9]/g, '');
+    if (lettersOnly.length < 2 && !['i', 'a', 'oi', 'ai', 'না', 'হ্যাঁ', 'হাঁ'].includes(text.toLowerCase().trim())) {
+      throw new Error('No intelligible speech detected. Noise filtered.');
+    }
+
     console.log(`✅ Transcribed: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
     if (languageBridge) {
       try {
@@ -3531,7 +3601,8 @@ function parseMultiAgentTurns(text) {
       if (typeof jarvisManager.sanitizeAgentLexicon === 'function') {
         speech = jarvisManager.sanitizeAgentLexicon(speech, agentInfo.name, agentInfo.voice);
       } else if (agentInfo.name !== 'Tuk Tuk') {
-        speech = speech.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentInfo.name === 'Friday' ? 'Hritthik' : 'bro');
+        const defaultUser = (jarvisManager && jarvisManager.config?.userName) || 'Hritthik';
+        speech = speech.replace(/\b(babe|sweetheart|honey|darling|meri\s+jaan)\b/gi, agentInfo.name === 'Friday' ? defaultUser : 'bro');
       }
 
       // Dynamic Bengali neural voice adaptation for Vision
@@ -3586,7 +3657,20 @@ function parseMultiAgentTurns(text) {
 // Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
 async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, handoffContext = null, languageMode = null) {
   const startTime = Date.now();
-  const agent = activeAgent || jarvisManager.agents.tuktuk;
+  const isSingleRealVoice = Boolean(
+    jarvisManager && (
+      (typeof jarvisManager.isSingleRealVoiceMode === 'function' && jarvisManager.isSingleRealVoiceMode()) ||
+      jarvisManager.preferences?.single_real_voice_active ||
+      jarvisManager.preferences?.multi_personality_disabled ||
+      jarvisManager.preferences?.multi_person_voice_disabled ||
+      jarvisManager.preferences?.single_voice_tuktuk_exclusive ||
+      jarvisManager.singleRealVoiceActive ||
+      jarvisManager.multiPersonalityDisabled ||
+      jarvisManager.config?.singleRealVoiceActive ||
+      jarvisManager.config?.multiPersonalityDisabled
+    )
+  );
+  const agent = isSingleRealVoice ? jarvisManager.agents.tuktuk : (activeAgent || jarvisManager.agents.tuktuk);
   const activeLang = languageMode || jarvisManager.currentLanguageMode || "en";
   let systemPrompt = jarvisManager.getSystemPrompt(agent, displaySpeech || userSpeech, handoffContext, activeLang, { compact: true });
 
@@ -3606,8 +3690,10 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user', activeLang);
 
-    // 16-turn window: 8 full conversational exchanges for podcast-grade continuity & long-term retention
-    const historyMessages = jarvisManager.getHistory(16, agent.key, activeLang);
+    // Interactive voice conversational window: 6 turns (12 messages) ensures immediate multi-turn continuity while slashing token consumption to protect Groq daily quotas (TPD)
+    const configuredDepth = (jarvisManager && typeof jarvisManager.getPreference === 'function' && jarvisManager.getPreference('working_memory_turns_depth')) || 6;
+    const memoryDepth = Math.min(configuredDepth, 6);
+    const historyMessages = jarvisManager.getHistory(memoryDepth, agent.key, activeLang);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
     const sanitizedHistory = [];
@@ -3671,7 +3757,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     if (!content) {
       try {
         let targetModel = 'qwen/qwen3.8-27b';
-        let targetMaxTokens = agent.key === 'team' ? 220 : 90;
+        let targetMaxTokens = agent.key === 'team' ? 240 : 200;
 
         // Tuk Tuk Omni-Situational Awareness & Deep Intellectual Cognition Escalation
         if (agent.key === 'tuktuk' || agent.key === 'ava') {
@@ -3680,10 +3766,12 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
             const evalRes = tukTukIntellectualCortex.evaluateTurn(userSpeech, agent.key, {
               activeApp: screenShareManager?.lastContext?.appName
             });
-            if (evalRes && evalRes.isIntellectual) {
-              targetModel = evalRes.recommendedModel;
-              targetMaxTokens = evalRes.maxTokens;
-              console.log(`🧠 [Tuk Tuk Intellectual Escalation]: Model ${targetModel}, MaxTokens ${targetMaxTokens}, Situation: ${evalRes.situation}, Depth: ${evalRes.intellectualScore.toFixed(2)}`);
+            if (evalRes) {
+              if (evalRes.recommendedModel) targetModel = evalRes.recommendedModel;
+              if (evalRes.maxTokens) targetMaxTokens = Math.max(targetMaxTokens, evalRes.maxTokens);
+              if (evalRes.isIntellectual) {
+                console.log(`🧠 [Tuk Tuk Intellectual Escalation]: Model ${targetModel}, MaxTokens ${targetMaxTokens}, Situation: ${evalRes.situation}, Depth: ${evalRes.intellectualScore.toFixed(2)}`);
+              }
             }
           } catch (cortexErr) {
             console.warn('⚠️ [Tuk Tuk Intellectual Cortex Evaluation Error]:', cortexErr.message);
@@ -3931,10 +4019,16 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     console.error(`❌ [${agent.name}] AI query failed:`, error.message);
     logApiRequest('jarvis-talk', 'error', Date.now() - startTime, null, error.message);
     // Persona-aware error fallbacks that still sound alive
-    if (agent.key === 'vision') return `Brother, still right here — network hiccup. Tell me what to build.`;
-    if (agent.key === 'friday') return `Hmm, lost connection for a sec. What were you saying?`;
-    if (agent.key === 'dd' || agent.key === 'brian') return `Systems dipped for a moment. Still here bro, keep going.`;
-    return `Hey, I'm right here. One sec — what did you need?`;
+    let fallbackReply = `Hey, I'm right here. One sec — what did you need?`;
+    if (agent.key === 'vision') fallbackReply = `Brother, still right here — network hiccup. Tell me what to build.`;
+    else if (agent.key === 'friday') fallbackReply = `Hmm, lost connection for a sec. What were you saying?`;
+    else if (agent.key === 'dd' || agent.key === 'brian') fallbackReply = `Systems dipped for a moment. Still here bro, keep going.`;
+
+    // Commit fallback turn to working memory so the role sequence remains unbroken
+    if (jarvisManager && typeof jarvisManager.addTurn === 'function') {
+      jarvisManager.addTurn('assistant', fallbackReply, agent.name, activeLang);
+    }
+    return fallbackReply;
   }
 }
 
@@ -4231,8 +4325,8 @@ function saveToHistory(entry) {
   }
 
   cachedHistoryMemory.unshift(entry);
-  if (cachedHistoryMemory.length > 100) {
-    cachedHistoryMemory = cachedHistoryMemory.slice(0, 100);
+  if (cachedHistoryMemory.length > 1000) {
+    cachedHistoryMemory = cachedHistoryMemory.slice(0, 1000);
   }
 
   // Non-blocking async write to disk

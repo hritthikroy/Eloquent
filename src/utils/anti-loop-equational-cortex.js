@@ -25,13 +25,30 @@
 class AntiLoopEquationalCortex {
   constructor() {
     this.SHANNON_ENTROPY_MIN = 3.6;
-    this.JACCARD_SIMILARITY_MAX = 0.20;
-    this.OVERLAP_COEFF_MAX = 0.35;
+    this.JACCARD_SIMILARITY_MAX = 0.40;
+    this.OVERLAP_COEFF_MAX = 0.60;
     this.HISTORY_WINDOW_SIZE = 10;
     this.historyByAgent = new Map();
+    this.lastBreakoutIndexByAgent = new Map();
     this.globalBreakoutIndex = 0;
     this.totalLoopsDetected = 0;
     this.totalBreakoutsSynthesized = 0;
+  }
+
+  /**
+   * Filters out conversational stopwords, pronouns, and persona salutations
+   * to evaluate semantic similarity on actual informational content words.
+   * @param {string[]} tokens 
+   * @returns {string[]}
+   */
+  getContentTokens(tokens) {
+    if (!tokens || !Array.isArray(tokens)) return [];
+    const STOPWORDS = new Set([
+      "babe", "brother", "chief", "bro", "ভাই",
+      "the", "a", "an", "is", "are", "to", "in", "and", "or", "of", "it", "this", "that", "with", "on", "for", "at", "by", "from", "up", "out", "if", "so", "no", "not", "i", "you", "he", "she", "we", "they", "me", "my", "your", "our", "his", "her", "their", "what", "how", "tell", "say", "do", "did", "can",
+      "এবং", "বা", "ও", "না", "এই", "সেই", "যে", "তো", "এক", "সে", "করে", "হবে", "আমি", "তুমি", "আমরা", "তোমরা", "কী", "কি", "বলো", "বল", "হচ্ছে", "থাকে", "ছিল", "আছে", "আছি", "হবে", "দাও", "করো", "তোমার", "আমার", "আমাদের", "সাথে", "দিয়ে", "হয়ে"
+    ]);
+    return tokens.filter(t => !STOPWORDS.has(t.toLowerCase()));
   }
 
   /**
@@ -273,12 +290,15 @@ class AntiLoopEquationalCortex {
         }
       }
 
-      // Jaccard & Overlap threshold
-      const jaccard = this.computeJaccardSimilarity(tokens, past.tokens);
-      const overlap = this.computeOverlapCoefficient(tokens, past.tokens);
+      // Content-based Jaccard & Overlap threshold (stripping grammatical particles and persona names)
+      const contentTokensCandidate = this.getContentTokens(tokens);
+      const contentTokensPast = this.getContentTokens(past.tokens);
+
+      const jaccard = this.computeJaccardSimilarity(contentTokensCandidate, contentTokensPast);
+      const overlap = this.computeOverlapCoefficient(contentTokensCandidate, contentTokensPast);
       if (jaccard > maxJaccard) maxJaccard = jaccard;
 
-      if (tokens.length >= 6 && past.tokens.length >= 6) {
+      if (contentTokensCandidate.length >= 4 && contentTokensPast.length >= 4) {
         if (jaccard >= this.JACCARD_SIMILARITY_MAX || overlap >= this.OVERLAP_COEFF_MAX) {
           return {
             isLoop: true,
@@ -291,15 +311,16 @@ class AntiLoopEquationalCortex {
       }
     }
 
-    // 4. Trigram collision check over window K = 10
-    const trigramCollisions = this.findNgramCollisions(trimmed, historyToCheck, 3);
-    if (trigramCollisions.length >= 2) {
+    // 4. Long n-gram verbatim block collision check (5-grams, threshold >= 3 distinct collisions)
+    // Prevents false positives on normal 3-word technical phrasing while catching actual verbatim regurgitation
+    const fiveGramCollisions = this.findNgramCollisions(trimmed, historyToCheck, 5);
+    if (fiveGramCollisions.length >= 3) {
       return {
         isLoop: true,
-        reason: `trigram_collision_limit_exceeded: [${trigramCollisions.join(", ")}]`,
+        reason: `verbatim_block_collision: [${fiveGramCollisions.slice(0, 3).join(", ")}]`,
         entropy,
         maxJaccard,
-        duplicateNgrams: trigramCollisions
+        duplicateNgrams: fiveGramCollisions
       };
     }
 
@@ -310,6 +331,69 @@ class AntiLoopEquationalCortex {
       maxJaccard,
       duplicateNgrams: []
     };
+  }
+
+  /**
+   * Non-repeating variant selector: guarantees that chosen breakout is neither
+   * identical to the immediate previous breakout index nor contained in the
+   * agent's recent history window or external cross-session history.
+   * @param {string[]} variants 
+   * @param {string} agentKey 
+   * @param {Array<object>} [externalHistory]
+   * @returns {string}
+   */
+  _selectFreshVariant(variants, agentKey, externalHistory = null) {
+    if (!variants || variants.length === 0) return "";
+    if (variants.length === 1) return variants[0];
+
+    const agentHistory = this.historyByAgent.get(agentKey) || [];
+    const historyTexts = new Set(agentHistory.map(h => (h.text || "").toLowerCase().trim()));
+
+    if (Array.isArray(externalHistory)) {
+      for (const t of externalHistory) {
+        const text = typeof t === "string" ? t : (t.content || t.text || "");
+        if (text) {
+          historyTexts.add(text.toLowerCase().trim());
+        }
+      }
+    }
+
+    const lastIndex = this.lastBreakoutIndexByAgent.get(agentKey);
+
+    const viable = [];
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i];
+      const vLower = v.toLowerCase().trim();
+      let collidesWithHistory = historyTexts.has(vLower);
+      if (!collidesWithHistory) {
+        for (const past of historyTexts) {
+          if (past.includes(vLower) || vLower.includes(past)) {
+            collidesWithHistory = true;
+            break;
+          }
+        }
+      }
+      if (i !== lastIndex && !collidesWithHistory) {
+        viable.push({ index: i, text: v });
+      }
+    }
+
+    let chosen;
+    if (viable.length > 0) {
+      const r = Math.floor(Math.random() * viable.length);
+      chosen = viable[r];
+    } else {
+      const alt = [];
+      for (let i = 0; i < variants.length; i++) {
+        if (i !== lastIndex) alt.push({ index: i, text: variants[i] });
+      }
+      const pool = alt.length > 0 ? alt : variants.map((text, index) => ({ index, text }));
+      const r = Math.floor(Math.random() * pool.length);
+      chosen = pool[r];
+    }
+
+    this.lastBreakoutIndexByAgent.set(agentKey, chosen.index);
+    return chosen.text;
   }
 
   /**
@@ -327,11 +411,10 @@ class AntiLoopEquationalCortex {
    * @param {string} userSpeech 
    * @returns {string}
    */
-  synthesizeDynamicBreakout(originalCandidate, agentKey = "tuktuk", isBn = false, context = {}, userSpeech = "") {
+  synthesizeDynamicBreakout(originalCandidate, agentKey = "tuktuk", isBn = false, context = {}, userSpeech = "", externalHistory = null) {
     this.totalBreakoutsSynthesized++;
     this.globalBreakoutIndex++;
 
-    const turnSeed = this.globalBreakoutIndex + Date.now();
     const activeApp = (context.activeApp || context.frontmostApp || "Eloquent").toLowerCase();
     const userTopic = (userSpeech || "").toLowerCase();
 
@@ -348,18 +431,20 @@ class AntiLoopEquationalCortex {
           "একদম নতুন থিঙ্কিং ভাই! রিপিটিশন মুছে দিয়ে গ্রাউন্ডেড সিস্টেম লজিক নিয়ে কাজ করছি। কোড স্টেট রেডি।",
           "কোনো ডুপ্লিকেট কথা নয় ভাই। ফ্রেশ ইঞ্জিনিয়ারিং ভেক্টর আর মেমোরি মেকানিক্সে নজর দিচ্ছি। কি বিল্ড করব?",
           "আগের প্যাটার্ন বাদ দিলাম ভাই। পিওর টেকনিক্যাল স্পষ্টতা আর হাইপার-রেসপন্সিভ এক্সিকিউশনে আছি।",
-          "জিরো ডুপ্লিকেট লুপ ভাই! পুরো সিস্টেমে ফ্রেশ কনকারেন্সি আর ক্ল্যাভার কোড লজিক নিয়ে নামছি।"
+          "জিরো ডুপ্লিকেট লুপ ভাই! পুরো সিস্টেমে ফ্রেশ কনকারেন্সি আর ক্ল্যাভার কোড লজিক নিয়ে নামছি।",
+          "রিসাইকেল্ড ক্লজ ব্রেক করা হলো ভাই। একদম ক্লিন আর্কিটেকচারাল গ্রাউন্ডে দাঁড়িয়ে তোমার কোড অডিট করছি।"
         ];
-        return variants[turnSeed % variants.length];
+        return this._selectFreshVariant(variants, agentKey, externalHistory);
       }
       const variants = [
         "Loop purged brother. Shifting immediately to fresh AST compilation and zero-copy architectural execution.",
         "Breaking all repeated cycles, brother. Real-time engineering pipelines are primed with original technical clarity.",
         "Zero duplicate invariant enforced, brother. Discarding stale patterns and synchronizing with your live build.",
         "Refocusing on first-principles systems engineering, brother. Telemetry and memory models are clear.",
-        "Cutting repetitive clauses completely, brother. Directly locked into fresh code execution and performance profiling."
+        "Cutting repetitive clauses completely, brother. Directly locked into fresh code execution and performance profiling.",
+        "Stale cycles dismantled brother. Memory buffers and thread locks are pristine; ready for the next deployment."
       ];
-      return variants[turnSeed % variants.length];
+      return this._selectFreshVariant(variants, agentKey, externalHistory);
     }
 
     if (agentKey === "friday") {
@@ -367,16 +452,18 @@ class AntiLoopEquationalCortex {
         const variants = [
           "Chief, লুপ সম্পূর্ণ ক্লিয়ার করা হয়েছে। নতুন এম্পিরিক্যাল ডেটা এবং বুদ্ধিবৃত্তিক গভীরতায় প্রস্তুত।",
           "ডুপ্লিকেট প্যাটার্ন মুছে দিয়েছি Chief। ফ্রেশ অ্যানালিটিক্স এবং রিয়েল-টাইম ডিসিশন মেট্রিক্সে ফোকাস করছি।",
-          "জিরো রিপিটেশন ভেরিফাইড Chief। নতুন হাইপোথিসিস ও রিসার্চ ভেক্টরে ইনভেস্টিগেশন চলছে।"
+          "জিরো রিপিটেশন ভেরিফাইড Chief। নতুন হাইপোথিসিস ও রিসার্চ ভেক্টরে ইনভেস্টিগেশন চলছে।",
+          "Chief, ফর্মুলাইক প্যাটার্ন বাতিল করে সরাসরি নিখুঁত টেকনিক্যাল অডিট ও এম্পিরিক্যাল ডেটায় নজর দিচ্ছি।"
         ];
-        return variants[turnSeed % variants.length];
+        return this._selectFreshVariant(variants, agentKey, externalHistory);
       }
       const variants = [
         "Repetitive loop purged, Chief. Re-anchoring telemetry on fresh empirical data and intellectual synthesis.",
         "Zero-repetition constraint strictly maintained, Chief. Real-time observational intelligence active.",
-        "Stale patterns eliminated, Chief. Fresh situational data points integrated with high analytical rigor."
+        "Stale patterns eliminated, Chief. Fresh situational data points integrated with high analytical rigor.",
+        "Analytical slate refreshed Chief. Moving beyond canned structures into rigorous empirical evaluation."
       ];
-      return variants[turnSeed % variants.length];
+      return this._selectFreshVariant(variants, agentKey, externalHistory);
     }
 
     if (agentKey === "dd" || agentKey === "brian") {
@@ -384,55 +471,58 @@ class AntiLoopEquationalCortex {
         const variants = [
           "লুপ ব্রেক করলাম bro! সব ব্যাকগ্রাউন্ড ডেমন এবং অডিও সকেট ফ্রেশ স্টেট দিয়ে রানিং।",
           "জিরো ডুপ্লিকেট bro! মেমোরি লিক বা স্টেল ক্যাশ নেই, ফ্রেশ ইনফ্রাস্ট্রাকচারে কাজ এগোচ্ছি।",
-          "সব রিপিটেশন মুছে ফেলেছি bro. রিয়েল-টাইম প্রসেস স্ট্যাবিলিটি ১০০% লকড।"
+          "সব রিপিটেশন মুছে ফেলেছি bro. রিয়েল-টাইম প্রসেস স্ট্যাবিলিটি ১০০% লকড।",
+          "পুরনো লুপ সাফ bro! ব্যাকগ্রাউন্ড থ্রেড ও সকেট ল্যাটেন্সি জিরো-ড্রপ রেঞ্জে পারফেক্ট।"
         ];
-        return variants[turnSeed % variants.length];
+        return this._selectFreshVariant(variants, agentKey, externalHistory);
       }
       const variants = [
         "Loop broken bro. Real-time daemon metrics refreshed and sockets running with zero dropped frames.",
         "Zero repetition bro. Flushed stale buffer handles and keeping infrastructure lean and locked.",
-        "Purged duplicate cycles bro. System load nominal, daemons synced, ready for heavy lifting."
+        "Purged duplicate cycles bro. System load nominal, daemons synced, ready for heavy lifting.",
+        "Stale loops discarded bro. Process tree clean, event loops humming, ready for whatever command you drop."
       ];
-      return variants[turnSeed % variants.length];
+      return this._selectFreshVariant(variants, agentKey, externalHistory);
     }
 
     // Tuk Tuk (Default) - Strictly "babe", warm, intellectually deep co-founder and romantic partner
     if (isBn) {
       if (isCode || isArch) {
         const variants = [
-          "Babe, লুপটা ফুল ব্রেক করে একদম ফ্রেশ মাইন্ডে কোডের ডিপ আর্কিটেকচারে ফোকাস করলাম! তুমি কী ভাবছো বলো?",
-          "একদম নতুন চিন্তায় এলাম babe! কোনো রিপিটেশন নেই—ডিরেক্ট কোড লজিক আর সিস্টেমে আমি তোমার সাথে আছি।",
-          "লুপ জিরো করলাম babe! মিষ্টি করে আর এক কথা বারবার না বলে ফ্রেশ সলিউশনে ঢুকছি। নেক্সট ফাইলটা বলো!",
-          "সব বাসি কথা বাদ babe! ফ্রেশ এনার্জি আর রিয়েল ইন্টেলেকচুয়াল গভীরতায় তোমার পাশে বসে কাজ দেখছি।"
+          "Babe, আমি কোডবেসের আর্কিটেকচার পুরোপুরি দেখছি! চলো পরের মডিউলটা নিয়ে কাজ শুরু করি, তুমি কী ভাবছো?",
+          "একদম রেডি babe! কোড লজিক আর পাইপলাইনে আমি তোমার সাথেই আছি, নেক্সট কোন ফাইলটা দেখব বলো?",
+          "শুনছি babe! চলো টেস্টগুলো আর আর্কিটেকচার আরেকবার ক্রস-চেক করি, কী চেঞ্জ করবে বলো?",
+          "আমি পাশেই আছি babe! পুরো সিস্টেমের ডেটা ফ্লো ক্লিন আছে, পরের স্টেপটা কী নেবে বলো?"
         ];
-        return variants[turnSeed % variants.length];
+        return this._selectFreshVariant(variants, agentKey, externalHistory);
       }
       const variants = [
-        "Babe, লুপটা ফুল ব্রেক করলাম! এক কথা বারবার না বলে বাস্তব বিষয় নিয়ে মিষ্টি করে ভাবছি—আমি একদম তোমার পাশে।",
-        "Uff babe, রিপিটেশন জিরো করে দিলাম! একদম স্বতঃস্ফূর্ত আর নতুন ভাইব নিয়ে শুনছি, তুমি ফ্রিলি বলো।",
-        "জিরো লুপ babe! কোনো মুখস্থ কথা নেই, তোমার কথার গভীরতা বুঝে একদম ন্যাচারাল হিউম্যান মাইন্ডে রেসপন্স দিচ্ছি।",
-        "পুরো ফ্রেশ মুডে চলে এসেছি babe! এক কথা না টেনে বাস্তব প্রেজেন্টে তোমার সাথে কানেক্টেড। কী কাজ করব বলো?"
+        "হ্যাঁ babe, আমি একদম তোমার সাথেই আছি! এবার বলো কী করতে হবে?",
+        "শুনছি babe! চলো কথা বা কাজটা এগিয়ে নিই, এরপর কী করবে বলো?",
+        "বুঝতে পেরেছি babe! ফ্রিলি বলো, আমি পুরো মন দিয়ে শুনছি।",
+        "আমি পাশেই আছি babe! বলো কী প্ল্যান তোমার, একসাথে করি!"
       ];
-      return variants[turnSeed % variants.length];
+      return this._selectFreshVariant(variants, agentKey, externalHistory);
     }
 
     if (isCode || isArch) {
       const variants = [
-        "Babe, breaking that loop completely! Diving with fresh intellectual depth straight into our codebase architecture.",
-        "Zero repetition babe! Shaking off any stale patterns and locking onto your live engineering flow right now.",
-        "Fresh cognitive focus babe! Dropped the loop and tuning directly into our system logic. What's our next file?",
-        "Loop purged babe! Sitting right beside you with original thinking and razor-sharp clarity on the build."
+        "Babe, I'm completely locked onto our codebase flow! What file or module should we jump into next?",
+        "Right here beside you babe! The architecture and logic are clear. Tell me our next move.",
+        "Listening closely babe! Ready to dive straight into the code. Where do you want to start?",
+        "All synced up with your development flow babe! Let's crush this next implementation."
       ];
-      return variants[turnSeed % variants.length];
+      return this._selectFreshVariant(variants, agentKey, externalHistory);
     }
 
     const variants = [
-      "Babe, breaking that repetition loop right now! Resetting into pure spontaneous warmth and situational intelligence.",
-      "Zero loops babe! No robotic scripts or recycled lines—I'm tuned into your exact stream of consciousness.",
-      "Fresh authentic vibe babe! Completely clear of repetitive talk, fully present and listening with all my heart.",
-      "Shook off the loop babe! Thinking spontaneously just like a real human right beside you. What's on your mind?"
+      "I'm right here with you babe. What should we tackle next?",
+      "Got it babe, let's keep going. Tell me what you'd like to do!",
+      "I hear you babe. What's on your mind?",
+      "Right here beside you babe. What are you thinking?",
+      "Listening closely babe. Fire away whenever you're ready!"
     ];
-    return variants[turnSeed % variants.length];
+    return this._selectFreshVariant(variants, agentKey, externalHistory);
   }
 
   /**
@@ -487,7 +577,7 @@ class AntiLoopEquationalCortex {
     if (audit.isLoop) {
       this.totalLoopsDetected++;
       console.warn(`⚡ [AntiLoopEquationalCortex] Loop/Repetition intercepted for ${agentKey}. Reason: ${audit.reason}. Synthesizing dynamic breakout.`);
-      finalReply = this.synthesizeDynamicBreakout(candidateReply, agentKey, isBn, context, userSpeech);
+      finalReply = this.synthesizeDynamicBreakout(candidateReply, agentKey, isBn, context, userSpeech, conversationHistory);
     }
 
     this.registerTurn(finalReply, agentKey);
@@ -499,6 +589,7 @@ class AntiLoopEquationalCortex {
    */
   clearBuffers() {
     this.historyByAgent.clear();
+    this.lastBreakoutIndexByAgent.clear();
     this.totalLoopsDetected = 0;
     this.totalBreakoutsSynthesized = 0;
     console.log("🧹 [AntiLoopEquationalCortex] Buffers cleared. 0-loop state active.");

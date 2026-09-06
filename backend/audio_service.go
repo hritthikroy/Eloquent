@@ -5,7 +5,7 @@
 // 1. Decoupled from deprecated flush signals - continuous streaming ingestion.
 // 2. ReadLoop optimized with sync.Pool buffer recycling for zero GC pressure.
 // 3. Sub-millisecond continuous data handoff with atomic metric tracking.
-package backend
+package main
 
 import (
 	"context"

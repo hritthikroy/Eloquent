@@ -16,7 +16,7 @@ class ContextEnricher {
     // 1. Serialize multi-turn conversation history
     if (jarvisManager && typeof jarvisManager.getHistory === "function") {
       try {
-        const turns = jarvisManager.getHistory(6);
+        const turns = jarvisManager.getHistory(16);
         context.dialogueContext = turns.map(t => `${t.role.toUpperCase()}: ${t.content}`);
       } catch (e) {
         console.warn("⚠️ [ContextEnricher] Failed to serialize history:", e.message);
@@ -35,7 +35,7 @@ class ContextEnricher {
     try {
       const { ContextInjector } = require("../context-injector");
       const turns = (jarvisManager && typeof jarvisManager.getHistory === "function")
-        ? jarvisManager.getHistory(6)
+        ? jarvisManager.getHistory(16)
         : [];
       integrityReport = ContextInjector.formatIntegrityBlock(turns, {
         stack: context.workspaceContext,

@@ -85,6 +85,10 @@ export class PromptEngineer {
     targetStack?: string
   ): string {
     let sanitizedIntent = (rawIntent || 'Enhance system performance and architecture').trim();
+    sanitizedIntent = sanitizedIntent
+      .replace(/^(?:implement\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble|build)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*(?:prompt|প্রম্পট)\s*(?:for|about|on|of|to)?\s*/i, '')
+      .replace(/[,;\s]*(?:and\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*prompt\s*(?:for|about|on|of|to)?\s*$/i, '')
+      .trim();
     const cleanCheck = sanitizedIntent.toLowerCase().replace(/[\p{P}\p{S}]+/gu, ' ').replace(/\s+/g, ' ').trim();
     if (!cleanCheck || /^(?:so|well|now|okay|ok|and|then)?\s*(?:i|we)?\s*(?:am|m|are|re|will|ll)?\s*(?:going|about|trying|planning|ready)?\s*(?:to)?$/i.test(cleanCheck)) {
       sanitizedIntent = context?.activeTask || 'Expand multi-agent directives, prompt engineering resilience, and AST schema compliance';
@@ -147,7 +151,10 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
     context?: WorkspaceContext
   ): 'audio_backend' | 'electron_ipc' | 'agent_brain' | 'prompt_engine' | 'general' {
     const combined = `${intent} ${context?.stack || ''} ${context?.activeDomain || ''}`.toLowerCase();
-    if (combined.includes('prompt') || combined.includes('antigravity') || combined.includes('intent') || combined.includes('kana') || combined.includes('wohndraja') || combined.includes('ondhoraja') || (combined.includes('reading') && combined.includes('fix'))) {
+    if (combined.includes('short time memory') || combined.includes('short-term memory') || combined.includes('memory loss') || combined.includes('memory lost') || (combined.includes('memory') && combined.includes('fix'))) {
+      return 'agent_brain';
+    }
+    if (combined.includes('prompt') || combined.includes('antigravity') || combined.includes('intent') || combined.includes('kana') || combined.includes('wohndraja') || combined.includes('ondhoraja') || (combined.includes('reading') && combined.includes('fix')) || combined.includes('issue') || combined.includes('fixing')) {
       return 'prompt_engine';
     }
     if (combined.includes('audio') || combined.includes('go') || combined.includes('vad') || combined.includes('recorder') || combined.includes('mic')) {
@@ -175,19 +182,23 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
     quality: string[];
   } {
     if (domain === 'prompt_engine') {
+      const isMetaFix = /\b(?:fix|fixing|resolve|remediate)\s+(?:this\s+kind\s+of\s+)?(?:all\s+)?(?:these\s+|the\s+)?issues?\b/i.test(intent) ||
+        intent.toLowerCase().includes('pipeline resilience');
+      const objectiveText = isMetaFix
+        ? `Implement prompt engineering pipeline resilience, multi-agent intent parsing, and AST schema compliance, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`
+        : `Architect and harden the prompt engineering, reading comprehension, and issue remediation engine for Eloquent. Address: "${intent}". Guarantee zero conversational filler, 100% AST schema compliance, token budget optimization, and robust multi-agent directive routing.`;
+
       return {
-        objective: `Architect and harden the prompt engineering, reading comprehension, and issue remediation engine for Eloquent. Address: "${intent}". Guarantee zero conversational filler, 100% AST schema compliance, token budget optimization, and robust multi-agent directive routing.`,
+        objective: objectiveText,
         files: [
-          { path: 'src/utils/prompt-engine/intent-parser.js', description: 'Multi-agent directive routing, suffix pattern extraction, and compound intent parsing' },
-          { path: 'src/utils/prompt-engine/prompt-assembler.js', description: 'Senior-developer prompt generation with strict 4-section schema compliance' },
-          { path: 'src/core/prompt-engineer.ts', description: 'AST compliance, recursive self-correction loop, and token boundary verification' },
-          { path: 'src/utils/prompt-engine/text-sanitizer.js', description: 'Phonetic STT normalizer for multilingual speech and folklore terminology' }
+          { path: 'src/utils/prompt-engine/intent-parser.js', description: 'Expand intent detection patterns and multi-agent directives' },
+          { path: 'src/utils/prompt-engine/prompt-assembler.js', description: 'Assemble natural, senior-developer Antigravity prompts' },
+          { path: 'src/core/prompt-engineer.ts', description: 'Verify 100% AST schema compliance and token boundaries' }
         ],
         quality: [
-          'Enforce strict 100% AST schema compliance with zero markdown wrappers or conversational preambles.',
-          'Validate token budget constraints using PromptOptimizer within 256-token boundaries.',
-          'Verify that all modified JavaScript files pass AST validation via node -c.',
-          'Ensure all automated test suites pass without regressions.'
+          'Validate 100% AST syntax clean execution via node -c across all modified JavaScript files.',
+          'Ensure all automated test suites pass without regression (npm test).',
+          'Verify edge cases, graceful degradation, and zero memory leaks across long-running loops.'
         ]
       };
     }
@@ -226,6 +237,25 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
       };
     }
 
+    const isMemoryLoss = /\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:loss|lost|issues?|drops?|fail|failing|wipe|wiped|leak|leaks|leaking)\b/i.test(intent) ||
+      /\b(?:memory\s+loss|memory\s+lost)\b/i.test(intent);
+
+    if (isMemoryLoss) {
+      return {
+        objective: `Implement short-term working memory persistence, multi-turn episodic retention, and zero-loss context synchronization, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`,
+        files: [
+          { path: 'src/utils/jarvis-manager.js', description: 'Active working memory window management and compact prompt injection' },
+          { path: 'src/utils/zero-loss-memory.js', description: 'Zero-loss write-ahead logging and immediate fact extraction' },
+          { path: 'src/utils/local-cognitive-brain.js', description: 'Multi-turn working memory recall and zero-amnesia fallbacks' }
+        ],
+        quality: [
+          'Enforce zero conversational amnesia across 16+ turns without premature history slicing.',
+          'Validate that LocalCognitiveBrain resolves previous turn context and user queries cleanly.',
+          'Validate 100% AST syntax clean execution via node -c across all modified JavaScript files.'
+        ]
+      };
+    }
+
     return {
       objective: `Optimize full-duplex conversational brain and multi-agent turn coordination. Address: "${intent}". Maintain Ebbinghaus memory retention and 140ms TRP handoff between specialists.`,
       files: [
@@ -257,6 +287,10 @@ ${quality.map(q => `- ${q}`).join('\n')}`;
     targetStack?: string
   ): string {
     let sanitizedIntent = (rawIntent || 'Enhance system performance and architecture').trim();
+    sanitizedIntent = sanitizedIntent
+      .replace(/^(?:implement\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble|build)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*(?:prompt|প্রম্পট)\s*(?:for|about|on|of|to)?\s*/i, '')
+      .replace(/[,;\s]*(?:and\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*prompt\s*(?:for|about|on|of|to)?\s*$/i, '')
+      .trim();
     const cleanCheck = sanitizedIntent.toLowerCase().replace(/[\p{P}\p{S}]+/gu, ' ').replace(/\s+/g, ' ').trim();
     if (!cleanCheck || /^(?:so|well|now|okay|ok|and|then)?\s*(?:i|we)?\s*(?:am|m|are|re|will|ll)?\s*(?:going|about|trying|planning|ready)?\s*(?:to)?$/i.test(cleanCheck)) {
       sanitizedIntent = context?.activeTask || 'Expand multi-agent directives, prompt engineering resilience, and AST schema compliance';

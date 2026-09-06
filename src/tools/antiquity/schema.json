@@ -1,0 +1,126 @@
+[
+  {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "AntiquityToolSchema",
+    "description": "Strict JSON schema for Antiquity stateless microservice tool invocations and responses in Eloquent",
+    "type": "object",
+    "definitions": {
+      "legacyParserPayload": {
+        "type": "object",
+        "required": ["rawContent", "format"],
+        "properties": {
+          "rawContent": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Legacy content or string data to parse"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["v1", "xml", "csv", "json-legacy", "custom"],
+            "description": "Legacy data format identifier"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "strictMode": { "type": "boolean" },
+              "sanitize": { "type": "boolean" },
+              "delimiter": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "audioBridgePayload": {
+        "type": "object",
+        "required": ["action", "audioData"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["transcode", "normalize", "stream_metadata", "bridge_go"],
+            "description": "Audio pipeline action to perform"
+          },
+          "audioData": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Base64 or string encoded audio buffer"
+          },
+          "sampleRate": {
+            "type": "integer",
+            "minimum": 8000,
+            "maximum": 192000,
+            "default": 24000,
+            "description": "Target or source sample rate in Hz"
+          },
+          "channels": {
+            "type": "integer",
+            "enum": [1, 2],
+            "default": 1,
+            "description": "Number of audio channels (1=mono, 2=stereo)"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["pcm16", "wav", "mp3", "opus"],
+            "default": "pcm16",
+            "description": "Audio encoding format"
+          }
+        },
+        "additionalProperties": false
+      },
+      "formatConverterPayload": {
+        "type": "object",
+        "required": ["input", "from", "to"],
+        "properties": {
+          "input": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "toolResponse": {
+        "type": "object",
+        "required": ["success", "requestId", "tool", "executionTimeMs"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "requestId": { "type": "string" },
+          "tool": { "type": "string" },
+          "data": { "type": "object" },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "details": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["code", "message"]
+          },
+          "executionTimeMs": { "type": "number", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "required": ["tool", "authToken", "requestId", "payload"],
+    "properties": {
+      "tool": {
+        "type": "string",
+        "enum": ["legacy-parser", "audio-bridge", "format-converter"],
+        "description": "The isolated antiquity microservice tool identifier"
+      },
+      "authToken": {
+        "type": "string",
+        "minLength": 16,
+        "description": "Authentication token provided by Electron handshake"
+      },
+      "requestId": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9_-]{6,64}$",
+        "description": "Unique deterministic request identifier"
+      },
+      "payload": {
+        "type": "object",
+        "description": "Tool-specific parameter payload validated against tool sub-schema"
+      }
+    },
+    "additionalProperties": false
+  }
+]
