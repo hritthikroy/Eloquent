@@ -222,6 +222,24 @@ class IntentParser {
       };
     }
 
+    // 2.1936 Remove Single Bangla Talk, Pure Single Bangla Talk Soul & Personality Person Directive
+    if (IntentParser.isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_single_bangla_talk_pure_soul_personality_person_directive",
+        action: "remove_single_bangla_talk_pure_soul_personality_person_directive",
+        agentDirective
+      };
+    }
+
     // 2.193 Short-Term Working Memory Loss Fix Directive
     if (IntentParser.isShortTermMemoryLossDirective(lower)) {
       let agentDirective = "team";
@@ -1339,6 +1357,26 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Remove Single Bangla Talk, Pure Single Bangla Talk Soul & Personality Person Directive
+   * Handles:
+   * "remove the single bangla talk no need pure single bangla talk sol and personality person from code base",
+   * "remove single bangla talk", "no need pure single bangla talk sol",
+   * "no need pure single bangla personality person", "remove pure single bangla personality person"
+   */
+  static isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+(?:the\s+)?single\s+(?:bangal|bangla)\s+talk\b/i.test(lower)) ||
+      (/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+talk\s+(?:sol|soul)\b/i.test(lower)) ||
+      (/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/i.test(lower)) ||
+      (/\bremove\s+pure\s+single\s+(?:bangal|bangla)\s+(?:talk|soul|personality|person)\b/i.test(lower)) ||
+      (/\b(?:single\s+bangla\s+talk|pure\s+single\s+bangla)\b/i.test(lower) && /\b(?:remove|no\s+need|purge|banned|drop)\b/i.test(lower)) ||
+      (/(?:সিঙ্গেল\s*বাংলা\s*টক\s*বাদ|পিওর\s*সিঙ্গেল\s*বাংলা\s*পার্সোনালিটি\s*বাদ|বাংলা\s*পার্সন\s*বাদ)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Fix Bengali Language Directive
    * Handles:
    * "fix bengali language", "fix bangla language", "bengali language fix", "fix bangal language",
@@ -2101,5 +2139,6 @@ module.exports = {
   isRemoveOtherVersionsAndSortsDirective: IntentParser.isRemoveOtherVersionsAndSortsDirective,
   isFixBengaliLanguageDirective: IntentParser.isFixBengaliLanguageDirective,
   isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective: IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective,
+  isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective: IntentParser.isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
 };

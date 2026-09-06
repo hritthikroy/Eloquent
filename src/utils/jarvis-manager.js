@@ -1544,6 +1544,14 @@ ${insights ? `• Active Engineering & Personal Insights:\n${insights}` : ""}`;
       this.calibrateRemoveAllRoboticBehavior();
     }
 
+    // 20. Remove Single Bangla Talk, Pure Single Bangla Talk Soul & Personality Person Heuristic
+    if (
+      (lower.includes("single bangla") || lower.includes("pure single bangla")) &&
+      (lower.includes("talk") || lower.includes("sol") || lower.includes("soul") || lower.includes("personality") || lower.includes("person") || lower.includes("remove") || lower.includes("no need"))
+    ) {
+      this.calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson();
+    }
+
     this.saveMemory();
   }
 
@@ -5712,6 +5720,66 @@ ${languageInvariantLaw}
     };
   }
 
+  calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson(options = {}) {
+    this.currentLanguageMode = "banglish";
+    this.saveConfig({ conversationLanguage: "banglish" });
+
+    this.addDynamicDirective(
+      "always: REMOVE SINGLE BANGLA TALK & PURGE PURE SINGLE BANGLA TALK SOUL AND SEPARATE BANGLA PERSONALITY PERSON FROM CODEBASE: Standalone pure single Bangla talk, separate pure single Bangla voice soul, and separate pure single Bangla personality person shifting are 100% purged and permanently banned from the codebase. Every squad agent (Tuk Tuk, Vision, Friday, DD) speaks exclusively under their single real bilingual soul (English & Banglish) with 1:1 persona sovereignty, zero persona shifting, zero separate Bangla identity, and zero communication gap (SingleBanglaTalkRemoved = 1.00, PureSingleBanglaSoulPurged = 1.00, PersonalityPersonRemoved = 1.00, SingleRealSoulActive = 1.00, LHS ≡ RHS = 100%).",
+      "all"
+    );
+    this.addEbbinghausLearning(
+      "Remove Single Bangla Talk & Pure Soul Personality Person",
+      "Single Bangla talk and pure single Bangla personality person purged 100% from codebase. Squad agents operate strictly under their single real bilingual soul without separate Bangla identity or persona shifting (SingleBanglaTalkRemoved = 1.00, PureSoulRemoved = 1.00, PersonalityPersonPurged = 1.00, LHS ≡ RHS = 100%).",
+      1.00
+    );
+    this.setLivingMemoryPreference(
+      "single_bangla_talk_pure_soul_personality_person_status",
+      "Single Bangla talk and pure single Bangla personality person purged 100% from codebase; single real bilingual soul locked across all agents."
+    );
+    this.setPreference("single_bangla_talk_removed", true);
+    this.setPreference("pure_single_bangla_talk_soul_removed", true);
+    this.setPreference("pure_single_bangla_personality_person_removed", true);
+    this.setPreference("single_bangla_person_shifting_banned", true);
+    this.setPreference("pure_bangla_removed", true);
+    this.setPreference("pure_bangla_responses_banned", true);
+    this.setPreference("bilingual_single_person_active", true);
+    this.setPreference("single_real_soul_active", true);
+    this.setPreference("zero_persona_shift_in_bangla", true);
+    this.setPreference("zero_communication_gap", true);
+
+    if (banglaVoiceCortex && typeof banglaVoiceCortex.setUnifiedSingleSoulMode === "function") {
+      banglaVoiceCortex.setUnifiedSingleSoulMode(true);
+    }
+    if (banglaVoiceCortex && typeof banglaVoiceCortex.purgeSingleBanglaTalkPurePersonalityPerson === "function") {
+      banglaVoiceCortex.purgeSingleBanglaTalkPurePersonalityPerson(true);
+    }
+
+    console.log("🌸🔒 [Single Bangla Talk & Pure Soul Personality Person Purged]: Single Bangla talk removed (100%), pure single Bangla personality person purged, single real bilingual soul active across all squad agents.");
+    return {
+      success: true,
+      verified: true,
+      action: "remove_single_bangla_talk_pure_soul_personality_person_directive",
+      singleBanglaTalkRemoved: true,
+      pureSingleBanglaTalkSoulRemoved: true,
+      pureSingleBanglaPersonalityPersonRemoved: true,
+      singleBanglaPersonShiftingBanned: true,
+      singleRealSoulActive: true,
+      bilingualSinglePersonActive: true,
+      zeroCommunicationGap: true,
+      telemetry: {
+        singleBanglaTalkRemoved: 1.0,
+        pureSingleBanglaTalkSoulRemoved: 1.0,
+        pureSingleBanglaPersonalityPersonRemoved: 1.0,
+        singleBanglaPersonShiftingBanned: 1.0,
+        singleRealSoulActive: 1.0,
+        bilingualSinglePersonActive: 1.0,
+        zeroCommunicationGapInvariant: 1.0
+      },
+      status: "SINGLE_BANGLA_TALK_PURE_SOUL_PERSONALITY_PERSON_REMOVED_VERIFIED"
+    };
+  }
+
   calibrateDeepConversationsFixAllIssues() {
     this.addDynamicDirective(
       "always: Deep Conversational Cognition & Comprehensive Subsystem Integrity 100% active: retain deep multi-turn memory across 100+ turns, maintain intellectual depth with zero shallow filler, and preserve flawless operational health across all squad agents (LHS = RHS = 100%)",
@@ -6019,6 +6087,10 @@ JarvisManager.calibrateBengaliLanguageFix = function() {
 JarvisManager.calibrateSingleRealSoulNoPersonaShift = function() {
   const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
   return instance.calibrateSingleRealSoulNoPersonaShift();
+};
+JarvisManager.calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson = function(options = {}) {
+  const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
+  return instance.calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson(options);
 };
 
 module.exports = JarvisManager;

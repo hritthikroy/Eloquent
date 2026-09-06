@@ -309,6 +309,55 @@ class BanglaVoiceCortex {
     return out;
   }
 
+  processHybridBengaliCodeMix(text = "") {
+    if (!text || typeof text !== "string") return text;
+    let out = text;
+
+    // 1. Restore clean English loanwords spelled in English
+    out = this.restoreCleanEnglishLoanwords(out);
+
+    // 2. Map common Romanized Bengali words into clean Bengali script for high-clarity Bengali pronunciation
+    const romanToBengaliMap = [
+      [/\bamader\b/gi, "আমাদের"],
+      [/\bekdom\b/gi, "একদম"],
+      [/\bkotha\b/gi, "কথা"],
+      [/\bbolchhi\b/gi, "বলছি"],
+      [/\bbolchhe\b/gi, "বলছে"],
+      [/\bshob\b/gi, "সব"],
+      [/\bshobai\b/gi, "সবাই"],
+      [/\bkorche\b/gi, "করছে"],
+      [/\bkorchhi\b/gi, "করছি"],
+      [/\blagche\b/gi, "লাগছে"],
+      [/\bekhon\b/gi, "এখন"],
+      [/\bhobe\b/gi, "হবে"],
+      [/\bbolo\b/gi, "বলো"],
+      [/\bshunchhi\b/gi, "শুনছি"],
+      [/\bshuntechi\b/gi, "শুনছি"],
+      [/\bthik\b/gi, "ঠিক"],
+      [/\bache\b/gi, "আছে"],
+      [/\bkhub\b/gi, "খুব"],
+      [/\bcholo\b/gi, "চলো"],
+      [/\bekasathe\b/gi, "একসাথে"],
+      [/\beksathe\b/gi, "একসাথে"],
+      [/\bnotun\b/gi, "নতুন"],
+      [/\bduito\b/gi, "দুটো"],
+      [/\bbolei\b/gi, "বলেই"],
+      [/\bdakob\b/gi, "ডাকব"],
+      [/\bdekhbo\b/gi, "দেখব"],
+      [/\bdekhobo\b/gi, "দেখাব"],
+      [/\bniye\b/gi, "নিয়ে"],
+      [/\bshuru\b/gi, "শুরু"],
+      [/\bjako\b/gi, "যাক"],
+      [/\bryechhe\b/gi, "রয়েছে"]
+    ];
+
+    for (const [regex, replacement] of romanToBengaliMap) {
+      out = out.replace(regex, replacement);
+    }
+
+    return out;
+  }
+
   enforceBanglishModernVibe(text = "") {
     if (!text || typeof text !== "string") return text;
     let out = text;
@@ -705,6 +754,26 @@ class BanglaVoiceCortex {
       this.isBanglishOnlyMode = true;
     }
     return this.isUnifiedSingleSoulMode;
+  }
+
+  purgeSingleBanglaTalkPurePersonalityPerson(enabled = true) {
+    this.isSingleBanglaTalkPurged = !!enabled;
+    this.isPureSingleBanglaPersonalityPersonRemoved = !!enabled;
+    this.setUnifiedSingleSoulMode(enabled);
+    return {
+      isSingleBanglaTalkPurged: this.isSingleBanglaTalkPurged,
+      isPureSingleBanglaPersonalityPersonRemoved: this.isPureSingleBanglaPersonalityPersonRemoved,
+      isUnifiedSingleSoulMode: this.isUnifiedSingleSoulMode
+    };
+  }
+
+  removeSingleBanglaTalkPureSoulPersonalityPerson(text = "") {
+    if (!text || typeof text !== "string") return "";
+    let clean = this.enforceUnifiedSingleSoul(text);
+    return clean
+      .replace(/\b(?:single\s+bangla\s+talk|pure\s+single\s+bangla\s+talk\s+soul|bangla\s+personality\s+person)\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   enforceUnifiedSingleSoul(text = "") {

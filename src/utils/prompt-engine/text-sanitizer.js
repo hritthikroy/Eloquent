@@ -877,6 +877,13 @@ class TextSanitizer {
       .replace(/\bfix\s+(?:bengali|bangla|bangal)\s+language\b/gi, "Fix Bengali language")
       .replace(/\b(?:bengali|bangla|bangal)\s+language\s+fix\b/gi, "Bengali language fix")
       .replace(/\bfix\s+(?:bangla|bangal)\s+speech\b/gi, "fix Bangla speech")
+      // Remove Single Bangla Talk, Pure Single Bangla Talk Soul & Personality Person STT Normalizations
+      // Handles: "remove the single bangla talk no need pure single bangla talk sol and personality person from code base"
+      .replace(/\bremove\s+(?:the\s+)?single\s+(?:bangal|bangla)\s+talk\s+no\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+talk\s+(?:sol|soul)\s+and\s+personality\s+person(?:\s+from\s+(?:code\s*base|codebase))?\b/gi, "Remove single Bangla talk, no need pure single Bangla talk soul and personality person from codebase")
+      .replace(/\bremove\s+(?:the\s+)?single\s+(?:bangal|bangla)\s+talk\b/gi, "Remove single Bangla talk")
+      .replace(/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+talk\s+(?:sol|soul)\b/gi, "no need pure single Bangla talk soul")
+      .replace(/\bno\s+need\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/gi, "no need pure single Bangla personality person")
+      .replace(/\bremove\s+pure\s+single\s+(?:bangal|bangla)\s+personality\s+person\b/gi, "remove pure single Bangla personality person")
       .replace(/\b(?:intrapted)\b/gi, "interrupted")
       .replace(/\b(?:intraption)\b/gi, "interruption");
 
