@@ -848,6 +848,11 @@ class TextSanitizer {
       .replace(/\bneed\s+one\s+single\s+real\s+(?:sol|soul)\s+for\s+all\s+for\s+(?:bangal|bangla)\s+and\s+english\s+both\b/gi, "need one single real soul for all for Bangla and English both")
       .replace(/\bone\s+single\s+real\s+(?:sol|soul)\s+for\s+all\b/gi, "one single real soul for all")
       .replace(/\bsingle\s+real\s+(?:sol|soul)\s+for\s+(?:bangal|bangla)\s+and\s+english\b/gi, "single real soul for Bangla and English")
+      // Remove All Other Versions & Other Sorts STT Normalizations
+      // Handles: "remove all your other version and other sorts", "remove all other versions and other sorts", "remove other versions and sorts"
+      .replace(/\bremove\s+all\s+(?:your\s+)?other\s+(?:version|versions)\s+and\s+other\s+(?:sorts?|sortings?)\b/gi, "Remove all other versions and other sorts")
+      .replace(/\bremove\s+(?:all\s+)?other\s+(?:version|versions)\s+and\s+(?:other\s+)?(?:sorts?|sortings?)\b/gi, "remove all other versions and other sorts")
+      .replace(/\bother\s+(?:version|versions)\s+and\s+other\s+(?:sorts?|sortings?)\b/gi, "other versions and other sorts")
       .replace(/\b(?:intrapted)\b/gi, "interrupted")
       .replace(/\b(?:intraption)\b/gi, "interruption");
 

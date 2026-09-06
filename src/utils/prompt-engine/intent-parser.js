@@ -127,6 +127,23 @@ class IntentParser {
       };
     }
 
+    // 2.1938 Remove All Other Versions & Other Sorts Directive
+    if (IntentParser.isRemoveOtherVersionsAndSortsDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_other_versions_and_sorts",
+        agentDirective
+      };
+    }
+
     // 2.1937 Remove Bangla Interrupted Soul & One Single Real Soul Directive
     if (IntentParser.isRemoveBanglaInterruptedSingleSoulDirective(lower)) {
       let agentDirective = "team";
@@ -1297,6 +1314,27 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Remove All Other Versions & Other Sorts Directive
+   * Handles:
+   * "remove all your other version and other sorts",
+   * "remove all other versions and other sorts",
+   * "remove other versions and sorts", "remove legacy versions and sorts",
+   * "অন্যান্য ভার্সন আর সোর্ট বাদ", "সব আদার ভার্সন রিমুভ"
+   */
+  static isRemoveOtherVersionsAndSortsDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+all\s+(?:your\s+)?other\s+(?:version|versions)\s+and\s+other\s+(?:sorts?|sortings?)\b/i.test(lower)) ||
+      (/\bremove\s+(?:all\s+)?other\s+(?:version|versions)\s+and\s+(?:other\s+)?(?:sorts?|sortings?)\b/i.test(lower)) ||
+      (/\bother\s+(?:version|versions)\s+and\s+other\s+(?:sorts?|sortings?)\b/i.test(lower)) ||
+      (/\bremove\s+legacy\s+versions?\s+and\s+sorts?\b/i.test(lower)) ||
+      (/\bpurge\s+other\s+versions?\b/i.test(lower)) ||
+      (/(?:অন্যান্য\s*ভার্সন.*বাদ|আদার\s*ভার্সন\s*রিমুভ|সোর্ট\s*রিমুভ|একটাই\s*সিঙ্গেল\s*ভার্সন)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Remove Bangla Interrupted Soul & One Single Real Soul Directive
    * Handles:
    * "remove bangla intrapted sol need one single real sol for all for bangal and english both",
@@ -2018,6 +2056,7 @@ module.exports = {
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
   isRemoveBanglaInterruptedSingleSoulDirective: IntentParser.isRemoveBanglaInterruptedSingleSoulDirective,
+  isRemoveOtherVersionsAndSortsDirective: IntentParser.isRemoveOtherVersionsAndSortsDirective,
   isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective: IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
 };
