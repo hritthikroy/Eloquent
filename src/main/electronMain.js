@@ -385,6 +385,17 @@ class ElectronEyeBridge {
         return { success: true, bondingMetrics: null };
       });
 
+      // 4b. Fast Learner Module IPC Channel
+      ipcMain.on('fast-learner:toggle', (_event, payload) => {
+        this._broadcast('fast-learner:toggle', payload);
+      });
+
+      ipcMain.handle('fast-learner:toggle', async (_event, payload = {}) => {
+        const enabled = !!(payload && payload.enabled);
+        this._broadcast('fast-learner:toggle', { enabled, config: payload.config || {} });
+        return { success: true, enabled, timestamp: Date.now() };
+      });
+
       // 5. Cross-Layer Cache Purge IPC Handlers
       ipcMain.handle('clear-app-cache', async (_event, options = {}) => this.clearAppCache(options));
 
