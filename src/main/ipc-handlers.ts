@@ -13,6 +13,8 @@ import {
   SyncCheckpoint,
   validateSyncCheckpoint
 } from './conversation-state-manager';
+import { ClipboardManager, clipboardManager } from './clipboard-manager';
+import { IpcChannels, ClipboardSyncPayload, ClipboardSyncResponse } from '../shared/types';
 
 export interface VerifyIntegrityPayload {
   uiState?: ConversationalState;
@@ -194,6 +196,24 @@ export function registerConversationIpcHandlers(
     }
   });
 
+  // Channel: 'clipboard:sync' (IpcChannels.CLIPBOARD_SYNC)
+  // Handles automatic and manual prompt clipboard synchronization requests
+  ipcMain.handle(IpcChannels.CLIPBOARD_SYNC, async (_event: any, payload: string | ClipboardSyncPayload): Promise<ClipboardSyncResponse> => {
+    try {
+      console.log('📋 [IPCHandlers] Processing clipboard:sync request...');
+      const response = await clipboardManager.syncPromptToClipboard(payload);
+      return response;
+    } catch (err: any) {
+      console.error('❌ [IPCHandlers] Error in clipboard:sync channel:', err?.message || err);
+      return {
+        success: false,
+        length: 0,
+        timestamp: Date.now(),
+        error: err?.message || 'Unhandled clipboard sync IPC error'
+      };
+    }
+  });
+
   // Telemetry Broadcast Subscription:
   // Emits 'stateSyncStatus' to renderer windows
   const unsubscribeSync = manager.onSyncStatus((status: StateSyncStatus) => {
@@ -213,7 +233,7 @@ export function registerConversationIpcHandlers(
     }
   });
 
-  console.log('✅ [IPCHandlers] Registered conversation:verify-integrity, stateSyncStatus & validate-bangla-text channels');
+  console.log('✅ [IPCHandlers] Registered conversation:verify-integrity, clipboard:sync, stateSyncStatus & validate-bangla-text channels');
 
   return {
     unregister: () => {
@@ -224,6 +244,7 @@ export function registerConversationIpcHandlers(
           ipcMain.removeHandler('conversation:get-sync-status');
           ipcMain.removeHandler('conversation:ingest-checkpoint');
           ipcMain.removeHandler('validate-bangla-text');
+          ipcMain.removeHandler(IpcChannels.CLIPBOARD_SYNC);
         }
         unsubscribeSync();
       } catch (e) {}
