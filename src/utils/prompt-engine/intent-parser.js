@@ -1122,9 +1122,11 @@ class IntentParser {
       (/\b(?:why\s+(?:he|she|they)?\s*change\s+(?:his|her|their)?\s*(?:sole|soul|sol))\b/i.test(lower)) ||
       (/\b(?:interchange\s+(?:thare|their)?\s*(?:sol|soul|sole)\s+also\s+interchange)\b/i.test(lower)) ||
       (/\b(?:need\s+one\s+(?:soll|soul|sol)\s+like\s+(?:humen|human)\s+not\s+(?:interchnageble|interchangeable))\b/i.test(lower)) ||
-      (/\b(?:one\s+soul|single\s+soul)\b/i.test(lower) && /\b(?:not\s+interchangeable|non-interchangeable|like\s+human|like\s+humen)\b/i.test(lower)) ||
-      (/\b(?:fix\s+soul\s+interchange|zero\s+soul\s+interchange|stop\s+interchanging\s+souls?)\b/i.test(lower)) ||
-      (/(?:টুকটুক.*(?:সোল.*ইন্টারচেঞ্জ|একটি\s*সোল|মানুষের\s*মতো\s*সোল)|সোল\s*ইন্টারচেঞ্জ\s*হবে\s*না|ওয়ান\s*সোল\s*লাইক\s*হিউম্যান)/u.test(lower))
+      (/\b(?:one\s+soul|single\s+soul)\b/i.test(lower) && /\b(?:not\s+interchangeable|non-interchangeable|like\s+human|like\s+humen|zero\s+interchange)\b/i.test(lower)) ||
+      (/\b(?:fix\s+soul\s+interchange|zero\s+soul\s+interchange|stop\s+(?:changing|swapping|interchanging)\s+souls?)\b/i.test(lower)) ||
+      (/\b(?:changing|change|swap|interchange)\s+souls?\s+(?:when|while)\s+(?:he\s+|she\s+)?(?:talks?|talking)\b/i.test(lower)) ||
+      (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) && /\b(?:single\s+soul|one\s+soul)\b/i.test(lower)) ||
+      (/(?:টুকটুক.*(?:সোল.*(?:ইন্টারচেঞ্জ|চেঞ্জ|সোয়াপ)|একটি\s*সোল|মানুষের\s*মতো\s*সোল)|সোল\s*(?:ইন্টারচেঞ্জ|চেঞ্জ|সোয়াপ).*হবে\s*না|ওয়ান\s*সোল\s*লাইক\s*হিউম্যান|পার্মানেন্ট\s*সোল|একটাই\s*পার্মানেন্ট\s*সোল)/u.test(lower))
     );
   }
 
@@ -1184,6 +1186,8 @@ class IntentParser {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
     return (
+      (/\b(?:thay|they)\s+are\s+not\s+(?:lisening|listening)\s+(?:anf|and)?\s*(?:memorize|memorise|memorizing)\s+(?:instently|instantly)\s+(?:anf|and)?\s*(?:corectly|correctly)\b/i.test(lower)) ||
+      (/\b(?:thay|they)\s+are\s+not\s+(?:lisening|listening)\s+(?:anf|and)?\s*(?:memorize|memorise|memorizing)\b/i.test(lower)) ||
       (/\b(?:middle\s+of\s+the\s+talk|middle\s+talk|mid[-\s]*talk)\b/i.test(lower) && /\b(?:capture|lissyen|listen|memorise|memorize)\b/i.test(lower)) ||
       (/\b(?:if\s+(?:thay|they)\s+talk|when\s+(?:thay|they)\s+are\s+(?:taking|talking))\b/i.test(lower) && /\b(?:middle|capture|lissyen|listen)\b/i.test(lower)) ||
       (/\b(?:capture\s+middle\s+talk|capture\s+mid[-\s]*talk)\b/i.test(lower)) ||

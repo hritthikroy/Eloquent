@@ -77,6 +77,11 @@ class TextSanitizer {
       .replace(/\b(?:robotik\s*gaps?|robotic\s*gap)\b/gi, "robotic gaps")
       .replace(/\b(?:both\s*working\s*languages?)\b/gi, "both working languages")
       // Bilingual vibe parity & dialect mishearing normalizations
+      .replace(/\bthay\b(?!\s*bot)/gi, "they")
+      .replace(/\blisening\b/gi, "listening")
+      .replace(/\banf\b/gi, "and")
+      .replace(/\binstently\b/gi, "instantly")
+      .replace(/\bcorectly\b/gi, "correctly")
       .replace(/\b(?:thay\s*bot|they\s*bot)\b/gi, "they both")
       .replace(/\b(?:difrent|defret|defrent)\b/gi, "different")
       .replace(/\b(?:dif+rent\s+vide)\b/gi, "different vibe")
