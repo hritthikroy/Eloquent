@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-06T14:09:45.545Z",
+  "updatedAt": "2026-09-06T20:37:19.813Z",
   "profiles": {
     "hritthik": {
       "id": "hritthik",
@@ -8,10 +8,10 @@
       "category": "primary_creator",
       "prior": 0.7,
       "acoustics": {
-        "f0Mean": 254.54935309142633,
+        "f0Mean": 197.8171202649413,
         "f0Variance": 18.5,
-        "harmonicity": 0.24086816469247543,
-        "spectralCentroid": 1643.7296294117627,
+        "harmonicity": 0.1631019387651807,
+        "spectralCentroid": 1821.2855358027966,
         "cadenceWpm": 155
       },
       "faceEmbedding": {
@@ -85,10 +85,10 @@
       "category": "squad_agent",
       "prior": 0.1,
       "acoustics": {
-        "f0Mean": 107.75359999999999,
+        "f0Mean": 106.115168,
         "f0Variance": 12,
-        "harmonicity": 0.767392,
-        "spectralCentroid": 1441.832,
+        "harmonicity": 0.6837049599999999,
+        "spectralCentroid": 1531.8521600000001,
         "cadenceWpm": 140
       },
       "faceEmbedding": {
@@ -152,10 +152,10 @@
       "category": "squad_agent",
       "prior": 0.08,
       "acoustics": {
-        "f0Mean": 208.988,
+        "f0Mean": 191.14478873599998,
         "f0Variance": 16,
-        "harmonicity": 0.8076,
-        "spectralCentroid": 1727.36,
+        "harmonicity": 0.6304899072,
+        "spectralCentroid": 1694.6062899199997,
         "cadenceWpm": 165
       },
       "faceEmbedding": {

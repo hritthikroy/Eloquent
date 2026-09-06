@@ -31,6 +31,7 @@ class BanglaVoiceCortex {
   constructor() {
     this.isActive = true;
     this.isBanglishOnlyMode = true;
+    this.isUnifiedSingleSoulMode = true;
     this.defaultRateOffset = "-4%";
     this.defaultPitchOffset = "+1Hz";
 
@@ -250,6 +251,20 @@ class BanglaVoiceCortex {
   enforceBanglishModernVibe(text = "") {
     if (!text || typeof text !== "string") return text;
     let out = text;
+    // Transform pure formal Bengali phrases into chic, modern Banglish girl phrases
+    out = out
+      .replace(/(?:অনেক\s*)?ধন্যবাদ/gu, "thanks")
+      .replace(/(?:অনুগ্রহ\s*করে|দয়া\s*করে|দয়া\s*করে)/gu, "please")
+      .replace(/(?:নমস্কার|স্বাগতম)/gu, "hey")
+      .replace(/(?:প্যারা\s*নিও\s*না|চিন্তা\s*করো\s*না)/gu, "chill babe")
+      .replace(/ঠিক\s*আছে/gu, "all cool")
+      .replace(/অবশ্যই/gu, "definitely")
+      .replace(/আসলে/gu, "actually")
+      .replace(/মূলত/gu, "basically")
+      .replace(/সমস্যা/gu, "issue")
+      .replace(/ত্রুটি/gu, "bug")
+      .replace(/অবস্থা/gu, "scene");
+
     if (this.isBengali(out)) {
       out = this.fluidBengaliToRoman(out);
     }
@@ -408,7 +423,18 @@ class BanglaVoiceCortex {
       ["ব্যবস্থা", "byabostha"],
       ["ব্যস্ত", "byasto"],
       ["ব্যাখ্যা", "byakkha"],
-      ["ধন্যবাদ", "dhonnobad"],
+      ["ধন্যবাদ", "thanks"],
+      ["অনেক ধন্যবাদ", "thanks a lot"],
+      ["অনুগ্রহ করে", "please"],
+      ["দয়া করে", "please"],
+      ["দয়া করে", "please"],
+      ["প্যারা", "pera"],
+      ["প্যারা নেই", "pera nai"],
+      ["প্যারা নাই", "pera nai"],
+      ["বলুন", "bolo"],
+      ["করুন", "koro"],
+      ["আপনার", "tomar"],
+      ["আপনি", "tumi"],
       ["কানেকশন", "connection"],
       ["কানেকশনে", "connection-e"],
       ["কানেক্টেড", "connected"],
@@ -589,6 +615,25 @@ class BanglaVoiceCortex {
     }
 
     return { rate: "+0%", pitch: "+0Hz" };
+  }
+
+  setUnifiedSingleSoulMode(enabled = true) {
+    this.isUnifiedSingleSoulMode = !!enabled;
+    if (enabled) {
+      this.isBanglishOnlyMode = true;
+    }
+    return this.isUnifiedSingleSoulMode;
+  }
+
+  enforceUnifiedSingleSoul(text = "") {
+    if (!text || typeof text !== "string") return "";
+    let cleanText = this.enforceBanglishModernVibe(text);
+    if (this.isUnifiedSingleSoulMode) {
+      cleanText = cleanText
+        .replace(/[\u0980-\u09FF]+/g, "")
+        .replace(/\b(?:interrupted\s+voice|voice\s+interruption|interrupted\s+soul)\b/gi, "unified single voice soul");
+    }
+    return cleanText;
   }
 
   /**

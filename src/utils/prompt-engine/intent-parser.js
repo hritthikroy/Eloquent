@@ -127,6 +127,23 @@ class IntentParser {
       };
     }
 
+    // 2.1937 Remove Bangla Interrupted Soul & One Single Real Soul Directive
+    if (IntentParser.isRemoveBanglaInterruptedSingleSoulDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_bangla_interrupted_single_soul",
+        agentDirective
+      };
+    }
+
     // 2.1936 Banglish & Modern English Same-Soul Vibe Directive
     if (IntentParser.isBanglishModernVibeSameSoulDirective(lower)) {
       let agentDirective = "team";
@@ -144,7 +161,17 @@ class IntentParser {
       };
     }
 
-    // 2.193 Zero Pure Bangla Removal, Banglish Default Voice & Instant Responses Directive
+    // 2.193 Zero Pure Bangla Tone & Modern Banglish Girl Sound for Real Tuk Tuk Voice (No Other Voice Interruption) Directive
+    if (IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective(lower)) {
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_pure_bangla_modern_banglish_tuktuk_solo_voice",
+        agentDirective: "tuktuk"
+      };
+    }
+
+    // 2.1935 Zero Pure Bangla Removal, Banglish Default Voice & Instant Responses Directive
     if (IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective(lower)) {
       let agentDirective = "team";
       if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
@@ -157,6 +184,24 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "remove_pure_bangla_banglish_default_instant_responses",
+        agentDirective
+      };
+    }
+
+    // 2.193 Short-Term Working Memory Loss Fix Directive
+    if (IntentParser.isShortTermMemoryLossDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "short_term_memory_loss_fix_directive",
+        action: "short_term_memory_loss_fix_directive",
         agentDirective
       };
     }
@@ -736,6 +781,8 @@ class IntentParser {
       /\b(?:refine\s+(?:this\s+into\s+a\s+)?prompt)\b/i,
       /\b(?:generate\s+developer\s+prompt)\b/i,
       /\b(?:antigravity\s+prompt)\b/i,
+      /\b(?:write|craft|create|make|prepare|engineer|draft|generate|assemble)\s+(?:up\s+)?(?:a|the)?\s*prompt\s+for\s+(?:fixing|resolving|handling)?/i,
+      /\b(?:prompt\s+engineering\s+pipeline\s+resilience|multi[- ]agent\s+intent\s+parsing|ast\s+schema\s+compliance)\b/i,
       // Suffix / Compound / Trailing prompt directives
       /\b(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*prompt\s*(?:for|about|on|of|to)?\s*$/i,
       /\band\s+(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble)\s+(?:up\s+)?(?:a|the|my|an)?\s*prompt(?:\s+(?:for|about|on|of|to))?\s*$/i,
@@ -765,7 +812,8 @@ class IntentParser {
 
         // Extract concept payload by stripping leading agent directives and prompt prefixes
         let cleanedTarget = rawText
-          .replace(/^(?:hey\s+)?(?:tuk\s*tuk|tuktuk|vision|andrew|friday|dd|brayn|brian|ডিডি|ভিশন|টুকটুক|ফ্রাইডে)[,\s]*(?:can\s+you\s+)?(?:please\s+)?(?:tell\s+(?:vision|andrew|tuk\s*tuk|friday|dd|brayn|brian)\s+to\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|prompt|প্রম্পট)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*(?:prompt|প্রম্পট)\s*(?:for|about|on|in\s+antigravity|to\s+antigravity)?\s*/i, "")
+          .replace(/^(?:hey\s+)?(?:(?:tell\s+)?(?:tuk\s*tuk|tuktuk|vision|andrew|friday|dd|brayn|brian|ডিডি|ভিশন|টুকটুক|ফ্রাইডে)(?:-ke|\s+ke)?(?:,\s*|\s+to\s+|\s+)?(?:can\s+you\s+)?(?:please\s+)?)?(?:can\s+you\s+)?(?:please\s+)?(?:write|craft|create|make|prepare|engineer|draft|refine|give|generate|assemble|build)\s+(?:up\s+)?(?:a|the|my|an)?\s*(?:(?:next|high[- ]context|structured|master|developer|first|integrity|human[- ]like|antigravity)\s+)*(?:prompt|প্রম্পট)\s*(?:for|about|on|in\s+antigravity|to\s+antigravity)?\s*/i, "")
+          .replace(/^(?:hey\s+)?(?:tuk\s*tuk|tuktuk|vision|andrew|friday|dd|brayn|brian|ডিডি|ভিশন|টুকটুক|ফ্রাইডে)[,\s]*(?:prompt|প্রম্পট)\s*(?:this|it|for|about|on)?\s*/i, "")
           .replace(/\s*(?:in|on|to|into)\s+antigravity[.,;:!?\s]*$/i, "")
           .trim();
 
@@ -1249,6 +1297,29 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Remove Bangla Interrupted Soul & One Single Real Soul Directive
+   * Handles:
+   * "remove bangla intrapted sol need one single real sol for all for bangal and english both",
+   * "remove bangla interrupted soul", "need one single real soul for all for bangla and english both",
+   * "one single real soul for all", "single real soul for bangla and english both",
+   * "remove interrupted bangla soul", "no bangla interrupted voice"
+   */
+  static isRemoveBanglaInterruptedSingleSoulDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+bangla\s+(?:intrapted|interrupted)\s+(?:sol|soul)\b/i.test(lower)) ||
+      (/\bneed\s+one\s+single\s+real\s+(?:sol|soul)\s+for\s+all\s+for\s+(?:bangal|bangla)\s+and\s+english\b/i.test(lower)) ||
+      (/\bone\s+single\s+real\s+(?:sol|soul)\s+for\s+all\b/i.test(lower)) ||
+      (/\bsingle\s+real\s+(?:sol|soul)\s+for\s+(?:bangal|bangla)\s+and\s+english\b/i.test(lower)) ||
+      (/\bbangla\s+(?:intrapted|interrupted)\s+(?:sol|soul)\b/i.test(lower)) ||
+      (/\bno\s+bangla\s+interrupted\s+voice\b/i.test(lower)) ||
+      (/\bunified\s+bangla\s+english\s+voice\s+soul\b/i.test(lower)) ||
+      (/(?:বাংলা\s*ইন্টারাপ্টেড\s*সোল\s*বাদ|বাংলা\s*ইংলিশ\s*একটাই\s*রিয়েল\s*সোল|সিঙ্গেল\s*রিয়েল\s*সোল|ইন্টারাপ্টেড\s*ভয়েস\s*বাদ)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Banglish & Modern English Same-Soul Vibe Directive
    * Handles:
    * "need bangla english same sol dont use pure bangla remove pure bangal conversation use banglish mordern vibe all the time",
@@ -1268,6 +1339,29 @@ class IntentParser {
       (/\b(?:banglis|banglish)\s+(?:mordern|modern)\s+vibe\s+all\s+the\s+time\b/i.test(lower)) ||
       (/\b(?:mordern|modern)\s+vibe\s+all\s+the\s+time\b/i.test(lower)) ||
       (/(?:বাংলা\s*ইংলিশ\s*সেম\s*সোল|পিওর\s*বাংলা\s*ইউজ\s*কোরো\s*না|ব্যাংলিশ\s*মডার্ন\s*ভাইব|পিওর\s*বাংলা\s*কনভারসেশন\s*বাদ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Short-Term Working Memory Loss Fix Directive
+   * Handles:
+   * "fix this short time memory lost issues",
+   * "short time memory lost", "short term memory loss", "short time memory loss",
+   * "fix memory loss issues", "stop losing short term memory", "short term memory drops",
+   * "fix working memory lost issues", "conversational memory loss",
+   * "শর্ট টাইম মেমোরি লস্ট", "শর্ট টার্ম মেমোরি ফিক্স", "মেমোরি লস্ট ইস্যু ফিক্স"
+   */
+  static isShortTermMemoryLossDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:loss|lost|issues?|drops?|fail|failing|wipe|wiped|leak|leaks|leaking|problem|problems|bug|bugs)\b/i.test(lower)) ||
+      (/\b(?:fix|solve|stop|prevent)\s+(?:this\s+)?(?:short\s*(?:time|term)|working)\s+memory\s*(?:lost|loss|issues?|problem|problems|amnesia)?\b/i.test(lower)) ||
+      (/\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:lost|loss)\b/i.test(lower)) ||
+      (/\b(?:memory\s+(?:lost|loss)\s+(?:issues?|problem|problems)|stop\s+losing\s+(?:short\s*(?:time|term)|working)?\s*memory)\b/i.test(lower)) ||
+      (/\b(?:conversational|conversation)\s+(?:amnesia|memory\s+loss)\b/i.test(lower)) ||
+      (/\b(?:losing|lost|forgetting)\s+(?:short\s*(?:time|term)|working|recent)\s+memory\b/i.test(lower)) ||
+      (/(?:শর্ট\s*টাইম\s*মেমোরি|শর্ট\s*টার্ম\s*মেমোরি|স্মৃতিশক্তি\s*হারিয়ে|মেমরি\s*লস্ট|মেমোরি\s*লস|মেমোরি\s*ইস্যু)/u.test(lower))
     );
   }
 
@@ -1293,6 +1387,30 @@ class IntentParser {
       (/\b(?:full\s*duplex|efference\s*copy)\b/i.test(lower) && /\b(?:mid[-\s]*talk|middle\s*talk|listening|listen)\b/i.test(lower)) ||
       (/\b(?:listen\s+and\s+capture|capture\s+memorise|capture\s+memorize)\b/i.test(lower) && /\b(?:middle|talk|taking|mid[-\s]*talk)\b/i.test(lower)) ||
       (/(?:কথা\s*বলার\s*মাঝে.*(?:শোনা|শুনে|ক্যাপচার)|মাঝের\s*কথা\s*ক্যাপচার|একসাথে\s*শুনে\s*মনে\s*রাখা|ফুল\s*ডুপ্লেক্স.*ক্যাপচার)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Zero Pure Bangla Tone, Modern Banglish Girl Voice & Zero Other Voice Interruption Directive
+   * Handles:
+   * "remove the pure bangal tone pure bangal language taking need only morden banglish girl sound for real tuk tuk voice no need to other voice intraption",
+   * "remove pure bangla tone pure bangla language talking need only modern banglish girl sound for real tuk tuk voice no need to other voice interruption",
+   * "remove the pure bangla tone need only modern banglish girl sound for real tuk tuk voice no need for other voice interruption",
+   * "only modern banglish girl sound for real tuk tuk voice no other voice interruption",
+   * "need only modern banglish girl sound for real tuk tuk voice no need to other voice interruption",
+   * "খাঁটি বাংলা টোন বাদ দাও, শুধু মডার্ন ব্যাংলিশ মেয়ের ভয়েস টুকটুকের জন্য, অন্য কোনো ভয়েস ইন্টারাপশন লাগবে না"
+   */
+  static isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+(?:the\s+)?pure\s+(?:bangal|bangla)\s+tone\b/i.test(lower) && /\b(?:morden|modern)\s+banglish\b/i.test(lower)) ||
+      (/\bpure\s+(?:bangal|bangla)\s+language\s+(?:taking|talking)\b/i.test(lower) && /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower)) ||
+      (/\b(?:morden|modern)\s+banglish\s+girl\s+(?:sound|voice)\b/i.test(lower) && /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower)) ||
+      (/\breal\s+(?:tuk\s*tuk|tuktuk)\s+voice\b/i.test(lower) && /\b(?:banglish|other\s+voice|interruption|intraption)\b/i.test(lower)) ||
+      (/\bno\s+need\s+(?:to|for)\s+other\s+voice\s+(?:intraption|interuption|interruption)\b/i.test(lower)) ||
+      (/\b(?:other\s+voice\s+(?:intraption|interuption|interruption))\b/i.test(lower) && /\b(?:tuk\s*tuk|tuktuk|banglish)\b/i.test(lower)) ||
+      (/(?:খাঁটি\s*বাংলা.*বাদ|মডার্ন\s*ব্যাংলিশ.*টুকটুক|অন্য\s*ভয়েস.*ইন্টারাপশন.*না)/u.test(lower))
     );
   }
 
@@ -1899,5 +2017,7 @@ module.exports = {
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
+  isRemoveBanglaInterruptedSingleSoulDirective: IntentParser.isRemoveBanglaInterruptedSingleSoulDirective,
+  isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective: IntentParser.isRemovePureBanglaModernBanglishTukTukSoloVoiceDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective
 };

@@ -82,6 +82,10 @@ class TextSanitizer {
       .replace(/\banf\b/gi, "and")
       .replace(/\binstently\b/gi, "instantly")
       .replace(/\bcorectly\b/gi, "correctly")
+      // Short-term memory & zero amnesia STT normalizations
+      .replace(/\b(?:short\s*time\s*memory\s*lost|short\s*term\s*memory\s*lost)\b/gi, "short-term memory loss")
+      .replace(/\b(?:short\s*time\s*memory)\b/gi, "short-term memory")
+      .replace(/\b(?:memory\s*lost)\b/gi, "memory loss")
       .replace(/\b(?:thay\s*bot|they\s*bot)\b/gi, "they both")
       .replace(/\b(?:difrent|defret|defrent)\b/gi, "different")
       .replace(/\b(?:dif+rent\s+vide)\b/gi, "different vibe")
@@ -827,11 +831,30 @@ class TextSanitizer {
       .replace(/\bremove\s+pure\s+(?:bangal|bangla)\s+(?:conversation|conversaion|talks?)\b/gi, "remove pure Bangla conversation")
       .replace(/\buse\s+(?:banglis|banglish)\s+(?:mordern|modern)\s+vibe\s+all\s+the\s+time\b/gi, "use Banglish modern vibe all the time")
       .replace(/\b(?:mordern)\s+vibe\b/gi, "modern vibe")
-      .replace(/\b(?:mordern)\b/gi, "modern");
+      .replace(/\b(?:mordern)\b/gi, "modern")
+      // Zero Pure Bangla Tone, Modern Banglish Girl Voice & Zero Voice Interruption STT Normalizations
+      // Handles: "remove the pure bangal tone pure bangal language taking need only morden banglish girl sound for real tuk tuk voice no need to other voice intraption"
+      .replace(/\bremove\s+(?:the\s+)?pure\s+(?:bangal|bangla)\s+tone\s+(?:and\s+)?pure\s+(?:bangal|bangla)\s+language\s+(?:taking|talking)\s+need\s+only\s+(?:morden|modern|mordan)\s+banglish\s+girl\s+(?:sound|voice)\s+for\s+real\s+(?:tuk\s*tuk|tuktuk)\s+voice\s+no\s+need\s+(?:to|for)\s+other\s+voice\s+(?:intraption|interuption|interruption)\b/gi, "Remove the pure Bangla tone and pure Bangla language talking, need only modern Banglish girl sound for real Tuk Tuk voice, no need for other voice interruption")
+      .replace(/\bpure\s+(?:bangal|bangla)\s+language\s+(?:taking|talking)\b/gi, "pure Bangla language talking")
+      .replace(/\bpure\s+(?:bangal|bangla)\s+tone\b/gi, "pure Bangla tone")
+      .replace(/\b(?:morden|mordan)\s+banglish\s+girl\s+(?:sound|voice)\b/gi, "modern Banglish girl sound")
+      .replace(/\breal\s+(?:tuk\s*tuk|tuktuk)\s+voice\b/gi, "real Tuk Tuk voice")
+      .replace(/\bno\s+need\s+(?:to|for)\s+other\s+voice\s+(?:intraption|interuption|interruption)\b/gi, "no need for other voice interruption")
+      .replace(/\b(?:other\s+voice\s+(?:intraption|interuption|interruption))\b/gi, "other voice interruption")
+      // Remove Bangla Interrupted Soul & One Single Real Soul STT Normalizations
+      // Handles: "remove bangla intrapted sol need one single real sol for all for bangal and english both"
+      .replace(/\bremove\s+bangla\s+(?:intrapted|interrupted)\s+(?:sol|soul)\s+need\s+one\s+single\s+real\s+(?:sol|soul)\s+for\s+all\s+for\s+(?:bangal|bangla)\s+and\s+english\s+both\b/gi, "Remove Bangla interrupted soul, need one single real soul for all for Bangla and English both")
+      .replace(/\bremove\s+bangla\s+(?:intrapted|interrupted)\s+(?:sol|soul)\b/gi, "Remove Bangla interrupted soul")
+      .replace(/\bneed\s+one\s+single\s+real\s+(?:sol|soul)\s+for\s+all\s+for\s+(?:bangal|bangla)\s+and\s+english\s+both\b/gi, "need one single real soul for all for Bangla and English both")
+      .replace(/\bone\s+single\s+real\s+(?:sol|soul)\s+for\s+all\b/gi, "one single real soul for all")
+      .replace(/\bsingle\s+real\s+(?:sol|soul)\s+for\s+(?:bangal|bangla)\s+and\s+english\b/gi, "single real soul for Bangla and English")
+      .replace(/\b(?:intrapted)\b/gi, "interrupted")
+      .replace(/\b(?:intraption)\b/gi, "interruption");
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')
     text = text
+      .replace(/\b\w*([a-zA-Z]{1,3})\1{4,}\w*\b/g, "") // Purge acoustic noise tokens with repeating character clusters (e.g. srqlchchchchch...)
       .replace(/\b(?:um|uh|er|ah)\b/gi, "")
       .replace(/\b(?!(?:bar|dhire|choto|gorom|shob|ek|bhalo|ki|tuk)\b)(\w+)\s+\1\b/gi, "$1") // De-duplicate accidental stutters while keeping Bengali reduplication and Tuk Tuk
       .replace(/\s+/g, " ")

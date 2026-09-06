@@ -34,7 +34,7 @@ class FourAgentBilingualVoiceSmoothnessCortex {
       },
       vision: {
         en: "en-US-AndrewMultilingualNeural",
-        bn: "bn-BD-PradeepNeural",
+        bn: "en-US-AndrewMultilingualNeural",
         prosody: { rate: "+0%", pitch: "+0Hz" }
       },
       friday: {
