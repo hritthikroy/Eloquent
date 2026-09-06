@@ -3590,18 +3590,8 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     const effectiveTurns = maxTurns || configuredTurns;
     const activeLang = filterLang || this.currentLanguageMode || null;
     const messageLimit = Math.max(effectiveTurns * 2, 16);
+    // Unbroken multi-turn memory: retain all chronological conversation turns without purging mixed-script context
     let recent = this.conversationHistory.slice(-messageLimit);
-    if (activeLang === "en") {
-      // In English workflow mode, prioritize English turns and filter out Bengali script to prevent context confusion
-      const enTurns = recent.filter(t => !(/[\u0980-\u09FF]/.test(t.content)));
-      if (enTurns.length >= 4) {
-        recent = enTurns.slice(-messageLimit);
-      } else {
-        recent = this.conversationHistory.slice(-messageLimit);
-      }
-    } else {
-      recent = this.conversationHistory.slice(-messageLimit);
-    }
 
     const isNonTukTuk = requestingAgentKey && requestingAgentKey !== "tuktuk";
     return recent
@@ -5130,9 +5120,9 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
 
     const tempAudioPath = `/tmp/eloquent_jarvis_${Date.now()}.mp3`;
 
-    // Dynamic Adaptive Timeout (12.0s baseline + 250ms per word over 10 words, clamped 12s-25s)
+    // Responsive Neural Voice Timeout: Fast failover (3.2s-5.5s attempt 1, 4.0s-8.0s attempt 2)
+    // Prevents overlay hanging on "readying voice... 0:12" when synthesis socket stalls
     const wordCount = cleanText.split(/\s+/).filter(Boolean).length;
-    const adaptiveTimeoutMs = Math.min(25000, Math.max(12000, 7000 + wordCount * 250));
 
     // High-Fidelity Studio Neural Voice via msedge-tts (96kbps Mono MP3)
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -5141,6 +5131,9 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
         if (attempt > 1) {
           this.initTTS();
         }
+        const adaptiveTimeoutMs = attempt === 1
+          ? Math.min(5500, Math.max(3200, 1800 + wordCount * 80))
+          : Math.min(8000, Math.max(4000, 2500 + wordCount * 100));
         const client = await this.getWarmTTSClient(ttsVoice);
         // Isolated directory prevents file-lock collisions with CoreAudio afplay
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "eloquent_tts_"));

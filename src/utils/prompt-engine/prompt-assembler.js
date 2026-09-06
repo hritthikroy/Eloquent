@@ -139,7 +139,8 @@ Assemble the structured Antigravity developer prompt:`;
 
     const isShortTermMemoryLoss =
       /\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:loss|lost|issues?|drops?|fail|failing|wipe|wiped|leak|leaks|leaking)\b/i.test(cleanObjective) ||
-      /\b(?:memory\s+loss|memory\s+lost)\b/i.test(cleanObjective);
+      /\b(?:memory\s+loss|memory\s+lost)\b/i.test(cleanObjective) ||
+      /\b(?:reset\s+conversation|conversation\s+reset|every\s+time\s+reset)\b/i.test(cleanObjective);
 
     const isMetaIssueRemediation =
       /\b(?:fix|resolve|remediate)\s+(?:this\s+kind\s+of\s+)?(?:all\s+)?(?:these\s+|the\s+)?issues?\b/i.test(cleanObjective) ||

@@ -1642,9 +1642,12 @@ class IntentParser {
       (/\b(?:fix|solve|stop|prevent)\s+(?:this\s+)?(?:short\s*(?:time|term)|working)\s+memory\s*(?:lost|loss|issues?|problem|problems|amnesia)?\b/i.test(lower)) ||
       (/\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:lost|loss)\b/i.test(lower)) ||
       (/\b(?:memory\s+(?:lost|loss)\s+(?:issues?|problem|problems)|stop\s+losing\s+(?:short\s*(?:time|term)|working)?\s*memory)\b/i.test(lower)) ||
-      (/\b(?:conversational|conversation)\s+(?:amnesia|memory\s+loss)\b/i.test(lower)) ||
+      (/\b(?:conversational|conversation)\s+(?:amnesia|memory\s+loss|reset|resets)\b/i.test(lower)) ||
+      (/\b(?:reset\s+conversation|conversation\s+reset|resetting\s+conversation)\b/i.test(lower)) ||
+      (/\b(?:every\s+time\s+reset\s+conversation|reset\s+conversation.*memory\s+(?:loss|lost)|main\s+issue\s+for\s+memory\s+(?:loss|lost))\b/i.test(lower)) ||
+      (/\b(?:fix\s+.*(?:reset\s+conversation|memory\s+loss))\b/i.test(lower)) ||
       (/\b(?:losing|lost|forgetting)\s+(?:short\s*(?:time|term)|working|recent)\s+memory\b/i.test(lower)) ||
-      (/(?:শর্ট\s*টাইম\s*মেমোরি|শর্ট\s*টার্ম\s*মেমোরি|স্মৃতিশক্তি\s*হারিয়ে|মেমরি\s*লস্ট|মেমোরি\s*লস|মেমোরি\s*ইস্যু)/u.test(lower))
+      (/(?:শর্ট\s*টাইম\s*মেমোরি|শর্ট\s*টার্ম\s*মেমোরি|স্মৃতিশক্তি\s*হারিয়ে|মেমরি\s*লস্ট|মেমোরি\s*লস|মেমোরি\s*ইস্যু|কনভারসেশন\s*রিসেট)/u.test(lower))
     );
   }
 

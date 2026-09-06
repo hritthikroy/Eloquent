@@ -8985,15 +8985,22 @@ Your task:
     }
 
     // --- EYE RECALIBRATION, VISION RECOVERY & SCREEN PERCEPTION (Direct Gemini Multimodal Optical Cortex) ---
-    const isEyeRecalibrationQuery = /\b(fix\s+(?:your|their|they\s+are|thay\s+are|thare|the|our)?\s*eyes?|fix\s+(?:\w+\s+)?eyes?|fix\s+eye|fix\s+eyes|recalibrate\s+eyes?|reset\s+eyes?|eye\s+tracker|eye\s+drift|chokh\s+(?:thik|nosto|bondho))|\b(?:not\s+seeing|they\s+are\s+not\s+seeing|thay\s+are\s+not\s+seeing|not\s+see|cannot\s+see|cant\s+see|can't\s+see|eyes?\s+(?:not\s+working|broken|dead|off)|eyes?\s+(?:are\s+)?not\s+(?:working|active|functional|seeing)|not\s+seeing\s+(?:anything|with\s+eyes?))/i.test(lower);
+    // Precision Invariant: Do NOT hijack natural conversational utterances (e.g., "I can't see the difference...", "can't see why", "am I blind")
+    const isEyeRecalibrationQuery =
+      /\b(?:fix\s+(?:your|their|they\s+are|the|our)?\s*eyes?|recalibrate\s+(?:your|the)?\s*eyes?|reset\s+(?:your|the)?\s*eyes?|eye\s+tracker|eye\s+drift|chokh\s+(?:thik|nosto|bondho))\b/i.test(lower) ||
+      /\b(?:eyes?\s+(?:are\s+)?not\s+(?:working|active|functional|seeing|moving)|eyes?\s+(?:broken|dead|off))\b/i.test(lower) ||
+      /\b(?:camera\s+eyes?|ocular\s+eyes?|optical\s+cortex)\s+(?:not\s+working|broken|reset|fix|recalibrate)\b/i.test(lower) ||
+      /\b(?:they\s+are\s+not\s+seeing|you\s+are\s+not\s+seeing)\s+(?:my\s+)?(?:screen|display|monitor|code|window)\b/i.test(lower);
+
     const isVisualQuery =
       isEyeRecalibrationQuery ||
       /\b(see|look\s+at|inspect|watch|check|read)\s+(?:our|my|the|this)?\s*(?:screen|display|monitor|code|terminal|window|ide|antigravity|prompt)\b/i.test(lower) ||
       /\b(what(?:'s|\s+is)\s+(?:on|showing\s+on|in)\s+(?:our|my|the|this)?\s*(?:screen|display|code|window))\b/i.test(lower) ||
-      /\b(what\s+do\s+you\s+see|what\s+are\s+you\s+seeing|can\s+you\s+see|are\s+you\s+seeing|do\s+you\s+see)\b/i.test(lower) ||
-      /\b(are\s+you\s+blind|you\s+blind|cannot\s+see|can't\s+see|blind)\b/i.test(lower) ||
-      /\b(showing\s+empty|empty\s+screen|screen\s+blank|blank\s+screen|where\s+is\s+the\s+prompt)\b/i.test(lower) ||
-      /\b(chokh\s+kholo|screen\s+dekho|screen\s+e\s+ki|dekhte\s+parchho|screen\s+ta\s+dekh|code\s+ta\s+dekh|chokh\s+ta\s+dekh)\b/i.test(lower);
+      /\b(what\s+do\s+you\s+see|what\s+are\s+you\s+seeing)\s+(?:on\s+(?:our|my|the|this)?\s*(?:screen|display|code|window))?\b/i.test(lower) && /\b(?:screen|display|code|window|desktop)\b/i.test(lower) ||
+      /\b(can\s+you\s+see|are\s+you\s+seeing|do\s+you\s+see)\s+(?:our|my|the|this)?\s*(?:screen|display|monitor|code|terminal|window|desktop)\b/i.test(lower) ||
+      /\b(are\s+you\s+blind\s+to\s+my\s+screen|can(?:'t|not)\s+see\s+(?:our|my|the|this)?\s*(?:screen|display|monitor|code|window|desktop))\b/i.test(lower) ||
+      /\b(showing\s+empty|empty\s+screen|screen\s+blank|blank\s+screen|where\s+is\s+the\s+prompt\s+on\s+screen)\b/i.test(lower) ||
+      /\b(chokh\s+kholo|screen\s+dekho|screen\s+e\s+ki|screen\s+ta\s+dekh|code\s+ta\s+dekh|chokh\s+ta\s+dekh)\b/i.test(lower);
 
     if (isVisualQuery) {
       const screenShareManager = require('./screen-share-manager');

@@ -3693,9 +3693,9 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user', activeLang);
 
-    // Interactive voice conversational window: 6 turns (12 messages) ensures immediate multi-turn continuity while slashing token consumption to protect Groq daily quotas (TPD)
-    const configuredDepth = (jarvisManager && typeof jarvisManager.getPreference === 'function' && jarvisManager.getPreference('working_memory_turns_depth')) || 6;
-    const memoryDepth = Math.min(configuredDepth, 6);
+    // Interactive working memory window: dynamically expands to 24 turns (48 messages) to eliminate conversational amnesia
+    const configuredDepth = (jarvisManager && typeof jarvisManager.getPreference === 'function' && jarvisManager.getPreference('working_memory_turns_depth')) || 24;
+    const memoryDepth = Math.max(configuredDepth, 16);
     const historyMessages = jarvisManager.getHistory(memoryDepth, agent.key, activeLang);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);

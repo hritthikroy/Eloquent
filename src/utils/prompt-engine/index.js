@@ -123,6 +123,18 @@ class PromptEngine {
       console.warn("⚠️ [PromptEngine] clipboard copy and auto-paste failed:", e.message);
     }
 
+    // 5.1 Synchronize voice context with VoiceIdeBridge for Antigravity & Cursor MCP consumers
+    try {
+      const { voiceIdeBridge } = require("../voice-ide-bridge");
+      voiceIdeBridge.recordUtterance({
+        transcript: rawText,
+        cleanedText: sanitized,
+        structuredPrompt: assembledPrompt,
+        targetObjective: parsedIntent.target,
+        agentKey: agentDirective || "vision"
+      });
+    } catch (_) {}
+
     // 6. Return response payload according to active agent persona & single real voice invariant
     let speechConfirmation = "";
     if (isSingleRealVoice) {
