@@ -659,8 +659,12 @@ class BanglaVoiceCortex {
   }
 
   /**
-   * Complete Bengali Speech Preflight Pipeline
+   * Complete Bengali / Banglish Speech Preflight Pipeline
    */
+  processUtterance(text = "", voice = "") {
+    return this.processBengaliUtterance(text, voice);
+  }
+
   processBengaliUtterance(text = "", voice = "") {
     if (!text || typeof text !== "string") return text;
 
@@ -673,13 +677,20 @@ class BanglaVoiceCortex {
     // 2. Numbers and units
     out = this.normalizeNumbersAndUnits(out);
 
-    // 3. English technical loanwords
-    out = this.harmonizeLoanwordsAndCodeSwitching(out);
+    // 3. English technical loanwords: ONLY convert to Bengali script if NOT in Banglish-only mode!
+    if (!this.isBanglishOnlyMode) {
+      out = this.harmonizeLoanwordsAndCodeSwitching(out);
+    }
 
-    // 4. Romanization check for strictly monolingual voices or Banglish-only mode
-    const isMultilingualVoice = /multilingual/i.test(voice) || /ava/i.test(voice) || /emma/i.test(voice) || /brian/i.test(voice) || voice.startsWith("bn-") || /andrew.*multilingual/i.test(voice);
-    if (this.isBanglishOnlyMode || (!isMultilingualVoice && this.isBengali(out))) {
+    // 4. Romanization check for Banglish-only mode or pure neural voices
+    const isMultilingualVoice = !this.isBanglishOnlyMode && (/multilingual/i.test(voice) && !/avan/i.test(voice) && !/andrewn/i.test(voice) && !/emman/i.test(voice) && !/briann/i.test(voice));
+    if (this.isBanglishOnlyMode || !isMultilingualVoice || this.isBengali(out)) {
       out = this.enforceBanglishModernVibe(out);
+    }
+
+    // 5. Zero-Bangla-Script Invariant: Guaranteed 100% clean Latin alphabet output in Banglish mode
+    if (this.isBanglishOnlyMode && this.isBengali(out)) {
+      out = out.replace(/[\u0980-\u09FF]+/g, "").replace(/\s+/g, " ").trim();
     }
 
     return out;

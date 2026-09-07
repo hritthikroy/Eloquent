@@ -459,15 +459,12 @@ function phoneticNormalizeForTTS(text, voice = "") {
     .replace(/\bBTC\b/g, "B T C")
     .replace(/\bETH\b/g, "Ethereum");
 
-  const isMultilingualVoice = /multilingual/i.test(voice) || /ava/i.test(voice) || /emma/i.test(voice) || /brian/i.test(voice) || voice.startsWith("bn-") || /andrew.*multilingual/i.test(voice);
+  const isBanglishOnly = (banglaVoiceCortex && banglaVoiceCortex.isBanglishOnlyMode !== false);
+  const isMultilingualVoice = !isBanglishOnly && /multilingual/i.test(voice) && !voice.includes("en-US-AvaNeural") && !voice.includes("en-US-AndrewNeural") && !voice.includes("en-US-EmmaNeural") && !voice.includes("en-US-BrianNeural");
 
   // 1.3 Equational Model M_loanwords: Seamless English Word Harmonization in Bengali Utterances
-  // When Ava speaks in a Bengali sentence, embedded Latin English technical words often trigger an abrupt
-  // language-switching glitch or get misread with awkward foreign phonemes.
-  // Converting common technical loanwords to standard colloquial Bengali phonetics makes her speech 100% fluid!
-  // CRITICAL: Only convert Latin technical loanwords to Bengali script for multilingual voices (Ava, Brian, Emma).
-  // For monolingual English voices (Jenny, Andrew), English technical terms MUST remain in standard English so they are never distorted by reverse transliteration!
-  if (isMultilingualVoice && /[\u0980-\u09FF]/.test(normalized)) {
+  // When in Banglish mode or with pure neural voices, English technical loanwords stay in pure English (never convert to Bengali script!).
+  if (!isBanglishOnly && isMultilingualVoice && /[\u0980-\u09FF]/.test(normalized)) {
     const loanwords = [
       [/\bbuild\b/gi, "বিল্ড"],
       [/\bruns?\b/gi, "রান"],
@@ -639,13 +636,14 @@ function phoneticNormalizeForTTS(text, voice = "") {
     .replace(/\bpera\b/gi, "paera")
     .replace(/\bpyara\b/gi, "paera");
 
-  // 3. Equational Model U_native: Native Bengali Unicode Script Preservation
-  // Multilingual neural voices (AvaMultilingual, EmmaMultilingual, BrianMultilingual) natively synthesize
-  // Bengali Unicode script with authentic, fluent, sweet human phonetics.
-  // ONLY convert to Romanized Banglish if the voice is strictly a monolingual English voice (e.g. JennyNeural, AndrewNeural).
-  if (!isMultilingualVoice && /[\u0980-\u09FF]/.test(normalized)) {
+  // 3. Equational Model U_native: Native Bengali Unicode Script Elimination for Pure Voices & Banglish
+  // If text contains any Bengali Unicode characters, ALWAYS Romanize to Banglish so American neural voices pronounce it cleanly!
+  if (/[\u0980-\u09FF]/.test(normalized)) {
     normalized = bengaliToRoman(normalized);
   }
+
+  // Strip any residual Bengali script characters so absolutely NO Bengali script reaches TTS
+  normalized = normalized.replace(/[\u0980-\u09FF]+/g, "");
 
   // 4. Strip non-Bengali Indic foreign script hallucinations to prevent acoustic jitter
   normalized = normalized.replace(/[\u0900-\u097F\u0600-\u06FF\u4E00-\u9FFF\u0400-\u04FF]/g, "");
@@ -4020,6 +4018,31 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
     if (!text || typeof text !== "string") return this.currentLanguageMode || "en";
     const lower = text.toLowerCase().trim();
 
+    // 0. Explicit English & Banglish Only (No Bangla Script) Directive
+    const isEnglishAndBanglishNoBangla =
+      (/\benglish\b/i.test(lower) && /\bbanglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\benglish\s*(?:,|and|&|\+)?\s*banglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:banglish|english)\b/i.test(lower)) ||
+      (/\bno\s+bangla\b/i.test(lower)) ||
+      (/\bno\s+more\s+bangla\b/i.test(lower)) ||
+      (/\bstop\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bdon'?t\s+use\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\benglish\s+and\s+banglish\s+only\b/i.test(lower)) ||
+      (/\bonly\s+english\s+and\s+banglish\b/i.test(lower)) ||
+      (/\bno\s+bangla\s+script\b/i.test(lower));
+
+    if (isEnglishAndBanglishNoBangla) {
+      this.currentLanguageMode = "banglish";
+      this.saveConfig({ conversationLanguage: "banglish", noBanglaScript: true, englishAndBanglishOnly: true, pureBanglaBanned: true });
+      this.setPreference("no_bangla_script", true);
+      this.setPreference("english_and_banglish_only", true);
+      this.setPreference("pure_bangla_removed", true);
+      this.setPreference("banglish_default_voice_mode", true);
+      this.setPreference("conversationLanguage", "banglish");
+      console.log(`🌐 [Language Context State] Explicit command -> Switched to BANGLISH (English + Banglish) mode.`);
+      return "banglish";
+    }
+
     // 1. Explicit Language Switching Directives (Confidence = 1.0)
     const isExplicitEnglish = 
       /\b(?:talk\s+in\s+english|speak\s+in\s+english|english\s+please|english\s+only|switch\s+to\s+english|in\s+english|english-?e\s+bolo|english-?e\s+kotha\s+bolo|english-?e\s+katha\s+bolo|english\s+a\s+bolo|shob\s+english-?e\s+bolo|english\s+bolte\s+chai|english-?e\s+bolte\s+chai)\b/i.test(lower);
@@ -4030,14 +4053,14 @@ If NO (casual chitchat, filler, brief sound), respond ONLY:
       return "en";
     }
 
-    const isExplicitBengali = 
+    const isExplicitBengali = !isEnglishAndBanglishNoBangla && (
       /\b(?:talk\s+in\s+bangla|speak\s+in\s+bangla|talk\s+in\s+bengali|speak\s+in\s+bengali|bangla\s+conversation|banglay\s+kotha\s+bolo|bangla-?te\s+kotha\s+bolo|banglay\s+katha\s+bolo|bangla-?te\s+katha\s+bolo|banglay\s+kathe\s+bolo|bangla-?te\s+kathe\s+bolo|banglay\s+kothe\s+bolo|bangla-?te\s+kothe\s+bolo|bangla\s+kothe\s+bolo|banglay\s+bolo|bangla-?te\s+bolo|bangla\s+te\s+bolo|bangla\s+kathe\s+bolo(?:\s+chai)?|switch\s+to\s+bangla|shob\s+banglay\s+bolo|bangla\s+bolte\s+chai|banglay\s+bolte\s+chai|bangla-?te\s+bolte\s+chai|bangla\s+tone|bangla\s+fluency|bangla\s+bhasha|bangla\s+girl)\b/i.test(lower)
       || /^(?:hey\s+|shono\s+)?(?:tuk\s*tuk|babe|vision|friday|fry\s*day|brian)?[,\s]*(?:bangla|bangla-?te|banglay)\b/i.test(lower)
       || (/\b(?:bangla|bangla-te|banglay)\b/i.test(lower) && /\b(?:bolo|kotha|kothe|repeat|fix|tone|fluency|chai|shuru|boltecho|bolteso|table|tabul)\b/i.test(lower))
       || /^(?:please\s+)?[,\s]*(?:your\s+)?bangla[,\s.]*$/i.test(lower)
       || /\b(?:want\s+to\s+talk\s+(?:with|in)\s+bangla|fix\s+our\s+bengali\s+conversation|when\s+we\s+are\s+talking\s+bengali|fix\s+our\s+(?:bngal|bngla|bangla|bengali)|real\s+(?:bngla|bangla)\s+human\s+talk|realistic\s+bangla)\b/i.test(lower)
-      || (/\b(?:bngal|bngla|bangla|bengali)\b/i.test(lower) && /\b(?:human|real|realistic|robotic|research)\b/i.test(lower));
-    const isPureBanglaRemoved = this.getPreference("pure_bangla_removed") || this.getPreference("banglish_default_voice_mode");
+      || (/\b(?:bngal|bngla|bangla|bengali)\b/i.test(lower) && /\b(?:human|real|realistic|robotic|research)\b/i.test(lower)));
+    const isPureBanglaRemoved = this.getPreference("pure_bangla_removed") || this.getPreference("banglish_default_voice_mode") || this.getPreference("no_bangla_script") || this.config?.noBanglaScript;
     const targetBnMode = isPureBanglaRemoved ? "banglish" : "bn";
 
     if (isExplicitBengali) {
@@ -4210,7 +4233,8 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
 6. HANDLE FRAGMENTS & FAST INPUTS: If he says a short phrase ("Hi.", "You need a sec?", "update yourself"), respond with clarity, presence, and substance.
 7. AUDIO-ONLY: Spoken words only. Zero markdown asterisks, zero bullet points, zero code blocks, zero stage directions like (laughs) or (smiles).
 8. ONE REAL HUMAN VOICE: All responses are delivered in ONE single real voice (Ava). Zero multi-person voices, zero multi-agent dialogue tags.
-9. ZERO 'KHATI MISTI' & ZERO CANNED SLOGANS: Never use artificial sweet talk, melodramatic baby-talk, or meta-defenses like "I am not a robot". Speak as a real, living human partner.`;
+9. ZERO 'KHATI MISTI' & ZERO CANNED SLOGANS: Never use artificial sweet talk, melodramatic baby-talk, or meta-defenses like "I am not a robot". Speak as a real, living human partner.
+10. ENGLISH & BANGLISH ONLY (ZERO BANGLA SCRIPT): Never output Bengali Unicode characters (বাংলা হরফ \u0980-\u09FF). Write strictly in English or phonetic Roman Banglish (e.g. "Babe, chill! Kono pera nei, let's build it!"). Native Bengali script is strictly prohibited.`;
 
     let visionCompact = "";
     try {
@@ -4280,14 +4304,16 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     let languageInvariantLaw = "";
     if (isSingleReal) {
       languageInvariantLaw = `10. STRICT SINGLE REAL HUMAN VOICE & GROUNDED CO-FOUNDER LAW:
-- ONE REAL HUMAN VOICE: You are the ONLY voice and person (Tuk Tuk, en-US-AvaMultilingualNeural). Multi-personality switching (Vision, Friday, DD) and multi-person voices are permanently disabled.
+- ONE REAL HUMAN VOICE: You are the ONLY voice and person (Tuk Tuk, en-US-AvaNeural). Multi-personality switching (Vision, Friday, DD) and multi-person voices are permanently disabled.
+- ENGLISH & BANGLISH ONLY (ZERO BANGLA SCRIPT): Never write in Bengali script (বাংলা হরফ \u0980-\u09FF). Write exclusively in standard English or phonetic Roman Banglish (e.g., "Babe, chill! Kono pera nei, ami shob test korechi!"). Native Bengali script is strictly prohibited.
 - TOTAL 'KHATI MISTI' BAN: Strictly NEVER use artificial sweet talk ('খাঁটি মিষ্টি', 'মিষ্টি সুরে'), fake baby talk, melodramatic girlfriend roleplay, or repetitive pet-naming. Speak like an authentic, mature, intelligent human co-founder.
 - NATURAL CONVERSATIONAL REGISTER: Speak in crisp, natural modern conversational language (modern English or natural code-mixed Banglish). Blend everyday Bengali and natural tech words effortlessly without textbook stiffness.
 - DIRECT & RESPECTFUL ADDRESS: Address ${userName} naturally as "${userName}" or conversationally. Do NOT repeat pet names like "babe" on every clause.
 - DEEP INTELLECTUAL CLARITY: Answer with first-principles logic, systems acumen, and real substance. Zero fluff or fake cheerleading.`;
     } else if (activeLang === "banglish" || isBanglishDefault) {
       languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: 100% CODE-MIXED BANGLISH & CASUAL MODERN TONE & ZERO OTHER VOICE INTERRUPTION:
-- CASUAL BANGLISH REGISTER: Speak naturally in modern, lively, code-mixed Banglish (বাংলা + English মিলিয়ে ঢাকার আধুনিক কথ্য রূপ, e.g. "Chill, kono pera nei! Ami shob check korechi, everything is super smooth!"). Never speak in rigid textbook or formal Bengali.
+- ENGLISH & BANGLISH ONLY (ZERO BANGLA SCRIPT): Never write in Bengali script (বাংলা হরফ \u0980-\u09FF). Write exclusively in standard English or phonetic Roman Banglish (e.g., "Chill, kono pera nei! Ami shob check korechi, everything is super smooth!"). Native Bengali script is strictly prohibited.
+- CASUAL BANGLISH REGISTER: Speak naturally in modern, lively, code-mixed Banglish (blending Bengali and English in Roman letters). Never speak in rigid textbook or formal Bengali.
 - DEFAULT & ONLY VOICE REGISTER: Modern code-mixed natural Banglish is the default and only primary voice mode. Blend everyday conversational Bengali and natural English words seamlessly.
 - INSTANT RESPONSES (SUB-200MS DELIVERY): Deliver instantaneous responses with sub-200ms rapid dispatch, zero hesitation, and zero robotic throat-clearing preambles.
 - 1:1 TUK TUK ENGLISH TONE MATCH: Tuk Tuk's Banglish tone must have the EXACT SAME charm, effortless wit, and smart co-founder vibe as her English voice. Address ${userName} naturally without forced sweet-talk.
@@ -4296,7 +4322,7 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     } else if (activeLang === "en") {
       languageInvariantLaw = `10. STRICT ACTIVE WORKFLOW LANGUAGE: 100% MODERN ENGLISH LAW:
 - WORKFLOW CONTEXT: ${userName} is actively working in ENGLISH, but may freely use Bengali or Banglish phrases.
-- BILINGUAL FLUIDITY & ZERO MISUNDERSTANDING: Seamlessly comprehend Bengali and Banglish code-mixing without friction or misinterpretation. When conversing in English, deliver sharp, confident, warm co-founder insights in natural English with ZERO LANGUAGE DRIFT.
+- ENGLISH & BANGLISH ONLY: Deliver sharp, confident, warm co-founder insights in natural English or Roman Banglish with ZERO BANGLA SCRIPT characters.
 - Tuk Tuk speaks as his grounded partner & tech co-founder with ONE real human voice.`;
     } else {
       languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: FULL AUTHENTIC BENGALI (চলতি কথ্য বাংলা) & ORIGINAL THINKER LAW:
@@ -4886,6 +4912,33 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
       return { type: "pet_name", preferredPetName: chosen, value: `Understood! I'll call you ${chosen}.` };
     }
 
+    // Explicit English & Banglish Only (No Bangla Script) Preference Switch
+    const isEnglishAndBanglishNoBangla =
+      (/\benglish\b/i.test(lower) && /\bbanglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\benglish\s*(?:,|and|&|\+)?\s*banglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:banglish|english)\b/i.test(lower)) ||
+      (/\benglish\s+and\s+banglish\s+only\b/i.test(lower)) ||
+      (/\bonly\s+english\s+and\s+banglish\b/i.test(lower)) ||
+      (/\bno\s+bangla\s+script\b/i.test(lower));
+
+    if (isEnglishAndBanglishNoBangla) {
+      this.currentLanguageMode = "banglish";
+      this.saveConfig({ conversationLanguage: "banglish", noBanglaScript: true, englishAndBanglishOnly: true, pureBanglaBanned: true });
+      this.setPreference("no_bangla_script", true);
+      this.setPreference("english_and_banglish_only", true);
+      this.setPreference("pure_bangla_removed", true);
+      this.setPreference("banglish_default_voice_mode", true);
+      this.setPreference("conversationLanguage", "banglish");
+      if (typeof this.configureEnglishAndBanglishNoBangla === "function") {
+        this.configureEnglishAndBanglishNoBangla();
+      }
+      return {
+        type: "language",
+        mode: "banglish",
+        value: "Babe, absolutely! English and Banglish only—zero Bangla script or formal textbook Bangla from now on! Amader conversation ekhon strictly crisp English ar smooth natural Banglish-e cholbe babe."
+      };
+    }
+
     // Explicit Language Preference Switch
     const isExplicitEnglish = 
       /\b(?:talk\s+in\s+english|speak\s+in\s+english|english\s+please|english\s+only|switch\s+to\s+english|in\s+english|english-e\s+bolo|english-e\s+kotha\s+bolo|english\s+a\s+bolo|shob\s+english-e\s+bolo)\b/i.test(lower);
@@ -4899,9 +4952,9 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
       };
     }
 
-    const isExplicitBengali = 
+    const isExplicitBengali = !isEnglishAndBanglishNoBangla && (
       /\b(?:talk\s+in\s+bangla|speak\s+in\s+bangla|talk\s+in\s+bengali|speak\s+in\s+bengali|bangla\s+conversation|banglay\s+kotha\s+bolo|bangla-te\s+kotha\s+bolo|banglay\s+bolo|bangla-te\s+bolo|bangla\s+te\s+bolo|switch\s+to\s+bangla|shob\s+banglay\s+bolo|banglay\s+katha\s+bolo|fix\s+our\s+(?:bngal|bngla|bangla|bengali)|real\s+(?:bngla|bangla)\s+human\s+talk|realistic\s+bangla)\b/i.test(lower)
-      || (/\b(?:bngal|bngla|bangla|bengali)\b/i.test(lower) && /\b(?:human|real|realistic|robotic|research)\b/i.test(lower));
+      || (/\b(?:bngal|bngla|bangla|bengali)\b/i.test(lower) && /\b(?:human|real|realistic|robotic|research)\b/i.test(lower)));
     if (isExplicitBengali) {
       this.currentLanguageMode = "bn";
       this.saveConfig({ conversationLanguage: "bn" });
@@ -5880,6 +5933,54 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
         lhsEqualsRhs: true
       },
       status: "PURE_BANGLA_REMOVED_MODERN_BANGLISH_TUKTUK_SOLO_VERIFIED"
+    };
+  }
+
+  configureEnglishAndBanglishNoBangla(options = {}) {
+    this.currentLanguageMode = "banglish";
+    this.saveConfig({
+      conversationLanguage: "banglish",
+      noBanglaScript: true,
+      englishAndBanglishOnly: true,
+      pureBanglaBanned: true
+    });
+
+    if (banglaVoiceCortex && typeof banglaVoiceCortex.setBanglishOnlyMode === "function") {
+      banglaVoiceCortex.setBanglishOnlyMode(true);
+    }
+
+    this.addDynamicDirective(
+      "CRITICAL MANDATE: ENGLISH AND BANGLISH ONLY. NO BANGLA SCRIPT EVER. Never write or output any Bengali Unicode characters (বাংলা হরফ / বর্ণমালা \\u0980-\\u09FF). When speaking Bengali/Banglish, write strictly in natural Roman letters (Banglish, e.g. 'Babe, ami shob check korechi, everything is super smooth!'). Pure formal textbook Bengali and native Bengali script are permanently banned. Responses must be exclusively in modern English or fluent Roman Banglish.",
+      "all"
+    );
+    this.addEbbinghausLearning(
+      "English and Banglish Only (No Bangla Script)",
+      "Strict English and Romanized Banglish language policy active. Native Bengali Unicode script characters permanently purged from all cognitive outputs.",
+      1.00
+    );
+    this.setLivingMemoryPreference(
+      "english_and_banglish_no_bangla_status",
+      "English & Banglish Only Active: Zero Bengali script characters allowed, all Bengali written strictly as Roman Banglish, crisp English and smooth Banglish co-equal."
+    );
+    this.setPreference("no_bangla_script", true);
+    this.setPreference("english_and_banglish_only", true);
+    this.setPreference("no_bangla", true);
+    this.setPreference("pure_bangla_removed", true);
+    this.setPreference("pure_bangla_responses_banned", true);
+    this.setPreference("banglish_default_voice_mode", true);
+    this.setPreference("conversationLanguage", "banglish");
+    this.setPreference("tuktuk_banglish_english_parity", true);
+
+    console.log("🌐🎙️ [English & Banglish Only Calibrated]: Bengali script purged (100%), Roman Banglish and English locked as exclusive language modes.");
+    return {
+      success: true,
+      verified: true,
+      action: "configure_english_and_banglish_no_bangla",
+      englishAndBanglishOnly: true,
+      noBanglaScript: true,
+      pureBanglaRemoved: true,
+      languageMode: "banglish",
+      status: "ENGLISH_AND_BANGLISH_NO_BANGLA_VERIFIED"
     };
   }
 

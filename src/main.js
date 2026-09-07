@@ -293,6 +293,7 @@ let overlayCreationLock = false;
 let lastOverlayCreationTime = 0;
 let recordingStartTime = 0;
 let isJarvisLoopActive = false;
+let conversationSessionStartTime = 0;
 let currentActiveAgent = null;
 
 let activeKeyPoolIndex = 0;
@@ -796,6 +797,9 @@ app.whenReady().then(async () => {
       } catch (speakErr) {}
 
       isJarvisLoopActive = true;
+      if (!conversationSessionStartTime) {
+        conversationSessionStartTime = Date.now();
+      }
       setTimeout(() => {
         if (isJarvisLoopActive && !isSessionAborted && !jarvisManager.isSpeaking) {
           if (overlayWindow && !overlayWindow.isDestroyed()) {
@@ -1208,6 +1212,9 @@ function handleShortcut(action, mode = 'standard') {
     isSessionAborted = false;
     if (mode === 'jarvis') {
       isJarvisLoopActive = true;
+      if (!conversationSessionStartTime) {
+        conversationSessionStartTime = Date.now();
+      }
       playSound('start'); // Alexa-style activation chime
       // Ambient Screen Perception: capture fresh frame in background immediately
       try { screenShareManager.captureInstantFrame(); } catch (e) {}
@@ -1246,6 +1253,7 @@ function handleShortcut(action, mode = 'standard') {
     console.log('🛑 ESC pressed - terminating session immediately and completely (0ms hard stop)');
     isSessionAborted = true;
     isJarvisLoopActive = false;
+    conversationSessionStartTime = 0;
     isProcessing = false;
     isStopRecordingLock = false;
     
@@ -1499,6 +1507,12 @@ function initOverlayWindow() {
 function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
   currentMode = mode;
   isSessionAborted = false;
+  if (mode === 'jarvis') {
+    isJarvisLoopActive = true;
+    if (!conversationSessionStartTime) {
+      conversationSessionStartTime = Date.now();
+    }
+  }
 
   // Seamlessly re-arm ocular camera eyes if previously stopped via ESC
   if (cameraManager && typeof cameraManager.start === 'function' && !cameraManager.isActive) {
@@ -1528,7 +1542,8 @@ function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
   win.setBounds(targetPos);
 
   const displayAndRecord = () => {
-    win.webContents.send('set-mode', mode);
+    const sessionStart = (mode === 'jarvis' && conversationSessionStartTime) ? conversationSessionStartTime : null;
+    win.webContents.send('set-mode', mode, sessionStart);
     win.showInactive(); // Shows instantly without stealing active window focus
     if (autoRecord && !jarvisManager.isSpeaking) {
       startRecording();
@@ -1545,6 +1560,9 @@ function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
 
 // Hide overlay with instant dismissal and renderer teardown
 function hideOverlayInstant() {
+  if (!isJarvisLoopActive) {
+    conversationSessionStartTime = 0;
+  }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     try {
       overlayWindow.webContents.send('session-aborted');
@@ -2259,9 +2277,10 @@ function startRecording() {
     stopRecording();
   }, MAX_RECORDING_DURATION_MS);
 
-  // Send the recording start time to the overlay for accurate timer
+  // Send the recording start time and persistent meeting session start time to the overlay for accurate timer
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.webContents.send('recording-started', recordingStartTime);
+    const sessionStart = (currentMode === 'jarvis' && conversationSessionStartTime) ? conversationSessionStartTime : null;
+    overlayWindow.webContents.send('recording-started', recordingStartTime, sessionStart);
   }
 
   if (currentMode !== 'jarvis') {
@@ -2626,7 +2645,7 @@ async function stopRecording() {
       isStopRecordingLock = false;
       if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('jarvis-listening');
-        overlayWindow.webContents.send('recording-started', Date.now());
+        overlayWindow.webContents.send('recording-started', Date.now(), conversationSessionStartTime || null);
         setTimeout(() => {
           if (isJarvisLoopActive && !isSessionAborted) {
             startRecording();
@@ -2668,7 +2687,7 @@ async function stopRecording() {
         isStopRecordingLock = false;
         if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
           overlayWindow.webContents.send('jarvis-listening');
-          overlayWindow.webContents.send('recording-started', Date.now());
+          overlayWindow.webContents.send('recording-started', Date.now(), conversationSessionStartTime || null);
           setTimeout(() => {
             if (isJarvisLoopActive && !isSessionAborted) {
               startRecording();
@@ -2693,7 +2712,7 @@ async function stopRecording() {
       isStopRecordingLock = false;
       if (isJarvisLoopActive && !isSessionAborted && overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('jarvis-listening');
-        overlayWindow.webContents.send('recording-started', Date.now());
+        overlayWindow.webContents.send('recording-started', Date.now(), conversationSessionStartTime || null);
         setTimeout(() => {
           if (isJarvisLoopActive && !isSessionAborted) {
             startRecording();
@@ -3687,6 +3706,10 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     systemPrompt += `\n\n${ocularCtx}`;
   }
 
+  const isNoBanglaScript = jarvisManager?.config?.noBanglaScript || jarvisManager?.getPreference?.('no_bangla_script') || jarvisManager?.config?.englishAndBanglishOnly || activeLang === 'banglish';
+  if (isNoBanglaScript && !systemPrompt.includes('[STRICT LANGUAGE MANDATE')) {
+    systemPrompt += `\n\n[STRICT LANGUAGE MANDATE]: Write ONLY in English or Romanized Banglish (e.g. "Babe, thik ache! Let's build it!"). STRICTLY ZERO Bengali script characters (বাংলা হরফ/বর্ণমালা \\u0980-\\u09FF). NEVER output native Bengali alphabet characters under any circumstances. Everything must be in standard English letters.`;
+  }
 
   try {
     console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory (Lang: ${activeLang.toUpperCase()})...`);
@@ -3947,7 +3970,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     // Guaranteed non-empty fallback per agent persona (Dynamic, Language-Aware, Non-Repetitive)
     if (!reply || reply.length < 2) {
       const LocalCognitiveBrain = require('./utils/local-cognitive-brain');
-      const isBn = activeLang === 'bn';
+      const isBn = activeLang === 'bn' && !isNoBanglaScript;
       const fallbackPools = {
         tuktuk: isBn
           ? ["একদম তোমার পাশেই আছি babe, মন দিয়ে শুনছি তুমি কী ভাবছো।", "তোমার সাথেই আছি babe, বাস্তব যুক্তি দিয়ে বিষয়টার গভীরে যাই।", "মন দিয়ে শুনছি babe, পুরো মনোযোগ তোমার দিকে।", "তোমার পাশেই বসে আছি babe, গভীর বুদ্ধিবৃত্তিক চিন্তায় তোমার সাথে আছি।"]
@@ -3972,6 +3995,15 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       reply = (typeof LocalCognitiveBrain._pickUnique === 'function')
         ? LocalCognitiveBrain._pickUnique(agent.key, agentPool)
         : agentPool[Math.floor(Math.random() * agentPool.length)];
+    }
+
+    if (isNoBanglaScript && reply && /[\u0980-\u09FF]/.test(reply)) {
+      const banglaVoiceCortex = require('./utils/bangla-voice-cortex');
+      if (banglaVoiceCortex && typeof banglaVoiceCortex.enforceBanglishModernVibe === 'function') {
+        reply = banglaVoiceCortex.enforceBanglishModernVibe(reply);
+      } else {
+        reply = reply.replace(/[\u0980-\u09FF]+/g, '').replace(/\s+/g, ' ').trim();
+      }
     }
 
     // 4b. 0-Loop, 0-Repetition, 0-Duplicate & Equational Anti-Loop Engine

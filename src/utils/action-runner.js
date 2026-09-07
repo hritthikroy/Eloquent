@@ -131,8 +131,8 @@ class OfficeActionRunner {
       );
       if (isSingleReal) {
         res.agentName = "Tuk Tuk";
-        res.agentVoice = "en-US-AvaMultilingualNeural";
-        if (res.voice) res.voice = "en-US-AvaMultilingualNeural";
+        res.agentVoice = "en-US-AvaNeural";
+        if (res.voice) res.voice = "en-US-AvaNeural";
         if (res.agentKey) res.agentKey = "tuktuk";
         if (res.speech && typeof res.speech === "string") {
           res.speech = res.speech
@@ -147,16 +147,22 @@ class OfficeActionRunner {
             ? "Babe, shob perfectly complete korechi! Ami Tuk Tuk tomar sathei achi babe, bolo erpor ki korbo?"
             : "Babe, I've taken care of that completely! I'm right here with you babe, what are we building next?";
         }
+        if (res.speech && (jm?.config?.noBanglaScript || jm?.preferences?.no_bangla_script || jm?.currentLanguageMode === "banglish")) {
+          const bvc = require("./bangla-voice-cortex");
+          if (bvc && typeof bvc.enforceBanglishModernVibe === "function") {
+            res.speech = bvc.enforceBanglishModernVibe(res.speech);
+          }
+        }
         if (res.speech && jm && typeof jm.sanitizeAgentLexicon === "function") {
           res.speech = jm.sanitizeAgentLexicon(res.speech, "tuktuk");
         }
         if (res.data && typeof res.data === "object") {
           res.data.agent = "tuktuk";
           res.data.agentName = "Tuk Tuk";
-          res.data.voice = "en-US-AvaMultilingualNeural";
-          res.data.agentVoice = "en-US-AvaMultilingualNeural";
+          res.data.voice = "en-US-AvaNeural";
+          res.data.agentVoice = "en-US-AvaNeural";
           if (res.data.voices) {
-            res.data.voices = { tuktuk: "en-US-AvaMultilingualNeural" };
+            res.data.voices = { tuktuk: "en-US-AvaNeural" };
           }
           if (res.data.target) {
             res.data.target = "tuktuk";
@@ -1944,6 +1950,90 @@ class OfficeActionRunner {
           zeroPureBanglaScript: true,
           status: "REMOVE_BANGLA_INTERRUPTED_SINGLE_SOUL_VERIFIED",
           agents: ["tuktuk", "vision", "friday", "dd"]
+        }
+      };
+    }
+
+    // -------------------------------------------------------------
+    // ENGLISH & BANGLISH ONLY (NO BANGLA SCRIPT) DIRECTIVE
+    // Handles: "English,and Banglish. no bangla", "English and Banglish. no bangla",
+    // "english and banglish only no bangla", "no bangla", "only english and banglish"
+    // -------------------------------------------------------------
+    const isEnglishAndBanglishNoBanglaDirective =
+      (IntentParser && typeof IntentParser.isEnglishAndBanglishNoBanglaDirective === "function" && IntentParser.isEnglishAndBanglishNoBanglaDirective(lower)) ||
+      (/\benglish\b/i.test(lower) && /\bbanglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:banglish|english)\b/i.test(lower));
+
+    if (isEnglishAndBanglishNoBanglaDirective) {
+      if (banglaVoiceCortex && typeof banglaVoiceCortex.setBanglishOnlyMode === "function") {
+        banglaVoiceCortex.setBanglishOnlyMode(true);
+      }
+      const jm = jarvisManager || this.jarvisManager;
+      if (jm) {
+        if (typeof jm.configureEnglishAndBanglishNoBangla === "function") {
+          jm.configureEnglishAndBanglishNoBangla();
+        } else {
+          jm.currentLanguageMode = "banglish";
+          jm.saveConfig({ conversationLanguage: "banglish", noBanglaScript: true, englishAndBanglishOnly: true, pureBanglaBanned: true });
+        }
+        if (typeof jm.setPreference === "function") {
+          jm.setPreference("no_bangla_script", true);
+          jm.setPreference("english_and_banglish_only", true);
+          jm.setPreference("pure_bangla_removed", true);
+          jm.setPreference("pure_bangla_responses_banned", true);
+          jm.setPreference("banglish_default_voice_mode", true);
+          jm.setPreference("conversationLanguage", "banglish");
+          jm.setPreference("tuktuk_banglish_english_parity", true);
+          jm.setPreference("no_bangla", true);
+        }
+      }
+
+      const isSingleReal = Boolean(
+        jm && (
+          (typeof jm.isSingleRealVoiceMode === "function" && jm.isSingleRealVoiceMode()) ||
+          jm.preferences?.single_real_voice_active ||
+          jm.singleRealVoiceActive ||
+          jm.config?.singleRealVoiceActive
+        )
+      );
+
+      const activeAgent = (jm && !isSingleReal) ? jm.activeAgent : null;
+      const agentKey = isSingleReal ? "tuktuk" : (activeAgent?.key || "tuktuk");
+      let agentName = isSingleReal ? "Tuk Tuk" : (activeAgent?.name || "Tuk Tuk");
+      let agentVoice = "en-US-AvaNeural";
+      let speech = "";
+
+      if (agentKey === "vision" || agentKey === "andrew") {
+        agentName = "Vision";
+        agentVoice = "en-US-AndrewNeural";
+        speech = "Brother, English and Banglish only locked! Pure Bangla script and formal dialect completely dropped. Clean Roman Banglish and crisp English ready to roll, brother!";
+      } else if (agentKey === "friday") {
+        agentName = "Friday";
+        agentVoice = "en-US-EmmaNeural";
+        speech = "Chief, English and Banglish directive operationalized. Native Bengali script purged, Romanized Banglish and English established as exclusive language registers.";
+      } else if (agentKey === "dd" || agentKey === "brian") {
+        agentName = "DD";
+        agentVoice = "en-US-BrianNeural";
+        speech = "Bro, English and Banglish locked 100%! Zero Bengali script, audio pipelines smooth and jitter-free!";
+      } else {
+        agentName = "Tuk Tuk";
+        agentVoice = "en-US-AvaNeural";
+        speech = "Babe, absolutely! English and Banglish only—zero Bangla script or formal textbook Bangla from now on! Amader conversation ekhon strictly crisp English ar smooth natural Banglish-e cholbe babe. No Bengali script, no robotic voice, just me right here with you babe!";
+      }
+
+      return {
+        handled: true,
+        agentName,
+        agentKey,
+        agentVoice,
+        speech,
+        data: {
+          action: "english_and_banglish_no_bangla_directive",
+          englishAndBanglishOnly: true,
+          noBanglaScript: true,
+          pureBanglaRemoved: true,
+          languageMode: "banglish",
+          status: "ENGLISH_AND_BANGLISH_NO_BANGLA_VERIFIED"
         }
       };
     }

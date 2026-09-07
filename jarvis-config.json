@@ -10,6 +10,10 @@
     "workingMemoryTurnsDepth": 24,
     "persistence": true
   },
+  "conversationLanguage": "banglish",
+  "noBanglaScript": true,
+  "englishAndBanglishOnly": true,
+  "pureBanglaBanned": true,
   "singleRealVoiceActive": true,
   "multiPersonalityDisabled": true,
   "multiPersonVoiceDisabled": true,

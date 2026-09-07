@@ -1680,6 +1680,35 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for English & Banglish Only (No Bangla Script) Directive
+   * Handles:
+   * "English,and Banglish. no bangla", "English, and Banglish. no bangla",
+   * "english and banglish only no bangla", "no bangla english and banglish",
+   * "only english and banglish", "no bangla", "no more bangla", "stop bangla",
+   * "don't use bangla", "shudhu english ar banglish, kono bangla na"
+   */
+  static isEnglishAndBanglishNoBanglaDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\benglish\b/i.test(lower) && /\bbanglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\benglish\s*(?:,|and|&|\+)?\s*banglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:banglish|english)\b/i.test(lower)) ||
+      (/\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bno\s+more\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bstop\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\bdon'?t\s+use\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
+      (/\benglish\s+and\s+banglish\s+only\b/i.test(lower)) ||
+      (/\bonly\s+english\s+and\s+banglish\b/i.test(lower)) ||
+      (/\benglish\s*,\s*and\s+banglish\b/i.test(lower)) ||
+      (/\b(?:shudhu|only)\s+english\s+(?:ar|and)\s+banglish\b/i.test(lower)) ||
+      (/\bno\s+(?:bangla|bangal|bengali)\s+script\b/i.test(lower)) ||
+      (/\b(?:stop|banned|purge|drop)\s+(?:bangal|bangla|bengali)\s+(?:script|characters?|letters?)\b/i.test(lower)) ||
+      (/(?:বাংলা\s*না|কোনো\s*বাংলা\s*না|শুধু\s*ইংলিশ\s*আর\s*ব্যাংলিশ|বাংলা\s*হরফ\s*বাদ|বাংলা\s*স্ক্রিপ্ট\s*বাদ)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Short-Term Working Memory Loss Fix Directive
    * Handles:
    * "fix this short time memory lost issues",
@@ -2365,6 +2394,7 @@ module.exports = {
   isBanglishDefaultCodeMixedTukTukToneDirective: IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective,
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
+  isEnglishAndBanglishNoBanglaDirective: IntentParser.isEnglishAndBanglishNoBanglaDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
   isRemoveBanglaInterruptedSingleSoulDirective: IntentParser.isRemoveBanglaInterruptedSingleSoulDirective,
   isRemoveOtherVersionsAndSortsDirective: IntentParser.isRemoveOtherVersionsAndSortsDirective,

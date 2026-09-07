@@ -39,6 +39,7 @@ let analyser = null;
 let dataArray = null;
 let animationId = null;
 let startTime = Date.now();
+let sessionStartTime = null;
 let canvasW = 60;
 let canvasH = 20;
 
@@ -294,23 +295,44 @@ function drawBars() {
   }
 }
 
-// Update Timer Display
+// Update Timer Display (Continuous Zoom Meeting timer across turns in Jarvis mode)
 function updateTimer() {
   if (!timer) return;
 
-  if (!startTime) {
+  const currentStart = (mode === 'jarvis' && sessionStartTime) ? sessionStartTime : startTime;
+  if (!currentStart) {
     timer.textContent = '0:00';
     return;
   }
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
-  const mins = Math.floor(elapsed / 60);
+  const elapsed = Math.max(0, Math.floor((Date.now() - currentStart) / 1000));
+  const hrs = Math.floor(elapsed / 3600);
+  const mins = Math.floor((elapsed % 3600) / 60);
   const secs = elapsed % 60;
-  timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  if (hrs > 0) {
+    timer.textContent = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  } else {
+    timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
 }
 
 // Mode Selection Handler
-ipcRenderer.on('set-mode', (_, m) => {
+ipcRenderer.on('set-mode', (_, m, sessionStart) => {
   mode = m;
+  if (m === 'jarvis') {
+    if (sessionStart) {
+      sessionStartTime = sessionStart;
+    } else if (!sessionStartTime) {
+      sessionStartTime = Date.now();
+    }
+    if (!window.timerInterval) {
+      window.timerInterval = setInterval(() => {
+        updateTimer();
+      }, 500);
+    }
+  } else {
+    sessionStartTime = null;
+  }
+
   if (overlay) {
     overlay.classList.remove('fade-out', 'error');
     overlay.classList.toggle('rewrite', m === 'rewrite');
@@ -460,9 +482,14 @@ ipcRenderer.on('live-done', () => {
 });
 
 // Recording Started Handler
-ipcRenderer.on('recording-started', (_, recordingStartTime) => {
-  console.log('🎙️ Recording started event received:', recordingStartTime);
+ipcRenderer.on('recording-started', (_, recordingStartTime, sessionStart) => {
+  console.log('🎙️ Recording started event received:', recordingStartTime, 'sessionStart:', sessionStart);
   startTime = recordingStartTime;
+  if (sessionStart) {
+    sessionStartTime = sessionStart;
+  } else if (mode === 'jarvis' && !sessionStartTime) {
+    sessionStartTime = recordingStartTime || Date.now();
+  }
   currentState = mode === 'jarvis' ? 'listening' : 'recording';
 
   if (overlay) {
@@ -494,7 +521,7 @@ ipcRenderer.on('recording-started', (_, recordingStartTime) => {
   if (window.timerInterval) clearInterval(window.timerInterval);
   window.timerInterval = setInterval(() => {
     updateTimer();
-  }, 1000);
+  }, 500);
 });
 
 // Quick Popup Mode
@@ -556,6 +583,7 @@ function cleanupRenderer() {
     clearInterval(window.timerInterval);
     window.timerInterval = null;
   }
+  sessionStartTime = null;
 
   // 4. Instantly vanish the overlay visually
   if (overlay) {
