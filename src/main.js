@@ -792,7 +792,7 @@ app.whenReady().then(async () => {
         ? `Hey ${jarvisManager?.userName || 'Hritthik'}, I am online and ready. What are we working on?`
         : "Hey babe, I am awake and ready. What are we working on?";
       try {
-        await jarvisManager.speak(greeting, "en-US-AvaMultilingualNeural");
+        await jarvisManager.speak(greeting, "en-US-AvaNeural");
       } catch (speakErr) {}
 
       isJarvisLoopActive = true;
@@ -3017,7 +3017,7 @@ async function stopRecording() {
       }
 
       const speakingAgentName = isSingleRealVoice ? 'Tuk Tuk' : ((actionResult && actionResult.agentName) || activeAgent.name);
-      const speakingVoice = isSingleRealVoice ? 'en-US-AvaMultilingualNeural' : ((actionResult && actionResult.agentVoice) || activeAgent.voice);
+      const speakingVoice = isSingleRealVoice ? 'en-US-AvaNeural' : ((actionResult && actionResult.agentVoice) || activeAgent.voice);
 
       if (!standupAlreadySpoken) {
         // Stop any running filler before speaking the full answer
@@ -3034,7 +3034,7 @@ async function stopRecording() {
           const consolidatedText = multiTurns.map(t => t.text).join(' ').replace(/\[(?:Tuk\s*Tuk|Vision|Andrew|Friday|DD|Brian|Squad|Assistant)\]:\s*/gi, '').trim();
           multiTurns = [{
             agentName: 'Tuk Tuk',
-            voice: 'en-US-AvaMultilingualNeural',
+            voice: 'en-US-AvaNeural',
             text: consolidatedText || jarvisReply.replace(/\[(?:Tuk\s*Tuk|Vision|Andrew|Friday|DD|Brian|Squad|Assistant)\]:\s*/gi, '').trim()
           }];
         } else {
@@ -3101,11 +3101,11 @@ async function stopRecording() {
         } else {
           // Single agent turn — clean text and voice extraction
           let singleSpeechText = jarvisReply;
-          let singleVoice = isSingleRealVoice ? 'en-US-AvaMultilingualNeural' : speakingVoice;
+          let singleVoice = isSingleRealVoice ? 'en-US-AvaNeural' : speakingVoice;
           let agentDisplayName = isSingleRealVoice ? 'Tuk Tuk' : speakingAgentName;
           if (multiTurns.length === 1) {
             singleSpeechText = multiTurns[0].text;
-            singleVoice = isSingleRealVoice ? 'en-US-AvaMultilingualNeural' : multiTurns[0].voice;
+            singleVoice = isSingleRealVoice ? 'en-US-AvaNeural' : multiTurns[0].voice;
             agentDisplayName = isSingleRealVoice ? 'Tuk Tuk' : multiTurns[0].agentName;
             if (overlayWindow && !overlayWindow.isDestroyed()) {
               overlayWindow.webContents.send('set-agent-name', agentDisplayName);
@@ -3555,28 +3555,28 @@ function parseMultiAgentTurns(text) {
   if (!text || typeof text !== 'string') return [];
   
   const agentMap = {
-    'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
-    'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
-    'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
+    'tuk tuk': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'tuktuk': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'ava': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
     'vision': { name: 'Vision', voice: 'en-US-AndrewNeural' },
     'vison': { name: 'Vision', voice: 'en-US-AndrewNeural' },
-    'friday': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'fry day': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'fryday': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'fridya': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'fridy': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'fryda': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'dd': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'dee dee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'deedee': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'brian': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'brayn': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'টুকটুক': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
-    'টুক টুক': { name: 'Tuk Tuk', voice: 'en-US-AvaMultilingualNeural' },
-    'ভিশন': { name: 'Vision', voice: 'bn-BD-PradeepNeural' },
-    'ফ্রাইডে': { name: 'Friday', voice: 'en-US-EmmaMultilingualNeural' },
-    'ডিডি': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' },
-    'ডি ডি': { name: 'DD', voice: 'en-US-BrianMultilingualNeural' }
+    'friday': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'fry day': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'fryday': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'fridya': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'fridy': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'fryda': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'dd': { name: 'DD', voice: 'en-US-BrianNeural' },
+    'dee dee': { name: 'DD', voice: 'en-US-BrianNeural' },
+    'deedee': { name: 'DD', voice: 'en-US-BrianNeural' },
+    'brian': { name: 'DD', voice: 'en-US-BrianNeural' },
+    'brayn': { name: 'DD', voice: 'en-US-BrianNeural' },
+    'টুকটুক': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'টুক টুক': { name: 'Tuk Tuk', voice: 'en-US-AvaNeural' },
+    'ভিশন': { name: 'Vision', voice: 'en-US-AndrewNeural' },
+    'ফ্রাইডে': { name: 'Friday', voice: 'en-US-EmmaNeural' },
+    'ডিডি': { name: 'DD', voice: 'en-US-BrianNeural' },
+    'ডি ডি': { name: 'DD', voice: 'en-US-BrianNeural' }
   };
 
   // Enhanced pattern: captures the 4 core agents (Tuk Tuk, Vision, Friday, DD) in English and Bengali script
@@ -3587,7 +3587,7 @@ function parseMultiAgentTurns(text) {
   // Extract all agent turns from the formatted text
   while ((match = pattern.exec(text)) !== null) {
     const rawName = match[1].toLowerCase().replace(/\s+/g, ' ').trim();
-    const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaMultilingualNeural' };
+    const agentInfo = agentMap[rawName] || { name: match[1], voice: 'en-US-AvaNeural' };
     let speech = match[2].trim();
     
     // Clean up leading punctuation and whitespace

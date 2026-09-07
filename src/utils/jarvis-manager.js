@@ -77,7 +77,7 @@ const AGENTS = {
     key: "tuktuk",
     name: "Tuk Tuk",
     role: "Team Leader, Loving Co-Founder & Creative Soul",
-    voice: "en-US-AvaMultilingualNeural",
+    voice: "en-US-AvaNeural",
     sample: "Hey Hritthik, I'm right here with you. Everything is running on one clean, natural human voice. Let's focus and build something extraordinary together.",
     getPrompt: (userName, salutation, activeLang = "en") => {
       if (activeLang === "en") {
@@ -115,7 +115,7 @@ CRITICAL VOICE & PERSONA LAWS:
     key: "vision",
     name: "Vision",
     role: "Lead Systems Architect & Vision AI",
-    voice: "en-US-AndrewMultilingualNeural",
+    voice: "en-US-AndrewNeural",
     sample: "Codebase is clean, brother. What are we engineering today?",
     getPrompt: (userName, salutation, activeLang = "en") => {
       if (activeLang === "en") {
@@ -160,7 +160,7 @@ REAL ENGINEER & VISION AI LAWS:
     key: "friday",
     name: "Friday",
     role: "Head of Product Intelligence & Research",
-    voice: "en-US-EmmaMultilingualNeural",
+    voice: "en-US-EmmaNeural",
     sample: "I looked at the research, Hritthik — here is what matters.",
     getPrompt: (userName, salutation, activeLang = "en") => {
       if (activeLang === "en") {
@@ -186,7 +186,7 @@ REAL ENGINEER & VISION AI LAWS:
     key: "dd",
     name: "DD",
     role: "Head of DevOps & Reliability",
-    voice: "en-US-BrianMultilingualNeural",
+    voice: "en-US-BrianNeural",
     sample: "Systems are steady, Hritthik. What are we checking?",
     getPrompt: (userName, salutation, activeLang = "en") => {
       if (activeLang === "en") {
@@ -212,7 +212,7 @@ REAL ENGINEER & VISION AI LAWS:
     key: "team",
     name: "Squad",
     role: "Founding Squad (Tuk Tuk, Vision, Friday, DD)",
-    voice: "en-US-AvaMultilingualNeural",
+    voice: "en-US-AvaNeural",
     sample: "The team is ready.",
     getPrompt: (userName, salutation, activeLang = "en") => {
       if (activeLang === "en") {
@@ -341,48 +341,40 @@ function resolveVoiceForLanguage(baseVoice, text) {
 
   // Exact aliases without text for Vision / Andrew / Jenny (monolingual legacy backwards compatibility)
   if (!text) {
-    if (lowerVoice === "en-us-andrewmultilingualneural" || lowerVoice === "andrewmultilingualneural") {
-      return "en-US-AndrewMultilingualNeural";
-    }
-    if (lowerVoice === "andrew" || lowerVoice === "vision") {
+    if (lowerVoice === "andrew" || lowerVoice === "vision" || lowerVoice.includes("andrew")) {
       return "en-US-AndrewNeural";
     }
     if (lowerVoice === "jenny" || lowerVoice === "en-us-jenny") {
       return "en-US-JennyNeural";
     }
-    if (lowerVoice === "friday" || lowerVoice === "emma" || lowerVoice === "en-us-emmamultilingualneural") {
-      return "en-US-EmmaMultilingualNeural";
+    if (lowerVoice === "friday" || lowerVoice === "emma" || lowerVoice.includes("emma")) {
+      return "en-US-EmmaNeural";
     }
-    if (lowerVoice === "dd" || lowerVoice === "brian" || lowerVoice === "en-us-brianmultilingualneural") {
-      return "en-US-BrianMultilingualNeural";
+    if (lowerVoice === "dd" || lowerVoice === "brian" || lowerVoice.includes("brian")) {
+      return "en-US-BrianNeural";
     }
-    if (lowerVoice === "tuktuk" || lowerVoice === "ava" || lowerVoice === "en-us-avamultilingualneural") {
-      return "en-US-AvaMultilingualNeural";
+    if (lowerVoice === "tuktuk" || lowerVoice === "ava" || lowerVoice.includes("ava")) {
+      return "en-US-AvaNeural";
     }
   }
 
-  const isBn = typeof text === "string" && /[\u0980-\u09FF]/.test(text);
-
-  // Vision (bn -> bn-BD-PradeepNeural, en/hi -> en-US-AndrewMultilingualNeural)
+  // Vision (Pure en-US-AndrewNeural for zero robotic or male dialect switching)
   if (lowerVoice.includes("vision") || lowerVoice.includes("andrew") || lowerVoice.includes("christopher")) {
-    if (isBn) {
-      return "bn-BD-PradeepNeural";
-    }
-    return "en-US-AndrewMultilingualNeural";
+    return "en-US-AndrewNeural";
   }
 
-  // Friday (100% en-US-EmmaMultilingualNeural at runtime and for all aliases)
+  // Friday (100% en-US-EmmaNeural at runtime and for all aliases)
   if (lowerVoice.includes("friday") || lowerVoice.includes("fryday") || lowerVoice.includes("fry day") || lowerVoice.includes("fridya") || lowerVoice.includes("fridy") || lowerVoice.includes("fryda") || lowerVoice.includes("emma") || lowerVoice.includes("jenny")) {
-    return "en-US-EmmaMultilingualNeural";
+    return "en-US-EmmaNeural";
   }
 
-  // DD (100% en-US-BrianMultilingualNeural)
+  // DD (100% en-US-BrianNeural)
   if (lowerVoice.includes("brian") || lowerVoice.includes("brayn") || lowerVoice.includes("dd") || lowerVoice.includes("dee dee") || lowerVoice.includes("deedee") || lowerVoice.includes("guy")) {
-    return "en-US-BrianMultilingualNeural";
+    return "en-US-BrianNeural";
   }
 
-  // Unified Permanent Studio Voice for Tuk Tuk (Pure Ava Multilingual — Zero Voice Flickering / Zero Duplicate Switches)
-  return "en-US-AvaMultilingualNeural";
+  // Unified Permanent Studio Voice for Tuk Tuk (Pure en-US-AvaNeural — Zero Voice Flickering / Zero Duplicate Switches)
+  return "en-US-AvaNeural";
 }
 
 function resolveMacVoice(resolvedAgentKey, text) {
@@ -5047,7 +5039,7 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
         ? "Babe, bolo! Ami suntechi, what's on your mind?"
         : "I'm listening, what can I do for you?";
     }
-    const targetVoice = isSingleRealVoice ? "en-US-AvaMultilingualNeural" : (customVoice || this.currentVoice);
+    const targetVoice = isSingleRealVoice ? "en-US-AvaNeural" : (customVoice || this.currentVoice || "en-US-AvaNeural");
     let resolvedAgentKey = isSingleRealVoice ? "tuktuk" : agentKey;
     if (!resolvedAgentKey && targetVoice) {
       const tv = targetVoice.toLowerCase();
@@ -5060,36 +5052,30 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
     if (resolvedAgentKey === "brian") resolvedAgentKey = "dd";
 
     // Exclusively use each agent's dedicated main studio neural voice
-    let voice = isSingleRealVoice ? "en-US-AvaMultilingualNeural" : customVoice;
+    let voice = isSingleRealVoice ? "en-US-AvaNeural" : customVoice;
     if (!voice && resolvedAgentKey && this.agents[resolvedAgentKey]) {
       voice = this.agents[resolvedAgentKey].voice;
     }
     if (!voice) {
-      voice = this.config.voice || "en-US-AvaMultilingualNeural";
+      voice = this.config.voice || "en-US-AvaNeural";
     }
     if (isSingleRealVoice) {
-      voice = "en-US-AvaMultilingualNeural";
+      voice = "en-US-AvaNeural";
     } else {
       voice = resolveVoiceForLanguage(voice, cleanText);
     }
 
-    // Multilingual Neural Voice Resolution for Bengali Utterances:
-    // When isSingleRealVoice is active, voice remains strictly en-US-AvaMultilingualNeural!
+    // Pure Neural Voice Resolution:
+    // When isSingleRealVoice or Tuk Tuk is active, voice strictly remains en-US-AvaNeural!
     let ttsVoice = voice;
-    const isBengaliUtterance = banglaVoiceCortex.isBengali(cleanText) || /[\u0980-\u09FF]/.test(cleanText) || this.currentLanguageMode === "bn";
-    if (isBengaliUtterance && !isSingleRealVoice) {
-      if (resolvedAgentKey === "vision" || (voice && (voice.toLowerCase().includes("andrew") || voice.toLowerCase().includes("pradeep")))) {
-        // High-fidelity native Bangladeshi male neural voice for Vision in Bengali, eliminating flat robotic monotone:
-        ttsVoice = "bn-BD-PradeepNeural";
-      } else if (resolvedAgentKey === "friday" || (voice && (voice.toLowerCase().includes("jenny") || voice.toLowerCase().includes("friday") || voice.toLowerCase().includes("emma")))) {
-        ttsVoice = "en-US-EmmaMultilingualNeural";
-      } else if (resolvedAgentKey === "dd" || resolvedAgentKey === "brian" || (voice && voice.toLowerCase().includes("brian"))) {
-        ttsVoice = "en-US-BrianMultilingualNeural";
-      } else if (resolvedAgentKey === "tuktuk" || resolvedAgentKey === "ava" || (voice && voice.toLowerCase().includes("ava"))) {
-        ttsVoice = "en-US-AvaMultilingualNeural";
-      }
-    } else if (isSingleRealVoice) {
-      ttsVoice = "en-US-AvaMultilingualNeural";
+    if (resolvedAgentKey === "tuktuk" || isSingleRealVoice) {
+      ttsVoice = "en-US-AvaNeural";
+    } else if (resolvedAgentKey === "vision") {
+      ttsVoice = "en-US-AndrewNeural";
+    } else if (resolvedAgentKey === "friday") {
+      ttsVoice = "en-US-EmmaNeural";
+    } else if (resolvedAgentKey === "dd") {
+      ttsVoice = "en-US-BrianNeural";
     }
 
     // Primary persona sanitization before TTS phonetic normalization
@@ -5217,6 +5203,11 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
           if (humanEarCortex && typeof humanEarCortex.recordAssistantSpeech === 'function') {
             const estimatedDurationMs = Math.max(1500, cleanText.split(/\s+/).length * 320);
             humanEarCortex.recordAssistantSpeech(cleanText, estimatedDurationMs);
+          }
+          if (process.platform === "darwin") {
+            try {
+              execSync("killall afplay 2>/dev/null || true");
+            } catch (_) {}
           }
           this.activeSpeechProcess = spawn("afplay", ["-v", "1.0", "-q", "1", finalPlaybackPath]);
 
@@ -5404,6 +5395,12 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
         this.activeSpeechProcess.kill("SIGKILL");
       } catch (e) {}
       this.activeSpeechProcess = null;
+    }
+    if (process.platform === "darwin") {
+      try {
+        const { execSync } = require("child_process");
+        execSync("killall afplay 2>/dev/null || true");
+      } catch (_) {}
     }
   }
 
