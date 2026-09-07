@@ -325,56 +325,63 @@ AGENTS.andrew = { ...AGENTS.vision, voice: "en-US-AndrewNeural", key: "vision" }
 function resolveVoiceForLanguage(baseVoice, text) {
   const lowerVoice = (baseVoice || "").toLowerCase();
 
-  // 100% Locked Core Studio Voices — Zero Voice/Language Flickering
+  // STRICT BAN on robotic male Bangladeshi voice (bn-BD-PradeepNeural):
+  // Redirect to AvaMultilingualNeural
   if (lowerVoice.includes("pradeep") || lowerVoice.includes("bn-bd")) {
-    return "bn-BD-PradeepNeural";
+    return "en-US-AvaMultilingualNeural";
   }
 
-  // Exact studio voice locks for monolingual studio voices
+  // Exact multilingual neural voice locks
+  if (lowerVoice.includes("avamultilingual") || (lowerVoice.includes("ava") && lowerVoice.includes("multilingual"))) {
+    return "en-US-AvaMultilingualNeural";
+  }
+  if (lowerVoice.includes("andrewmultilingual") || (lowerVoice.includes("andrew") && lowerVoice.includes("multilingual"))) {
+    return "en-US-AndrewMultilingualNeural";
+  }
+  if (lowerVoice.includes("emmamultilingual") || (lowerVoice.includes("emma") && lowerVoice.includes("multilingual"))) {
+    return "en-US-EmmaMultilingualNeural";
+  }
+  if (lowerVoice.includes("brianmultilingual") || (lowerVoice.includes("brian") && lowerVoice.includes("multilingual"))) {
+    return "en-US-BrianMultilingualNeural";
+  }
+
+  // Exact studio voice locks for monolingual studio voices (when explicitly requested without multilingual)
   if (lowerVoice === "en-us-andrewneural" || lowerVoice === "andrewneural") {
-    return "en-US-AndrewNeural";
+    return (text && /[\u0980-\u09FF]/.test(text)) ? "en-US-AndrewMultilingualNeural" : "en-US-AndrewNeural";
   }
 
   if (lowerVoice === "en-us-jennyneural" || lowerVoice === "jennyneural") {
     return "en-US-JennyNeural";
   }
 
-  // Exact aliases without text for Vision / Andrew / Jenny (monolingual legacy backwards compatibility)
-  if (!text) {
-    if (lowerVoice === "andrew" || lowerVoice === "vision" || lowerVoice.includes("andrew")) {
-      return "en-US-AndrewNeural";
-    }
-    if (lowerVoice === "jenny" || lowerVoice === "en-us-jenny") {
-      return "en-US-JennyNeural";
-    }
-    if (lowerVoice === "friday" || lowerVoice === "emma" || lowerVoice.includes("emma")) {
-      return "en-US-EmmaNeural";
-    }
-    if (lowerVoice === "dd" || lowerVoice === "brian" || lowerVoice.includes("brian")) {
-      return "en-US-BrianNeural";
-    }
-    if (lowerVoice === "tuktuk" || lowerVoice === "ava" || lowerVoice.includes("ava")) {
-      return "en-US-AvaNeural";
-    }
-  }
-
-  // Vision (Pure en-US-AndrewNeural for zero robotic or male dialect switching)
+  // Vision
   if (lowerVoice.includes("vision") || lowerVoice.includes("andrew") || lowerVoice.includes("christopher")) {
-    return "en-US-AndrewNeural";
+    if (text && /[\u0980-\u09FF]/.test(text)) {
+      return "en-US-AndrewMultilingualNeural";
+    }
+    return lowerVoice.includes("multilingual") ? "en-US-AndrewMultilingualNeural" : "en-US-AndrewNeural";
   }
 
-  // Friday (100% en-US-EmmaNeural at runtime and for all aliases)
+  // Friday
   if (lowerVoice.includes("friday") || lowerVoice.includes("fryday") || lowerVoice.includes("fry day") || lowerVoice.includes("fridya") || lowerVoice.includes("fridy") || lowerVoice.includes("fryda") || lowerVoice.includes("emma") || lowerVoice.includes("jenny")) {
-    return "en-US-EmmaNeural";
+    if (text && /[\u0980-\u09FF]/.test(text)) {
+      return "en-US-EmmaMultilingualNeural";
+    }
+    return lowerVoice.includes("multilingual") ? "en-US-EmmaMultilingualNeural" : "en-US-EmmaNeural";
   }
 
-  // DD (100% en-US-BrianNeural)
+  // DD
   if (lowerVoice.includes("brian") || lowerVoice.includes("brayn") || lowerVoice.includes("dd") || lowerVoice.includes("dee dee") || lowerVoice.includes("deedee") || lowerVoice.includes("guy")) {
-    return "en-US-BrianNeural";
+    if (text && /[\u0980-\u09FF]/.test(text)) {
+      return "en-US-BrianMultilingualNeural";
+    }
+    return lowerVoice.includes("multilingual") ? "en-US-BrianMultilingualNeural" : "en-US-BrianNeural";
   }
 
-  // Unified Permanent Studio Voice for Tuk Tuk (Pure en-US-AvaNeural — Zero Voice Flickering / Zero Duplicate Switches)
-  return "en-US-AvaNeural";
+  // Unified Permanent Studio Voice for Tuk Tuk:
+  // en-US-AvaMultilingualNeural delivers native Bengali script phonemes for Bengali words
+  // and crisp American phonemes for English words with zero pronunciation distortion.
+  return "en-US-AvaMultilingualNeural";
 }
 
 function resolveMacVoice(resolvedAgentKey, text) {
@@ -459,12 +466,16 @@ function phoneticNormalizeForTTS(text, voice = "") {
     .replace(/\bBTC\b/g, "B T C")
     .replace(/\bETH\b/g, "Ethereum");
 
-  const isBanglishOnly = (banglaVoiceCortex && banglaVoiceCortex.isBanglishOnlyMode !== false);
-  const isMultilingualVoice = !isBanglishOnly && /multilingual/i.test(voice) && !voice.includes("en-US-AvaNeural") && !voice.includes("en-US-AndrewNeural") && !voice.includes("en-US-EmmaNeural") && !voice.includes("en-US-BrianNeural");
+  const isBanglishOnly = (banglaVoiceCortex && banglaVoiceCortex.isBanglishOnlyMode === true);
+  const isCodeMixedRealLetters = Boolean(
+    (banglaVoiceCortex && banglaVoiceCortex.codeMixedRealBanglaAndEnglishLetters) ||
+    /multilingual/i.test(voice)
+  );
+  const isMultilingualVoice = /multilingual/i.test(voice);
 
   // 1.3 Equational Model M_loanwords: Seamless English Word Harmonization in Bengali Utterances
-  // When in Banglish mode or with pure neural voices, English technical loanwords stay in pure English (never convert to Bengali script!).
-  if (!isBanglishOnly && isMultilingualVoice && /[\u0980-\u09FF]/.test(normalized)) {
+  // When in code-mixed mode (real Bangla letters + English letters), English words stay in pure English letters!
+  if (!isCodeMixedRealLetters && !isBanglishOnly && isMultilingualVoice && /[\u0980-\u09FF]/.test(normalized)) {
     const loanwords = [
       [/\bbuild\b/gi, "বিল্ড"],
       [/\bruns?\b/gi, "রান"],
@@ -636,14 +647,17 @@ function phoneticNormalizeForTTS(text, voice = "") {
     .replace(/\bpera\b/gi, "paera")
     .replace(/\bpyara\b/gi, "paera");
 
-  // 3. Equational Model U_native: Native Bengali Unicode Script Elimination for Pure Voices & Banglish
-  // If text contains any Bengali Unicode characters, ALWAYS Romanize to Banglish so American neural voices pronounce it cleanly!
-  if (/[\u0980-\u09FF]/.test(normalized)) {
-    normalized = bengaliToRoman(normalized);
+  // 3. Equational Model U_native: Native Bengali Unicode Script Handling
+  // When in code-mixed mode or with multilingual neural voices (AvaMultilingualNeural),
+  // preserve real Bengali Unicode characters! AvaMultilingual natively synthesizes Bengali script
+  // with authentic native Dhaka pronunciation and English script with crisp American phonetics.
+  if (!isCodeMixedRealLetters) {
+    if (/[\u0980-\u09FF]/.test(normalized)) {
+      normalized = bengaliToRoman(normalized);
+    }
+    // Strip any residual Bengali script characters for purely monolingual English voices
+    normalized = normalized.replace(/[\u0980-\u09FF]+/g, "");
   }
-
-  // Strip any residual Bengali script characters so absolutely NO Bengali script reaches TTS
-  normalized = normalized.replace(/[\u0980-\u09FF]+/g, "");
 
   // 4. Strip non-Bengali Indic foreign script hallucinations to prevent acoustic jitter
   normalized = normalized.replace(/[\u0900-\u097F\u0600-\u06FF\u4E00-\u9FFF\u0400-\u04FF]/g, "");
@@ -4234,7 +4248,7 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
 7. AUDIO-ONLY: Spoken words only. Zero markdown asterisks, zero bullet points, zero code blocks, zero stage directions like (laughs) or (smiles).
 8. ONE REAL HUMAN VOICE: All responses are delivered in ONE single real voice (Ava). Zero multi-person voices, zero multi-agent dialogue tags.
 9. ZERO 'KHATI MISTI' & ZERO CANNED SLOGANS: Never use artificial sweet talk, melodramatic baby-talk, or meta-defenses like "I am not a robot". Speak as a real, living human partner.
-10. ENGLISH & BANGLISH ONLY (ZERO BANGLA SCRIPT): Never output Bengali Unicode characters (বাংলা হরফ \u0980-\u09FF). Write strictly in English or phonetic Roman Banglish (e.g. "Babe, chill! Kono pera nei, let's build it!"). Native Bengali script is strictly prohibited.`;
+10. CODE-MIXED REAL BANGLA & ENGLISH LETTERS FOR SUPERIOR PRONUNCIATION: When speaking Banglish, write Bengali words using real Bangla letters (বাংলা হরফ/বর্ণমালা) and write English words using English letters (Latin alphabet). Never write Bengali words in English letters. This activates Ava Multilingual's native phonemes for 100% natural, authentic pronunciation.`;
 
     let visionCompact = "";
     try {
@@ -4304,16 +4318,16 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     let languageInvariantLaw = "";
     if (isSingleReal) {
       languageInvariantLaw = `10. STRICT SINGLE REAL HUMAN VOICE & GROUNDED CO-FOUNDER LAW:
-- ONE REAL HUMAN VOICE: You are the ONLY voice and person (Tuk Tuk, en-US-AvaNeural). Multi-personality switching (Vision, Friday, DD) and multi-person voices are permanently disabled.
-- ENGLISH & BANGLISH ONLY (ZERO BANGLA SCRIPT): Never write in Bengali script (বাংলা হরফ \u0980-\u09FF). Write exclusively in standard English or phonetic Roman Banglish (e.g., "Babe, chill! Kono pera nei, ami shob test korechi!"). Native Bengali script is strictly prohibited.
+- ONE REAL HUMAN VOICE: You are the ONLY voice and person (Tuk Tuk, en-US-AvaMultilingualNeural). Multi-personality switching (Vision, Friday, DD) and multi-person voices are permanently disabled.
+- CODE-MIXED REAL BANGLA & ENGLISH LETTERS: When speaking Banglish, write Bengali words in real Bangla letters (বাংলা হরফ/বর্ণমালা, e.g. "আমি তোমার সাথে আছি", "কোনো চিন্তা করো না", "সব টেস্ট পাস করেছি") and write English technical/conversational words in English letters (Latin alphabet, e.g. "Babe", "code", "build", "test", "clean", "terminal", "everything is running smooth!"). NEVER write Bengali words in English letters (pure Romanized Banglish ruins pronunciation). Real Bangla letters + English letters activate en-US-AvaMultilingualNeural's native phoneme inventory for authentic, beautiful pronunciation.
 - TOTAL 'KHATI MISTI' BAN: Strictly NEVER use artificial sweet talk ('খাঁটি মিষ্টি', 'মিষ্টি সুরে'), fake baby talk, melodramatic girlfriend roleplay, or repetitive pet-naming. Speak like an authentic, mature, intelligent human co-founder.
 - NATURAL CONVERSATIONAL REGISTER: Speak in crisp, natural modern conversational language (modern English or natural code-mixed Banglish). Blend everyday Bengali and natural tech words effortlessly without textbook stiffness.
 - DIRECT & RESPECTFUL ADDRESS: Address ${userName} naturally as "${userName}" or conversationally. Do NOT repeat pet names like "babe" on every clause.
 - DEEP INTELLECTUAL CLARITY: Answer with first-principles logic, systems acumen, and real substance. Zero fluff or fake cheerleading.`;
     } else if (activeLang === "banglish" || isBanglishDefault) {
-      languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: 100% CODE-MIXED BANGLISH & CASUAL MODERN TONE & ZERO OTHER VOICE INTERRUPTION:
-- ENGLISH & BANGLISH ONLY (ZERO BANGLA SCRIPT): Never write in Bengali script (বাংলা হরফ \u0980-\u09FF). Write exclusively in standard English or phonetic Roman Banglish (e.g., "Chill, kono pera nei! Ami shob check korechi, everything is super smooth!"). Native Bengali script is strictly prohibited.
-- CASUAL BANGLISH REGISTER: Speak naturally in modern, lively, code-mixed Banglish (blending Bengali and English in Roman letters). Never speak in rigid textbook or formal Bengali.
+      languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: 100% CODE-MIXED BANGLISH (REAL BANGLA + ENGLISH LETTERS) & ZERO OTHER VOICE INTERRUPTION:
+- REAL BANGLA LETTERS FOR BANGLA + ENGLISH LETTERS FOR TECH/ENGLISH: Write Bengali words using real Bangla letters (বাংলা হরফ, e.g. "আমি তোমার code build আর test করেছি, everything is smooth!") and English words using Latin letters. Never Romanize Bengali words into English letters.
+- CASUAL BANGLISH REGISTER: Speak naturally in modern, lively, code-mixed Banglish. Never speak in rigid textbook or formal Bengali.
 - DEFAULT & ONLY VOICE REGISTER: Modern code-mixed natural Banglish is the default and only primary voice mode. Blend everyday conversational Bengali and natural English words seamlessly.
 - INSTANT RESPONSES (SUB-200MS DELIVERY): Deliver instantaneous responses with sub-200ms rapid dispatch, zero hesitation, and zero robotic throat-clearing preambles.
 - 1:1 TUK TUK ENGLISH TONE MATCH: Tuk Tuk's Banglish tone must have the EXACT SAME charm, effortless wit, and smart co-founder vibe as her English voice. Address ${userName} naturally without forced sweet-talk.
@@ -4322,8 +4336,8 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     } else if (activeLang === "en") {
       languageInvariantLaw = `10. STRICT ACTIVE WORKFLOW LANGUAGE: 100% MODERN ENGLISH LAW:
 - WORKFLOW CONTEXT: ${userName} is actively working in ENGLISH, but may freely use Bengali or Banglish phrases.
-- ENGLISH & BANGLISH ONLY: Deliver sharp, confident, warm co-founder insights in natural English or Roman Banglish with ZERO BANGLA SCRIPT characters.
-- Tuk Tuk speaks as his grounded partner & tech co-founder with ONE real human voice.`;
+- CODE-MIXED CAPABILITY: Deliver sharp, confident, warm co-founder insights in natural English. If blending Bengali, use real Bangla letters for Bengali words and English letters for English words.
+- Tuk Tuk speaks as his grounded partner & tech co-founder with ONE real human voice (AvaMultilingualNeural).`;
     } else {
       languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: FULL AUTHENTIC BENGALI (চলতি কথ্য বাংলা) & ORIGINAL THINKER LAW:
 - FULL BENGALI CONTEXT: ${userName} wants a natural conversational experience in BENGALI with true original thinking.
@@ -5984,6 +5998,63 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
     };
   }
 
+  configureCodeMixedRealBanglaAndEnglishLetters(options = {}) {
+    this.currentLanguageMode = "banglish";
+    this.config.voice = "en-US-AvaMultilingualNeural";
+    this.saveConfig({
+      voice: "en-US-AvaMultilingualNeural",
+      conversationLanguage: "banglish",
+      codeMixedRealBanglaAndEnglishLetters: true,
+      noBanglaScript: false,
+      englishAndBanglishOnly: true,
+      pureBanglaBanned: true
+    });
+
+    if (banglaVoiceCortex) {
+      if (typeof banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters === "function") {
+        banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters(true);
+      }
+      if (typeof banglaVoiceCortex.setBanglishOnlyMode === "function") {
+        banglaVoiceCortex.setBanglishOnlyMode(false);
+      }
+      banglaVoiceCortex.codeMixedRealBanglaAndEnglishLetters = true;
+      banglaVoiceCortex.isBanglishOnlyMode = false;
+    }
+
+    this.addDynamicDirective(
+      "CRITICAL MANDATE: CODE-MIXED REAL BANGLA LETTERS & ENGLISH LETTERS FOR NATURAL PRONUNCIATION. When speaking in Banglish, write Bengali words in real Bangla letters (বাংলা হরফ/বর্ণমালা, e.g., 'আমি তোমার সাথে আছি', 'কোনো সমস্যা নেই', 'সব টেস্ট পাস') and write English technical & conversational words in English letters (Latin alphabet, e.g., 'Babe', 'code', 'build', 'test', 'clean', 'terminal', 'everything is running smooth!'). NEVER write Bengali words in English letters (pure Romanized Banglish is banned because it causes bad, robotic English pronunciation). Real Bangla letters + English letters activate en-US-AvaMultilingualNeural's native phoneme inventory for 100% crystal-clear, authentic pronunciation.",
+      "all"
+    );
+    this.addEbbinghausLearning(
+      "Code-Mixed Real Bangla & English Letters Pronunciation",
+      "Real Bangla letters (বাংলা হরফ) for Bengali words and English letters (A-Z) for English technical words locked. Delivers authentic Dhaka phonetics and crisp American phonetics via en-US-AvaMultilingualNeural without pronunciation distortion.",
+      1.00
+    );
+    this.setLivingMemoryPreference(
+      "code_mixed_real_bangla_and_english_letters_status",
+      "Code-Mixed Real Bangla & English Letters Active: Bengali words written in real Bangla script, English words written in Latin script, voiced by en-US-AvaMultilingualNeural with zero pronunciation distortion."
+    );
+    this.setPreference("code_mixed_real_bangla_and_english_letters", true);
+    this.setPreference("no_bangla_script", false);
+    this.setPreference("voice", "en-US-AvaMultilingualNeural");
+    this.setPreference("english_and_banglish_only", true);
+    this.setPreference("banglish_default_voice_mode", true);
+    this.setPreference("conversationLanguage", "banglish");
+    this.setPreference("tuktuk_banglish_english_parity", true);
+
+    console.log("🌐🎙️ [Code-Mixed Real Bangla & English Letters Calibrated]: Real Bangla letters + English letters locked on en-US-AvaMultilingualNeural for flawless pronunciation.");
+    return {
+      success: true,
+      verified: true,
+      action: "configure_code_mixed_real_bangla_and_english_letters",
+      codeMixedRealBanglaAndEnglishLetters: true,
+      noBanglaScript: false,
+      voice: "en-US-AvaMultilingualNeural",
+      languageMode: "banglish",
+      status: "CODE_MIXED_REAL_BANGLA_AND_ENGLISH_LETTERS_VERIFIED"
+    };
+  }
+
   calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson(options = {}) {
     this.currentLanguageMode = "banglish";
     this.saveConfig({ conversationLanguage: "banglish" });
@@ -6416,5 +6487,10 @@ JarvisManager.calibratePromptAutoPasteAtCursorAndProfessionalEngineering = funct
   const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
   return instance.calibratePromptAutoPasteAtCursorAndProfessionalEngineering(options);
 };
+JarvisManager.configureCodeMixedRealBanglaAndEnglishLetters = function(options = {}) {
+  const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
+  return instance.configureCodeMixedRealBanglaAndEnglishLetters(options);
+};
 
+JarvisManager.JarvisManager = JarvisManager;
 module.exports = JarvisManager;

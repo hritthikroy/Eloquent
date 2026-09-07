@@ -30,7 +30,8 @@
 class BanglaVoiceCortex {
   constructor() {
     this.isActive = true;
-    this.isBanglishOnlyMode = true;
+    this.isBanglishOnlyMode = false;
+    this.codeMixedRealBanglaAndEnglishLetters = true;
     this.isUnifiedSingleSoulMode = true;
     this.defaultRateOffset = "+0%";
     this.defaultPitchOffset = "+0Hz";
@@ -246,6 +247,16 @@ class BanglaVoiceCortex {
 
   setBanglishOnlyMode(enabled = true) {
     this.isBanglishOnlyMode = Boolean(enabled);
+    if (enabled) {
+      this.codeMixedRealBanglaAndEnglishLetters = false;
+    }
+  }
+
+  setCodeMixedRealBanglaAndEnglishLetters(enabled = true) {
+    this.codeMixedRealBanglaAndEnglishLetters = Boolean(enabled);
+    if (enabled) {
+      this.isBanglishOnlyMode = false;
+    }
   }
 
   restoreCleanEnglishLoanwords(text = "") {
@@ -668,6 +679,27 @@ class BanglaVoiceCortex {
   processBengaliUtterance(text = "", voice = "") {
     if (!text || typeof text !== "string") return text;
 
+    // Check if code-mixed real Bangla letters & English letters mode is active
+    const isCodeMixedRealLetters = Boolean(
+      this.codeMixedRealBanglaAndEnglishLetters ||
+      (!this.isBanglishOnlyMode && /multilingual/i.test(voice)) ||
+      /avamultilingual/i.test(voice) ||
+      /andrewmultilingual/i.test(voice) ||
+      /emmamultilingual/i.test(voice) ||
+      /brianmultilingual/i.test(voice)
+    );
+
+    if (isCodeMixedRealLetters) {
+      // Real Bangla letters for Bengali words + English letters for English words.
+      // This activates AvaMultilingualNeural's native Bengali phonemes for Bengali words
+      // and native American phonemes for English words with zero pronunciation distortion!
+      let out = this.smoothHardBengaliPronunciations(text);
+      out = this.optimizeCadenceAndBreathPauses(out);
+      out = this.normalizeNumbersAndUnits(out);
+      out = this.restoreCleanEnglishLoanwords(out);
+      return out.replace(/\s+/g, " ").trim();
+    }
+
     // 0. Smooth hard Sanskritized pronunciations & suppress TTS voice breaks
     let out = this.smoothHardBengaliPronunciations(text);
 
@@ -812,4 +844,5 @@ class BanglaVoiceCortex {
 
 const banglaVoiceCortex = new BanglaVoiceCortex();
 module.exports = banglaVoiceCortex;
+module.exports.banglaVoiceCortex = banglaVoiceCortex;
 module.exports.BanglaVoiceCortex = BanglaVoiceCortex;

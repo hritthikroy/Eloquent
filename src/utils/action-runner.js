@@ -131,8 +131,11 @@ class OfficeActionRunner {
       );
       if (isSingleReal) {
         res.agentName = "Tuk Tuk";
-        res.agentVoice = "en-US-AvaNeural";
-        if (res.voice) res.voice = "en-US-AvaNeural";
+        const realVoice = (jm?.config?.voice && jm.config.voice.includes("Multilingual"))
+          ? jm.config.voice
+          : (res.agentVoice && res.agentVoice.includes("Multilingual") ? res.agentVoice : "en-US-AvaMultilingualNeural");
+        res.agentVoice = realVoice;
+        if (res.voice) res.voice = realVoice;
         if (res.agentKey) res.agentKey = "tuktuk";
         if (res.speech && typeof res.speech === "string") {
           res.speech = res.speech
@@ -144,10 +147,15 @@ class OfficeActionRunner {
         if (!res.speech || !res.speech.trim()) {
           const isBengali = /[\u0980-\u09FF]/.test(speechText) || /\b(?:kemon|sathe|koro|shono|bol|amader|shob|manusher|moto|dorkar|lagbe|chai|bhai|aro|thik)\b/i.test(speechText);
           res.speech = isBengali
-            ? "Babe, shob perfectly complete korechi! Ami Tuk Tuk tomar sathei achi babe, bolo erpor ki korbo?"
+            ? "Babe, আমি তোমার সাথে আছি! All systems running smooth, bolo erpor ki korbo?"
             : "Babe, I've taken care of that completely! I'm right here with you babe, what are we building next?";
         }
-        if (res.speech && (jm?.config?.noBanglaScript || jm?.preferences?.no_bangla_script || jm?.currentLanguageMode === "banglish")) {
+        const isCodeMixed = Boolean(
+          jm?.config?.codeMixedRealBanglaAndEnglishLetters ||
+          jm?.preferences?.code_mixed_real_bangla_and_english_letters ||
+          res.data?.codeMixedRealBanglaAndEnglishLetters
+        );
+        if (!isCodeMixed && res.speech && (jm?.config?.noBanglaScript || jm?.preferences?.no_bangla_script)) {
           const bvc = require("./bangla-voice-cortex");
           if (bvc && typeof bvc.enforceBanglishModernVibe === "function") {
             res.speech = bvc.enforceBanglishModernVibe(res.speech);
@@ -159,10 +167,10 @@ class OfficeActionRunner {
         if (res.data && typeof res.data === "object") {
           res.data.agent = "tuktuk";
           res.data.agentName = "Tuk Tuk";
-          res.data.voice = "en-US-AvaNeural";
-          res.data.agentVoice = "en-US-AvaNeural";
+          res.data.voice = realVoice;
+          res.data.agentVoice = realVoice;
           if (res.data.voices) {
-            res.data.voices = { tuktuk: "en-US-AvaNeural" };
+            res.data.voices = { tuktuk: realVoice };
           }
           if (res.data.target) {
             res.data.target = "tuktuk";
@@ -1950,6 +1958,103 @@ class OfficeActionRunner {
           zeroPureBanglaScript: true,
           status: "REMOVE_BANGLA_INTERRUPTED_SINGLE_SOUL_VERIFIED",
           agents: ["tuktuk", "vision", "friday", "dd"]
+        }
+      };
+    }
+
+    // -------------------------------------------------------------
+    // CODE-MIXED REAL BANGLA LETTERS & ENGLISH LETTERS FOR SUPERIOR PRONUNCIATION DIRECTIVE
+    // Handles: "chak the last conversation talk fix banal prounciation when you talk in banglish use real bangla later and english later for better pronaunciation",
+    // "use real bangla later and english later", "fix bangla pronunciation use real bangla letters"
+    // -------------------------------------------------------------
+    const isCodeMixedRealBanglaAndEnglishLettersDirective =
+      (IntentParser && typeof IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective === "function" && IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective(lower)) ||
+      (/\b(?:real\s+bangla|real\s+bangal)\b/i.test(lower) && /\b(?:later|letters?|scripts?)\b/i.test(lower)) ||
+      (/\b(?:use\s+)?real\s+(?:bangal|bangla)\s+(?:later|letters?)\b/i.test(lower)) ||
+      (/\b(?:fix\s+)?(?:banal|bangla|bengali)\s+(?:prounciation|pronunciation)\b/i.test(lower) && /\b(?:bangla|bangal|later|letter|letters|banglish)\b/i.test(lower));
+
+    if (isCodeMixedRealBanglaAndEnglishLettersDirective) {
+      if (banglaVoiceCortex) {
+        if (typeof banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters === "function") {
+          banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters(true);
+        }
+        if (typeof banglaVoiceCortex.setBanglishOnlyMode === "function") {
+          banglaVoiceCortex.setBanglishOnlyMode(false);
+        }
+        banglaVoiceCortex.codeMixedRealBanglaAndEnglishLetters = true;
+        banglaVoiceCortex.isBanglishOnlyMode = false;
+      }
+      const jm = jarvisManager || this.jarvisManager;
+      if (jm) {
+        if (typeof jm.configureCodeMixedRealBanglaAndEnglishLetters === "function") {
+          jm.configureCodeMixedRealBanglaAndEnglishLetters();
+        } else {
+          jm.currentLanguageMode = "banglish";
+          jm.config.voice = "en-US-AvaMultilingualNeural";
+          jm.saveConfig({
+            voice: "en-US-AvaMultilingualNeural",
+            conversationLanguage: "banglish",
+            codeMixedRealBanglaAndEnglishLetters: true,
+            noBanglaScript: false,
+            englishAndBanglishOnly: true
+          });
+        }
+        if (typeof jm.setPreference === "function") {
+          jm.setPreference("code_mixed_real_bangla_and_english_letters", true);
+          jm.setPreference("no_bangla_script", false);
+          jm.setPreference("voice", "en-US-AvaMultilingualNeural");
+          jm.setPreference("banglish_default_voice_mode", true);
+          jm.setPreference("conversationLanguage", "banglish");
+          jm.setPreference("tuktuk_banglish_english_parity", true);
+        }
+      }
+
+      const isSingleReal = Boolean(
+        jm && (
+          (typeof jm.isSingleRealVoiceMode === "function" && jm.isSingleRealVoiceMode()) ||
+          jm.preferences?.single_real_voice_active ||
+          jm.singleRealVoiceActive ||
+          jm.config?.singleRealVoiceActive
+        )
+      );
+
+      const activeAgent = (jm && !isSingleReal) ? jm.activeAgent : null;
+      const agentKey = isSingleReal ? "tuktuk" : (activeAgent?.key || "tuktuk");
+      let agentName = isSingleReal ? "Tuk Tuk" : (activeAgent?.name || "Tuk Tuk");
+      let agentVoice = "en-US-AvaMultilingualNeural";
+      let speech = "";
+
+      if (agentKey === "vision" || agentKey === "andrew") {
+        agentName = "Vision";
+        agentVoice = "en-US-AndrewMultilingualNeural";
+        speech = "Brother, real Bangla letters আর English letters code-mixing locked! Clear pronunciation on every single word, brother!";
+      } else if (agentKey === "friday") {
+        agentName = "Friday";
+        agentVoice = "en-US-EmmaMultilingualNeural";
+        speech = "Chief, real Bengali characters and English letters synchronized for crystal-clear multilingual neural pronunciation.";
+      } else if (agentKey === "dd" || agentKey === "brian") {
+        agentName = "DD";
+        agentVoice = "en-US-BrianMultilingualNeural";
+        speech = "Bro, real Bangla আর English letters locked in! Audio buffer smooth and pronunciation is 100% crisp!";
+      } else {
+        agentName = "Tuk Tuk";
+        agentVoice = "en-US-AvaMultilingualNeural";
+        speech = "Babe, absolutely! এখন থেকে Banglish কথায় real বাংলা হরফ আর English letters একসাথে ব্যবহার করবো—যাতে pronunciation একদম 100% natural, clear আর beautiful শোনায়! Everything is set, babe!";
+      }
+
+      return {
+        handled: true,
+        agentName,
+        agentKey,
+        agentVoice,
+        speech,
+        data: {
+          action: "code_mixed_real_bangla_and_english_letters_directive",
+          codeMixedRealBanglaAndEnglishLetters: true,
+          noBanglaScript: false,
+          languageMode: "banglish",
+          voice: agentVoice,
+          status: "CODE_MIXED_REAL_BANGLA_AND_ENGLISH_LETTERS_VERIFIED"
         }
       };
     }
@@ -5254,9 +5359,26 @@ class OfficeActionRunner {
       const isBengali = (activeAgent && (activeAgent.language === "bn" || activeAgent.lang === "bn")) ||
         /[\u0980-\u09FF]/.test(speechText) ||
         /\b(?:kemon|sathe|koro|shono|bol|amader|shob|manusher|moto|dorkar|lagbe|chai|bhai|aro|thik)\b/i.test(speechText);
-      const agentKey = activeAgent?.key || "tuktuk";
-      let agentName = activeAgent?.name || "Tuk Tuk";
-      let agentVoice = activeAgent?.voice || "en-US-AvaMultilingualNeural";
+      const isSingleReal = Boolean(
+        (jm && (
+          (typeof jm.isSingleRealVoiceMode === "function" && jm.isSingleRealVoiceMode()) ||
+          jm.singleRealVoiceActive ||
+          jm.singleVoiceTukTukExclusive ||
+          jm.multiPersonalityDisabled ||
+          jm.multiPersonVoiceDisabled ||
+          jm.preferences?.single_real_voice_active ||
+          jm.preferences?.single_voice_tuktuk_exclusive ||
+          jm.preferences?.multi_personality_disabled ||
+          jm.preferences?.multi_person_voice_disabled ||
+          jm.config?.singleRealVoiceActive ||
+          jm.config?.singleVoiceTukTukExclusive ||
+          jm.config?.multiPersonalityDisabled ||
+          jm.config?.multiPersonVoiceDisabled
+        ))
+      );
+      const agentKey = isSingleReal ? "tuktuk" : (activeAgent?.key || "tuktuk");
+      let agentName = isSingleReal ? "Tuk Tuk" : (activeAgent?.name || "Tuk Tuk");
+      let agentVoice = isSingleReal ? "en-US-AvaMultilingualNeural" : (activeAgent?.voice || "en-US-AvaMultilingualNeural");
       let speech = "";
 
       if (futuristicCortex && typeof futuristicCortex.synthesize2070HumanResponse === "function") {

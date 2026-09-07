@@ -232,6 +232,24 @@ class IntentParser {
       };
     }
 
+    // 2.1934 Code-Mixed Real Bangla Letters & English Letters for Superior Pronunciation Directive
+    if (IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "code_mixed_real_bangla_and_english_letters_directive",
+        action: "code_mixed_real_bangla_and_english_letters_directive",
+        agentDirective
+      };
+    }
+
     // 2.1936 Banglish & Modern English Same-Soul Vibe Directive
     if (IntentParser.isBanglishModernVibeSameSoulDirective(lower)) {
       let agentDirective = "team";
@@ -1680,6 +1698,32 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Code-Mixed Real Bangla Letters & English Letters for Superior Pronunciation Directive
+   * Handles:
+   * "chak the last conversation talk fix banal prounciation when you talk in banglish use real bangla later and english later for better pronaunciation",
+   * "fix bangla pronunciation when you talk in banglish use real bangla letters and english letters for better pronunciation",
+   * "use real bangla later and english later", "use real bangla letter and english letter",
+   * "real bangla letters and english letters", "real bangla letter english letter",
+   * "real bangla later english later", "bangla later english later",
+   * "when you talk in banglish use real bangla", "fix banal prounciation",
+   * "use real bangla for better pronunciation",
+   * "বাংলা হরফ আর ইংলিশ হরফ মিলিয়ে বলো", "রিয়েল বাংলা লেটার আর ইংলিশ লেটার"
+   */
+  static isCodeMixedRealBanglaAndEnglishLettersDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:real\s+bangla|real\s+bangal)\b/i.test(lower) && /\b(?:later|letters?|scripts?)\b/i.test(lower)) ||
+      (/\b(?:bangla|bangal)\s+(?:later|letter|letters)\b/i.test(lower) && /\b(?:english|eng)\s+(?:later|letter|letters)\b/i.test(lower)) ||
+      (/\b(?:use\s+)?real\s+(?:bangal|bangla)\s+(?:later|letters?)\b/i.test(lower)) ||
+      (/\b(?:fix\s+)?(?:banal|bangla|bengali)\s+(?:prounciation|pronuncitation|pronunciation)\b/i.test(lower) && /\b(?:bangla|bangal|later|letter|letters|banglish)\b/i.test(lower)) ||
+      (/\bwhen\s+you\s+talk\s+in\s+banglish\b/i.test(lower) && /\b(?:real\s+bangla|bangla\s+later|bangla\s+letter|pronunciation|pronaunciation|prounciation)\b/i.test(lower)) ||
+      (/\b(?:better\s+pronaunciation|better\s+pronunciation)\b/i.test(lower) && /\b(?:bangla|bangal|banglish|real\s+bangla|later|letter)\b/i.test(lower)) ||
+      (/(?:বাংলা\s*হরফ.*(?:ইংলিশ\s*লেটার|উচ্চারণ)|রিয়েল\s*বাংলা\s*লেটার|সঠিক\s*উচ্চারণ.*বাংলা\s*হরফ)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for English & Banglish Only (No Bangla Script) Directive
    * Handles:
    * "English,and Banglish. no bangla", "English, and Banglish. no bangla",
@@ -1689,6 +1733,7 @@ class IntentParser {
    */
   static isEnglishAndBanglishNoBanglaDirective(text = "") {
     if (!text || typeof text !== "string") return false;
+    if (IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective(text)) return false;
     const lower = text.toLowerCase().trim();
     return (
       (/\benglish\b/i.test(lower) && /\bbanglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
@@ -2394,6 +2439,7 @@ module.exports = {
   isBanglishDefaultCodeMixedTukTukToneDirective: IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective,
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
+  isCodeMixedRealBanglaAndEnglishLettersDirective: IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective,
   isEnglishAndBanglishNoBanglaDirective: IntentParser.isEnglishAndBanglishNoBanglaDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
   isRemoveBanglaInterruptedSingleSoulDirective: IntentParser.isRemoveBanglaInterruptedSingleSoulDirective,

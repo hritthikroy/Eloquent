@@ -80,7 +80,7 @@ console.log('\nTest 2: ActionRunner handleAction for isTukTukExclusiveSoloPerson
 
   assert.strictEqual(result.handled, true, 'ActionRunner must handle the directive');
   assert.strictEqual(result.agentName, 'Tuk Tuk', 'Speaking agent name must be Tuk Tuk');
-  assert.strictEqual(result.agentVoice, 'en-US-AvaNeural', 'Voice must be en-US-AvaNeural');
+  assert.strictEqual(result.agentVoice, 'en-US-AvaMultilingualNeural', 'Voice must be en-US-AvaMultilingualNeural');
   assert.strictEqual(mockJM.preferences.single_voice_tuktuk_exclusive, true, 'single_voice_tuktuk_exclusive must be set to true');
   assert.strictEqual(mockJM.preferences.single_real_voice_active, true, 'single_real_voice_active must be set to true');
   assert.strictEqual(mockJM.preferences.multi_personality_disabled, true, 'multi_personality_disabled must be set to true');
@@ -105,7 +105,7 @@ console.log('\nTest 2: ActionRunner handleAction for isTukTukExclusiveSoloPerson
 
   assert.strictEqual(banglaResult.handled, true, 'Bangla talk directive must be handled');
   assert.strictEqual(banglaResult.agentName, 'Tuk Tuk', 'Must be Tuk Tuk when single real voice mode is active');
-  assert.strictEqual(banglaResult.agentVoice, 'en-US-AvaNeural', 'Voice must remain Ava');
+  assert.strictEqual(banglaResult.agentVoice, 'en-US-AvaMultilingualNeural', 'Voice must remain Ava');
   assert.strictEqual(/\[(?:Vision|Friday|DD)\]/i.test(banglaResult.speech), false, 'Zero secondary agent brackets');
   console.log('✅ Bangla talk directive correctly confined to Tuk Tuk Ava voice under single real voice mode.');
 
