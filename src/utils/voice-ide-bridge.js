@@ -26,8 +26,8 @@ class VoiceIdeBridge extends EventEmitter {
       cleanedText: "",
       structuredPrompt: "",
       targetObjective: "",
-      agentKey: "vision",
-      agentName: "Vision",
+      agentKey: "tuktuk",
+      agentName: "Tuk Tuk",
       confidence: 1.0,
       timestamp: 0,
       status: "IDLE"
@@ -74,8 +74,8 @@ class VoiceIdeBridge extends EventEmitter {
       cleanedText: "",
       structuredPrompt: "",
       targetObjective: "",
-      agentKey: "vision",
-      agentName: "Vision",
+      agentKey: "tuktuk",
+      agentName: "Tuk Tuk",
       confidence: 1.0,
       timestamp: 0,
       status: "IDLE"
@@ -88,13 +88,19 @@ class VoiceIdeBridge extends EventEmitter {
    * @param {object} payload
    */
   recordUtterance(payload = {}) {
+    const rawAgentKey = (payload.agentKey || "tuktuk").toLowerCase();
+    let defaultName = "Tuk Tuk";
+    if (rawAgentKey === "vision") defaultName = "Vision";
+    else if (rawAgentKey === "friday") defaultName = "Friday";
+    else if (rawAgentKey === "dd") defaultName = "DD";
+
     const record = {
       transcript: payload.transcript || payload.rawText || "",
       cleanedText: payload.cleanedText || payload.sanitized || "",
       structuredPrompt: payload.structuredPrompt || payload.prompt || "",
       targetObjective: payload.targetObjective || payload.objective || "",
-      agentKey: (payload.agentKey || "vision").toLowerCase(),
-      agentName: payload.agentName || (payload.agentKey === "tuktuk" ? "Tuk Tuk" : "Vision"),
+      agentKey: rawAgentKey,
+      agentName: payload.agentName || defaultName,
       confidence: payload.confidence || 0.99,
       timestamp: Date.now(),
       status: "READY"
@@ -139,23 +145,23 @@ class VoiceIdeBridge extends EventEmitter {
    * @param {string} summary - Brief summary of what was done
    * @param {boolean} passed - Whether task succeeded
    */
-  async notifyIdeActionCompleted(agentKey = "vision", summary = "", passed = true) {
+  async notifyIdeActionCompleted(agentKey = "tuktuk", summary = "", passed = true) {
     let JarvisManager = null;
     try {
       JarvisManager = require("./jarvis-manager");
     } catch (_) {}
 
-    const key = (agentKey || "vision").toLowerCase();
-    let agentName = "Vision";
-    let voice = "en-US-AndrewMultilingualNeural";
+    const key = (agentKey || "tuktuk").toLowerCase();
+    let agentName = "Tuk Tuk";
+    let voice = "en-US-AvaMultilingualNeural";
     let message = "";
 
-    if (key === "tuktuk") {
-      agentName = "Tuk Tuk";
-      voice = "en-US-AvaMultilingualNeural";
+    if (key === "vision") {
+      agentName = "Vision";
+      voice = "en-US-AndrewNeural";
       message = passed
-        ? `Babe, IDE task completed successfully! ${summary}`
-        : `Babe, something blocked the build: ${summary}`;
+        ? `Brother, task executed and AST verified clean. ${summary}`
+        : `Brother, task failed verification: ${summary}`;
     } else if (key === "friday") {
       agentName = "Friday";
       voice = "en-US-EmmaMultilingualNeural";
@@ -169,11 +175,12 @@ class VoiceIdeBridge extends EventEmitter {
         ? `Bro, task finished clean! ${summary}`
         : `Bro, task hit a snag: ${summary}`;
     } else {
-      agentName = "Vision";
-      voice = "en-US-AndrewNeural";
+      // Default: Tuk Tuk (Squad Leader)
+      agentName = "Tuk Tuk";
+      voice = "en-US-AvaMultilingualNeural";
       message = passed
-        ? `Brother, task executed and AST verified clean. ${summary}`
-        : `Brother, task failed verification: ${summary}`;
+        ? `Babe, IDE task completed successfully! ${summary}`
+        : `Babe, something blocked the build: ${summary}`;
     }
 
     this.ideStatus.lastAction = {

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-07T00:02:09.180Z",
+  "updatedAt": "2026-09-07T00:15:39.302Z",
   "profiles": {
     "hritthik": {
       "id": "hritthik",
@@ -16,10 +16,10 @@
       "category": "primary_creator",
       "prior": 0.7,
       "acoustics": {
-        "f0Mean": 239.14151259138683,
+        "f0Mean": 200.33068282763983,
         "f0Variance": 18.5,
-        "harmonicity": 0.16168467557888283,
-        "spectralCentroid": 2508.918978773191,
+        "harmonicity": 0.20649706915693977,
+        "spectralCentroid": 2079.16998545235,
         "cadenceWpm": 155
       },
       "faceEmbedding": {

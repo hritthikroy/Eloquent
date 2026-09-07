@@ -21,8 +21,8 @@ class PromptEngine {
     // 1. Sanitize raw user speech (fix stutters, mishearings, terminology)
     const sanitized = TextSanitizer.sanitize(rawSpeech);
 
-    // 2. Parse Intent
-    const { intent, target, agentDirective = "vision", useConversationContext = false } = IntentParser.parse(sanitized);
+    // 2. Parse Intent (default agent: Tuk Tuk as Squad Leader)
+    const { intent, target, agentDirective = "tuktuk", useConversationContext = false } = IntentParser.parse(sanitized);
 
     // If standard query, let regular conversational loop handle it
     if (intent === INTENTS.STANDARD_QUERY) {
@@ -131,13 +131,13 @@ class PromptEngine {
         cleanedText: sanitized,
         structuredPrompt: assembledPrompt,
         targetObjective: target || promptConcept,
-        agentKey: agentDirective || "vision"
+        agentKey: agentDirective || "tuktuk"
       });
     } catch (err) {
       console.warn("⚠️ [PromptEngine] VoiceIdeBridge recordUtterance warning:", err.message);
     }
 
-    // 6. Return response payload according to active agent persona & single real voice invariant
+    // 6. Return response payload according to active agent persona (Tuk Tuk Leader, Vision, Friday, DD)
     let speechConfirmation = "";
     if (isSingleRealVoice) {
       if (intent === INTENTS.SMOOTH_CONVERSATION) {
@@ -146,15 +146,17 @@ class PromptEngine {
         speechConfirmation = `I've structured the full Antigravity developer prompt and pasted it directly at your keyboard cursor, ${userName}! Ready to fire.`;
       }
     } else {
-      speechConfirmation = "I crafted the professional developer prompt and pasted it directly at your keyboard cursor, bro! You can press Enter or tell me 'fire prompt' to execute it now.";
       if (intent === INTENTS.SMOOTH_CONVERSATION) {
-        speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, bro! It's pasted at your cursor and ready to fire.";
-      } else if (agentDirective === "tuktuk") {
-        speechConfirmation = "I've structured the full Antigravity prompt and pasted it directly at your keyboard cursor, babe!";
+        speechConfirmation = "I analyzed our conversation flow, eliminated the blockages, and engineered a structured developer prompt with next steps, babe! It's pasted at your cursor and ready to fire.";
+      } else if (agentDirective === "vision") {
+        speechConfirmation = "I crafted the professional developer prompt and pasted it directly at your keyboard cursor, brother! You can press Enter or tell me 'fire prompt' to execute it now.";
       } else if (agentDirective === "friday") {
         speechConfirmation = "Executive developer prompt synthesized, copied to clipboard, and pasted at your keyboard cursor, Chief. Ready for deployment.";
       } else if (agentDirective === "dd") {
         speechConfirmation = "DevOps prompt locked in and pasted directly at your cursor, bro. Ready to execute.";
+      } else {
+        // Default: Tuk Tuk (Squad Leader)
+        speechConfirmation = "I've structured the full Antigravity prompt and pasted it directly at your keyboard cursor, babe! Ready to fire.";
       }
     }
 

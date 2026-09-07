@@ -21,8 +21,8 @@ async function runTests() {
   console.log("[TEST 1] Testing Initial State...");
   const initialCtx = bridge.getLatestVoiceContext();
   assert.strictEqual(initialCtx.status, "IDLE");
-  assert.strictEqual(initialCtx.agentKey, "vision");
-  console.log("  ✅ [PASS 1/4] Initial state is IDLE and default agent is Vision.");
+  assert.strictEqual(initialCtx.agentKey, "tuktuk");
+  console.log("  ✅ [PASS 1/4] Initial state is IDLE and default squad leader is Tuk Tuk.");
 
   // 2. Record Utterance
   console.log("\n[TEST 2] Testing Record Utterance...");

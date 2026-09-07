@@ -132,6 +132,17 @@ class IntentParser {
       };
     }
 
+    // 2.183 Tuk Tuk Exclusive Solo Real Human Person & Zero Personality Overlap Directive
+    if (IntentParser.isTukTukExclusiveSoloPersonaDirective(lower)) {
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.999,
+        target: "tuktuk_exclusive_solo_persona",
+        action: "tuktuk_exclusive_solo_persona",
+        agentDirective: "tuktuk"
+      };
+    }
+
     // 2.184 Single Real Voice & Zero Multi-Personality / Multi-Person Voice Directive
     if (IntentParser.isSingleRealVoiceNoMultiPersonalityDirective(lower)) {
       return {
@@ -1378,9 +1389,52 @@ class IntentParser {
    * - "one real voice no multi person voice"
    * - "একটাই রিয়েল ভয়েস মাল্টি পার্সোনালিটি না"
    */
+  /**
+   * Centralized detector for Tuk Tuk Exclusive Solo Real Human Person & Zero Personality Overlap Directive
+   * Handles:
+   * - "i need tuk tuk person not any other persons personality overlap issues like bangal and malti nural somthing are change the real humen its a very big conversational bugs"
+   * - "i need tuk tuk person not any other persons"
+   * - "need tuk tuk person not other persons"
+   * - "tuk tuk person not any other"
+   * - "personality overlap issues" / "stop personality overlap"
+   * - "bangal and malti nural somthing are change the real humen"
+   * - "malti nural changing real human"
+   * - "টুকটুক ছাড়া অন্য কোনো পার্সন না" / "পার্সোনালিটি ওভারল্যাপ বন্ধ করো"
+   */
+  static isTukTukExclusiveSoloPersonaDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:need|want)\s+(?:tuk\s*tuk|tuktuk)\s+(?:person|voice)\b/i.test(lower) && /\bnot\s+(?:any\s+)?other\s+(?:persons?|people|voices?|personas?)\b/i.test(lower)) ||
+      (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) && /\b(?:sole|only|exclusive)\s+(?:person|persona|human|voice)\b/i.test(lower)) ||
+      (/\b(?:personality|personalyti)\s+(?:overlap|overlaping|overlapping|issues?)\b/i.test(lower) && (/\b(?:bangal|bangla|nural|neural|malti|multi|tuktuk|tuk\s*tuk|real\s+humen|real\s+human)\b/i.test(lower))) ||
+      (/\b(?:bangal|bangla)\b/i.test(lower) && /\b(?:malti|multi)[-\s]*(?:nural|neural)\b/i.test(lower) && /\b(?:change|changing|replace)\b/i.test(lower) && /\b(?:real\s+humen|real\s+human|human)\b/i.test(lower)) ||
+      (/\b(?:need|want)\s+(?:tuk\s*tuk|tuktuk)\s+person\b/i.test(lower)) ||
+      (/\b(?:tuk\s*tuk|tuktuk)\s+person\s+not\s+(?:any\s+)?other\b/i.test(lower)) ||
+      (/\b(?:stop|fix|remove|zero|eliminate|disable)\s+(?:personality|personalyti)\s+(?:overlap|overlaping|overlapping)\b/i.test(lower)) ||
+      (/\b(?:personality|personalyti)\s+overlap\b/i.test(lower) && /\b(?:conversational\s+bugs?|bugs?|big\s+bugs?)\b/i.test(lower)) ||
+      (/(?:টুকটুক.*(?:একমাত্র|শুধুমাত্র|রিয়েল\s*হিউম্যান|ছাড়া\s*অন্য\s*কেউ\s*না)|পার্সোনালিটি\s*ওভারল্যাপ.*(?:বন্ধ|ফিক্স|না)|মাল্টি\s*নিউরাল.*হিউম্যান.*চেঞ্জ)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Single Real Voice & Zero Multi-Personality Directive
+   * Handles:
+   * - "remove the khti misti bangla kotha totaly this person and this voice i need one real humen voices not malti parson voices"
+   * - "need one real voice not malti personalyti and malti person voice"
+   * - "need one real voice not multi-personality and multi-person voice"
+   * - "one real voice not multi personality"
+   * - "no multi personality and multi person voice"
+   * - "need 1 real voice no multi personality"
+   * - "remove multi personality and multi person voice"
+   * - "disable multi personality and multi person voice"
+   * - "one real voice no multi person voice"
+   * - "একটাই রিয়েল ভয়েস মাল্টি পার্সোনালিটি না"
+   */
   static isSingleRealVoiceNoMultiPersonalityDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (IntentParser.isTukTukExclusiveSoloPersonaDirective(lower)) return true;
     return (
       (/\b(?:khti|khati)\s+(?:misti|mishti)\b/i.test(lower)) ||
       (/(?:খাঁটি\s*মিষ্টি|মিষ্টি\s*বাংলা\s*কথা.*(?:বাদ|মুছে|রিমুভ)|মিষ্টি\s*টোন.*(?:বাদ|বন্ধ))/u.test(lower)) ||
@@ -1823,6 +1877,13 @@ class IntentParser {
   static isBanglaTalkNeuralOverlapDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (
+      IntentParser.isTukTukExclusiveSoloPersonaDirective(lower) ||
+      IntentParser.isSingleRealVoiceNoMultiPersonalityDirective(lower) ||
+      /\b(?:need\s+tuk\s*tuk|tuk\s*tuk\s+person|not\s+(?:any\s+)?other\s+person|personality\s+overlap|change\s+the\s+real\s+humen)\b/i.test(lower)
+    ) {
+      return false;
+    }
     return (
       (/\b(?:check|chack|audit|test|fix|inspect)\b/i.test(lower) && /\b(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:overlaping|overlapping|overlap)\b/i.test(lower)) ||
       (/\b(?:bangal|bangla|bengali)\s+(?:talk|speech|conversation|kotha|voice|audio)\b/i.test(lower) && /\b(?:overlaping|overlapping|overlap)\b/i.test(lower)) ||
@@ -2274,6 +2335,7 @@ module.exports = {
   isAutonomousSelfMedicPeerMeshDirective: IntentParser.isAutonomousSelfMedicPeerMeshDirective,
   isSoulDuplicationMismatchHardcodedFixDirective: IntentParser.isSoulDuplicationMismatchHardcodedFixDirective,
   isTukTukSingleHumanSoulNonInterchangeableDirective: IntentParser.isTukTukSingleHumanSoulNonInterchangeableDirective,
+  isTukTukExclusiveSoloPersonaDirective: IntentParser.isTukTukExclusiveSoloPersonaDirective,
   isSingleRealVoiceNoMultiPersonalityDirective: IntentParser.isSingleRealVoiceNoMultiPersonalityDirective,
   isGeminiGroqZeroOverlapAutonomousCodeHealingDirective: IntentParser.isGeminiGroqZeroOverlapAutonomousCodeHealingDirective,
   isZeroHumanAgentGapEquationalDirective: IntentParser.isZeroHumanAgentGapEquationalDirective,

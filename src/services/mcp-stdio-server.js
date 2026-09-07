@@ -64,7 +64,7 @@ class McpStdioServer {
     // 2. Speak Voice Notification (TTS to Developer Headphones)
     this.registerTool({
       name: "eloquent_speak_voice_notification",
-      description: "Triggers Jarvis TTS to speak an audio message back to the developer (e.g. informing that a build passed, AST verified, or test failed) using the authentic persona voice (Vision/Andrew, Tuk Tuk/Ava, Friday/Emma, DD/Brian)",
+      description: "Triggers Tuk Tuk Squad TTS to speak an audio message back to the developer (e.g. informing that a build passed, AST verified, or test failed) using the authentic persona voice with Tuk Tuk as leader (Tuk Tuk/Ava, Vision/Andrew, Friday/Emma, DD/Brian)",
       inputSchema: {
         type: "object",
         properties: {
@@ -74,7 +74,7 @@ class McpStdioServer {
           },
           agentKey: {
             type: "string",
-            description: "Agent persona to speak: 'vision', 'tuktuk', 'friday', or 'dd' (default: 'vision')"
+            description: "Agent persona to speak: 'tuktuk' (Squad Leader), 'vision', 'friday', or 'dd' (default: 'tuktuk')"
           },
           passed: {
             type: "boolean",
@@ -84,7 +84,7 @@ class McpStdioServer {
         required: ["message"]
       },
       handler: async (args) => {
-        const agentKey = (args.agentKey || "vision").toLowerCase();
+        const agentKey = (args.agentKey || "tuktuk").toLowerCase();
         const result = await voiceIdeBridge.notifyIdeActionCompleted(agentKey, args.message, args.passed !== false);
         return {
           success: true,
@@ -111,8 +111,8 @@ class McpStdioServer {
         required: ["directive"]
       },
       handler: async (args) => {
+        const projectRoot = path.resolve(__dirname, "../..");
         const { execSync } = require("child_process");
-        const projectRoot = path.resolve(__dirname, "../../");
 
         if (args.directive === "validate_ast") {
           try {
@@ -120,6 +120,15 @@ class McpStdioServer {
             return { success: true, directive: args.directive, output: out.trim(), zeroDefects: true };
           } catch (err) {
             return { success: false, directive: args.directive, error: err.message, zeroDefects: false };
+          }
+        }
+
+        if (args.directive === "run_tests") {
+          try {
+            const out = execSync("npm test", { cwd: projectRoot, encoding: "utf8" });
+            return { success: true, directive: args.directive, output: out.trim(), testsPassed: true };
+          } catch (err) {
+            return { success: false, directive: args.directive, error: err.message, testsPassed: false };
           }
         }
 
@@ -149,7 +158,7 @@ class McpStdioServer {
     // 4. Get Squad Brain State
     this.registerTool({
       name: "eloquent_get_squad_brain_state",
-      description: "Returns the current live state of the squad agents: active directives, living brain memory, and language/persona status",
+      description: "Returns the current live state of the squad agents: active directives, living brain memory, and language/persona status with Tuk Tuk as leader",
       inputSchema: {
         type: "object",
         properties: {}
@@ -158,20 +167,28 @@ class McpStdioServer {
         let JarvisManager = null;
         try { JarvisManager = require("../utils/jarvis-manager"); } catch (_) {}
 
-        let config = {};
+        const config = {
+          squadLeader: "Tuk Tuk",
+          activeAgent: "Tuk Tuk",
+          availableAgents: [
+            { key: "tuktuk", name: "Tuk Tuk", role: "Squad Leader", voice: "en-US-AvaMultilingualNeural", address: "babe" },
+            { key: "vision", name: "Vision", role: "Technical Architect", voice: "en-US-AndrewNeural", address: "brother / ভাই" },
+            { key: "friday", name: "Friday", role: "Executive Operations", voice: "en-US-EmmaMultilingualNeural", address: "Chief" },
+            { key: "dd", name: "DD", role: "Engineering & Creative", voice: "en-US-BrianMultilingualNeural", address: "bro" }
+          ],
+          personaInvariants: {
+            tuktuk: "babe",
+            vision: "brother / ভাই",
+            friday: "Chief",
+            dd: "bro"
+          }
+        };
+
         if (JarvisManager && typeof JarvisManager.getInstance === "function") {
           const jm = JarvisManager.getInstance();
-          config = {
-            activeAgent: jm.activeAgent?.name || "Tuk Tuk",
-            singleRealVoiceActive: Boolean(jm.singleRealVoiceActive),
-            conversationLanguage: jm.config?.conversationLanguage || "banglish",
-            personaInvariants: {
-              tuktuk: "babe",
-              vision: "brother / ভাই",
-              friday: "Chief",
-              dd: "bro"
-            }
-          };
+          config.activeAgent = jm.activeAgent?.name || "Tuk Tuk";
+          config.singleRealVoiceActive = Boolean(jm.singleRealVoiceActive);
+          config.conversationLanguage = jm.config?.conversationLanguage || "banglish";
         }
 
         return {
