@@ -1512,6 +1512,7 @@ class IntentParser {
   static isSingleRealVoiceNoMultiPersonalityDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (IntentParser.isEnglishForEnglishWorkMixedDirective(lower)) return false;
     if (IntentParser.isTukTukExclusiveSoloPersonaDirective(lower)) return true;
     return (
       (/\b(?:khti|khati)\s+(?:misti|mishti)\b/i.test(lower)) ||
