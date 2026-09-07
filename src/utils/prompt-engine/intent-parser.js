@@ -232,6 +232,30 @@ class IntentParser {
       };
     }
 
+    // 2.1931 Bilingual Code-Mixing & Technical English Work Preservation Directive (Law 54)
+    if (IntentParser.isEnglishForEnglishWorkMixedDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) {
+        if (lower.includes("friday") && lower.includes("vision") && lower.includes("dd")) {
+          agentDirective = "team";
+        } else {
+          agentDirective = "tuktuk";
+        }
+      }
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "english_for_english_work_mixed_directive",
+        action: "english_for_english_work_mixed_directive",
+        agentDirective
+      };
+    }
+
     // 2.1932 Instant Reading, Instant Human-Like Reply & Zero Starting Delay Directive
     if (IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective(lower)) {
       let agentDirective = "team";
@@ -1757,6 +1781,31 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Bilingual Code-Mixing & Technical English Work Preservation Directive (Law 54)
+   * Handles:
+   * "use english for english work mixed", "english for english work mixed",
+   * "use english for english work", "mix english for english work",
+   * "use english mixed for english work", "use english for tech work mixed",
+   * "code mixed english for tech work", "code mixed english for english work",
+   * "Tuk Tuk: \"Hey babe, একদম চলো. এখন থেকে পুরোটা খাঁটি মিষ্টি বাংলায় কথা হবে, আমি তো পাশেই আছি.\" ... use english for english work mixed",
+   * "টেক বা ইংলিশ কাজের জন্য ইংলিশ মিক্স করে কথা বলো", "খাঁটি মিষ্টি বাংলায় কথা হবে বলা বন্ধ করো"
+   */
+  static isEnglishForEnglishWorkMixedDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:use\s+)?english\s+for\s+english\s+work\s*(?:mixed|mix|mixd)?\b/i.test(lower)) ||
+      (/\b(?:mix|mixed)\s+english\s+for\s+english\s+works?\b/i.test(lower)) ||
+      (/\b(?:use\s+)?english\s+mixed\s+for\s+english\s+works?\b/i.test(lower)) ||
+      (/\benglish\s+for\s+english\s+work\b/i.test(lower)) ||
+      (/\b(?:use\s+)?english\s+for\s+(?:tech|technical|coding|engineering|dev)\s+works?\s*(?:mixed|mix)?\b/i.test(lower)) ||
+      (/\bcode[-\s]*mixed\s+english\s+for\s+(?:english|tech|technical)\s+work\b/i.test(lower)) ||
+      (/\buse\s+english\s+work\s+mixed\b/i.test(lower)) ||
+      (/(?:পুরোটা\s*খাঁটি\s*মিষ্টি\s*বাংলা.*(?:না|বাদ|বন্ধ|ভুল)|খাঁটি\s*মিষ্টি\s*বাংলা.*(?:না|বাদ)|টেক.*ইংলিশ\s*মিক্স|ইংলিশ\s*কাজের\s*জন্য\s*ইংলিশ\s*মিক্স)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for English-Bangla Mixed Only, Zero Pure/Only Bangla, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
    * Handles:
    * "not use only bangla only use english bangal mixed for bangla only never use pure deshi bangll use bangla for hard sentances understand do deep chack and fix all",
@@ -1817,6 +1866,7 @@ class IntentParser {
     if (!text || typeof text !== "string") return false;
     if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(text)) return false;
     if (IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective(text)) return false;
+    if (IntentParser.isEnglishForEnglishWorkMixedDirective(text)) return false;
     const lower = text.toLowerCase().trim();
     return (
       (/\benglish\b/i.test(lower) && /\bbanglish\b/i.test(lower) && /\bno\s+(?:bangal|bangla|bengali)\b/i.test(lower)) ||
@@ -2524,6 +2574,7 @@ module.exports = {
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
   isCodeMixedRealBanglaAndEnglishLettersDirective: IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective,
   isInstantReadingAndInstantReplyZeroDelayDirective: IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective,
+  isEnglishForEnglishWorkMixedDirective: IntentParser.isEnglishForEnglishWorkMixedDirective,
   isEnglishBanglaMixedNoPureDeshiHardSentencesDirective: IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective,
   isEnglishAndBanglishNoBanglaDirective: IntentParser.isEnglishAndBanglishNoBanglaDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,

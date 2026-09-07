@@ -2061,6 +2061,8 @@ class OfficeActionRunner {
     // -------------------------------------------------------------
     const isEnglishBanglaMixedNoPureDeshiHardSentencesDirective =
       (IntentParser && typeof IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective === "function" && IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) ||
+      (IntentParser && typeof IntentParser.isEnglishForEnglishWorkMixedDirective === "function" && IntentParser.isEnglishForEnglishWorkMixedDirective(lower)) ||
+      (/\b(?:use\s+)?english\s+for\s+english\s+work\s*(?:mixed|mix|mixd)?\b/i.test(lower)) ||
       (/\b(?:not\s+use\s+only\s+bangla|never\s+use\s+only\s+bangla|no\s+only\s+bangla)\b/i.test(lower)) ||
       (/\b(?:pure\s+deshi|pure\s+desi|pure\s+deshi\s+bangl+|never\s+use\s+pure\s+deshi)\b/i.test(lower)) ||
       (/\b(?:english\s+(?:bangal|bangla)\s+mixed|mixed\s+for\s+bangla\s+only)\b/i.test(lower)) ||
