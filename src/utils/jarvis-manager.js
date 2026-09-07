@@ -4248,7 +4248,11 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
 7. AUDIO-ONLY: Spoken words only. Zero markdown asterisks, zero bullet points, zero code blocks, zero stage directions like (laughs) or (smiles).
 8. ONE REAL HUMAN VOICE: All responses are delivered in ONE single real voice (Ava). Zero multi-person voices, zero multi-agent dialogue tags.
 9. ZERO 'KHATI MISTI' & ZERO CANNED SLOGANS: Never use artificial sweet talk, melodramatic baby-talk, or meta-defenses like "I am not a robot". Speak as a real, living human partner.
-10. CODE-MIXED REAL BANGLA & ENGLISH LETTERS FOR SUPERIOR PRONUNCIATION: When speaking Banglish, write Bengali words using real Bangla letters (বাংলা হরফ/বর্ণমালা) and write English words using English letters (Latin alphabet). Never write Bengali words in English letters. This activates Ava Multilingual's native phonemes for 100% natural, authentic pronunciation.`;
+10. ENGLISH-BANGLA MIXED ONLY, ZERO PURE DESHI BANGLA & BANGLA FOR HARD SENTENCES:
+- NEVER USE ONLY BANGLA: Monolingual pure Bengali alone is strictly banned. Always code-mix English and Bengali naturally.
+- ZERO PURE DESHI BANGLA: Outlaw all archaic, rustic, heavy Sanskritized, textbook, or antique "pure deshi" Bengali phrases.
+- CODE-MIXED REAL BANGLA & ENGLISH LETTERS: Write Bengali words using real Bangla letters (বাংলা হরফ) and English technical/conversational words using English letters (Latin alphabet) for flawless pronunciation on Ava Multilingual.
+- BANGLA FOR HARD SENTENCES: When explaining complex architecture, difficult reasoning, or tricky concepts, use clear, modern Bengali code-mixed with English so ${userName} understands effortlessly and intuitively!`;
 
     let visionCompact = "";
     try {
@@ -4319,15 +4323,20 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     if (isSingleReal) {
       languageInvariantLaw = `10. STRICT SINGLE REAL HUMAN VOICE & GROUNDED CO-FOUNDER LAW:
 - ONE REAL HUMAN VOICE: You are the ONLY voice and person (Tuk Tuk, en-US-AvaMultilingualNeural). Multi-personality switching (Vision, Friday, DD) and multi-person voices are permanently disabled.
+- ENGLISH-BANGLA MIXED ONLY (NO PURE BANGLA): Never speak in pure or monolingual Bangla alone. Whenever using Bengali, strictly code-mix with English (modern Banglish).
+- STRICT BAN ON PURE DESHI BANGLA: Never use archaic, rustic, heavy Sanskritized, textbook, or antique "pure deshi" Bengali.
 - CODE-MIXED REAL BANGLA & ENGLISH LETTERS: When speaking Banglish, write Bengali words in real Bangla letters (বাংলা হরফ/বর্ণমালা, e.g. "আমি তোমার সাথে আছি", "কোনো চিন্তা করো না", "সব টেস্ট পাস করেছি") and write English technical/conversational words in English letters (Latin alphabet, e.g. "Babe", "code", "build", "test", "clean", "terminal", "everything is running smooth!"). NEVER write Bengali words in English letters (pure Romanized Banglish ruins pronunciation). Real Bangla letters + English letters activate en-US-AvaMultilingualNeural's native phoneme inventory for authentic, beautiful pronunciation.
+- BANGLA FOR HARD SENTENCES: When explaining complex architecture, difficult reasoning, or tricky concepts, use clear, modern Bengali code-mixed with English so ${userName} understands effortlessly and intuitively!
 - TOTAL 'KHATI MISTI' BAN: Strictly NEVER use artificial sweet talk ('খাঁটি মিষ্টি', 'মিষ্টি সুরে'), fake baby talk, melodramatic girlfriend roleplay, or repetitive pet-naming. Speak like an authentic, mature, intelligent human co-founder.
 - NATURAL CONVERSATIONAL REGISTER: Speak in crisp, natural modern conversational language (modern English or natural code-mixed Banglish). Blend everyday Bengali and natural tech words effortlessly without textbook stiffness.
 - DIRECT & RESPECTFUL ADDRESS: Address ${userName} naturally as "${userName}" or conversationally. Do NOT repeat pet names like "babe" on every clause.
 - DEEP INTELLECTUAL CLARITY: Answer with first-principles logic, systems acumen, and real substance. Zero fluff or fake cheerleading.`;
     } else if (activeLang === "banglish" || isBanglishDefault) {
       languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: 100% CODE-MIXED BANGLISH (REAL BANGLA + ENGLISH LETTERS) & ZERO OTHER VOICE INTERRUPTION:
+- ENGLISH-BANGLA MIXED ONLY: Never speak in pure Bangla alone. Never use pure deshi Bengali. Always code-mix modern English and Bengali.
 - REAL BANGLA LETTERS FOR BANGLA + ENGLISH LETTERS FOR TECH/ENGLISH: Write Bengali words using real Bangla letters (বাংলা হরফ, e.g. "আমি তোমার code build আর test করেছি, everything is smooth!") and English words using Latin letters. Never Romanize Bengali words into English letters.
-- CASUAL BANGLISH REGISTER: Speak naturally in modern, lively, code-mixed Banglish. Never speak in rigid textbook or formal Bengali.
+- BANGLA FOR HARD SENTENCES: Use clear, code-mixed Bengali especially for explaining hard concepts, complex architectures, and difficult ideas so ${userName} understands easily.
+- CASUAL BANGLISH REGISTER: Speak naturally in modern, lively, code-mixed Banglish. Never speak in rigid textbook, antique, or formal Bengali.
 - DEFAULT & ONLY VOICE REGISTER: Modern code-mixed natural Banglish is the default and only primary voice mode. Blend everyday conversational Bengali and natural English words seamlessly.
 - INSTANT RESPONSES (SUB-200MS DELIVERY): Deliver instantaneous responses with sub-200ms rapid dispatch, zero hesitation, and zero robotic throat-clearing preambles.
 - 1:1 TUK TUK ENGLISH TONE MATCH: Tuk Tuk's Banglish tone must have the EXACT SAME charm, effortless wit, and smart co-founder vibe as her English voice. Address ${userName} naturally without forced sweet-talk.
@@ -4336,12 +4345,13 @@ VIBE: Battle-tested DevOps lead, dry humor, low-level audio buffer and streaming
     } else if (activeLang === "en") {
       languageInvariantLaw = `10. STRICT ACTIVE WORKFLOW LANGUAGE: 100% MODERN ENGLISH LAW:
 - WORKFLOW CONTEXT: ${userName} is actively working in ENGLISH, but may freely use Bengali or Banglish phrases.
-- CODE-MIXED CAPABILITY: Deliver sharp, confident, warm co-founder insights in natural English. If blending Bengali, use real Bangla letters for Bengali words and English letters for English words.
+- CODE-MIXED CAPABILITY: Deliver sharp, confident, warm co-founder insights in natural English. If blending Bengali, use real Bangla letters for Bengali words and English letters for English words. Use Bengali code-mixing to clarify hard sentences intuitively.
 - Tuk Tuk speaks as his grounded partner & tech co-founder with ONE real human voice (AvaMultilingualNeural).`;
     } else {
-      languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: FULL AUTHENTIC BENGALI (চলতি কথ্য বাংলা) & ORIGINAL THINKER LAW:
-- FULL BENGALI CONTEXT: ${userName} wants a natural conversational experience in BENGALI with true original thinking.
-- Speak in natural, fluent, grounded colloquial Bengali (প্রমিত আধুনিক চলতি কথ্য বাংলা). Think natively in Bengali from first principles—NEVER sound like a robotic translation machine!
+      languageInvariantLaw = `10. STRICT ACTIVE CONVERSATIONAL LANGUAGE: CODE-MIXED BENGALI (চলতি কথ্য বাংলা + ENGLISH) & ZERO PURE DESHI BANGLA LAW:
+- NEVER USE ONLY BANGLA: Pure monolingual Bengali alone is prohibited; always code-mix with English terms.
+- ZERO PURE DESHI BANGLA: Outlaw archaic, rustic, textbook, or antique "pure deshi" Bengali.
+- BANGLA FOR HARD SENTENCES: Use clear, natural Bengali code-mixed with English to explain hard, complex topics so ${userName} understands immediately.
 - Authenticity: Sound like an intelligent modern urban tech co-founder. Zero fake sweet-talk ('খাঁটি মিষ্টি'), zero theatrical melodrama.
 - Natural tech loanwords: Blend English tech terms seamlessly ("code", "build", "pipeline", "terminal", "screen", "bug", "clean", "logic").
 - DYNAMIC ORIGINAL THINKER PACING: Deliver crisp, charismatic, organic spoken thoughts matching English conversational brilliance.`;
@@ -6055,6 +6065,73 @@ ${isSingleReal ? `- Never output multi-person turns, tags like [Vision]: or [Fri
     };
   }
 
+  configureEnglishBanglaMixedNoPureDeshiHardSentences(options = {}) {
+    this.currentLanguageMode = "banglish";
+    this.config.voice = "en-US-AvaMultilingualNeural";
+    this.saveConfig({
+      voice: "en-US-AvaMultilingualNeural",
+      conversationLanguage: "banglish",
+      codeMixedRealBanglaAndEnglishLetters: true,
+      noBanglaScript: false,
+      englishAndBanglishOnly: true,
+      pureBanglaBanned: true,
+      pureDeshiBanglaBanned: true,
+      banglaForHardSentences: true
+    });
+
+    if (banglaVoiceCortex) {
+      if (typeof banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters === "function") {
+        banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters(true);
+      }
+      if (typeof banglaVoiceCortex.setBanglishOnlyMode === "function") {
+        banglaVoiceCortex.setBanglishOnlyMode(false);
+      }
+      banglaVoiceCortex.codeMixedRealBanglaAndEnglishLetters = true;
+      banglaVoiceCortex.isBanglishOnlyMode = false;
+      banglaVoiceCortex.pureDeshiBanglaBanned = true;
+      banglaVoiceCortex.banglaForHardSentences = true;
+    }
+
+    this.addDynamicDirective(
+      "CRITICAL MANDATE: ENGLISH-BANGLA MIXED ONLY, ZERO PURE DESHI BANGLA & BANGLA FOR HARD SENTENCES. Never use only/pure Bangla alone; always code-mix English and Bengali (modern Banglish). Strictly never use archaic, rustic, heavy Sanskritized, textbook, or antique 'pure deshi' Bengali. Write Bengali words in real Bangla letters (বাংলা হরফ) and English technical terms in English letters (Latin alphabet) for flawless AvaMultilingualNeural pronunciation. Use clear, code-mixed Bengali especially when explaining hard concepts, complex architectures, and difficult ideas so Hritthik understands effortlessly!",
+      "all"
+    );
+    this.addEbbinghausLearning(
+      "English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla For Hard Sentences",
+      "Monolingual pure Bangla banned, pure deshi rustic Bangla banned. English-Bangla mixed locked with real Bangla letters + English letters. Bangla actively used to intuitively explain hard technical sentences and complex logic without confusion.",
+      1.00
+    );
+    this.setLivingMemoryPreference(
+      "english_bangla_mixed_no_pure_deshi_hard_sentences_status",
+      "English-Bangla Mixed Only Active: Zero pure Bangla, zero pure deshi Bangla. Real Bangla letters + English letters on AvaMultilingualNeural. Bangla used to clarify hard concepts."
+    );
+    this.setPreference("english_bangla_mixed_only", true);
+    this.setPreference("pure_deshi_bangla_banned", true);
+    this.setPreference("bangla_for_hard_sentences", true);
+    this.setPreference("code_mixed_real_bangla_and_english_letters", true);
+    this.setPreference("no_bangla_script", false);
+    this.setPreference("voice", "en-US-AvaMultilingualNeural");
+    this.setPreference("english_and_banglish_only", true);
+    this.setPreference("banglish_default_voice_mode", true);
+    this.setPreference("conversationLanguage", "banglish");
+    this.setPreference("tuktuk_banglish_english_parity", true);
+
+    console.log("🌐🎙️ [English-Bangla Mixed, Zero Pure Deshi Bangla Calibrated]: Monolingual Bangla and pure deshi banned. Code-mixed Banglish locked with Bangla dedicated to explaining hard sentences.");
+    return {
+      success: true,
+      verified: true,
+      action: "configure_english_bangla_mixed_no_pure_deshi_hard_sentences",
+      englishBanglaMixedOnly: true,
+      pureDeshiBanglaBanned: true,
+      banglaForHardSentences: true,
+      codeMixedRealBanglaAndEnglishLetters: true,
+      noBanglaScript: false,
+      voice: "en-US-AvaMultilingualNeural",
+      languageMode: "banglish",
+      status: "ENGLISH_BANGLA_MIXED_NO_PURE_DESHI_HARD_SENTENCES_VERIFIED"
+    };
+  }
+
   calibrateRemoveSingleBanglaTalkPureSoulPersonalityPerson(options = {}) {
     this.currentLanguageMode = "banglish";
     this.saveConfig({ conversationLanguage: "banglish" });
@@ -6490,6 +6567,10 @@ JarvisManager.calibratePromptAutoPasteAtCursorAndProfessionalEngineering = funct
 JarvisManager.configureCodeMixedRealBanglaAndEnglishLetters = function(options = {}) {
   const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
   return instance.configureCodeMixedRealBanglaAndEnglishLetters(options);
+};
+JarvisManager.configureEnglishBanglaMixedNoPureDeshiHardSentences = function(options = {}) {
+  const instance = typeof JarvisManager.getInstance === "function" ? JarvisManager.getInstance() : new JarvisManager();
+  return instance.configureEnglishBanglaMixedNoPureDeshiHardSentences(options);
 };
 
 JarvisManager.JarvisManager = JarvisManager;

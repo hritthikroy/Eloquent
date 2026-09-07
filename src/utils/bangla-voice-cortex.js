@@ -239,9 +239,24 @@ class BanglaVoiceCortex {
       [/(?:প্রতিক্রিয়া|প্রতিক্রিয়া)/gu, "feedback"],
       [/(?:নিশ্চিতকরণ)/gu, "কনফার্মেশন"],
       [/(?:জটিলতা)/gu, "complexity"],
-      [/(?:পরিমাপ)/gu, "metrics"],
       [/(?:আত্মবিশ্বাস)/gu, "confidence"],
-      [/(?:উদ্বেগ)/gu, "টেনশন"]
+      [/(?:উদ্বেগ)/gu, "টেনশন"],
+
+      // Strict ban on archaic, rustic, heavy Sanskritized "pure deshi" Bengali
+      [/(?:খাঁটি\s*দেশি|খাঁটি\s*দেশী)/gu, "clean"],
+      [/(?:সাধু\s*ভাষা|সাধুভাষা)/gu, "standard language"],
+      [/(?:মম\s*প্রিয়|মম\s*হৃদয়)/gu, "my favorite"],
+      [/(?:ভাত\s*খাইয়াছ\s*কি|আহার\s*করিয়াছ)/gu, "how are you"],
+      [/(?:অধুনা|সম্প্ৰতি)/gu, "recently"],
+      [/(?:পরিমাপণ)/gu, "metrics"],
+      [/(?:সংশোধনপূর্বক)/gu, "fixing"],
+      [/(?:সংশোধন)/gu, "fix"],
+      [/(?:ত্রুটিসমূহ)/gu, "bugs"],
+      [/(?:কার্যপ্রণালী)/gu, "workflow"],
+      [/(?:সতর্কবার্তা)/gu, "warning"],
+      [/(?:অনতিবিলম্বে)/gu, "immediately"],
+      [/(?:বিলম্বে)/gu, "late"],
+      [/(?:যান্ত্রিক)/gu, "robotic"]
     ];
   }
 
@@ -257,6 +272,14 @@ class BanglaVoiceCortex {
     if (enabled) {
       this.isBanglishOnlyMode = false;
     }
+  }
+
+  setPureDeshiBanglaBanned(enabled = true) {
+    this.pureDeshiBanglaBanned = Boolean(enabled);
+  }
+
+  setBanglaForHardSentences(enabled = true) {
+    this.banglaForHardSentences = Boolean(enabled);
   }
 
   restoreCleanEnglishLoanwords(text = "") {

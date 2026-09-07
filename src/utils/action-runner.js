@@ -1963,6 +1963,114 @@ class OfficeActionRunner {
     }
 
     // -------------------------------------------------------------
+    // ENGLISH-BANGLA MIXED ONLY, STRICT BAN ON PURE DESHI BANGLA & BANGLA FOR HARD SENTENCES DIRECTIVE
+    // Handles: "not use only bangla only use english bangal mixed for bangla only never use pure deshi bangll use bangla for hard sentances understand do deep chack and fix all"
+    // "never use pure deshi bangla", "english and bangla mixed only", "use bangla for hard sentences understand"
+    // -------------------------------------------------------------
+    const isEnglishBanglaMixedNoPureDeshiHardSentencesDirective =
+      (IntentParser && typeof IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective === "function" && IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) ||
+      (/\b(?:not\s+use\s+only\s+bangla|never\s+use\s+only\s+bangla|no\s+only\s+bangla)\b/i.test(lower)) ||
+      (/\b(?:pure\s+deshi|pure\s+desi|pure\s+deshi\s+bangl+|never\s+use\s+pure\s+deshi)\b/i.test(lower)) ||
+      (/\b(?:english\s+(?:bangal|bangla)\s+mixed|mixed\s+for\s+bangla\s+only)\b/i.test(lower)) ||
+      (/\b(?:hard\s+sentances?\s+understand|bangla\s+for\s+hard)\b/i.test(lower));
+
+    if (isEnglishBanglaMixedNoPureDeshiHardSentencesDirective) {
+      if (banglaVoiceCortex) {
+        if (typeof banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters === "function") {
+          banglaVoiceCortex.setCodeMixedRealBanglaAndEnglishLetters(true);
+        }
+        if (typeof banglaVoiceCortex.setBanglishOnlyMode === "function") {
+          banglaVoiceCortex.setBanglishOnlyMode(false);
+        }
+        banglaVoiceCortex.codeMixedRealBanglaAndEnglishLetters = true;
+        banglaVoiceCortex.isBanglishOnlyMode = false;
+        banglaVoiceCortex.pureDeshiBanglaBanned = true;
+        banglaVoiceCortex.banglaForHardSentences = true;
+      }
+      const jm = jarvisManager || this.jarvisManager;
+      if (jm) {
+        if (typeof jm.configureEnglishBanglaMixedNoPureDeshiHardSentences === "function") {
+          jm.configureEnglishBanglaMixedNoPureDeshiHardSentences();
+        } else {
+          jm.currentLanguageMode = "banglish";
+          jm.config.voice = "en-US-AvaMultilingualNeural";
+          jm.saveConfig({
+            voice: "en-US-AvaMultilingualNeural",
+            conversationLanguage: "banglish",
+            codeMixedRealBanglaAndEnglishLetters: true,
+            noBanglaScript: false,
+            englishAndBanglishOnly: true,
+            pureDeshiBanglaBanned: true,
+            banglaForHardSentences: true
+          });
+        }
+        if (typeof jm.setPreference === "function") {
+          jm.setPreference("english_bangla_mixed_only", true);
+          jm.setPreference("pure_deshi_bangla_banned", true);
+          jm.setPreference("bangla_for_hard_sentences", true);
+          jm.setPreference("code_mixed_real_bangla_and_english_letters", true);
+          jm.setPreference("no_bangla_script", false);
+          jm.setPreference("voice", "en-US-AvaMultilingualNeural");
+          jm.setPreference("banglish_default_voice_mode", true);
+          jm.setPreference("conversationLanguage", "banglish");
+          jm.setPreference("tuktuk_banglish_english_parity", true);
+        }
+      }
+
+      const isSingleReal = Boolean(
+        jm && (
+          (typeof jm.isSingleRealVoiceMode === "function" && jm.isSingleRealVoiceMode()) ||
+          jm.preferences?.single_real_voice_active ||
+          jm.singleRealVoiceActive ||
+          jm.config?.singleRealVoiceActive
+        )
+      );
+
+      const activeAgent = (jm && !isSingleReal) ? jm.activeAgent : null;
+      const agentKey = isSingleReal ? "tuktuk" : (activeAgent?.key || "tuktuk");
+      let agentName = isSingleReal ? "Tuk Tuk" : (activeAgent?.name || "Tuk Tuk");
+      let agentVoice = "en-US-AvaMultilingualNeural";
+      let speech = "";
+
+      if (agentKey === "vision" || agentKey === "andrew") {
+        agentName = "Vision";
+        agentVoice = "en-US-AndrewMultilingualNeural";
+        speech = "Brother, locked and verified! শুধু বাংলা কখনো বলব না—সবসময় English আর বাংলা mix করে modern Banglish বলব, pure deshi বাংলা totally banned। আর যেকোনো hard sentence সহজে বোঝানোর জন্য পরিষ্কার বাংলা আর English মিলিয়ে explain করব, brother!";
+      } else if (agentKey === "friday") {
+        agentName = "Friday";
+        agentVoice = "en-US-EmmaMultilingualNeural";
+        speech = "Chief, calibrated! Monolingual and pure archaic Bengali purged. English-Bengali code-mixing is active, with Bengali reserved to effortlessly clarify complex architectures and difficult logic.";
+      } else if (agentKey === "dd") {
+        agentName = "DD";
+        agentVoice = "en-US-BrianMultilingualNeural";
+        speech = "Bro, 100% locked! Pure deshi বাংলা বাদ, English আর বাংলা mixed Banglish locked। যেকোনো hard sentence পানির মতো ক্লিয়ার করে বুঝিয়ে দেব bro!";
+      } else {
+        agentName = "Tuk Tuk";
+        agentVoice = "en-US-AvaMultilingualNeural";
+        speech = "Babe, absolutely! শুধু বাংলা বা pure deshi বাংলা কখনো বলব না—সবসময় English আর বাংলা mix করে modern Banglish-এ কথা বলব। আর যেকোনো hard sentence বা complex topic সহজে বোঝানোর জন্য পরিষ্কার বাংলা ও English মিলিয়ে explain করব, যাতে instantly crystal clear হয়ে যায়! All checked and locked, babe!";
+      }
+
+      return {
+        handled: true,
+        agentName,
+        agentKey,
+        agentVoice,
+        speech,
+        data: {
+          action: "english_bangla_mixed_no_pure_deshi_hard_sentences_directive",
+          englishBanglaMixedOnly: true,
+          pureDeshiBanglaBanned: true,
+          banglaForHardSentences: true,
+          codeMixedRealBanglaAndEnglishLetters: true,
+          noBanglaScript: false,
+          languageMode: "banglish",
+          voice: agentVoice,
+          status: "ENGLISH_BANGLA_MIXED_NO_PURE_DESHI_HARD_SENTENCES_VERIFIED"
+        }
+      };
+    }
+
+    // -------------------------------------------------------------
     // CODE-MIXED REAL BANGLA LETTERS & ENGLISH LETTERS FOR SUPERIOR PRONUNCIATION DIRECTIVE
     // Handles: "chak the last conversation talk fix banal prounciation when you talk in banglish use real bangla later and english later for better pronaunciation",
     // "use real bangla later and english later", "fix bangla pronunciation use real bangla letters"

@@ -232,6 +232,24 @@ class IntentParser {
       };
     }
 
+    // 2.1933 English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
+    if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "english_bangla_mixed_no_pure_deshi_hard_sentences_directive",
+        action: "english_bangla_mixed_no_pure_deshi_hard_sentences_directive",
+        agentDirective
+      };
+    }
+
     // 2.1934 Code-Mixed Real Bangla Letters & English Letters for Superior Pronunciation Directive
     if (IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective(lower)) {
       let agentDirective = "team";
@@ -1698,6 +1716,29 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for English-Bangla Mixed Only, Zero Pure/Only Bangla, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
+   * Handles:
+   * "not use only bangla only use english bangal mixed for bangla only never use pure deshi bangll use bangla for hard sentances understand do deep chack and fix all",
+   * "never use pure deshi bangla", "not use only bangla", "only use english bangla mixed",
+   * "use bangla for hard sentences understand", "no pure deshi bangla",
+   * "never use pure deshi", "bangla for hard sentences", "dont use only bangla",
+   * "শুধু বাংলা ব্যবহার করো না", "পিওর দেশি বাংলা বাদ", "ইংলিশ আর বাংলা মিক্স", "কঠিন কথা সহজে বোঝানোর জন্য বাংলা"
+   */
+  static isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:not\s+use\s+only\s+bangla|never\s+use\s+only\s+bangla|no\s+only\s+bangla|dont\s+use\s+only\s+bangla)\b/i.test(lower)) ||
+      (/\b(?:pure\s+deshi|pure\s+desi|pure\s+deshi\s+bangl+|pure\s+desi\s+bangl+)\b/i.test(lower)) ||
+      (/\b(?:never\s+use\s+pure\s+deshi|no\s+pure\s+deshi|ban\s+pure\s+deshi)\b/i.test(lower)) ||
+      (/\b(?:english\s+(?:bangal|bangla)\s+mixed|english\s+and\s+bangla\s+mixed|mixed\s+for\s+bangla\s+only)\b/i.test(lower)) ||
+      (/\b(?:hard\s+sentances?\s+understand|hard\s+sentences?\s+understand|bangla\s+for\s+hard\s+sentences?)\b/i.test(lower)) ||
+      (/\b(?:use\s+bangla\s+for\s+hard)\b/i.test(lower)) ||
+      (/(?:শুধু\s*বাংলা.*ব্যবহার\s*করো\s*না|পিওর\s*দেশি.*বাদ|দেশি\s*বাংলা.*না|কঠিন\s*কথা.*সহজে\s*বোঝা|ইংলিশ\s*বাংলা\s*মিক্স)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Code-Mixed Real Bangla Letters & English Letters for Superior Pronunciation Directive
    * Handles:
    * "chak the last conversation talk fix banal prounciation when you talk in banglish use real bangla later and english later for better pronaunciation",
@@ -1733,6 +1774,7 @@ class IntentParser {
    */
   static isEnglishAndBanglishNoBanglaDirective(text = "") {
     if (!text || typeof text !== "string") return false;
+    if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(text)) return false;
     if (IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective(text)) return false;
     const lower = text.toLowerCase().trim();
     return (
@@ -2440,6 +2482,7 @@ module.exports = {
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
   isCodeMixedRealBanglaAndEnglishLettersDirective: IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective,
+  isEnglishBanglaMixedNoPureDeshiHardSentencesDirective: IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective,
   isEnglishAndBanglishNoBanglaDirective: IntentParser.isEnglishAndBanglishNoBanglaDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
   isRemoveBanglaInterruptedSingleSoulDirective: IntentParser.isRemoveBanglaInterruptedSingleSoulDirective,
