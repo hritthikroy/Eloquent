@@ -127,13 +127,15 @@ class PromptEngine {
     try {
       const { voiceIdeBridge } = require("../voice-ide-bridge");
       voiceIdeBridge.recordUtterance({
-        transcript: rawText,
+        transcript: rawSpeech,
         cleanedText: sanitized,
         structuredPrompt: assembledPrompt,
-        targetObjective: parsedIntent.target,
+        targetObjective: target || promptConcept,
         agentKey: agentDirective || "vision"
       });
-    } catch (_) {}
+    } catch (err) {
+      console.warn("⚠️ [PromptEngine] VoiceIdeBridge recordUtterance warning:", err.message);
+    }
 
     // 6. Return response payload according to active agent persona & single real voice invariant
     let speechConfirmation = "";

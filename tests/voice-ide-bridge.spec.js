@@ -15,7 +15,7 @@ console.log("🚀 RUNNING VOICE IDE BRIDGE VERIFICATION SUITE");
 console.log("================================================================================\n");
 
 async function runTests() {
-  const bridge = new VoiceIdeBridge();
+  const bridge = new VoiceIdeBridge({ hydrate: false, persist: false });
 
   // 1. Initial State
   console.log("[TEST 1] Testing Initial State...");

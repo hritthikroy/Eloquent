@@ -8,11 +8,19 @@
  */
 
 const { EventEmitter } = require("events");
+const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
+const BRIDGE_STATE_PATHS = [
+  path.resolve(__dirname, "../../userData/voice-context-bridge.json"),
+  path.join(os.tmpdir(), "eloquent-voice-bridge.json")
+];
+
 class VoiceIdeBridge extends EventEmitter {
-  constructor() {
+  constructor(options = {}) {
     super();
+    this.persist = options.persist !== false;
     this.latestVoiceContext = {
       transcript: "",
       cleanedText: "",
@@ -21,7 +29,7 @@ class VoiceIdeBridge extends EventEmitter {
       agentKey: "vision",
       agentName: "Vision",
       confidence: 1.0,
-      timestamp: Date.now(),
+      timestamp: 0,
       status: "IDLE"
     };
 
@@ -34,6 +42,45 @@ class VoiceIdeBridge extends EventEmitter {
 
     this.recentHistory = [];
     this.maxHistory = 20;
+
+    // Hydrate latest context from disk if available
+    if (options.hydrate !== false) {
+      this._hydrateFromDisk();
+    }
+  }
+
+  _hydrateFromDisk() {
+    if (!this.persist) return;
+    for (const p of BRIDGE_STATE_PATHS) {
+      try {
+        if (fs.existsSync(p)) {
+          const raw = fs.readFileSync(p, "utf8");
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.timestamp && (this.latestVoiceContext.status === "IDLE" || parsed.timestamp >= (this.latestVoiceContext.timestamp || 0))) {
+            this.latestVoiceContext = parsed;
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  /**
+   * Resets the bridge state to IDLE and clears history (for testing or session resets).
+   */
+  reset() {
+    this.latestVoiceContext = {
+      transcript: "",
+      cleanedText: "",
+      structuredPrompt: "",
+      targetObjective: "",
+      agentKey: "vision",
+      agentName: "Vision",
+      confidence: 1.0,
+      timestamp: 0,
+      status: "IDLE"
+    };
+    this.recentHistory = [];
   }
 
   /**
@@ -59,6 +106,17 @@ class VoiceIdeBridge extends EventEmitter {
       this.recentHistory.pop();
     }
 
+    // Persist to disk for cross-process MCP servers (e.g. Antigravity IDE CLI process)
+    if (this.persist) {
+      for (const p of BRIDGE_STATE_PATHS) {
+        try {
+          const dir = path.dirname(p);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(p, JSON.stringify(record, null, 2), "utf8");
+        } catch (_) {}
+      }
+    }
+
     this.emit("voice:captured", record);
     return record;
   }
@@ -68,9 +126,10 @@ class VoiceIdeBridge extends EventEmitter {
    * @returns {object}
    */
   getLatestVoiceContext() {
+    this._hydrateFromDisk();
     return {
       ...this.latestVoiceContext,
-      ageMs: Date.now() - this.latestVoiceContext.timestamp
+      ageMs: Date.now() - (this.latestVoiceContext.timestamp || Date.now())
     };
   }
 
