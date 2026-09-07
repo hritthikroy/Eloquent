@@ -44,7 +44,7 @@ async function runTests() {
     jm
   );
   assert.strictEqual(actionResult.handled, true, "Expected directive to be handled");
-  assert.strictEqual(actionResult.agentVoice, "en-US-AvaNeural", "Expected voice to be en-US-AvaNeural");
+  assert.strictEqual(actionResult.agentVoice, "en-US-AvaMultilingualNeural", "Expected voice to be en-US-AvaMultilingualNeural");
   assert.strictEqual(/[\u0980-\u09FF]/.test(actionResult.speech), false, "Expected ZERO Bengali Unicode characters in speech");
   assert.strictEqual(jm.getPreference("no_bangla_script"), true, "Expected no_bangla_script preference to be true");
   assert.strictEqual(jm.getPreference("conversationLanguage"), "banglish", "Expected conversationLanguage to be banglish");
