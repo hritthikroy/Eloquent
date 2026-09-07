@@ -16,6 +16,15 @@
  * }
  */
 
+// Route console logs to stderr to preserve stdio for clean JSON-RPC 2.0 frames
+console.log = (...args) => {
+  process.stderr.write(args.map(a => typeof a === "object" ? JSON.stringify(a) : a).join(" ") + "\n");
+};
+console.info = console.log;
+console.warn = (...args) => {
+  process.stderr.write("[WARN] " + args.map(a => typeof a === "object" ? JSON.stringify(a) : a).join(" ") + "\n");
+};
+
 const { McpStdioServer } = require("../src/services/mcp-stdio-server");
 
 const server = new McpStdioServer({
