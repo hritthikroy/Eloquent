@@ -164,20 +164,20 @@ class VoiceIdeBridge extends EventEmitter {
         : `Brother, task failed verification: ${summary}`;
     } else if (key === "friday") {
       agentName = "Friday";
-      voice = "en-US-EmmaMultilingualNeural";
+      voice = "en-US-EmmaNeural";
       message = passed
         ? `Chief, action verified and executed without error. ${summary}`
         : `Chief, exception encountered during execution: ${summary}`;
     } else if (key === "dd" || key === "brian") {
       agentName = "DD";
-      voice = "en-US-BrianMultilingualNeural";
+      voice = "en-US-BrianNeural";
       message = passed
         ? `Bro, task finished clean! ${summary}`
         : `Bro, task hit a snag: ${summary}`;
     } else {
       // Default: Tuk Tuk (Squad Leader)
       agentName = "Tuk Tuk";
-      voice = "en-US-AvaMultilingualNeural";
+      voice = "en-US-AvaNeural";
       message = passed
         ? `Babe, IDE task completed successfully! ${summary}`
         : `Babe, something blocked the build: ${summary}`;

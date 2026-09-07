@@ -171,10 +171,10 @@ class McpStdioServer {
           squadLeader: "Tuk Tuk",
           activeAgent: "Tuk Tuk",
           availableAgents: [
-            { key: "tuktuk", name: "Tuk Tuk", role: "Squad Leader", voice: "en-US-AvaMultilingualNeural", address: "babe" },
+            { key: "tuktuk", name: "Tuk Tuk", role: "Squad Leader", voice: "en-US-AvaNeural", address: "babe" },
             { key: "vision", name: "Vision", role: "Technical Architect", voice: "en-US-AndrewNeural", address: "brother / ভাই" },
-            { key: "friday", name: "Friday", role: "Executive Operations", voice: "en-US-EmmaMultilingualNeural", address: "Chief" },
-            { key: "dd", name: "DD", role: "Engineering & Creative", voice: "en-US-BrianMultilingualNeural", address: "bro" }
+            { key: "friday", name: "Friday", role: "Executive Operations", voice: "en-US-EmmaNeural", address: "Chief" },
+            { key: "dd", name: "DD", role: "Engineering & Creative", voice: "en-US-BrianNeural", address: "bro" }
           ],
           personaInvariants: {
             tuktuk: "babe",
