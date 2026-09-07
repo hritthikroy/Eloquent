@@ -235,16 +235,22 @@ class IntentParser {
     // 2.1931 Bilingual Code-Mixing & Technical English Work Preservation Directive (Law 54)
     if (IntentParser.isEnglishForEnglishWorkMixedDirective(lower)) {
       let agentDirective = "team";
-      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
-      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
-      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
-      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
-      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) {
-        if (lower.includes("friday") && lower.includes("vision") && lower.includes("dd")) {
-          agentDirective = "team";
-        } else {
-          agentDirective = "tuktuk";
-        }
+      const mentionsTukTuk = /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক");
+      const mentionsVision = /\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন");
+      const mentionsFriday = /\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে");
+      const mentionsDD = /\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি");
+      const agentCount = [mentionsTukTuk, mentionsVision, mentionsFriday, mentionsDD].filter(Boolean).length;
+
+      if (agentCount >= 2 || /\b(?:squad|team|all\s+agents)\b/i.test(lower)) {
+        agentDirective = "team";
+      } else if (mentionsVision) {
+        agentDirective = "vision";
+      } else if (mentionsFriday) {
+        agentDirective = "friday";
+      } else if (mentionsDD) {
+        agentDirective = "dd";
+      } else if (mentionsTukTuk) {
+        agentDirective = "tuktuk";
       }
 
       return {
