@@ -3016,8 +3016,8 @@ async function stopRecording() {
         return;
       }
 
-      const speakingAgentName = (actionResult && actionResult.agentName) || activeAgent.name;
-      const speakingVoice = (actionResult && actionResult.agentVoice) || activeAgent.voice;
+      const speakingAgentName = isSingleRealVoice ? 'Tuk Tuk' : ((actionResult && actionResult.agentName) || activeAgent.name);
+      const speakingVoice = isSingleRealVoice ? 'en-US-AvaMultilingualNeural' : ((actionResult && actionResult.agentVoice) || activeAgent.voice);
 
       if (!standupAlreadySpoken) {
         // Stop any running filler before speaking the full answer
@@ -3031,11 +3031,11 @@ async function stopRecording() {
         let multiTurns = parseMultiAgentTurns(jarvisReply);
         if (isSingleRealVoice) {
           // Collapse all multi-agent turns into ONE single turn by Tuk Tuk in her Ava voice
-          const consolidatedText = multiTurns.map(t => t.text).join(' ');
+          const consolidatedText = multiTurns.map(t => t.text).join(' ').replace(/\[(?:Tuk\s*Tuk|Vision|Andrew|Friday|DD|Brian|Squad|Assistant)\]:\s*/gi, '').trim();
           multiTurns = [{
             agentName: 'Tuk Tuk',
             voice: 'en-US-AvaMultilingualNeural',
-            text: consolidatedText || jarvisReply
+            text: consolidatedText || jarvisReply.replace(/\[(?:Tuk\s*Tuk|Vision|Andrew|Friday|DD|Brian|Squad|Assistant)\]:\s*/gi, '').trim()
           }];
         } else {
           const isNoOtherVoiceInterruption = jarvisManager && (
@@ -3852,6 +3852,15 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     // In Bengali mode: If the reply is an English meta-analysis fragment from a reasoning model, drop it so clean fallback kicks in
     if (activeLang === 'bn' && !/[\u0980-\u09FF]/.test(reply) && /^(?:we|i|the\s+user|user|must|following|possibly)\b/i.test(reply)) {
       reply = '';
+    }
+
+    // Purge robotic compliance refusals and open-model prompt reflections
+    if (/^(?:i(?:'m| am) sorry,?(?: but)? i (?:can(?:'t|not) comply|can(?:'t|not) fulfill)|we have a conversation\b|the user says\b|user is asking\b)/i.test(reply)) {
+      reply = '';
+    }
+
+    if (isSingleRealVoice && reply) {
+      reply = reply.replace(/\[(?:Tuk\s*Tuk|Vision|Andrew|Friday|DD|Brian|Squad|Assistant)\]:\s*/gi, '').trim();
     }
 
     if (!reply || reply.length < 2) {
