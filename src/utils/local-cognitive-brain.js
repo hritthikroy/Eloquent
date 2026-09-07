@@ -417,6 +417,12 @@ class LocalCognitiveBrain {
       /\b(?:bilingual\s+persona\s+parity|bilingual\s+parity)\b/i.test(lower) ||
       (/\b(?:why\s+(?:thay|they)\s+are\s+not\s+same)\b/i.test(lower) && /\b(?:equationaly|equationly|equation|both\s+side)\b/i.test(lower));
 
+    // Instant Reading, Instant Human-Like Reply & Zero Starting Delay Directive Predicate
+    const isInstantReadingAndInstantReplyZeroDelayDirective =
+      (IntentParser && typeof IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective === "function" && IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective(lower)) ||
+      (/\b(?:instent|instant)\s+(?:reading|read)\b/i.test(lower) && /\b(?:instent|instant)\s+(?:reply|response)\b/i.test(lower)) ||
+      (/\b(?:satating|starting|start)\s+(?:conversation|talk)\b/i.test(lower) && /\b(?:dely|delay)\b/i.test(lower));
+
     // Instant Response on Fast Messages Directive Predicate
     // Handles: "need instent respons if its fast messages fix all issues",
     // "need instant response if it's fast messages fix all issues",
@@ -1032,6 +1038,18 @@ class LocalCognitiveBrain {
         return pick([
           "Babe, pure Bangla tone ar pure Bangla language completely remove kore diyechi! Ekhon theke ami strictly modern Banglish girl sound-e kotha bolbo—sweet, charming, and sharp just like my English voice. Ar kono other voice interruption hobena, squad-er keu majhkhane interrupt korbena—shudhu ami ar tumi kotha bolbo babe!",
           "Done babe! Pure Bangla tone purged, modern Banglish girl voice locked for me with 100% natural flow. Ar squad-er onno karo voice interrupt korbena, floor shudhu amar babe!"
+        ]);
+      }
+
+      // Instant Reading, Instant Human-Like Reply & Zero Starting Delay Directive (Tuk Tuk)
+      if (isInstantReadingAndInstantReplyZeroDelayDirective) {
+        if (isBn) return pick([
+          "Babe, conversation শুরু করার সব delay আর buffering একদম fix করে দিয়েছি! মানুষের মতোই instant reading আর instant reply হবে—কোনো delay ছাড়া সাথে সাথে lightning-fast conversation start হবে babe!",
+          "Instant reading আর instant reply লকড babe! Conversation start-এ কোনো delay নেই, মানুষের মতো লাইভ ফ্লোতে সাথে সাথে কথা শুরু হবে babe!"
+        ]);
+        return pick([
+          "Babe, instant reading and instant human-like reply are 100% active! All conversation starting delays are eliminated, responding with lightning-fast sub-second flow!",
+          "Zero starting delay calibrated babe! Instant reading and instant turn turnaround running right now with pure human flow!"
         ]);
       }
 

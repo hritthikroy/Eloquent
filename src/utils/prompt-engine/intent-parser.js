@@ -232,6 +232,24 @@ class IntentParser {
       };
     }
 
+    // 2.1932 Instant Reading, Instant Human-Like Reply & Zero Starting Delay Directive
+    if (IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "instant_reading_and_instant_reply_zero_delay_directive",
+        action: "instant_reading_and_instant_reply_zero_delay_directive",
+        agentDirective
+      };
+    }
+
     // 2.1933 English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
     if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) {
       let agentDirective = "team";
@@ -1716,6 +1734,29 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Instant Reading, Instant Human-Like Reply & Zero Starting Delay Directive
+   * Handles:
+   * "instent reading and instent reply like humen fast satating conversation doing dely fix this issue",
+   * "instant reading and instant reply like human", "fast starting conversation doing delay fix",
+   * "instant reading and instant reply", "fast starting conversation doing delay fix this issue",
+   * "fast starting conversation", "zero starting delay", "instant reading instant reply",
+   * "পড়ার সাথে সাথে ইনস্ট্যান্ট রেসপন্স", "দেরি ছাড়া সাথে সাথে কথা শুরু করো"
+   */
+  static isInstantReadingAndInstantReplyZeroDelayDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:instent|instant)\s+(?:reading|read)\b/i.test(lower) && /\b(?:instent|instant)\s+(?:reply|response|replies)\b/i.test(lower)) ||
+      (/\b(?:instent|instant)\s+reading\b/i.test(lower) && /\b(?:like\s+humen|like\s+human|humen|human)\b/i.test(lower)) ||
+      (/\b(?:satating|starting|start|stating)\s+(?:conversation|talk|chat)\b/i.test(lower) && /\b(?:dely|delay|delays)\b/i.test(lower)) ||
+      (/\b(?:fast\s+satating|fast\s+starting)\s+(?:conversation|talk)?\b/i.test(lower) && /\b(?:doing\s+dely|doing\s+delay|delay\s+fix|dely\s+fix)\b/i.test(lower)) ||
+      (/\b(?:instent|instant)\s+(?:reading|reply)\b/i.test(lower) && /\b(?:fast\s+satating|fast\s+starting|dely|delay)\b/i.test(lower)) ||
+      (/\b(?:fix\s+this\s+issue|fix\s+issue)\b/i.test(lower) && /\b(?:instent|instant)\s+(?:reading|reply)\b/i.test(lower)) ||
+      (/(?:ইনস্ট্যান্ট\s*পড়া.*ইনস্ট্যান্ট\s*রিপ্লাই|দেরি\s*ছাড়া\s*কথা\s*শুরু|স্টার্ট\s*ডিলে\s*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for English-Bangla Mixed Only, Zero Pure/Only Bangla, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
    * Handles:
    * "not use only bangla only use english bangal mixed for bangla only never use pure deshi bangll use bangla for hard sentances understand do deep chack and fix all",
@@ -2482,6 +2523,7 @@ module.exports = {
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
   isCodeMixedRealBanglaAndEnglishLettersDirective: IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective,
+  isInstantReadingAndInstantReplyZeroDelayDirective: IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective,
   isEnglishBanglaMixedNoPureDeshiHardSentencesDirective: IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective,
   isEnglishAndBanglishNoBanglaDirective: IntentParser.isEnglishAndBanglishNoBanglaDirective,
   isBanglishModernVibeSameSoulDirective: IntentParser.isBanglishModernVibeSameSoulDirective,
