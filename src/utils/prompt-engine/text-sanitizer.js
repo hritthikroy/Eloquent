@@ -813,10 +813,22 @@ class TextSanitizer {
       .replace(/\bhide\s+(?:ther|their)\s+(?:faier|fear)\b/gi, "hide their fear")
       // Instant Voice Readiness & Simultaneous Parallel Cognitive Streaming STT Normalizations (Law 42)
       // Handles: "tuk tuk reading voice is get so much time need to fix", "tuk tuk readying voice is get so much time need to fix", "reading voice is get so much time"
-      .replace(/\b(?:tuk\s*tuk|tuktuk)\s+(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time(?:\s*,?\s*(?:need\s+to\s+)?fix)?\b/gi, "Tuk Tuk readying voice is taking so much time, need to fix")
-      .replace(/\b(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time(?:\s*,?\s*(?:need\s+to\s+)?fix)?\b/gi, "readying voice is taking so much time, need to fix")
-      .replace(/\b(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting)\s+so\s+much\s+time\b/gi, "readying voice is taking so much time")
+      .replace(/\b(?:tuk\s*tuk|tuktuk)\s+(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time\s*,?\s*(?:need\s+to\s+)?fix\b/gi, "Tuk Tuk readying voice is taking so much time, need to fix")
+      .replace(/\b(?:tuk\s*tuk|tuktuk)\s+(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time\b/gi, "Tuk Tuk readying voice is taking so much time")
+      .replace(/\b(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time\s*,?\s*(?:need\s+to\s+)?fix\b/gi, "readying voice is taking so much time, need to fix")
+      .replace(/\b(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time\b/gi, "readying voice is taking so much time")
       .replace(/\b(?:get|getting)\s+so\s+much\s+time\b/gi, "taking so much time")
+      // Quad-Modal Simultaneous Human Perception (Reading, Listening, Seeing, Speaking) Normalizations
+      // Handles: "how i make reading lisening seeing and spking all in symententeniously like a humen can do fix all issues"
+      .replace(/\b(?:how\s+(?:i|can\s+i|do\s+i)\s+make\s+)?(?:reading|read)[,\s]+(?:lisening|listening)[,\s]+(?:seeing|see)[,\s]+(?:and\s+)?(?:spking|speaking)\s+all\s+(?:in\s+)?(?:symententeniously|symentaniously|simultanously|simultaneously)\s+like\s+a\s+(?:humen|human)\s+can\s+do\s*,?\s*(?:fix\s+all\s+issues?|fix\s+all)?\b/gi, "How to make reading, listening, seeing, and speaking all simultaneously like a human can do, fix all issues")
+      .replace(/\b(?:reading|read)[,\s]+(?:lisening|listening)[,\s]+(?:seeing|see)[,\s]+(?:and\s+)?(?:spking|speaking)\s+all\s+(?:in\s+)?(?:symententeniously|symentaniously|simultanously|simultaneously)\b/gi, "reading, listening, seeing, and speaking all simultaneously")
+      .replace(/\b(?:reading|read)[,\s]+(?:lisening|listening)[,\s]+(?:seeing|see)[,\s]+(?:and\s+)?(?:spking|speaking)\b/gi, "reading, listening, seeing, and speaking")
+      .replace(/\bspking\b/gi, "speaking")
+      .replace(/\blisening\b/gi, "listening")
+      .replace(/\b(?:symententeniously|symentaniously|simultanously)\b/gi, "simultaneously")
+      .replace(/\ball\s+in\s+simultaneously\b/gi, "all simultaneously")
+      .replace(/\blike\s+a\s+humen\s+can\s+do\b/gi, "like a human can do")
+      .replace(/\blike\s+a\s+humen\b/gi, "like a human")
       // Handles: "need instent redying voice like humen think and talk symentaniously parallly on serice like need to fix all"
       .replace(/\b(?:need\s+)?(?:instent|instant)\s+(?:redying|readying|rading)\s+voices?\s+like\s+(?:humen|human)\s+(?:think|thinking)\s+and\s+(?:talk|talking)\s+(?:symentaniously|simultanously|simultaneously)\s+(?:parallly|parrallelly|parallelly|parallel)\s+(?:on|in)\s+(?:serice|series)\s*(?:like\s+)?(?:need\s+to\s+fix\s+all|fix\s+all)?\b/gi, "Need instant readying voice like human think and talk simultaneously in parallel on series, need to fix all")
       .replace(/\b(?:instent|instant)\s+(?:redying|readying)\s+voices?\b/gi, "instant readying voice")
@@ -1012,7 +1024,12 @@ class TextSanitizer {
       // Handles: "chack the last conversation and fix every iritations and sound like robotic do"
       .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?(?:last|previous|recent)\s+conversation\s+and\s+fix\s+every\s+(?:iritaions|irritations|iritatons)\s+and\s+sound\s+like\s+(?:robtic|robotic)(?:\s+do)?\b/gi, "Check the last conversation and fix every irritation and robotic sound")
       .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?(?:last|previous)\s+conversation\b/gi, "check the last conversation")
-      .replace(/\bsound\s+like\s+(?:robtic|robotic)(?:\s+do)?\b/gi, "robotic sound");
+      .replace(/\bsound\s+like\s+(?:robtic|robotic)(?:\s+do)?\b/gi, "robotic sound")
+      // Law 56: Voice Audibility Invariance, Log Diagnostic Audit & Total Audio Pipeline Resilience STT Normalizations
+      // Handles: "see not audible chack the log and fix all the issues", "not audible chack the log and fix all the issues"
+      .replace(/\b(?:see\s+)?not\s+audible\s+(?:chack|chak|check)\s+(?:the\s+)?logs?\s+and\s+fix\s+all\s+(?:the\s+)?issues\b/gi, "Voice not audible, check the log and fix all the issues")
+      .replace(/\b(?:see\s+)?not\s+audible\b/gi, "voice not audible")
+      .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?logs?\b/gi, "check the log");
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')

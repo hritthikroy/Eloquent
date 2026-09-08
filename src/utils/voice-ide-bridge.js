@@ -199,6 +199,8 @@ class VoiceIdeBridge extends EventEmitter {
         const jm = JarvisManager.getInstance();
         if (typeof jm.speakText === "function") {
           await jm.speakText(message, { voice, agent: key });
+        } else if (typeof jm.speak === "function") {
+          await jm.speak(message, voice, key);
         }
       } catch (err) {
         console.warn("⚠️ [VoiceIdeBridge] TTS notification fallback:", err.message);

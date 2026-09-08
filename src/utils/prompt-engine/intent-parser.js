@@ -310,6 +310,36 @@ class IntentParser {
       };
     }
 
+    // 2.19326 Law 56: Voice Audibility Invariance, Log Diagnostic Audit & Total Audio Pipeline Resilience Directive
+    if (IntentParser.isVoiceAudibilityAndLogAuditDirective(lower)) {
+      let agentDirective = "tuktuk";
+      const mentionsTukTuk = /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক");
+      const mentionsVision = /\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন");
+      const mentionsFriday = /\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে");
+      const mentionsDD = /\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি");
+      const agentCount = [mentionsTukTuk, mentionsVision, mentionsFriday, mentionsDD].filter(Boolean).length;
+
+      if (agentCount >= 2 || /\b(?:squad|team|all\s+agents)\b/i.test(lower)) {
+        agentDirective = "team";
+      } else if (mentionsVision) {
+        agentDirective = "vision";
+      } else if (mentionsFriday) {
+        agentDirective = "friday";
+      } else if (mentionsDD) {
+        agentDirective = "dd";
+      } else if (mentionsTukTuk) {
+        agentDirective = "tuktuk";
+      }
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "voice_audibility_and_log_audit_directive",
+        action: "voice_audibility_and_log_audit_directive",
+        agentDirective
+      };
+    }
+
     // 2.1933 English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
     if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) {
       let agentDirective = "team";
@@ -759,6 +789,24 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "four_agent_bilingual_voice_smoothness_vision_parity",
+        agentDirective
+      };
+    }
+
+    // 2.2045 Quad-Modal Simultaneous Human Perception & Action Directive (Reading, Listening, Seeing, Speaking)
+    if (IntentParser.isQuadModalSimultaneousPerceptionDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "quad_modal_simultaneous_perception_stream_directive",
+        action: "quad_modal_simultaneous_perception_stream_directive",
         agentDirective
       };
     }
@@ -2090,6 +2138,25 @@ class IntentParser {
     );
   }
 
+  /**
+   * Law 56: Voice Audibility Invariance, Log Diagnostic Audit & Total Audio Pipeline Resilience Directive
+   * Handles: "see not audible chack the log and fix all the issues", "voice not audible check log and fix all issues",
+   * "not audible check the log and fix all the issues", "sound not audible fix all issues",
+   * "কথা শোনা যাচ্ছে না লগ চেক করে ফিক্স করো", "সাউন্ড শোনা যাচ্ছে না"
+   */
+  static isVoiceAudibilityAndLogAuditDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:see\s+)?not\s+audible\b/i.test(lower)) ||
+      (/\b(?:voice|sound|audio)\s+(?:is\s+)?not\s+audible\b/i.test(lower)) ||
+      (/\bnot\s+audible\b/i.test(lower) && /\b(?:log|issue|chack|check|fix)\b/i.test(lower)) ||
+      (/\b(?:chack|check)\s+(?:the\s+)?logs?\b/i.test(lower) && /\b(?:audible|voice|sound|audio|fix|issues?)\b/i.test(lower)) ||
+      (/\bfix\s+all\s+(?:the\s+)?issues\b/i.test(lower) && (lower.includes("audible") || lower.includes("log"))) ||
+      (/(?:কথা\s*শোনা\s*যাচ্ছে\s*না|সাউন্ড\s*শোনা\s*যাচ্ছে\s*না|লগ\s*চেক\s*করে.*ফিক্স|অডিবল\s*না)/u.test(lower))
+    );
+  }
+
   static isDynamicRoomVibeWorkstationDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
@@ -2911,6 +2978,39 @@ class IntentParser {
   }
 
   /**
+   * Quad-Modal Simultaneous Human Perception & Action Directive
+   * Handles:
+   * "How to make reading, listening, seeing, and speaking all simultaneously like a human can do, fix all issues",
+   * "how i make reading lisening seeing and spking all in symententeniously like a humen can do fix all issues",
+   * "reading, listening, seeing, and speaking all simultaneously",
+   * "reading listening seeing speaking simultaneously",
+   * "see hear talk and read at the same time"
+   */
+  static isQuadModalSimultaneousPerceptionDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    const hasReading = /\b(?:reading|read)\b/i.test(lower) || /(?:পড়া|পড়ার)/u.test(lower);
+    const hasListening = /\b(?:listening|listen|hearing|hear|lisening)\b/i.test(lower) || /(?:শোনা|শোনার)/u.test(lower);
+    const hasSeeing = /\b(?:seeing|see|vision|eyes|watch)\b/i.test(lower) || /(?:দেখা|দেখার)/u.test(lower);
+    const hasSpeaking = /\b(?:speaking|speak|talking|talk|spking|voice)\b/i.test(lower) || /(?:কথা\s*বলা|বলা)/u.test(lower);
+    const hasSimultaneous = /\b(?:simultaneously|simultaneous|symentaniously|symententeniously|all\s+together|parallel|at\s+the\s+same\s+time|concurrently|together)\b/i.test(lower) || /(?:একসাথে|যুগপৎ|সমান্তরাল|একযোগে)/u.test(lower);
+    const hasHuman = /\b(?:like\s+a\s+human|human|humen|humanly)\b/i.test(lower) || /(?:মানুষের\s*মতো)/u.test(lower);
+
+    // Quad-modal condition: at least 3 modalities + (simultaneous or human)
+    const modalCount = [hasReading, hasListening, hasSeeing, hasSpeaking].filter(Boolean).length;
+    if (modalCount >= 3 && (hasSimultaneous || hasHuman)) {
+      return true;
+    }
+
+    return (
+      (/\b(?:reading|read)\b/i.test(lower) && /\b(?:listening|lisening)\b/i.test(lower) && /\b(?:seeing)\b/i.test(lower) && /\b(?:speaking|spking)\b/i.test(lower)) ||
+      (/\bquad[- ]modal\b/i.test(lower)) ||
+      (/\breading\b/i.test(lower) && /\blistening\b/i.test(lower) && /\bseeing\b/i.test(lower) && /\bsimultaneously\b/i.test(lower)) ||
+      (/(?:পড়া.*শোনা.*দেখা.*কথা\s*বলা|একসাথে\s*পড়া\s*শোনা\s*দেখা\s*কথা|কোয়াড\s*মোডাল)/u.test(lower))
+    );
+  }
+
+  /**
    * 2.216 Native Bangla Person Tone, Pronunciation & Banglish Gap Elimination Directive
    * Handles:
    * "chack last conversation and fix every gap of our banglis conversation every word with real tone and real pronuncitation need like a bangla person",
@@ -3116,6 +3216,7 @@ module.exports = {
   isVision2070MasterCoderMedicDirective: IntentParser.isVision2070MasterCoderMedicDirective,
   isCombatExtremeNoiseHumanAuditoryDirective: IntentParser.isCombatExtremeNoiseHumanAuditoryDirective,
   isBanglaPersonRealTonePronunciationDirective: IntentParser.isBanglaPersonRealTonePronunciationDirective,
+  isQuadModalSimultaneousPerceptionDirective: IntentParser.isQuadModalSimultaneousPerceptionDirective,
   isConversationalContinuationDirective: IntentParser.isConversationalContinuationDirective,
   isZeroRoboticVoiceDirective: IntentParser.isZeroRoboticVoiceDirective,
   isRemoveAllRoboticBehaviorDirective: IntentParser.isRemoveAllRoboticBehaviorDirective,
@@ -3161,6 +3262,7 @@ module.exports = {
   isUnbreakableLongSessionMemoryDirective: IntentParser.isUnbreakableLongSessionMemoryDirective,
   isConversationalGapAndDelayFixDirective: IntentParser.isConversationalGapAndDelayFixDirective,
   isCheckLastConversationFixIrritationsAndRoboticSoundDirective: IntentParser.isCheckLastConversationFixIrritationsAndRoboticSoundDirective,
+  isVoiceAudibilityAndLogAuditDirective: IntentParser.isVoiceAudibilityAndLogAuditDirective,
   isDynamicRoomVibeWorkstationDirective: IntentParser.isDynamicRoomVibeWorkstationDirective,
   isWireAllLiveTestEquationsDirective: IntentParser.isWireAllLiveTestEquationsDirective
 };
