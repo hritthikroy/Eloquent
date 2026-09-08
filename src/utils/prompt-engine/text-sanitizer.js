@@ -1029,7 +1029,16 @@ class TextSanitizer {
       // Handles: "see not audible chack the log and fix all the issues", "not audible chack the log and fix all the issues"
       .replace(/\b(?:see\s+)?not\s+audible\s+(?:chack|chak|check)\s+(?:the\s+)?logs?\s+and\s+fix\s+all\s+(?:the\s+)?issues\b/gi, "Voice not audible, check the log and fix all the issues")
       .replace(/\b(?:see\s+)?not\s+audible\b/gi, "voice not audible")
-      .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?logs?\b/gi, "check the log");
+      .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?logs?\b/gi, "check the log")
+      // Law 57: Deep Pipeline Diagnostics, Full End-to-End Smoothness & Seamless Audio Flow STT Normalizations
+      // Handles: "chack more deep test fix the full pipe line need fully smouth and all", "fix the full pipeline need fully smooth and all"
+      .replace(/\b(?:chack|chak|chek|check)\s+(?:more\s+)?deep\s+tests?\s+fix\s+(?:the\s+)?full\s+(?:pipe\s*line|pipeline)\s+need\s+(?:fully|fullly)\s+(?:smouth|smuth|smooth)\s+and\s+all\b/gi, "Check more deep test, fix the full pipeline, need fully smooth and all")
+      .replace(/\b(?:chack|chak|chek|check)\s+(?:more\s+)?deep\s+tests?\b/gi, "check more deep test")
+      .replace(/\bfix\s+(?:the\s+)?full\s+(?:pipe\s*line|pipeline)\b/gi, "fix the full pipeline")
+      .replace(/\bneed\s+(?:fully|fullly)\s+(?:smouth|smuth|smooth)\s+and\s+all\b/gi, "need fully smooth and all")
+      .replace(/\b(?:smouth|smuth)\s+and\s+all\b/gi, "smooth and all")
+      .replace(/\b(?:fully|fullly)\s+(?:smouth|smuth)\b/gi, "fully smooth");
+
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')

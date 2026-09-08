@@ -31,8 +31,10 @@ class ContinuousHumanLearningTrimodalCortex {
     this.activeSensoryStreams = {
       reading: true,
       hearing: true,
+      listening: true,
       seeing: true,
-      talking: true
+      talking: true,
+      speaking: true
     };
     this.peerHealingState = {
       selfLearnerActive: true,

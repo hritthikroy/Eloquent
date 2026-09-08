@@ -340,6 +340,36 @@ class IntentParser {
       };
     }
 
+    // 2.19327 Law 57: Deep Pipeline Diagnostics, Full End-to-End Smoothness & Seamless Audio Flow Directive
+    if (IntentParser.isDeepPipelineFullSmoothnessDirective(lower)) {
+      let agentDirective = "tuktuk";
+      const mentionsTukTuk = /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক");
+      const mentionsVision = /\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন");
+      const mentionsFriday = /\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে");
+      const mentionsDD = /\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি");
+      const agentCount = [mentionsTukTuk, mentionsVision, mentionsFriday, mentionsDD].filter(Boolean).length;
+
+      if (agentCount >= 2 || /\b(?:squad|team|all\s+agents)\b/i.test(lower)) {
+        agentDirective = "team";
+      } else if (mentionsVision) {
+        agentDirective = "vision";
+      } else if (mentionsFriday) {
+        agentDirective = "friday";
+      } else if (mentionsDD) {
+        agentDirective = "dd";
+      } else if (mentionsTukTuk) {
+        agentDirective = "tuktuk";
+      }
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "deep_pipeline_full_smoothness_directive",
+        action: "deep_pipeline_full_smoothness_directive",
+        agentDirective
+      };
+    }
+
     // 2.1933 English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
     if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) {
       let agentDirective = "team";
@@ -2157,6 +2187,27 @@ class IntentParser {
     );
   }
 
+  /**
+   * Law 57: Deep Pipeline Diagnostics, Full End-to-End Smoothness & Seamless Audio Flow Directive
+   * Handles:
+   * "chack more deep test fix the full pipe line need fully smouth and all",
+   * "check more deep test fix the full pipeline need fully smooth and all",
+   * "fix the full pipeline need fully smooth", "deep test fix the full pipeline fully smooth and all",
+   * "পাইপলাইন পুরোটা ডিপ টেস্ট করে একদম স্মুথ করে দাও", "সব পাইপলাইন স্মুথ করো"
+   */
+  static isDeepPipelineFullSmoothnessDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:chack|chak|check|chek)\s+(?:more\s+)?deep\s+tests?\b/i.test(lower) && /\b(?:pipe\s*line|pipeline|smouth|smuth|smooth)\b/i.test(lower)) ||
+      (/\bfix\s+(?:the\s+)?full\s+(?:pipe\s*line|pipeline)\b/i.test(lower)) ||
+      (/\b(?:full\s+(?:pipe\s*line|pipeline)|entire\s+(?:pipe\s*line|pipeline))\b/i.test(lower) && /\b(?:smouth|smuth|smooth|fix|deep)\b/i.test(lower)) ||
+      (/\bneed\s+(?:fully|fullly)\s+(?:smouth|smuth|smooth)\s+and\s+all\b/i.test(lower)) ||
+      (/\b(?:fully|fullly)\s+(?:smouth|smuth|smooth)\b/i.test(lower) && /\b(?:pipe\s*line|pipeline|test|deep)\b/i.test(lower)) ||
+      (/(?:পাইপলাইন.*(?:ডিপ\s*টেস্ট|স্মুথ)|ফুল\s*পাইপলাইন.*স্মুথ|সব\s*পাইপলাইন\s*স্মুথ)/u.test(lower))
+    );
+  }
+
   static isDynamicRoomVibeWorkstationDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
@@ -3263,6 +3314,7 @@ module.exports = {
   isConversationalGapAndDelayFixDirective: IntentParser.isConversationalGapAndDelayFixDirective,
   isCheckLastConversationFixIrritationsAndRoboticSoundDirective: IntentParser.isCheckLastConversationFixIrritationsAndRoboticSoundDirective,
   isVoiceAudibilityAndLogAuditDirective: IntentParser.isVoiceAudibilityAndLogAuditDirective,
+  isDeepPipelineFullSmoothnessDirective: IntentParser.isDeepPipelineFullSmoothnessDirective,
   isDynamicRoomVibeWorkstationDirective: IntentParser.isDynamicRoomVibeWorkstationDirective,
   isWireAllLiveTestEquationsDirective: IntentParser.isWireAllLiveTestEquationsDirective
 };
