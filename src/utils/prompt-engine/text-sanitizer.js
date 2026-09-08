@@ -812,6 +812,11 @@ class TextSanitizer {
       .replace(/\bhide\s+(?:you|your)\s+voice\s+(?:breck|break)\b/gi, "hide your voice break")
       .replace(/\bhide\s+(?:ther|their)\s+(?:faier|fear)\b/gi, "hide their fear")
       // Instant Voice Readiness & Simultaneous Parallel Cognitive Streaming STT Normalizations (Law 42)
+      // Handles: "tuk tuk reading voice is get so much time need to fix", "tuk tuk readying voice is get so much time need to fix", "reading voice is get so much time"
+      .replace(/\b(?:tuk\s*tuk|tuktuk)\s+(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time(?:\s*,?\s*(?:need\s+to\s+)?fix)?\b/gi, "Tuk Tuk readying voice is taking so much time, need to fix")
+      .replace(/\b(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting|taking)\s+so\s+much\s+time(?:\s*,?\s*(?:need\s+to\s+)?fix)?\b/gi, "readying voice is taking so much time, need to fix")
+      .replace(/\b(?:reading|readying|redying|rading)\s+voices?\s+is\s+(?:get|getting)\s+so\s+much\s+time\b/gi, "readying voice is taking so much time")
+      .replace(/\b(?:get|getting)\s+so\s+much\s+time\b/gi, "taking so much time")
       // Handles: "need instent redying voice like humen think and talk symentaniously parallly on serice like need to fix all"
       .replace(/\b(?:need\s+)?(?:instent|instant)\s+(?:redying|readying|rading)\s+voices?\s+like\s+(?:humen|human)\s+(?:think|thinking)\s+and\s+(?:talk|talking)\s+(?:symentaniously|simultanously|simultaneously)\s+(?:parallly|parrallelly|parallelly|parallel)\s+(?:on|in)\s+(?:serice|series)\s*(?:like\s+)?(?:need\s+to\s+fix\s+all|fix\s+all)?\b/gi, "Need instant readying voice like human think and talk simultaneously in parallel on series, need to fix all")
       .replace(/\b(?:instent|instant)\s+(?:redying|readying)\s+voices?\b/gi, "instant readying voice")
@@ -989,8 +994,25 @@ class TextSanitizer {
       // Handles: "listen our full conversation and fix every gaps and delay issues and all with equationaly with deep research fix every iritaions and all with to fix all replaying delay fix all issues"
       .replace(/\b(?:equationaly|equatinally|eqationally)\b/gi, "equationally")
       .replace(/\b(?:iritaions|irritatons|iritations)\b/gi, "irritations")
-      .replace(/\b(?:replaying|repliying)\s+(?:delay|delays)\b/gi, "replying delay")
-      .replace(/\b(?:replay|replaying)\b/gi, "replying");
+      .replace(/\b(?:replay|replaying)\b/gi, "replying")
+      // Silent Observer & Passive Learning Mode STT Normalizations
+      // Handles: "if i talk with some one need to be silent and lisen from our talk and learn sylently"
+      .replace(/\bif\s+i\s+talk\s+with\s+(?:some\s*one|someone)\s+(?:need\s+to\s+be|be)\s+silent\s+and\s+(?:lisen|listen)\s+(?:from|to)\s+our\s+talk\s+and\s+learn\s+(?:sylently|silently)\b/gi, "If I talk with someone, need to be silent and listen to our talk and learn silently")
+      .replace(/\b(?:sylently|silintly|silntly)\b/gi, "silently")
+      .replace(/\blisen\b/gi, "listen")
+      .replace(/\bsome\s+one\b/gi, "someone")
+      // Dynamic Room Vibe, Trimodal Seeing-Hearing-Thinking & Workstation Maintenance STT Normalizations
+      // Handles: "try chack with a conversation to fix all this type of issue need to maintain my room vibe to seeing haring and thinking dynamicaly for mainatain our work stations"
+      .replace(/\btry\s+(?:chack|chak|chek)\s+(?:with\s+a\s+)?conversation\s+to\s+fix\s+all\s+(?:this|these)\s+type\s+of\s+issues?\s+need\s+to\s+maintain\s+my\s+room\s+vibe\s+to\s+seeing\s+(?:haring|hearing)\s+and\s+thinking\s+(?:dynamicaly|dynamically)\s+for\s+(?:mainatain|maintain)\s+our\s+work\s*stations?\b/gi, "Try check with a conversation to fix all this type of issue, need to maintain my room vibe to seeing, hearing, and thinking dynamically to maintain our workstations")
+      .replace(/\bharing\b/gi, "hearing")
+      .replace(/\b(?:dynamicaly|dynamikally)\b/gi, "dynamically")
+      .replace(/\b(?:mainatain|maintan|mainten)\b/gi, "maintain")
+      .replace(/\bwork\s*stations\b/gi, "workstations")
+      // Law 55: Check Last Conversation, Fix Every Irritation & Robotic Sound STT Normalizations
+      // Handles: "chack the last conversation and fix every iritations and sound like robotic do"
+      .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?(?:last|previous|recent)\s+conversation\s+and\s+fix\s+every\s+(?:iritaions|irritations|iritatons)\s+and\s+sound\s+like\s+(?:robtic|robotic)(?:\s+do)?\b/gi, "Check the last conversation and fix every irritation and robotic sound")
+      .replace(/\b(?:chack|chak|chek)\s+(?:the\s+)?(?:last|previous)\s+conversation\b/gi, "check the last conversation")
+      .replace(/\bsound\s+like\s+(?:robtic|robotic)(?:\s+do)?\b/gi, "robotic sound");
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')

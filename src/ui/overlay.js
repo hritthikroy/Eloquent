@@ -449,13 +449,25 @@ ipcRenderer.on('jarvis-speaking', (_, data) => {
   ensureAnimating();
 });
 
+let isSilentObserverMode = false;
+
+ipcRenderer.on('set-silent-observer-mode', (_, active) => {
+  isSilentObserverMode = Boolean(active);
+  const recLabel = document.querySelector('.rec-label');
+  if (recLabel) {
+    recLabel.textContent = isSilentObserverMode ? 'Listening & Learning Silently...' : `${currentAgentName} listening...`;
+  }
+});
+
 ipcRenderer.on('jarvis-listening', (_, data) => {
   currentState = 'listening';
   if (data && data.agent) currentAgentName = data.agent;
   syncAuraVariables();
   setOverlayStateClass('listening');
   const recLabel = document.querySelector('.rec-label');
-  if (recLabel) recLabel.textContent = `${currentAgentName} listening...`;
+  if (recLabel) {
+    recLabel.textContent = isSilentObserverMode ? 'Listening & Learning Silently...' : `${currentAgentName} listening...`;
+  }
   ensureAnimating();
 });
 
@@ -585,6 +597,7 @@ function cleanupRenderer(hardAbort = false) {
       window.timerInterval = null;
     }
     sessionStartTime = null;
+    isSilentObserverMode = false;
   }
 
   // 4. Instantly vanish the overlay visually

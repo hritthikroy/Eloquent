@@ -2821,6 +2821,97 @@ async function stopRecording() {
         : { speakerId: 'hritthik', speakerName: (jarvisManager && typeof jarvisManager.isUserName === 'function' && jarvisManager.isUserName(originalText)) ? (jarvisManager.config?.userName || 'Hritthik') : 'Hritthik', role: 'creator_partner', confidence: 1.0, isGuest: false };
       console.log(`🎙️ Speaker Identified: ${speakerInfo.speakerName} (${speakerInfo.role || 'creator'}, confidence: ${speakerInfo.confidence || 1.0})`);
 
+      // Check if Silent Observer & Passive Learning Mode is active
+      const isSilentObserverActive = Boolean(
+        jarvisManager && (
+          (typeof jarvisManager.isSilentObserverPassiveLearningModeActive === 'function' && jarvisManager.isSilentObserverPassiveLearningModeActive()) ||
+          jarvisManager.preferences?.silent_observer_learning_mode_active ||
+          jarvisManager.preferences?.copresence_silent_learning_active
+        )
+      );
+
+      // Check if user is asking to disable or exit silent mode
+      const isDisableSilentCommand = /\b(?:disable\s+silent|stop\s+silent|turn\s+off\s+silent|exit\s+silent|unmute|start\s+speaking|resume\s+talking|kotha\s+bolo)\b/i.test(originalText);
+
+      // Check if user is activating the silent observer mode directive
+      const isActivatingSilentObserver = IntentParser && typeof IntentParser.isSilentObserverPassiveLearningDirective === 'function' && IntentParser.isSilentObserverPassiveLearningDirective(originalText);
+
+      // Check if the utterance explicitly summons or addresses an agent by name or direct command
+      const isExplicitAgentAddress =
+        isActivatingSilentObserver ||
+        isDisableSilentCommand ||
+        /\b(?:tuk\s*tuk|tuktuk|vision|friday|dd|brayn|brian|andrew|jarvis|squad|team|hey\s+team|hey\s+guys|all\s+agents)\b/i.test(originalText) ||
+        /\b(?:what\s+do\s+you\s+think|can\s+you|wake\s+up|help\s+us|look\s+at\s+(?:this|my\s+screen)|take\s+a\s+note|summarize|what\s+did\s+we\s+decide|did\s+you\s+catch\s+that)\b/i.test(originalText);
+
+      // If in Silent Observer Mode and user says "disable silent mode" / "unmute"
+      if (isSilentObserverActive && isDisableSilentCommand) {
+        console.log('🔊 [Silent Observer Mode Deactivated]: User requested vocal restoration.');
+        if (jarvisManager && typeof jarvisManager.calibrateSilentObserverPassiveLearningMode === 'function') {
+          jarvisManager.calibrateSilentObserverPassiveLearningMode({ active: false });
+        } else if (jarvisManager && typeof jarvisManager.setPreference === 'function') {
+          jarvisManager.setPreference('silent_observer_learning_mode_active', false);
+        }
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('set-silent-observer-mode', false);
+        }
+      } else if ((isSilentObserverActive || (speakerInfo && speakerInfo.isGuest)) && !isExplicitAgentAddress) {
+        // Conversing with someone else in the room: remain 100% silent, listen to the talk, and learn silently
+        console.log(`🤫 [Silent Observer & Passive Learning Active]: Conversing with someone else ("${originalText}"). Remaining 100% silent, learning passively...`);
+
+        if (overlayWindow && !overlayWindow.isDestroyed()) {
+          overlayWindow.webContents.send('set-agent-name', 'Silent Observer');
+          overlayWindow.webContents.send('jarvis-working', { agent: 'Silent Observer', action: 'Learning Silently' });
+        }
+
+        // 1. Record ambient multi-party turn into history & working memory
+        if (jarvisManager && typeof jarvisManager.addTurn === 'function') {
+          const speakerTag = (speakerInfo && speakerInfo.isGuest) ? (speakerInfo.speakerName || 'Guest') : 'Conversation';
+          jarvisManager.addTurn('user', `[Conversation]: ${originalText}`, speakerTag, activeLanguageMode);
+        }
+
+        saveToHistory({
+          id: Date.now(),
+          text: `[Learned Silently]: ${originalText}`,
+          originalText: originalText,
+          mode: 'silent_learning',
+          agent: 'Silent Observer',
+          timestamp: new Date().toISOString(),
+          duration: recordingDuration
+        });
+
+        // 2. Silently extract facts, entities, preferences & meeting insights into memory
+        if (jarvisManager && typeof jarvisManager.learnFromInteraction === 'function') {
+          jarvisManager.learnFromInteraction(originalText, '', 'silent_observer');
+        }
+        if (jarvisManager && typeof jarvisManager.consolidateDeepMemory === 'function' && originalText.trim().split(/\s+/).length >= 2) {
+          setTimeout(() => {
+            jarvisManager.consolidateDeepMemory(originalText, '', callGroqChatCompletion).catch(() => {});
+          }, 100);
+        }
+
+        // 3. Clear locks and immediately re-arm hands-free recording with zero vocal interruption
+        isProcessing = false;
+        isStopRecordingLock = false;
+
+        if (isJarvisLoopActive) {
+          lastInterruptedUtterance = null;
+          jarvisSpeechDetected = false;
+          jarvisSpeechStartTime = 0;
+          jarvisLastSpeechTime = 0;
+          jarvisSpeechFrames = 0;
+          jarvisAutoStopTriggered = false;
+          if (overlayWindow && !overlayWindow.isDestroyed()) {
+            overlayWindow.webContents.send('jarvis-listening');
+          }
+          setTimeout(() => {
+            if (isJarvisLoopActive && !isRecording && !isProcessing && !isSessionAborted && (!jarvisManager || !jarvisManager.isSpeaking)) {
+              startRecording();
+            }
+          }, 200);
+        }
+        return;
+      }
+
       // Check for voice preference change or explicit language command (e.g. "call me Hritthik", "talk in English", "speak in Bangla")
       const prefChange = jarvisManager.detectPreferenceChange(originalText);
       const activeLanguageMode = jarvisManager.evaluateLanguageTransition(originalText);
@@ -2991,6 +3082,11 @@ async function stopRecording() {
             jarvisReply = actionResult.speech;
             if (actionResult.dismissSession) {
               isJarvisLoopActive = false;
+            }
+            if (actionResult.action === 'silent_observer_passive_learning_directive') {
+              if (overlayWindow && !overlayWindow.isDestroyed()) {
+                overlayWindow.webContents.send('set-silent-observer-mode', true);
+              }
             }
           }
           // Record action/standup turns into in-memory conversation history for unbroken working context

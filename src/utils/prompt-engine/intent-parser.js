@@ -280,6 +280,36 @@ class IntentParser {
       };
     }
 
+    // 2.19325 Law 55: Check Last Conversation, Fix Every Irritation & Robotic Sound Directive
+    if (IntentParser.isCheckLastConversationFixIrritationsAndRoboticSoundDirective(lower)) {
+      let agentDirective = "tuktuk";
+      const mentionsTukTuk = /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক");
+      const mentionsVision = /\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন");
+      const mentionsFriday = /\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে");
+      const mentionsDD = /\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি");
+      const agentCount = [mentionsTukTuk, mentionsVision, mentionsFriday, mentionsDD].filter(Boolean).length;
+
+      if (agentCount >= 2 || /\b(?:squad|team|all\s+agents)\b/i.test(lower)) {
+        agentDirective = "team";
+      } else if (mentionsVision) {
+        agentDirective = "vision";
+      } else if (mentionsFriday) {
+        agentDirective = "friday";
+      } else if (mentionsDD) {
+        agentDirective = "dd";
+      } else if (mentionsTukTuk) {
+        agentDirective = "tuktuk";
+      }
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "check_last_conversation_fix_irritations_robotic_directive",
+        action: "check_last_conversation_fix_irritations_robotic_directive",
+        agentDirective
+      };
+    }
+
     // 2.1933 English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
     if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) {
       let agentDirective = "team";
@@ -414,22 +444,6 @@ class IntentParser {
       };
     }
 
-    // 2.2156 Continuous Session Timer & Long Context Window for Long Conversations Directive
-    if (IntentParser.isLongContextWindowPersistentTimerDirective(lower)) {
-      let agentDirective = "team";
-      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
-      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
-      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
-      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
-
-      return {
-        intent: INTENTS.SMOOTH_CONVERSATION,
-        confidence: 0.99,
-        target: "long_context_window_persistent_timer_directive",
-        action: "long_context_window_persistent_timer_directive",
-        agentDirective
-      };
-    }
 
     // 2.192 Long Context & Big Office Meeting Long Memory Directive
     if (IntentParser.isLongContextOfficeMeetingBigProblemDirective(lower)) {
@@ -892,6 +906,40 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "combat_extreme_noise_human_auditory_directive",
+        agentDirective
+      };
+    }
+
+    // 2.2158 Dynamic Room Vibe, Trimodal Seeing-Hearing-Thinking & Workstation Maintenance Directive
+    if (IntentParser.isDynamicRoomVibeWorkstationDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "dynamic_room_vibe_workstation_directive",
+        action: "dynamic_room_vibe_workstation_directive",
+        agentDirective
+      };
+    }
+
+    // 2.2157 Silent Observer & Passive Learning Mode Directive
+    if (IntentParser.isSilentObserverPassiveLearningDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "silent_observer_passive_learning_directive",
+        action: "silent_observer_passive_learning_directive",
         agentDirective
       };
     }
@@ -1990,6 +2038,7 @@ class IntentParser {
       (/\b(?:fast\s+satating|fast\s+starting)\s+(?:conversation|talk)?\b/i.test(lower) && /\b(?:doing\s+dely|doing\s+delay|delay\s+fix|dely\s+fix)\b/i.test(lower)) ||
       (/\b(?:instent|instant)\s+(?:reading|reply)\b/i.test(lower) && /\b(?:fast\s+satating|fast\s+starting|dely|delay)\b/i.test(lower)) ||
       (/\b(?:fix\s+this\s+issue|fix\s+issue)\b/i.test(lower) && /\b(?:instent|instant)\s+(?:reading|reply)\b/i.test(lower)) ||
+      (/\b(?:reading|readying)\s+voices?\b/i.test(lower) && /\b(?:so\s+much\s+time|takes\s+time|taking\s+time|doing\s+dely|delay|dely|slow)\b/i.test(lower)) ||
       (/(?:ইনস্ট্যান্ট\s*পড়া.*ইনস্ট্যান্ট\s*রিপ্লাই|দেরি\s*ছাড়া\s*কথা\s*শুরু|স্টার্ট\s*ডিলে\s*ফিক্স)/u.test(lower))
     );
   }
@@ -2016,6 +2065,48 @@ class IntentParser {
       (/\bcode[-\s]*mixed\s+english\s+for\s+(?:english|tech|technical)\s+work\b/i.test(lower)) ||
       (/\buse\s+english\s+work\s+mixed\b/i.test(lower)) ||
       (/(?:পুরোটা\s*খাঁটি\s*মিষ্টি\s*বাংলা.*(?:না|বাদ|বন্ধ|ভুল)|খাঁটি\s*মিষ্টি\s*বাংলা.*(?:না|বাদ)|টেক.*ইংলিশ\s*মিক্স|ইংলিশ\s*কাজের\s*জন্য\s*ইংলিশ\s*মিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Law 55: Check Last Conversation, Fix Every Irritation & Robotic Sound Directive
+   * Handles:
+   * "chack the last conversation and fix every iritations and sound like robotic do",
+   * "check the last conversation and fix every irritations and sound like robotic",
+   * "check last conversation fix every irritation", "fix every irritation and sound like robotic",
+   * "check last conversation fix irritations robotic sound", "fix sound like robotic",
+   * "sound like robotic fix all irritations", "গত কনভারসেশন চেক করে সব বিরক্তি ও রোবটিক সাউন্ড ফিক্স করো"
+   */
+  static isCheckLastConversationFixIrritationsAndRoboticSoundDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:chack|chak|check|cahck)\b/i.test(lower) && /\b(?:the\s+)?(?:last|previous|recent)\s+conversation\b/i.test(lower) && /\b(?:iritaions?|irritations?|iritatons?|robotic|robtic)\b/i.test(lower)) ||
+      (/\b(?:iritaions?|irritations?|iritatons?)\b/i.test(lower) && /\b(?:sound\s+like\s+(?:robtic|robotic)|(?:robtic|robotic)\s+sound)\b/i.test(lower)) ||
+      (/\bfix\s+(?:every|all)?\s*(?:iritaions?|irritations?|iritatons?)\b/i.test(lower)) ||
+      (/\b(?:chack|check)\s+(?:the\s+)?(?:last|previous)\s+conversation\b/i.test(lower) && /\bfix\b/i.test(lower) && /\b(?:robtic|robotic|iritaions?|irritations?)\b/i.test(lower)) ||
+      (/\bsound\s+like\s+(?:robtic|robotic)\s*(?:do|fix)?\b/i.test(lower) && (lower.includes("conversation") || lower.includes("irritation") || lower.includes("iritation") || lower.includes("chack") || lower.includes("check"))) ||
+      (/(?:আগের\s*কনভারসেশন.*(?:রোবটিক|বিরক্তি)|সব\s*রোবটিক.*সাউন্ড.*ফিক্স|বিরক্তি.*রোবটিক)/u.test(lower))
+    );
+  }
+
+  static isDynamicRoomVibeWorkstationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:dynamic\s+room\s+vibe|workstation\s+maintenance|trimodal\s+seeing[- ]hearing[- ]thinking)\b/i.test(lower)) ||
+      (/\broom\s+vibe\b/i.test(lower) && /\b(?:dynamic|maintenance|workstation)\b/i.test(lower)) ||
+      (/(?:রুম\s*ভাইব|ডাইনামিক\s*রুম)/u.test(lower))
+    );
+  }
+
+  static isWireAllLiveTestEquationsDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bwire\s+all\s+live\s+test\s+equations?\b/i.test(lower)) ||
+      (/\b(?:wire|wiring)\b/i.test(lower) && /\blive\s+test\s+equations?\b/i.test(lower)) ||
+      (/(?:সব\s*লাইভ\s*টেস্ট\s*ইকুয়েশন)/u.test(lower))
     );
   }
 
@@ -2807,12 +2898,15 @@ class IntentParser {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
     return (
-      (/\b(?:instent|instant|ready|readying|redying)\s+voices?\b/i.test(lower) && /\b(?:think|thinking)\s+(?:and|\&)\s+(?:talk|talking)\b/i.test(lower)) ||
+      (/\b(?:instent|instant|ready|readying|redying|reading|rading)\s+voices?\b/i.test(lower) && /\b(?:think|thinking)\s+(?:and|\&)\s+(?:talk|talking)\b/i.test(lower)) ||
       (/\b(?:think|thinking)\s+(?:and|\&)\s+(?:talk|talking)\s+(?:symentaniously|simultanously|simultaneously)\b/i.test(lower)) ||
       (/\b(?:parallly|parrallelly|parallelly|parallel)\s+(?:on|in)\s+(?:serice|series)\b/i.test(lower)) ||
       (/\b(?:simultaneously|symentaniously)\s+(?:in\s+)?(?:parallel|parallly)\b/i.test(lower)) ||
-      (/\b(?:instent|instant)\s+(?:redying|readying)\s+voices?\b/i.test(lower)) ||
-      (/(?:তাৎক্ষণিক\s*ভয়েস\s*প্রস্তুতি|যুগপৎ\s*সমান্তরাল\s*চিন্তন|একসাথে\s*চিন্তা\s*ও\s*কথা|প্যারালাল\s*স্ট্রিমিং|ভয়েস\s*রেডিনেস)/u.test(lower))
+      (/\b(?:instent|instant)\s+(?:redying|readying|reading)\s+voices?\b/i.test(lower)) ||
+      (/\b(?:readying|reading|redying|rading)\s+voices?\s+(?:is\s+)?(?:taking|get|getting)\s+(?:so\s+much|too\s+much|a\s+lot\s+of)\s+time\b/i.test(lower)) ||
+      (/\b(?:readying|reading|redying)\s+voices?\b/i.test(lower) && /\b(?:so\s+much\s+time|too\s+much\s+time|dely|delay|take\s+time|takes\s+time|slow|fix)\b/i.test(lower)) ||
+      (/\b(?:tuk\s*tuk|tuktuk)\s+(?:reading|readying|redying)\s+voices?\b/i.test(lower) && /\b(?:time|dely|delay|fix|slow)\b/i.test(lower)) ||
+      (/(?:তাৎক্ষণিক\s*ভয়েস\s*প্রস্তুতি|যুগপৎ\s*সমান্তরাল\s*চিন্তন|একসাথে\s*চিন্তা\s*ও\s*কথা|প্যারালাল\s*স্ট্রিমিং|ভয়েস\s*রেডিনেস|ভয়েস\s*রেডি\s*হতে\s*দেরি|পড়তে\s*দেরি)/u.test(lower))
     );
   }
 
@@ -2939,6 +3033,56 @@ class IntentParser {
       (/(?:টাইমার\s*রিসেট.*লং\s*কনটেক্সট|লং\s*কনটেক্সট.*টাইমার|কন্টিনিউয়াস\s*টাইমার|দীর্ঘ\s*কথোপকথন.*কনটেক্সট)/u.test(lower))
     );
   }
+
+  /**
+   * Centralized detector for Silent Observer, Passive Listening & Ambient Silent Learning Mode Directive
+   * Handles:
+   * "if i talk with some one need to be silent and lisen from our talk and learn sylently",
+   * "if i talk with someone need to be silent and listen to our talk and learn silently",
+   * "when i talk with someone be silent listen and learn silently",
+   * "silent listener mode", "silent observer mode", "passive listening mode",
+   * "কারো সাথে কথা বললে চুপ থাকো এবং আমাদের কথা শুনে নীরবে শেখো"
+   */
+  static isSilentObserverPassiveLearningDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:if|when)\s+i(?:\s+am)?\s+talk(?:ing)?\s+with\s+(?:some\s*one|someone|people|others?|anybody|anyone)\b/i.test(lower) &&
+        /\b(?:silent|quiet|shanto|chup)\b/i.test(lower) &&
+        /\b(?:learn|absorb|shikhe|shekho)\b/i.test(lower)) ||
+      (/\b(?:talk\s+with\s+(?:some\s*one|someone|others?)|conversation\s+with\s+(?:some\s*one|someone))\b/i.test(lower) &&
+        /\b(?:be\s+silent|stay\s+silent|remain\s+silent|keep\s+quiet)\b/i.test(lower) &&
+        /\b(?:listen|lisen|learn)\b/i.test(lower)) ||
+      (/\b(?:silent\s+and\s+(?:lisen|listen)|(?:lisen|listen)\s+and\s+learn\s+(?:sylently|silently))\b/i.test(lower) &&
+        /\b(?:talk|someone|some\s*one|conversation)\b/i.test(lower)) ||
+      (/\b(?:learn\s+(?:sylently|silently)|silent\s+learning\s+mode|passive\s+learning\s+mode|silent\s+observer\s+mode|silent\s+listener\s+mode)\b/i.test(lower)) ||
+      (/\b(?:need\s+to\s+be\s+silent|be\s+silent)\b/i.test(lower) && /\b(?:lisen|listen)\b/i.test(lower) && /\b(?:learn\s+(?:sylently|silently)|learn)\b/i.test(lower)) ||
+      (/(?:কারো\s*সাথে\s*কথা\s*বললে\s*চুপ|নীরবে\s*শুনবে\s*এবং\s*শিখবে|সাইলেন্ট\s*লিসেনার|সাইলেন্ট\s*অবজারভার)/u.test(lower))
+    );
+  }
+
+  /**
+   * 2.2158 Dynamic Room Vibe, Trimodal Seeing-Hearing-Thinking & Workstation Maintenance Directive
+   * Handles:
+   * "try chack with a conversation to fix all this type of issue need to maintain my room vibe to seeing haring and thinking dynamicaly for mainatain our work stations",
+   * "need to maintain my room vibe to seeing hearing and thinking dynamically to maintain our workstations",
+   * "maintain my room vibe", "maintain room vibe", "room vibe",
+   * "seeing hearing and thinking dynamically", "maintain our workstations",
+   * "রুমের পরিবেশ ও ওয়ার্কস্টেশন মেইনটেইন করো"
+   */
+  static isDynamicRoomVibeWorkstationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\broom\s+vibes?\b/i.test(lower) && /\b(?:seeing|seing|hearing|haring|thinking|work\s*stations?|maintain|mainatain)\b/i.test(lower)) ||
+      (/\b(?:maintain|mainatain|maintan)\s+(?:my\s+)?room\s+vibes?\b/i.test(lower)) ||
+      (/\b(?:seeing|seing)[,\s]+(?:hearing|haring)[,\s]*(?:and|\&)?\s*thinking\s+(?:dynamically|dynamicaly)\b/i.test(lower)) ||
+      (/\b(?:maintain|mainatain)\s+(?:our\s+)?work\s*stations?\b/i.test(lower) && /\b(?:room|vibe|seeing|hearing|haring|thinking)\b/i.test(lower)) ||
+      (/\b(?:try\s+(?:chack|check)\s+(?:with\s+a\s+)?conversation)\b/i.test(lower) && /\b(?:room\s+vibe|work\s*stations?|thinking\s+(?:dynamically|dynamicaly))\b/i.test(lower)) ||
+      (/\b(?:fix\s+all\s+this\s+type\s+of\s+issues?)\b/i.test(lower) && /\b(?:room\s+vibe|work\s*stations?)\b/i.test(lower)) ||
+      (/(?:রুম\s*ভাইব|রুমের\s*পরিবেশ|ওয়ার্কস্টেশন\s*মেইনটেইন|দেখা\s*শোনা\s*চিন্তা)/u.test(lower))
+    );
+  }
 }
 
 IntentParser.INTENTS = INTENTS;
@@ -3013,8 +3157,12 @@ module.exports = {
   isPromptEngineeringPipelineResilienceDirective: IntentParser.isPromptEngineeringPipelineResilienceDirective,
   isPromptEngineeringDirective: IntentParser.isPromptEngineeringDirective,
   isLongContextWindowPersistentTimerDirective: IntentParser.isLongContextWindowPersistentTimerDirective,
+  isSilentObserverPassiveLearningDirective: IntentParser.isSilentObserverPassiveLearningDirective,
   isUnbreakableLongSessionMemoryDirective: IntentParser.isUnbreakableLongSessionMemoryDirective,
-  isConversationalGapAndDelayFixDirective: IntentParser.isConversationalGapAndDelayFixDirective
+  isConversationalGapAndDelayFixDirective: IntentParser.isConversationalGapAndDelayFixDirective,
+  isCheckLastConversationFixIrritationsAndRoboticSoundDirective: IntentParser.isCheckLastConversationFixIrritationsAndRoboticSoundDirective,
+  isDynamicRoomVibeWorkstationDirective: IntentParser.isDynamicRoomVibeWorkstationDirective,
+  isWireAllLiveTestEquationsDirective: IntentParser.isWireAllLiveTestEquationsDirective
 };
 
 // Ensure all static methods on IntentParser are directly accessible on module.exports
