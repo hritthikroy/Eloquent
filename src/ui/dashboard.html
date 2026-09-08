@@ -799,6 +799,581 @@
       color: rgba(255, 255, 255, 0.7);
       line-height: 1.5;
     }
+
+    /* ==========================================================================
+       Agent Talk & Working Conversation History Hub Styling
+       ========================================================================== */
+    .history-stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(12px);
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: nowrap;
+    }
+
+    .stat-pill b {
+      font-weight: 700;
+    }
+
+    .stat-tuktuk {
+      background: rgba(244, 63, 94, 0.12);
+      border-color: rgba(244, 63, 94, 0.28);
+      color: #fda4af;
+    }
+
+    .stat-vision {
+      background: rgba(6, 182, 212, 0.12);
+      border-color: rgba(6, 182, 212, 0.28);
+      color: #67e8f9;
+    }
+
+    .stat-friday {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.28);
+      color: #6ee7b7;
+    }
+
+    .stat-brian {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.28);
+      color: #fcd34d;
+    }
+
+    .stat-squad {
+      background: rgba(139, 92, 246, 0.12);
+      border-color: rgba(139, 92, 246, 0.28);
+      color: #c4b5fd;
+    }
+
+    .stat-health {
+      margin-left: auto;
+      background: rgba(34, 197, 94, 0.15);
+      border-color: rgba(34, 197, 94, 0.35);
+      color: #86efac;
+    }
+
+    .stat-health.has-issues {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .history-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .history-filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .history-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+
+    .history-filter-pill:hover {
+      background: rgba(255, 255, 255, 0.13);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .history-filter-pill.active {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(59, 130, 246, 0.55);
+      color: #93c5fd;
+      font-weight: 600;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.2);
+    }
+
+    .history-filter-pill.issues-pill.active {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.55);
+      color: #fca5a5;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.2);
+    }
+
+    .filter-badge {
+      background: rgba(239, 68, 68, 0.85);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 2px;
+    }
+
+    /* Turn Card */
+    .turn-card {
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(16px);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .turn-card:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .turn-card.agent-card-tuktuk {
+      border-left: 4px solid #f43f5e;
+    }
+
+    .turn-card.agent-card-vision {
+      border-left: 4px solid #06b6d4;
+    }
+
+    .turn-card.agent-card-friday {
+      border-left: 4px solid #10b981;
+    }
+
+    .turn-card.agent-card-brian {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .turn-card.agent-card-squad {
+      border-left: 4px solid #8b5cf6;
+    }
+
+    .turn-card.agent-card-standard {
+      border-left: 4px solid #3b82f6;
+    }
+
+    .turn-card.has-issues-card {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(30, 25, 35, 0.8);
+    }
+
+    .turn-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .turn-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .turn-agent-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 9px;
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .turn-agent-tuktuk {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.25), rgba(225, 29, 72, 0.15));
+      border: 1px solid rgba(244, 63, 94, 0.45);
+      color: #fda4af;
+    }
+
+    .turn-agent-vision {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(14, 116, 144, 0.15));
+      border: 1px solid rgba(6, 182, 212, 0.45);
+      color: #67e8f9;
+    }
+
+    .turn-agent-friday {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(4, 120, 87, 0.15));
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+    }
+
+    .turn-agent-brian {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(180, 83, 9, 0.15));
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      color: #fcd34d;
+    }
+
+    .turn-agent-squad {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(109, 40, 217, 0.15));
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      color: #c4b5fd;
+    }
+
+    .turn-agent-standard {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(29, 78, 216, 0.15));
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      color: #93c5fd;
+    }
+
+    .turn-role-tag {
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.8;
+      margin-left: 2px;
+    }
+
+    .turn-id-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: all;
+    }
+
+    .turn-id-chip:hover {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
+
+    .turn-voice-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .turn-meta-time {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .turn-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .turn-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 11px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+
+    .turn-btn-replay {
+      background: rgba(139, 92, 246, 0.18);
+      border-color: rgba(139, 92, 246, 0.35);
+      color: #c4b5fd;
+    }
+
+    .turn-btn-replay:hover {
+      background: rgba(139, 92, 246, 0.3);
+      border-color: rgba(139, 92, 246, 0.6);
+      color: #fff;
+      transform: scale(1.03);
+    }
+
+    .turn-btn-copy {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
+
+    .turn-btn-copy:hover {
+      background: rgba(59, 130, 246, 0.28);
+      border-color: rgba(59, 130, 246, 0.55);
+      color: #fff;
+    }
+
+    .turn-btn-delete {
+      background: rgba(255, 59, 48, 0.12);
+      border-color: rgba(255, 59, 48, 0.25);
+      color: #fca5a5;
+    }
+
+    .turn-btn-delete:hover {
+      background: rgba(255, 59, 48, 0.25);
+      border-color: rgba(255, 59, 48, 0.45);
+      color: #fff;
+    }
+
+    /* Conversation dialog bubbles */
+    .turn-content-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .turn-bubble {
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14.5px;
+      line-height: 1.6;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      position: relative;
+    }
+
+    .turn-bubble-user {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .turn-bubble-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .turn-bubble-agent {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+    }
+
+    .turn-bubble-agent.bubble-tuktuk {
+      border-color: rgba(244, 63, 94, 0.25);
+      background: rgba(244, 63, 94, 0.05);
+    }
+
+    .turn-bubble-agent.bubble-vision {
+      border-color: rgba(6, 182, 212, 0.25);
+      background: rgba(6, 182, 212, 0.05);
+    }
+
+    .turn-bubble-agent.bubble-friday {
+      border-color: rgba(16, 185, 129, 0.25);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .turn-bubble-agent.bubble-brian {
+      border-color: rgba(245, 158, 11, 0.25);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .turn-bubble-agent.bubble-squad {
+      border-color: rgba(139, 92, 246, 0.25);
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    /* Working Action Details Drawer */
+    .turn-working-drawer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .turn-working-badge {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    /* Issue Diagnostics Banner */
+    .turn-issue-banner {
+      margin-top: 10px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .turn-issue-banner.issue-fixed {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    .turn-issue-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .turn-issue-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fca5a5;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .turn-issue-banner.issue-fixed .turn-issue-title {
+      color: #86efac;
+    }
+
+    .turn-issue-desc {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .btn-fix-single {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(185, 28, 28, 0.4));
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fecaca;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-fix-single:hover {
+      background: rgba(239, 68, 68, 0.5);
+      color: white;
+      transform: scale(1.04);
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+    }
+
+    /* Modern Toast */
+    .history-toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .history-toast {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 12px 18px;
+      color: white;
+      font-size: 13.5px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      max-width: 400px;
+    }
+
+    .history-toast.toast-success {
+      border-color: rgba(34, 197, 94, 0.5);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(6, 78, 59, 0.9));
+    }
+
+    .history-toast.toast-error {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(127, 29, 29, 0.9));
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes pulseSelfHeal {
+      0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); }
+      70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
+
+    .btn-self-heal {
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 10px;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      animation: pulseSelfHeal 3s infinite;
+    }
+
+    .btn-self-heal:hover {
+      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+    }
   </style>
 </head>
 
@@ -974,39 +1549,98 @@
     </div>
 
     <div id="history-section" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h1 style="margin: 0;">History</h1>
-        <button class="btn" id="clearAllHistoryBtn"
-          style="background: rgba(255, 59, 48, 0.15); color: #ff6b6b; border: 1px solid rgba(255, 59, 48, 0.3); padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 10px; transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-            stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-          Clear All
-        </button>
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #fff;">Agent Conversation History</h1>
+            <span style="background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); color: #86efac; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+              LIVE SYNC
+            </span>
+          </div>
+          <p style="color: rgba(255, 255, 255, 0.65); font-size: 13.5px; margin: 4px 0 0;">
+            All user prompts &amp; multi-agent replies across Tuk Tuk, Vision, Friday, Brian &amp; Squad with Turn IDs &amp; autonomous self-healing.
+          </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button id="fixAllIssuesBtn" class="btn-self-heal" title="Autonomous self-heal: fix all glitches, purge loops, re-warm TTS, restore living memory">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            ⚡ Fix All Issues / Self-Heal
+          </button>
+
+          <button id="exportHistoryBtn" class="btn" style="background: rgba(255, 255, 255, 0.08); color: white; border: 1px solid rgba(255, 255, 255, 0.2); padding: 9px 14px; font-size: 12.5px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export
+          </button>
+
+          <button id="clearAllHistoryBtn" class="btn" style="background: rgba(255, 59, 48, 0.12); color: #ff6b6b; border: 1px solid rgba(255, 59, 48, 0.25); padding: 9px 14px; font-size: 12.5px; font-weight: 600; border-radius: 10px; display: flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Clear All
+          </button>
+        </div>
       </div>
 
-      <!-- Search Bar -->
-      <div style="margin-bottom: 20px;">
-        <input type="text" id="historySearch" placeholder="Search transcriptions..."
-          style="width: 100%; padding: 14px 18px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white; backdrop-filter: blur(10px); transition: all 0.3s;"
-          onfocus="this.style.borderColor='rgba(59, 130, 246, 0.6)'; this.style.background='rgba(255, 255, 255, 0.15)'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)';"
-          onblur="this.style.borderColor='rgba(255, 255, 255, 0.2)'; this.style.background='rgba(255, 255, 255, 0.1)'; this.style.boxShadow='none';">
+      <!-- Live Telemetry & Stats Overview Bar -->
+      <div class="history-stats-bar" id="historyStatsBar">
+        <span class="stat-pill" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #93c5fd;">
+          📊 <b id="statTotalTurns">0</b> Total Turns
+        </span>
+        <span class="stat-pill stat-tuktuk">🌸 Tuk Tuk: <b id="statCountTuktuk">0</b></span>
+        <span class="stat-pill stat-vision">⚡ Vision: <b id="statCountVision">0</b></span>
+        <span class="stat-pill stat-friday">🧠 Friday: <b id="statCountFriday">0</b></span>
+        <span class="stat-pill stat-brian">🛡️ Brian: <b id="statCountBrian">0</b></span>
+        <span class="stat-pill stat-squad">👥 Squad: <b id="statCountSquad">0</b></span>
+        <span class="stat-pill stat-health" id="statHealthPill">
+          🩺 Health Score: <b id="statHealthScore">100%</b> (Operational)
+        </span>
       </div>
 
-      <!-- History List -->
-      <div id="historyList" style="display: flex; flex-direction: column; gap: 16px;">
-        <!-- History items will be inserted here -->
+      <!-- Controls: Filter Pills & Search -->
+      <div class="history-controls">
+        <div class="history-filter-pills" id="historyFilterPills">
+          <button class="history-filter-pill active" data-filter="all">🌐 All Agents</button>
+          <button class="history-filter-pill" data-filter="tuktuk">🌸 Tuk Tuk</button>
+          <button class="history-filter-pill" data-filter="vision">⚡ Vision</button>
+          <button class="history-filter-pill" data-filter="friday">🧠 Friday</button>
+          <button class="history-filter-pill" data-filter="brian">🛡️ Brian</button>
+          <button class="history-filter-pill" data-filter="squad">👥 Squad</button>
+          <button class="history-filter-pill issues-pill" data-filter="issues">
+            ⚠️ Issues Only <span id="issuesCountBadge" class="filter-badge" style="display: none;">0</span>
+          </button>
+        </div>
+
+        <div>
+          <input type="text" id="historySearch" placeholder="🔍 Search prompts, replies, Turn IDs (turn_...), voices, actions, or issues..."
+            style="width: 100%; padding: 13px 18px; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 12px; font-size: 14px; background: rgba(15, 23, 42, 0.6); color: white; backdrop-filter: blur(12px); transition: all 0.25s;"
+            onfocus="this.style.borderColor='rgba(59, 130, 246, 0.7)'; this.style.background='rgba(15, 23, 42, 0.85)'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.15)';"
+            onblur="this.style.borderColor='rgba(255, 255, 255, 0.18)'; this.style.background='rgba(15, 23, 42, 0.6)'; this.style.boxShadow='none';">
+        </div>
+      </div>
+
+      <!-- History Feed List -->
+      <div id="historyList" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- History turns will be inserted here -->
       </div>
 
       <!-- Empty State -->
       <div id="emptyHistory" class="card"
-        style="text-align: center; padding: 80px 40px; display: none; border: 1px solid rgba(255, 255, 255, 0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px;">
-        <div style="font-size: 64px; margin-bottom: 24px; opacity: 0.4; line-height: 1;">🎤</div>
-        <h3 style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: white; text-align: center; line-height: 1.3;">No transcriptions yet</h3>
-        <p style="color: rgba(255, 255, 255, 0.7); font-size: 15px; margin: 0; text-align: center; line-height: 1.5; max-width: 280px;">Press <strong
-            style="color: #60a5fa; font-weight: 600;">D D</strong> (double tap) to start your first recording</p>
+        style="text-align: center; padding: 70px 30px; display: none; border: 1px solid rgba(255, 255, 255, 0.15); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; background: rgba(15, 23, 42, 0.5);">
+        <div style="font-size: 54px; margin-bottom: 16px; opacity: 0.8;">🎙️</div>
+        <h3 style="font-size: 19px; font-weight: 600; margin-bottom: 8px; color: white; text-align: center;">No Agent Conversation Turns Found</h3>
+        <p style="color: rgba(255, 255, 255, 0.65); font-size: 14px; margin: 0; text-align: center; max-width: 380px; line-height: 1.5;">
+          Double tap <strong style="color: #60a5fa;">D D</strong> or speak to start talking with Tuk Tuk, Vision, Friday, Brian, or the Squad.
+        </p>
       </div>
     </div>
 
@@ -1507,6 +2141,7 @@
       initVehicleStateTelemetry();
     }
   </script>
+  <div id="historyToastContainer" class="history-toast-container"></div>
 </body>
 
 </html>

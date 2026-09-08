@@ -16,7 +16,10 @@ class ContextEnricher {
     // 1. Serialize multi-turn conversation history
     if (jarvisManager && typeof jarvisManager.getHistory === "function") {
       try {
-        const turns = jarvisManager.getHistory(16);
+        const isLongMem = (jarvisManager.isOfficeMeetingLongMemoryActive && jarvisManager.isOfficeMeetingLongMemoryActive()) ||
+          (rawInput && /\b(?:long\s+context|long\s+memory|office\s+meeting|big\s+problem)\b/i.test(rawInput));
+        const depth = isLongMem ? 128 : 24;
+        const turns = jarvisManager.getHistory(depth);
         context.dialogueContext = turns.map(t => `${t.role.toUpperCase()}: ${t.content}`);
       } catch (e) {
         console.warn("⚠️ [ContextEnricher] Failed to serialize history:", e.message);
@@ -34,8 +37,11 @@ class ContextEnricher {
     let integrityReport = "";
     try {
       const { ContextInjector } = require("../context-injector");
+      const isLongMem = (jarvisManager && jarvisManager.isOfficeMeetingLongMemoryActive && jarvisManager.isOfficeMeetingLongMemoryActive()) ||
+        (rawInput && /\b(?:long\s+context|long\s+memory|office\s+meeting|big\s+problem)\b/i.test(rawInput));
+      const depth = isLongMem ? 128 : 24;
       const turns = (jarvisManager && typeof jarvisManager.getHistory === "function")
-        ? jarvisManager.getHistory(16)
+        ? jarvisManager.getHistory(depth)
         : [];
       integrityReport = ContextInjector.formatIntegrityBlock(turns, {
         stack: context.workspaceContext,

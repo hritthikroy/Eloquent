@@ -137,6 +137,13 @@ Assemble the structured Antigravity developer prompt:`;
 
     let technicalObjective = "";
 
+    const isLongContextMeeting =
+      (/\b(?:long\s+context|long\s+memory)\b/i.test(cleanObjective) && /\b(?:big\s+proble|big\s+problem|office\s+meting|office\s+meeting|big\s+office|antigravty|antigravity)\b/i.test(cleanObjective)) ||
+      (/\b(?:office\s+meting|office\s+meeting|big\s+office)\b/i.test(cleanObjective) && /\b(?:long\s+context|long\s+memory|solve\s+big\s+proble|solve\s+big\s+problem|antigravty|antigravity|fix\s+all\s+issues)\b/i.test(cleanObjective)) ||
+      (/\b(?:solve\s+big\s+(?:proble|problem))\b/i.test(cleanObjective) && /\b(?:office\s+meting|office\s+meeting|antigravty|antigravity|long\s+context|long\s+memory)\b/i.test(cleanObjective)) ||
+      (/\b(?:long\s+context|long\s+memory)\b/i.test(cleanObjective) && /\b(?:antigravty|antigravity)\b/i.test(cleanObjective) && /\b(?:fix\s+all\s+issues|fix\s+issues)\b/i.test(cleanObjective)) ||
+      (/\b(?:i\s+need\s+long\s+context|need\s+long\s+context|need\s+long\s+memory)\b/i.test(cleanObjective));
+
     const isShortTermMemoryLoss =
       /\b(?:short\s*(?:time|term)|working)\s+memory\s+(?:loss|lost|issues?|drops?|fail|failing|wipe|wiped|leak|leaks|leaking)\b/i.test(cleanObjective) ||
       /\b(?:memory\s+loss|memory\s+lost)\b/i.test(cleanObjective) ||
@@ -146,7 +153,15 @@ Assemble the structured Antigravity developer prompt:`;
       /\b(?:fix|resolve|remediate)\s+(?:this\s+kind\s+of\s+)?(?:all\s+)?(?:these\s+|the\s+)?issues?\b/i.test(cleanObjective) ||
       /\b(?:prompt\s+engineering\s+pipeline\s+resilience|multi[- ]agent\s+intent\s+parsing|ast\s+schema\s+compliance)\b/i.test(cleanObjective);
 
-    if (isShortTermMemoryLoss) {
+    if (isLongContextMeeting) {
+      domainFiles = [
+        "- `src/utils/jarvis-manager.js`: Expand active working memory window to 128 turns, prevent context truncation, and maintain deep office meeting episodic retention.",
+        "- `src/utils/action-runner.js`: Guard office meeting long-memory directives against standup rollcall hijacking and automate Antigravity prompt dispatch.",
+        "- `src/utils/prompt-engine/context-enricher.js`: Deepen multi-turn dialogue serialization up to 128 turns for comprehensive problem-solving context.",
+        "- `src/utils/prompt-engine/prompt-assembler.js`: Structure complete multi-section Antigravity AST prompts with extended office meeting memory."
+      ];
+      technicalObjective = `Implement ultra-long context and office meeting episodic memory expansion with 128 turns, zero-loss multi-turn context retention, and automated Antigravity issue remediation, ensuring seamless integration across the Eloquent Electron workspace, high execution efficiency, and robust fault tolerance while preserving existing system invariants.`;
+    } else if (isShortTermMemoryLoss) {
       domainFiles = [
         "- `src/utils/jarvis-manager.js`: Expand active working memory window, prevent destructive history truncation, and inject living memory into compact prompts.",
         "- `src/utils/zero-loss-memory.js`: Ensure zero-loss Write-Ahead Logging and instant local fact extraction without cloud latency.",

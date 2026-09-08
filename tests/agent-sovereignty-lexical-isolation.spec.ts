@@ -15,6 +15,23 @@ async function runSovereigntyLexicalIsolationSuite() {
   let passed = 0;
   let total = 0;
 
+  // Ensure multi-agent sovereignty testing operates with multi-agent mode active
+  jarvisManager.singleRealVoiceActive = false;
+  jarvisManager.multiPersonalityDisabled = false;
+  jarvisManager.multiPersonVoiceDisabled = false;
+  if (jarvisManager.config) {
+    jarvisManager.config.userName = "Hritthik";
+    jarvisManager.config.singleRealVoiceActive = false;
+    jarvisManager.config.multiPersonalityDisabled = false;
+    jarvisManager.config.multiPersonVoiceDisabled = false;
+  }
+  if (jarvisManager.memory && jarvisManager.memory.preferences) {
+    delete jarvisManager.memory.preferences.single_real_voice_active;
+    delete jarvisManager.memory.preferences.multi_personality_disabled;
+    delete jarvisManager.memory.preferences.multi_person_voice_disabled;
+    delete jarvisManager.memory.preferences.single_voice_tuktuk_exclusive;
+  }
+
   function test(description: string, fn: () => void | Promise<void>) {
     total++;
     try {

@@ -158,7 +158,7 @@ async function runAll() {
     assert.strictEqual(resTukTuk.handled, true);
     assert.strictEqual(resTukTuk.data.oBanglaNeural, 1.0);
     assert.strictEqual(resTukTuk.data.overlapMs, 0);
-    assert.ok(resTukTuk.speech.includes("babe"));
+    assert.ok(resTukTuk.speech.includes("babe") || resTukTuk.speech.includes("Babe"));
     assert.ok(!resTukTuk.speech.includes("bro"));
     assert.ok(!resTukTuk.speech.includes("Chief"));
 

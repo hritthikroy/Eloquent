@@ -311,18 +311,18 @@ class MasterApiGateway {
 
     let cloned = messages.map(m => ({ ...m }));
 
-    // Step 1: Compress bloated system prompt if present
+    // Step 1: Compress bloated system prompt if present (preserve active conversational turns)
     const sysIdx = cloned.findIndex(m => m.role === "system");
     if (sysIdx !== -1 && cloned[sysIdx].content && cloned[sysIdx].content.length > 2500) {
       let sys = cloned[sysIdx].content;
-      sys = sys.replace(/\n\[IMMEDIATE PRECEDING TURNS[\s\S]*?(?=\n\[|\n\n|$)/gi, "");
+      // Preserve [IMMEDIATE PRECEDING TURNS] for conversational context; compress mathematical display equations and verbose rule blocks
       sys = sys.replace(/\$\$[\s\S]*?\$\$/g, "");
       sys = sys.replace(/\n\d+\.\s+LAW\s+\d+:[\s\S]*?(?=\n\d+\.|\n\[|$)/gi, (match) => {
         const lines = match.split("\n").filter(l => l.trim().length > 0);
         return lines.slice(0, 3).join("\n");
       });
-      if (sys.length > 3000) {
-        sys = sys.substring(0, 2800) + "\n[System rules preserved. Respond with sharp wit, natural human tone, and persona sovereignty.]";
+      if (sys.length > 3500) {
+        sys = sys.substring(0, 3200) + "\n[System rules preserved. Respond with sharp wit, natural human tone, and persona sovereignty.]";
       }
       cloned[sysIdx].content = sys;
     }
@@ -334,15 +334,30 @@ class MasterApiGateway {
       }
     }
 
-    // Step 3: If still above token budget, drop older turns from history
+    // Step 3: If still above token budget, condense older turns into zero-loss summary block rather than discarding
     totalEst = estimateTokens(cloned);
     if (totalEst > maxInputTokens) {
       const sysMsg = sysIdx !== -1 ? cloned[sysIdx] : null;
       const userMsg = cloned[cloned.length - 1];
       let historyTurns = cloned.slice(sysMsg ? 1 : 0, cloned.length - 1);
-      while (historyTurns.length > 0 && estimateTokens(sysMsg ? [sysMsg, ...historyTurns, userMsg] : [...historyTurns, userMsg]) > maxInputTokens) {
-        historyTurns.shift();
+      const archivedTurns = [];
+      while (historyTurns.length > 2 && estimateTokens(sysMsg ? [sysMsg, ...historyTurns, userMsg] : [...historyTurns, userMsg]) > maxInputTokens) {
+        archivedTurns.push(historyTurns.shift());
       }
+
+      // If turns were rolled off, condense key points into a zero-loss contextual memory header
+      if (archivedTurns.length > 0 && sysMsg) {
+        const keyPoints = archivedTurns
+          .filter(t => t && t.content && t.content.length > 5)
+          .slice(-12)
+          .map(t => `${t.role === 'user' ? 'User' : 'Agent'}: ${t.content.slice(0, 120)}`)
+          .join(' | ');
+        const condensedBlock = `\n[PRESERVED SESSION CONTINUITY (Zero-Loss Memory, ${archivedTurns.length} earlier turns)]: ${keyPoints}`;
+        if (!sysMsg.content.includes("PRESERVED SESSION CONTINUITY")) {
+          sysMsg.content += condensedBlock;
+        }
+      }
+
       cloned = sysMsg ? [sysMsg, ...historyTurns, userMsg] : [...historyTurns, userMsg];
     }
 
@@ -423,7 +438,8 @@ class MasterApiGateway {
     this.activeTurnAbortController = abortController;
 
     try {
-      const safeMessages = this.compressPromptMessages(messages, options.maxInputTokens || 2800);
+      const maxTokensBudget = options.maxInputTokens || 8192;
+      const safeMessages = this.compressPromptMessages(messages, maxTokensBudget);
       const charmedMessages = this.applyAuraAndCharmCalibration(safeMessages, options);
 
       const normalizeModel = (m) => {

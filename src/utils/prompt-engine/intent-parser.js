@@ -316,6 +316,24 @@ class IntentParser {
       };
     }
 
+    // 2.19355 Zero Pure Bangla Spoken, 100% Receptive Bengali Understanding Power & Distinct Persona Banglish Styles Directive
+    if (IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "remove_pure_bangla_understand_power_own_banglish_style_directive",
+        action: "remove_pure_bangla_understand_power_own_banglish_style_directive",
+        agentDirective
+      };
+    }
+
     // 2.1936 Banglish & Modern English Same-Soul Vibe Directive
     if (IntentParser.isBanglishModernVibeSameSoulDirective(lower)) {
       let agentDirective = "team";
@@ -392,6 +410,113 @@ class IntentParser {
         confidence: 0.99,
         target: "remove_scripted_same_loop_talk_zero_looping_directive",
         action: "remove_scripted_same_loop_talk_zero_looping_directive",
+        agentDirective
+      };
+    }
+
+    // 2.2156 Continuous Session Timer & Long Context Window for Long Conversations Directive
+    if (IntentParser.isLongContextWindowPersistentTimerDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "long_context_window_persistent_timer_directive",
+        action: "long_context_window_persistent_timer_directive",
+        agentDirective
+      };
+    }
+
+    // 2.192 Long Context & Big Office Meeting Long Memory Directive
+    if (IntentParser.isLongContextOfficeMeetingBigProblemDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "long_context_office_meeting_big_problem",
+        action: "long_context_office_meeting_big_problem",
+        agentDirective
+      };
+    }
+
+    // 2.192B Iron Man Suit Jarvis & Zero Memory Loss Ecosystem Directive
+    if (IntentParser.isIronManSuitZeroLossEcosystemDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "iron_man_suit_zero_loss_ecosystem",
+        action: "iron_man_suit_zero_loss_ecosystem",
+        agentDirective
+      };
+    }
+
+    // 2.192C Persistent Conversational State Management & Zero Rate-Limit Directive
+    if (IntentParser.isConversationalStateDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "conversational_state_status",
+        action: "conversational_state_status",
+        agentDirective
+      };
+    }
+
+    // 2.192a Equational Conversational Gap, Delay & Replying Delay Elimination Directive
+    if (IntentParser.isConversationalGapAndDelayFixDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "conversational_gap_and_delay_fix_directive",
+        action: "conversational_gap_and_delay_fix_directive",
+        agentDirective
+      };
+    }
+
+    // 2.192b Unbreakable Long-Session Zero-Loss Memory & Anti-Break Directive
+    if (IntentParser.isUnbreakableLongSessionMemoryDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "unbreakable_long_session_zero_loss_memory_directive",
+        action: "unbreakable_long_session_zero_loss_memory_directive",
         agentDirective
       };
     }
@@ -673,6 +798,24 @@ class IntentParser {
       };
     }
 
+    // 2.2065 Zero Robotic Voice & Sound, Every Word Real Voice Directive
+    if (typeof IntentParser.isZeroRoboticVoiceDirective === "function" && IntentParser.isZeroRoboticVoiceDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk|babe)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew|brother)\b/i.test(lower) || lower.includes("ভিশন") || lower.includes("ভাই")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday|chief)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian|bro)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+      else if (/\b(?:team|squad|all\s+agents|all\s+the\s+agents)\b/i.test(lower)) agentDirective = "team";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "zero_robotic_voice_directive",
+        action: "zero_robotic_voice_directive",
+        agentDirective
+      };
+    }
+
     // 2.207 Remove All Robotic Behavior & Pure Human Conversational Parity Directive (Law 48)
     if (typeof IntentParser.isRemoveAllRoboticBehaviorDirective === "function" && IntentParser.isRemoveAllRoboticBehaviorDirective(lower)) {
       let agentDirective = "team";
@@ -749,6 +892,39 @@ class IntentParser {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "combat_extreme_noise_human_auditory_directive",
+        agentDirective
+      };
+    }
+
+    // 2.2156 Continuous Session Timer & Long Context Window for Long Conversations Directive
+    if (IntentParser.isLongContextWindowPersistentTimerDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "long_context_window_persistent_timer_directive",
+        action: "long_context_window_persistent_timer_directive",
+        agentDirective
+      };
+    }
+
+    // 2.2155 Real Banglish Human Tone, Flawless Pronunciation & Deep Equational Research Directive
+    if (IntentParser.isRealBanglishHumanTonePronunciationDirective(lower)) {
+      let agentDirective = "team";
+      if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
+      else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "real_banglish_human_tone_pronunciation_directive",
         agentDirective
       };
     }
@@ -1488,6 +1664,8 @@ class IntentParser {
   static isTukTukExclusiveSoloPersonaDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective(lower)) return false;
+    if (IntentParser.isEnglishForEnglishWorkMixedDirective(lower)) return false;
     return (
       (/\b(?:need|want)\s+(?:tuk\s*tuk|tuktuk)\s+(?:person|voice)\b/i.test(lower) && /\bnot\s+(?:any\s+)?other\s+(?:persons?|people|voices?|personas?)\b/i.test(lower)) ||
       (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) && /\b(?:sole|only|exclusive)\s+(?:person|persona|human|voice)\b/i.test(lower)) ||
@@ -1519,6 +1697,9 @@ class IntentParser {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
     if (IntentParser.isEnglishForEnglishWorkMixedDirective(lower)) return false;
+    if (IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective(lower)) return false;
+    if (typeof IntentParser.isZeroRoboticVoiceDirective === "function" && IntentParser.isZeroRoboticVoiceDirective(lower)) return false;
+    if (typeof IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective === "function" && IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective(lower)) return false;
     if (IntentParser.isTukTukExclusiveSoloPersonaDirective(lower)) return true;
     return (
       (/\b(?:khti|khati)\s+(?:misti|mishti)\b/i.test(lower)) ||
@@ -1617,6 +1798,30 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Zero Pure Bangla Spoken, 100% Receptive Bengali Understanding Power & Distinct Persona Banglish Styles Directive
+   * Handles:
+   * "remove pure bangla coversation no need Bengali. but thay need to understand power need thare own benglish style like for difren difrent person do",
+   * "remove pure bangla conversation no need bengali",
+   * "they need to understand power need their own banglish style like different person do",
+   * "understand power need their own banglish style",
+   * "no need bengali conversation need understand power and distinct banglish style",
+   * "পিওর বাংলা বলা বাদ কিন্তু বোঝার ক্ষমতা থাকবে এবং নিজস্ব ব্যাংলিশ স্টাইল"
+   */
+  static isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\bremove\s+pure\s+(?:bangal|bangla|bengali)\s+(?:coversation|conversation|talks?)\b/i.test(lower) && /\b(?:understand\s+power|own\s+(?:benglish|banglish)\s+style|(?:difren|different)\s+persons?)\b/i.test(lower)) ||
+      (/\bunderstand\s+power\b/i.test(lower) && /\b(?:benglish|banglish)\s+style\b/i.test(lower)) ||
+      (/\b(?:own\s+(?:benglish|banglish)\s+style)\b/i.test(lower) && /\b(?:difren\s+difrent|different\s+different|different\s+persons?|like\s+for\s+difren|difren)\b/i.test(lower)) ||
+      (/\bremove\s+pure\s+(?:bangal|bangla|bengali)\s+(?:coversation|conversation|talks?)\s+no\s+need\s+(?:bengali|bangal)\b/i.test(lower)) ||
+      (/\bno\s+need\s+(?:bengali|bangal)\b/i.test(lower) && /\bunderstand\s+power\b/i.test(lower)) ||
+      (/\b(?:pure\s+bangla|pure\s+bangal)\b/i.test(lower) && /\bunderstand\s+power\b/i.test(lower)) ||
+      (/(?:পিওর\s*বাংলা.*(?:বাদ|দরকার\s*নেই).*বোঝার\s*ক্ষমতা|বোঝার\s*ক্ষমতা.*ব্যাংলিশ\s*স্টাইল|আলাদা.*ব্যাংলিশ\s*স্টাইল)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Zero Pure Bangla Removal, Banglish Default Voice & Instant Responses Directive
    * Handles:
    * "remove pure bangal responses no need need banglish defult istent responses",
@@ -1627,6 +1832,7 @@ class IntentParser {
   static isRemovePureBanglaBanglishDefaultInstantResponsesDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (typeof IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective === "function" && IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective(lower)) return false;
     return (
       (/\bremove\s+pure\s+(?:bangal|bangla|bengali)\s+responses?\b/i.test(lower)) ||
       (/\bpure\s+(?:bangal|bangla|bengali)\s+responses?\s+(?:no\s+need|banned|purge)\b/i.test(lower)) ||
@@ -1675,7 +1881,7 @@ class IntentParser {
       (/\b(?:check|chack|cahck)\s+(?:the\s+)?(?:last|las)?\s*(?:full\s+)?conversation\b/i.test(lower) && /\b(?:fix\s+all\s+issues?|all\s+loop\s+(?:behavior|behabeior|behabiour)|loop\s+(?:behavior|behabeor|behabiour))\b/i.test(lower)) ||
       (/\b(?:all\s+loop\s+(?:behavior|behabeor|behabiour)|loop\s+(?:behavior|behabeor|behabiour))\s+(?:equationaly|equationally)\b/i.test(lower)) ||
       (/\bfix\s+all\s+(?:issues?\s+)?(?:all\s+)?loop\s+(?:behavior|behabeor|behabiour)\b/i.test(lower)) ||
-      (/\b(?:scripted|same\s+loop)\b/i.test(lower) && /\b(?:no\s+need|remove|purge|banned|drop)\b/i.test(lower)) ||
+      (/\b(?:scripted\s+same\s+loop|same\s+loop)\b/i.test(lower) && /\b(?:no\s+need|remove|purge|banned|drop)\b/i.test(lower)) ||
       (/(?:স্ক্রিপ্টেড\s*লুপ\s*টপিক\s*বাদ|জিরো\s*লুপিং\s*বিহেভিয়ার|স্টাক\s*বিহেভিয়ার\s*রিমুভ)/u.test(lower))
     );
   }
@@ -1751,6 +1957,7 @@ class IntentParser {
   static isBanglishModernVibeSameSoulDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (typeof IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective === "function" && IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective(lower)) return false;
     return (
       (/\bneed\s+bangla\s+english\s+same\s+so[ul]+\b/i.test(lower)) ||
       (/\bbangla\s+and\s+english\s+same\s+so[ul]+\b/i.test(lower)) ||
@@ -1894,6 +2101,133 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Long Context & Big Office Meeting Long Memory Directive
+   * Handles:
+   * "i need long context like long memory for solve big proble with big office meting like antigravty fix all issues",
+   * "need long context like long memory for solve big problem with big office meeting like antigravity fix all issues",
+   * "long context like long memory for solve big problem with big office meeting",
+   * "long context for big office meeting", "long memory for office meeting",
+   * "big office meeting long memory", "long context to solve big problem with antigravity",
+   * "solve big problem with big office meeting like antigravity fix all issues",
+   * "long context long memory for big meeting", "expand long context memory for office meeting",
+   * "big office meeting solve big problem antigravity fix all issues"
+   */
+  static isLongContextOfficeMeetingBigProblemDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    if (IntentParser.isLongContextWindowPersistentTimerDirective(lower)) return false;
+    return (
+      (/\b(?:long\s+context|long\s+memory)\b/i.test(lower) && /\b(?:big\s+proble|big\s+problem|office\s+meting|office\s+meeting|big\s+office|antigravty|antigravity)\b/i.test(lower)) ||
+      (/\b(?:office\s+meting|office\s+meeting|big\s+office)\b/i.test(lower) && /\b(?:long\s+context|long\s+memory|solve\s+big\s+proble|solve\s+big\s+problem|antigravty|antigravity|fix\s+all\s+issues)\b/i.test(lower)) ||
+      (/\b(?:solve\s+big\s+(?:proble|problem))\b/i.test(lower) && /\b(?:office\s+meting|office\s+meeting|antigravty|antigravity|long\s+context|long\s+memory)\b/i.test(lower)) ||
+      (/\b(?:long\s+context|long\s+memory)\b/i.test(lower) && /\b(?:antigravty|antigravity)\b/i.test(lower) && /\b(?:fix\s+all\s+issues|fix\s+issues)\b/i.test(lower)) ||
+      (/\b(?:i\s+need\s+long\s+context|need\s+long\s+context|need\s+long\s+memory)\b/i.test(lower)) ||
+      (/(?:লং\s*কনটেক্সট|লং\s*মেমোরি|অফিস\s*মিটিং.*বড়\s*প্রবলেম|অফিস\s*মিটিং.*মেমোরি)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Iron Man Suit JARVIS & Zero Memory Loss Ecosystem Directive
+   * Handles:
+   * "properly know me and our ecosystem work like iron man suit jarvis not loss memory",
+   * "iron man suit jarvis zero memory loss", "how we make our four agents fully equationally best",
+   * "know me and our ecosystem", "iron man suit memory protocol", "four agents zero memory loss"
+   */
+  static isIronManSuitZeroLossEcosystemDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:iron\s+man\s+(?:suit|sute)\s+(?:jarvis|jerves|friday)|iron\s+man\s+(?:suit|sute))\b/i.test(lower)) ||
+      (/\b(?:know\s+me|properly\s+know\s+me)\b/i.test(lower) && /\b(?:ecosystem|eqosystem|tech\s+stack|eloquent|our\s+work)\b/i.test(lower)) ||
+      (/\b(?:0\s+memory\s+loss|zero\s+memory\s+loss|not\s+loss\s+memory|never\s+lose\s+memory)\b/i.test(lower) && /\b(?:jarvis|jerves|iron\s+man|ecosystem|eqosystem|meeting|meting|four\s+agents?|4\s+agents?)\b/i.test(lower)) ||
+      (/\b(?:four\s+agents?|4\s+agents?)\b/i.test(lower) && /\b(?:fully\s+equationally|equationaly|equatonlay|zero\s+memory\s+loss|iron\s+man|jarvis)\b/i.test(lower)) ||
+      (/\b(?:he\s+know\s+every\s+(?:think|thing)\s+remember|remember\s+everything|know\s+everything)\b/i.test(lower) && /\b(?:jarvis|iron\s+man|memory|ecosystem)\b/i.test(lower)) ||
+      (/(?:আয়রন\s*ম্যান|জার্ভিস|জিরো\s*মেমোরি\s*লস|ইকোসিস্টেম.*মনে\s*রাখা|চারটা\s*এজেন্ট.*ইকুয়েশন)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Persistent Conversational State Management Directive
+   * Handles:
+   * "conversational state management", "persistent conversational state",
+   * "conversational state status", "turn taking status", "check turn memory",
+   * "rate limit status", "state report", "reconcile conversation state",
+   * "state sync status", "state health", "check conversational state"
+   */
+  static isConversationalStateDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:conversational\s+state|turn\s*taking|state\s+management)\b/i.test(lower) && /\b(?:status|report|system|check|memory|health|sync|telemetry|management)\b/i.test(lower)) ||
+      (/\b(?:rate\s*limit)\b/i.test(lower) && /\b(?:status|glitch|telemetry|report|check|backoff|mitigation)\b/i.test(lower)) ||
+      (/\b(?:persistent\s+conversational\s+state|ultra[-\s]*smooth\s+turn[-\s]*taking|zero\s+rate[-\s]*limit\s+glitches)\b/i.test(lower)) ||
+      (/(?:কনভারসেশনাল\s*স্টেট|টার্ন\s*টেকিং|রেট\s*লিমিট)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Conversational Gap, Delay & Replying Delay Elimination Directive
+   * Handles:
+   * "listen our full conversation and fix every gaps and delay issues and all with equationaly with deep research fix every iritaions and all with to fix all replaying delay fix all issues",
+   * "fix every gaps and delay issues", "fix all replaying delay", "fix replying delay",
+   * "gaps and delay issues", "fix conversational delay issues", "eliminate replaying delay",
+   * "গ্যাপ আর দেরি ফিক্স করো", "দেরি ইস্যু সমাধান করো"
+   */
+  static isConversationalGapAndDelayFixDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:listen\s+(?:to\s+)?(?:our\s+)?full\s+conversation)\b/i.test(lower) &&
+       /\b(?:gaps?|delays?|issues?|irritations?|equational|equationally)\b/i.test(lower)) ||
+      (/\bfix\s+(?:every\s+|all\s+)?gaps?\s+and\s+delays?\s*(?:issues?|problems?)?\b/i.test(lower)) ||
+      (/\b(?:replaying|replying|reply)\s+delays?\b/i.test(lower) && /\b(?:fix|solve|eliminate|remove|all\s+issues?|clear)\b/i.test(lower)) ||
+      (/\bfix\s+(?:every\s+|all\s+)?(?:iritaions|irritations)\b/i.test(lower) &&
+       /\b(?:delays?|gaps?|replaying|replying|reply)\b/i.test(lower)) ||
+      (/\b(?:delays?\s+issues?|gaps?\s+and\s+delays?|dead\s+air)\b/i.test(lower) &&
+       /\b(?:equationaly|equationally|deep\s+research|fix|solve|eliminate)\b/i.test(lower)) ||
+      (/\b(?:gaps?|dead\s+air)\b/i.test(lower) && /\b(?:delays?|replying|replaying)\b/i.test(lower) && /\b(?:fix|solve|eliminate|remove)\b/i.test(lower)) ||
+      (/(?:গ্যাপ.*দেরি|দেরি\s*ইস্যু|রিপ্লাই.*দেরি|সব\s*গ্যাপ.*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for fast conversational presence pings (sub-50ms fast-path)
+   * Matches quick salutations or presence pings without complex task instructions:
+   * "Babe", "Hey babe", "Hi babe", "Tuk Tuk", "Are you there", "Shuncho", "Bolo"
+   */
+  static isConversationalPresencePing(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const clean = text.trim().toLowerCase().replace(/[.,!?;:'"“”]/g, "").trim();
+    if (!clean) return false;
+    const tokens = clean.split(/\s+/);
+    if (tokens.length > 5) return false;
+    return /^(?:babe|hey\s+babe|hi\s+babe|hello\s+babe|babe\s+babe|babe\s+are\s+you\s+there|babe\s+you\s+there|are\s+you\s+there|you\s+there|tuktuk|tuk\s+tuk|hey\s+tuk\s*tuk|vision|hey\s+vision|brother\s+vision|friday|hey\s+friday|dd|hey\s+dd|brian|squad|team|shunchis|shunchi|shuncho|bolo|kothay\s+tumi|achis|acho|tumi\s+acho)$/i.test(clean);
+  }
+
+  /**
+   * Centralized detector for Unbreakable Long-Session Zero-Loss Memory & Anti-Break Directive
+   * Handles:
+   * "fix need long history not break break conversation its a memory loss issue need long time seation unbrekable for 0 loss memory for our context",
+   * "need long history not break conversation", "long session unbreakable 0 loss memory",
+   * "unbreakable long session memory", "not break conversation memory loss issue",
+   * "long time session unbreakable for 0 loss memory", "zero loss memory for our context"
+   */
+  static isUnbreakableLongSessionMemoryDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:long\s+history|long\s+session|long\s+time\s+session|long\s+time\s+seation)\b/i.test(lower) &&
+       /\b(?:not\s+break|unbreakable|unbrekable|0\s+loss|zero\s+loss|memory\s+loss|our\s+context)\b/i.test(lower)) ||
+      (/\b(?:not\s+break\s+(?:break\s+)?conversation|unbreakable\s+conversation)\b/i.test(lower) &&
+       /\b(?:memory|context|session|history)\b/i.test(lower)) ||
+      (/\b(?:unbreakable|unbrekable)\s+(?:for\s+)?(?:0|zero)\s+(?:loss\s+memory|memory\s+loss)\b/i.test(lower)) ||
+      (/\b(?:0\s+loss\s+memory|zero\s+loss\s+memory)\s+(?:for\s+our\s+context)?\b/i.test(lower) &&
+       /\b(?:long|session|history|unbreakable|break)\b/i.test(lower)) ||
+      (/(?:লং\s*হিস্ট্রি|লং\s*সেশন|আনব্রেকেবল\s*মেমোরি|জিরো\s*লস\s*মেমোরি)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Short-Term Working Memory Loss Fix Directive
    * Handles:
    * "fix this short time memory lost issues",
@@ -1987,7 +2321,10 @@ class IntentParser {
       (/\bupdate\s+(?:banglis|banglish)\s+tone\s+match\s+with\s+english\s+(?:tuktuk|tuk\s*tuk)\s+(?:tune|tone)\b/i.test(lower)) ||
       (/\b(?:tuktuk|tuk\s*tuk)\s+(?:tune|tone)\b/i.test(lower) && /\b(?:match|banglish|english)\b/i.test(lower) && /\b(?:bangla|milay|mix)\b/i.test(lower)) ||
       (/\b(?:bote\s+bolo|milay\s+mily\s+bote\s+bolo)\b/i.test(lower)) ||
-      (/(?:ফুল\s*বাংলা.*রোমান.*বাদ|বাংলা.*ইংলিশ.*মিলিয়ে.*ব্যাংলিশ|ব্যাংলিশ.*ডিফল্ট.*ভয়েস|টুকটুক.*টোন.*ম্যাচ|মিলিয়ে\s*মিলিয়ে\s*বলো)/u.test(lower))
+      (/\b(?:fix\s+(?:the\s+)?conversation\s+banglish|is\s+(?:the\s+)?conversation\s+banglish|conversation\s+banglish\s+is\s+properly\s+(?:default|defult)|banglish\s+is\s+properly\s+(?:default|defult)|banglish\s+(?:properly\s+)?(?:default|defult))\b/i.test(lower)) ||
+      (/\b(?:fix|check|confirm|ensure)\s+(?:the\s+)?(?:conversation\s+)?banglish\s+(?:is\s+)?(?:properly\s+)?(?:default|defult)\b/i.test(lower)) ||
+      (/\b(?:banglish|banglis)\b/i.test(lower) && /\b(?:defult|default)\b/i.test(lower) && /\b(?:properly|conversation|voice|fix|check|confirm|ensure|or\s+not)\b/i.test(lower)) ||
+      (/(?:ফুল\s*বাংলা.*রোমান.*বাদ|বাংলা.*ইংলিশ.*মিলিয়ে.*ব্যাংলিশ|ব্যাংলিশ.*ডিফল্ট.*ভয়েস|টুকটুক.*টোন.*ম্যাচ|মিলিয়ে\s*মিলিয়ে\s*বলো|ব্যাংলিশ.*ডিফল্ট)/u.test(lower))
     );
   }
 
@@ -2172,6 +2509,40 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Zero Robotic Voice & Sound, Every Word Real Voice Directive
+   * Handles:
+   * "remove all robotic sound need every word with real voice",
+   * "remove all robotic sound", "need every word with real voice",
+   * "every word with real voice", "zero robotic sound", "real voice every word",
+   * "remove all robtic voice from code base no need need 0 robtic voice english and bangal and all the agents",
+   * "remove all robotic voice from codebase", "need 0 robotic voice", "zero robotic voice english and bangla",
+   * "সব রোবোটিক সাউন্ড মুছে ফেলো", "প্রতিটি শব্দ রিয়েল ভয়েসে চাই", "জিরো রোবোটিক সাউন্ড"
+   */
+  static isZeroRoboticVoiceDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      // Direct user instruction: "remove all robotic sound need every word with real voice"
+      (/\b(?:remove|eliminate|delete|clean|stop|purge)\s+(?:all\s+)?(?:robtic|robotic)\s+(?:sound|sounds|voice|voices|tone|tones)\b/i.test(lower) && /\b(?:need\s+)?(?:every|each)\s+word\s+(?:with\s+)?(?:a\s+)?real\s+(?:voice|voices)\b/i.test(lower)) ||
+      // "need every word with real voice", "every word with real voice", "real voice every word"
+      (/\b(?:need\s+)?(?:every|each)\s+word\s+(?:with\s+)?(?:a\s+)?real\s+(?:voice|voices)\b/i.test(lower)) ||
+      (/\breal\s+(?:voice|voices)\s+(?:for\s+)?(?:every|each)\s+word\b/i.test(lower)) ||
+      // "remove all robotic sound", "remove robotic sound", "stop robotic sound", "zero robotic sound"
+      (/\b(?:remove|eliminate|delete|clean|stop|purge)\s+(?:all\s+)?(?:robtic|robotic)\s+(?:sound|sounds)\b/i.test(lower)) ||
+      (/\b(?:need\s+0|need\s+zero|0|zero|no)\s+(?:robtic|robotic)\s+(?:sound|sounds)\b/i.test(lower)) ||
+      // Codebase zero robotic voice variants
+      (/\b(?:remove|eliminate|delete|clean|purge)\s+all\s+(?:robtic|robotic)\s+(?:voice|voices)\s+from\s+(?:code\s*base|codebase)\b/i.test(lower)) ||
+      (/\b(?:remove|eliminate|delete|clean|purge)\s+all\s+(?:robtic|robotic)\s+(?:voice|voices)\b/i.test(lower) && (lower.includes("codebase") || lower.includes("code base") || lower.includes("all agents") || lower.includes("0 robotic") || lower.includes("need 0") || lower.includes("bangal") || lower.includes("bangla"))) ||
+      (/\b(?:need\s+0|need\s+zero|0|zero)\s+(?:robtic|robotic)\s+(?:voice|voices)\b/i.test(lower)) ||
+      (/\b(?:robtic|robotic)\s+(?:voice|voices)\b/i.test(lower) && /\b(?:english|eng)\b/i.test(lower) && /\b(?:bangal|bangla|bengali)\b/i.test(lower) && /\b(?:all\s+the\s+agents|all\s+agents)\b/i.test(lower)) ||
+      (lower.includes("robotic voice") && (lower.includes("codebase") || lower.includes("code base") || lower.includes("all agents") || lower.includes("0 robotic") || lower.includes("real voice"))) ||
+      (lower.includes("robotic sound") && (lower.includes("real voice") || lower.includes("every word") || lower.includes("all agents") || lower.includes("remove") || lower.includes("zero"))) ||
+      // Bengali patterns
+      (/(?:সব\s*রোবোটিক\s*(?:সাউন্ড|ভয়েস|শব্দ)\s*(?:মুছে|রিমুভ|দূর|বাদ)|প্রতিটি\s*শব্দ\s*(?:রিয়েল|আসল)\s*ভয়েস|জিরো\s*রোবোটিক\s*(?:সাউন্ড|ভয়েস))/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Remove All Robotic Behavior & Pure Human Conversational Parity Directive (Law 48)
    * Handles:
    * "chack last full conversation remove all robotic behaveor",
@@ -2184,6 +2555,8 @@ class IntentParser {
   static isRemoveAllRoboticBehaviorDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
+    if (typeof IntentParser.isZeroRoboticVoiceDirective === "function" && IntentParser.isZeroRoboticVoiceDirective(lower)) return false;
+    if (typeof IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective === "function" && IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective(lower)) return false;
     return (
       (/\b(?:check|chack|cahck)\b/i.test(lower) && /\b(?:last|full|previous)\s+conversation\b/i.test(lower) && /\b(?:remove|purge|clean|fix|stop)\b/i.test(lower) && /\brobotic\b/i.test(lower)) ||
       (/\bremove\s+all\s+robotic\s+(?:behaveor|behavior|behaviour|tone|voice|cadence|stuff|fluff)\b/i.test(lower)) ||
@@ -2490,6 +2863,27 @@ class IntentParser {
   }
 
   /**
+   * Centralized detector for Real Banglish Human Tone, Flawless Pronunciation & Deep Equational Research Directive
+   * Handles: "fix banglish pronunciations need a real banglish humen like talk tone pronunceation and all equationaly to do deep research",
+   * "fix banglish pronunciation", "need real banglish human like talk tone", "real banglish human tone pronunciation",
+   * "banglish tone and pronunciation deep research equationally"
+   */
+  static isRealBanglishHumanTonePronunciationDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    if (lower.includes("bangla person") || lower.includes("bengali person") || lower.includes("last conversation")) {
+      return false;
+    }
+    return (
+      (/\b(?:banglis|banglish)\b/i.test(lower) && /\b(?:pronunciation|pronunceation|pronuncitation|talk\s+tone|human\s+tone|tone)\b/i.test(lower) && /\b(?:fix|need|real|human|humen|deep\s+research|equational|equationally)\b/i.test(lower)) ||
+      (/\b(?:fix\s+(?:the\s+)?(?:our\s+)?banglish\s+pronunciations?|fix\s+(?:the\s+)?(?:our\s+)?banglis\s+pronunciations?|fix\s+banglish\s+pronunceations?)\b/i.test(lower)) ||
+      (/\b(?:real\s+banglish\s+(?:human|humen)[-\s]*like\s+talk\s+tone|real\s+banglish\s+talk\s+tone)\b/i.test(lower)) ||
+      (/\b(?:banglish\s+pronunciation\s+and\s+tone|banglish\s+tone\s+and\s+pronunciation)\b/i.test(lower)) ||
+      (/(?:ব্যাংলিশ.*উচ্চারণ.*হিউম্যান\s*টোন|রিয়েল\s*ব্যাংলিশ\s*টোন|ব্যাংলিশ.*প্রোনাউনসিয়েশন.*ফিক্স)/u.test(lower))
+    );
+  }
+
+  /**
    * Centralized detector for Real Human Feel, Clarity & Pronunciation Directive
    * Catches user prompt: "continue with more deep research cliarty and pronunciation tests to get real same like humen fieal when i talk with them"
    * and variants.
@@ -2522,6 +2916,27 @@ class IntentParser {
       (/(?:ore|more)\s+tests?\s+(?:and|\&)\s+(?:research|reaserch)\s+(?:and|\&)\s+(?:update|upade)/i.test(lower)) ||
       (/(?:do\s+)?(?:ore|more)\s+(?:test|tests|research)/i.test(lower) && /(?:pini?|pin)[- ]+(?:by|bi)[- ]+pin/i.test(lower)) ||
       (/(?:পিন[-\s]*বাই[-\s]*পিন|প্রতিটা[-\s]*পিন\s*ধরে\s*টেস্ট|পুঙ্খানুপুঙ্খ\s*রিসার্চ.*পিন|পিন[-\s]*বাই[-\s]*পিন\s*টেস্ট)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Continuous Session Timer & Long Context Window for Long Conversations
+   * Handles: "fix resating this timer need long context windo with long conversations",
+   * "fix resetting this timer need long context window with long conversations",
+   * "fix timer need long context window", "continuous session timer and long context window",
+   * "timer resetting need long context window with long conversations",
+   * "টাইমার রিসেট ফিক্স করো এবং দীর্ঘ কথোপকথনের জন্য লং কনটেক্সট উইন্ডো দাও"
+   */
+  static isLongContextWindowPersistentTimerDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:resating|reseting|resetting|reset|fix)\s+(?:this\s+)?timers?\b/i.test(lower) && /\b(?:long\s+context|context\s+window|long\s+conversations?)\b/i.test(lower)) ||
+      (/\b(?:long\s+context\s+(?:window|windo)|long\s+conversations?)\b/i.test(lower) && /\b(?:timer|resetting|resating|fix)\b/i.test(lower)) ||
+      (/\b(?:timer\s+resetting|resating\s+timer|reset\s+timer|fixing\s+timer|fix\s+timer)\b/i.test(lower) && /\b(?:context|window|windo|conversation|conversations)\b/i.test(lower)) ||
+      (/\b(?:continuous\s+session\s+timer|persistent\s+timer|unbroken\s+timer)\b/i.test(lower)) ||
+      (/\b(?:long\s+context\s+window\s+(?:with\s+)?long\s+conversations?)\b/i.test(lower)) ||
+      (/(?:টাইমার\s*রিসেট.*লং\s*কনটেক্সট|লং\s*কনটেক্সট.*টাইমার|কন্টিনিউয়াস\s*টাইমার|দীর্ঘ\s*কথোপকথন.*কনটেক্সট)/u.test(lower))
     );
   }
 }
@@ -2558,6 +2973,7 @@ module.exports = {
   isCombatExtremeNoiseHumanAuditoryDirective: IntentParser.isCombatExtremeNoiseHumanAuditoryDirective,
   isBanglaPersonRealTonePronunciationDirective: IntentParser.isBanglaPersonRealTonePronunciationDirective,
   isConversationalContinuationDirective: IntentParser.isConversationalContinuationDirective,
+  isZeroRoboticVoiceDirective: IntentParser.isZeroRoboticVoiceDirective,
   isRemoveAllRoboticBehaviorDirective: IntentParser.isRemoveAllRoboticBehaviorDirective,
   isTukTukZeroBroGirlfriendToneDirective: IntentParser.isTukTukZeroBroGirlfriendToneDirective,
   isVisionZeroEgoCoderBrotherQuantumResearchDirective: IntentParser.isVisionZeroEgoCoderBrotherQuantumResearchDirective,
@@ -2570,6 +2986,7 @@ module.exports = {
   isInstantVoiceReadinessParallelDirective: IntentParser.isInstantVoiceReadinessParallelDirective,
   isPinByPinDeepTestResearchDirective: IntentParser.isPinByPinDeepTestResearchDirective,
   isBanglaPronunciationCodeSwitchingDirective: IntentParser.isBanglaPronunciationCodeSwitchingDirective,
+  isRealBanglishHumanTonePronunciationDirective: IntentParser.isRealBanglishHumanTonePronunciationDirective,
   isRealHumanFeelClarityPronunciationDirective: IntentParser.isRealHumanFeelClarityPronunciationDirective,
   isEquationalResearchUpdateAuditDirective: IntentParser.isEquationalResearchUpdateAuditDirective,
   isBanglaTalkNeuralOverlapDirective: IntentParser.isBanglaTalkNeuralOverlapDirective,
@@ -2578,6 +2995,7 @@ module.exports = {
   isDeepTestDriveEquationalFixDirective: IntentParser.isDeepTestDriveEquationalFixDirective,
   isBanglishDefaultCodeMixedTukTukToneDirective: IntentParser.isBanglishDefaultCodeMixedTukTukToneDirective,
   isFullDuplexMidTalkCaptureDirective: IntentParser.isFullDuplexMidTalkCaptureDirective,
+  isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective: IntentParser.isRemovePureBanglaUnderstandPowerOwnBanglishStyleDirective,
   isRemovePureBanglaBanglishDefaultInstantResponsesDirective: IntentParser.isRemovePureBanglaBanglishDefaultInstantResponsesDirective,
   isCodeMixedRealBanglaAndEnglishLettersDirective: IntentParser.isCodeMixedRealBanglaAndEnglishLettersDirective,
   isInstantReadingAndInstantReplyZeroDelayDirective: IntentParser.isInstantReadingAndInstantReplyZeroDelayDirective,
@@ -2592,7 +3010,16 @@ module.exports = {
   isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective: IntentParser.isRemoveSingleBanglaTalkPureSoulPersonalityPersonDirective,
   isRemoveScriptedSameLoopTalkZeroLoopingDirective: IntentParser.isRemoveScriptedSameLoopTalkZeroLoopingDirective,
   isRemoveScriptedRepeatedTalksDirective: IntentParser.isRemoveScriptedRepeatedTalksDirective,
-  isRemoveKhatiMistiSingleRealHumanVoiceDirective: IntentParser.isRemoveKhatiMistiSingleRealHumanVoiceDirective,
   isPromptEngineeringPipelineResilienceDirective: IntentParser.isPromptEngineeringPipelineResilienceDirective,
-  isPromptEngineeringDirective: IntentParser.isPromptEngineeringDirective
+  isPromptEngineeringDirective: IntentParser.isPromptEngineeringDirective,
+  isLongContextWindowPersistentTimerDirective: IntentParser.isLongContextWindowPersistentTimerDirective,
+  isUnbreakableLongSessionMemoryDirective: IntentParser.isUnbreakableLongSessionMemoryDirective,
+  isConversationalGapAndDelayFixDirective: IntentParser.isConversationalGapAndDelayFixDirective
 };
+
+// Ensure all static methods on IntentParser are directly accessible on module.exports
+Object.getOwnPropertyNames(IntentParser).forEach((prop) => {
+  if (typeof IntentParser[prop] === "function" && typeof module.exports[prop] === "undefined") {
+    module.exports[prop] = IntentParser[prop];
+  }
+});

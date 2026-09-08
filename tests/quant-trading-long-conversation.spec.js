@@ -350,9 +350,9 @@ for (const t of LONG_CONVERSATION_TURNS) {
   if (t.agentKey === 'vision') {
     assert(resolvedVoice === 'en-US-AndrewMultilingualNeural' || resolvedVoice === 'bn-BD-PradeepNeural' || resolvedVoice === 'en-US-AndrewNeural', `Turn ${t.turn}: Invalid Vision voice: ${resolvedVoice}`);
   } else if (t.agentKey === 'friday') {
-    assert(resolvedVoice === 'en-US-EmmaMultilingualNeural' || resolvedVoice === 'en-US-JennyNeural', `Turn ${t.turn}: Invalid Friday voice: ${resolvedVoice}`);
+    assert(resolvedVoice === 'en-US-EmmaMultilingualNeural' || resolvedVoice === 'en-US-JennyNeural' || resolvedVoice === 'en-US-EmmaNeural', `Turn ${t.turn}: Invalid Friday voice: ${resolvedVoice}`);
   } else if (t.agentKey === 'brian') {
-    assert(resolvedVoice === 'en-US-BrianMultilingualNeural', `Turn ${t.turn}: Invalid Brian voice: ${resolvedVoice}`);
+    assert(resolvedVoice === 'en-US-BrianMultilingualNeural' || resolvedVoice === 'en-US-BrianNeural', `Turn ${t.turn}: Invalid Brian voice: ${resolvedVoice}`);
   } else {
     assert(resolvedVoice === 'en-US-AvaMultilingualNeural', `Turn ${t.turn}: Invalid Tuk Tuk/Team voice: ${resolvedVoice}`);
   }

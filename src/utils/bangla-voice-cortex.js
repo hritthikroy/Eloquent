@@ -350,43 +350,38 @@ class BanglaVoiceCortex {
     // 1. Restore clean English loanwords spelled in English
     out = this.restoreCleanEnglishLoanwords(out);
 
-    // 2. Map common Romanized Bengali words into clean Bengali script for high-clarity Bengali pronunciation
-    const romanToBengaliMap = [
-      [/\bamader\b/gi, "আমাদের"],
-      [/\bekdom\b/gi, "একদম"],
-      [/\bkotha\b/gi, "কথা"],
-      [/\bbolchhi\b/gi, "বলছি"],
-      [/\bbolchhe\b/gi, "বলছে"],
-      [/\bshob\b/gi, "সব"],
-      [/\bshobai\b/gi, "সবাই"],
-      [/\bkorche\b/gi, "করছে"],
-      [/\bkorchhi\b/gi, "করছি"],
-      [/\blagche\b/gi, "লাগছে"],
-      [/\bekhon\b/gi, "এখন"],
-      [/\bhobe\b/gi, "হবে"],
-      [/\bbolo\b/gi, "বলো"],
-      [/\bshunchhi\b/gi, "শুনছি"],
-      [/\bshuntechi\b/gi, "শুনছি"],
-      [/\bthik\b/gi, "ঠিক"],
-      [/\bache\b/gi, "আছে"],
-      [/\bkhub\b/gi, "খুব"],
-      [/\bcholo\b/gi, "চলো"],
-      [/\bekasathe\b/gi, "একসাথে"],
-      [/\beksathe\b/gi, "একসাথে"],
-      [/\bnotun\b/gi, "নতুন"],
-      [/\bduito\b/gi, "দুটো"],
-      [/\bbolei\b/gi, "বলেই"],
-      [/\bdakob\b/gi, "ডাকব"],
-      [/\bdekhbo\b/gi, "দেখব"],
-      [/\bdekhobo\b/gi, "দেখাব"],
-      [/\bniye\b/gi, "নিয়ে"],
-      [/\bshuru\b/gi, "শুরু"],
-      [/\bjako\b/gi, "যাক"],
-      [/\bryechhe\b/gi, "রয়েছে"]
-    ];
-
-    for (const [regex, replacement] of romanToBengaliMap) {
-      out = out.replace(regex, replacement);
+    // 2. Harmonize Roman Banglish words using RealBanglishHumanTonePronunciationCortex
+    try {
+      const realBanglishCortex = require("./real-banglish-human-tone-pronunciation-cortex");
+      if (realBanglishCortex && typeof realBanglishCortex.harmonizeBanglishPronunciation === "function") {
+        out = realBanglishCortex.harmonizeBanglishPronunciation(out);
+      }
+    } catch (_) {
+      // Fallback to local table if cortex load fails
+      const romanToBengaliMap = [
+        [/\bamader\b/gi, "আমাদের"],
+        [/\bekdom\b/gi, "একদম"],
+        [/\bkotha\b/gi, "কথা"],
+        [/\bbolchhi\b/gi, "বলছি"],
+        [/\bbolchhe\b/gi, "বলছে"],
+        [/\bshob\b/gi, "সব"],
+        [/\bshobai\b/gi, "সবাই"],
+        [/\bkorche\b/gi, "করছে"],
+        [/\bkorchhi\b/gi, "করছি"],
+        [/\blagche\b/gi, "লাগছে"],
+        [/\bekhon\b/gi, "এখন"],
+        [/\bhobe\b/gi, "হবে"],
+        [/\bbolo\b/gi, "বলো"],
+        [/\bshunchhi\b/gi, "শুনছি"],
+        [/\bshuntechi\b/gi, "শুনছি"],
+        [/\bthik\b/gi, "ঠিক"],
+        [/\bache\b/gi, "আছে"],
+        [/\bkhub\b/gi, "খুব"],
+        [/\bcholo\b/gi, "চলো"]
+      ];
+      for (const [regex, replacement] of romanToBengaliMap) {
+        out = out.replace(regex, replacement);
+      }
     }
 
     return out;
@@ -717,6 +712,12 @@ class BanglaVoiceCortex {
       // This activates AvaMultilingualNeural's native Bengali phonemes for Bengali words
       // and native American phonemes for English words with zero pronunciation distortion!
       let out = this.smoothHardBengaliPronunciations(text);
+      try {
+        const realBanglishCortex = require("./real-banglish-human-tone-pronunciation-cortex");
+        if (realBanglishCortex && typeof realBanglishCortex.harmonizeBanglishPronunciation === "function") {
+          out = realBanglishCortex.harmonizeBanglishPronunciation(out, voice);
+        }
+      } catch (_) {}
       out = this.optimizeCadenceAndBreathPauses(out);
       out = this.normalizeNumbersAndUnits(out);
       out = this.restoreCleanEnglishLoanwords(out);
@@ -774,14 +775,15 @@ class BanglaVoiceCortex {
     const isTukTuk = agentKey === "tuktuk" || agentKey === "ava";
 
     if (!this.isBengali(text)) {
-      return { rate: "+0%", pitch: "+0Hz" };
+      return { rate: "+0%", pitch: isTukTuk ? "+1Hz" : "+0Hz" };
     }
 
     // Zero Robotic Voice Across Codebase (English & Bengali for All Agents):
-    // All agents calibrated to crisp, native human conversational tempo (+0% rate, +0Hz natural human pitch).
-    // Zero negative rate stretching, zero flat monotone, zero artificial sweet high-pitch lilt.
+    // All agents calibrated to crisp, native human conversational tempo (+0% rate).
+    // Tuk Tuk: +1Hz subtle warm pitch inflection; Vision, Friday, DD: +0Hz natural resonant pitch.
+    // Zero negative rate stretching (-4%, -3%, -2%), zero mechanical drone, zero flat-pitch monotone.
     if (isTukTuk) {
-      return { rate: "+0%", pitch: "+0Hz" }; // Natural, grounded real human tone
+      return { rate: "+0%", pitch: "+1Hz" }; // Natural, grounded real human tone with affectionate warmth
     }
     if (agentKey === "vision" || agentKey === "andrew" || agentKey === "pradeep") {
       return { rate: "+0%", pitch: "+0Hz" }; // Fluent, crisp brotherly cadence

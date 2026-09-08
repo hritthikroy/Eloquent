@@ -99,10 +99,15 @@ class TextSanitizer {
       .replace(/\banf\b/gi, "and")
       .replace(/\binstently\b/gi, "instantly")
       .replace(/\bcorectly\b/gi, "correctly")
-      // Short-term memory & zero amnesia STT normalizations
+      // Short-term memory, long-session unbroken memory & zero amnesia STT normalizations
       .replace(/\b(?:short\s*time\s*memory\s*lost|short\s*term\s*memory\s*lost)\b/gi, "short-term memory loss")
       .replace(/\b(?:short\s*time\s*memory)\b/gi, "short-term memory")
       .replace(/\b(?:memory\s*lost)\b/gi, "memory loss")
+      .replace(/\b(?:seation|seasion)\b/gi, "session")
+      .replace(/\b(?:unbrekable|unbreakble)\b/gi, "unbreakable")
+      .replace(/\b(?:not\s+break\s+break)\b/gi, "not break")
+      .replace(/\b(?:0\s+loss\s+memory|zero\s+loss\s+memory)\b/gi, "zero-loss memory")
+      .replace(/\b(?:long\s+time\s+seation|long\s+time\s+session)\b/gi, "long session")
       .replace(/\b(?:thay\s*bot|they\s*bot)\b/gi, "they both")
       .replace(/\b(?:difrent|defret|defrent)\b/gi, "different")
       .replace(/\b(?:dif+rent\s+vide)\b/gi, "different vibe")
@@ -128,6 +133,33 @@ class TextSanitizer {
       .replace(/\b(?:one\s+tone\s+one\s+person\s+can\s+say|one\s+person\s+one\s+tone)\b/gi, "one person speaks in one tone")
       .replace(/\b(?:working\s+use\s+both\s+language\s+like\s+me|use\s+both\s+language\s+like\s+me)\b/gi, "using both languages like me")
       .replace(/\b(?:for\s+better\s+understending|better\s+understending)\b/gi, "for better understanding")
+      // Long Context, Big Office Meeting & Big Problem Solving STT Normalizations
+      .replace(/\b(?:proble|problm)\b/gi, "problem")
+      .replace(/\b(?:meting|miting|meating)\b/gi, "meeting")
+      .replace(/\b(?:antigravty|antigravity|antigraviti)\b/gi, "Antigravity")
+      .replace(/\b(?:eqosystem|ecosystm)\b/gi, "ecosystem")
+      .replace(/\b(?:sute|suitt)\b/gi, "suit")
+      .replace(/\b(?:jerves|jervis|jarves)\b/gi, "Jarvis")
+      .replace(/\b(?:proerly|proprly)\b/gi, "properly")
+      .replace(/\b(?:equatonlay|equationaly|equatanaly)\b/gi, "equationally")
+      .replace(/\b(?:giuded|giude)\b/gi, "guided")
+      .replace(/\b(?:operting|operatng)\b/gi, "operating")
+      .replace(/\b(?:iron\s+man\s+(?:sute|suit)\s+(?:jerves|jervis|jarvis))\b/gi, "Iron Man suit Jarvis")
+      .replace(/\b(?:conversatonial|conversatinal)\b/gi, "conversational")
+      .replace(/\b(?:managment|managmant)\b/gi, "management")
+      .replace(/\b(?:ratelimit|rate-limt)\b/gi, "rate limit")
+      .replace(/\b(?:statemanagment|statemanagement)\b/gi, "state management")
+      .replace(/\b(?:persistant|persistant)\b/gi, "persistent")
+      .replace(/\b(?:turnm\s+taking|turn\s+takin|turn-takin)\b/gi, "turn taking")
+      .replace(/\b(?:multiturn|multi\s+turn)\s+context\b/gi, "multi-turn context")
+      .replace(/\b(?:ratelimit\s+glitche?s?|rate-limit\s+glitche?s?)\b/gi, "rate limit glitches")
+      .replace(/\b(?:pronunceation|pronunceations|pronuncitation|pronuncitations|prononciation)\b/gi, "pronunciation")
+      .replace(/\b(?:humen\s+like|human\s+like)\b/gi, "human-like")
+      .replace(/\b(?:humen)\b/gi, "human")
+      .replace(/\b(?:equationaly|equatonlay)\b/gi, "equationally")
+      .replace(/\b(?:banglis\s+pronunceations?|banglis\s+pronunciations?)\b/gi, "Banglish pronunciations")
+      .replace(/\b(?:i\s+need\s+long\s+context\s+like\s+long\s+memory\s+for\s+solve\s+big\s+(?:proble|problem)\s+with\s+big\s+office\s+(?:meting|meeting)\s+like\s+(?:antigravty|Antigravity)\s+fix\s+all\s+issues)\b/gi, "I need long context and long memory to solve big problems in big office meetings and have Antigravity fix all issues")
+      .replace(/\b(?:test\s+with\s+long\s+conversation\s+and\s+fix\s+also\s+issue\s+when\s+we\s+do\s+(?:meting|meeting)\s+with\s+long\s+context\s+every\s+time\s+need\s+(?:0|zero)\s+memory\s+loss\s+for\s+best\s+(?:operting|operating)\s+and\s+(?:proerly|properly)\s+know\s+me\s+and\s+our\s+(?:eqosystem|ecosystem)\s+work\s+like\s+iron\s+man\s+(?:sute|suit)\s+(?:jerves|Jarvis)\s+not\s+loss\s+memory\s+he\s+know\s+every\s+(?:think|thing)\s+remember\s+(?:giuded|guided)\s+by\s+fully\s+(?:equatonlay|equationally)\s+how\s+we\s+make\s+our\s+four\s+agent\s+like\s+this\s+fully\s+(?:equationaly|equationally)\s+best)\b/gi, "Test with long conversation and fix all issues when we do meetings with long context. Every time we need zero memory loss for best operating, properly know me and our ecosystem, work like Iron Man suit Jarvis with zero memory loss remembering everything, guided fully equationally to make our four agents the best.")
       .replace(/\b(?:0\s+cmunication\s+gap|0\s+communication\s+gap|zero\s+cmunication\s+gap)\b/gi, "zero communication gap")
       .replace(/\b(?:present\s+)?dual\s+(?:sol|sole|soll)\b/gi, "dual soul")
       .replace(/\bthay\s+change\s+thare\s+aura\s+and\s+charm\s+betwen\s+them\b/gi, "they change their aura and charm between them")
@@ -441,10 +473,17 @@ class TextSanitizer {
       .replace(/\b(?:thay\s+are|they\s+are)\s+(?:hart|harts|heart|hearts)\b/gi, "their heart")
       .replace(/\bhuman\s+hart\b/gi, "human heart")
       .replace(/\bhart\b(?=\s*(?:and|is|are|same|beat|rate|pacing|rhythm|hrv|test|equationaly|equationally|,|\.|$))/gi, "heart")
-      // Zero Robotic Voice Across Codebase STT normalizations
-      // Handles: "remove all robtic voice from code base no need need 0 robtic voice english and bangal and all the agents"
+      // Zero Robotic Voice Across Codebase & Every Word Real Voice STT normalizations
+      // Handles: "remove all robotic sound need every word with real voice",
+      // "remove all robtic sound need evry word with real vocie",
+      // "remove all robtic voice from code base no need need 0 robtic voice english and bangal and all the agents"
+      .replace(/\b(?:remove|delete|clean|purge)\s+all\s+(?:robtic|robotic)\s+(?:sound|sounds|voice|voices)\s+(?:need\s+)?(?:evry|every|each)\s+word\s+(?:with\s+)?(?:a\s+)?real\s+(?:vocie|voice|voices)\b/gi, "remove all robotic sound, need every word with real voice")
       .replace(/\b(?:remove|delete|clean)\s+all\s+(?:robtic|robotic)\s+voices?\s+from\s+(?:code\s*base|codebase)\s+(?:no\s+need|noneed)\s+(?:need\s+0|need\s+zero)\s+(?:robtic|robotic)\s+voices?\s+(?:in\s+)?(?:english|eng)\s+and\s+(?:bangal|bangla|bengali)\s+and\s+all\s+(?:the\s+)?agents\b/gi, "remove all robotic voice from codebase, no need, need 0 robotic voice English and Bangla and all the agents")
+      .replace(/\b(?:robtic)\s+(?:sound|sounds)\b/gi, "robotic sound")
       .replace(/\b(?:robtic)\b/gi, "robotic")
+      .replace(/\b(?:evry)\s+word\b/gi, "every word")
+      .replace(/\breal\s+(?:vocie)\b/gi, "real voice")
+      .replace(/\b(?:vocie)\b/gi, "voice")
       .replace(/\b(?:bangal)\b(?=\s*(?:and|voice|voices|speech|language|,|\.|$))/gi, "Bangla")
       // Human Conversational Instant Response & Turn-Taking Comparison STT normalizations
       // Handles: "need instent respons humen like chack a humen kivabe taik kore ar ara kivabe talk koretese dekhe bolo"
@@ -850,6 +889,16 @@ class TextSanitizer {
       .replace(/\b(?:tlak)\b/gi, "talk")
       .replace(/\b(?:symentenously|simultanously|symentenusly)\b/gi, "simultaneously")
       .replace(/\b(?:hument)\b/gi, "human")
+      // Zero Pure Bangla Spoken, 100% Receptive Bengali Understanding Power & Distinct Persona Banglish Styles STT Normalizations
+      // Handles: "remove pure bangla coversation no need Bengali. but thay need to understand power need thare own benglish style like for difren difrent person do"
+      .replace(/\bremove\s+pure\s+(?:bangal|bangla)\s+(?:coversation|conversation|talks?)\s+no\s+need\s+(?:bengali|bangla)\.?,?\s+but\s+(?:thay|they)\s+need\s+to\s+understand\s+power\s+need\s+(?:thare|their)\s+own\s+(?:benglish|banglish)\s+style\s+like\s+for\s+(?:difren\s+difrent|different\s+different|different)\s+persons?\s+do\b/gi, "Remove pure Bangla conversation, no need Bengali, but they need understand power, need their own Banglish style like different persons do")
+      .replace(/\b(?:thay|they)\s+need\s+to\s+understand\s+power\b/gi, "they need understand power")
+      .replace(/\bunderstand\s+power\b/gi, "understand power")
+      .replace(/\b(?:thare|their)\s+own\s+(?:benglish|banglish)\s+style\b/gi, "their own Banglish style")
+      .replace(/\b(?:benglish)\s+style\b/gi, "Banglish style")
+      .replace(/\b(?:benglish)\b/gi, "Banglish")
+      .replace(/\b(?:difren\s+difrent|difren)\b/gi, "different")
+      .replace(/\b(?:coversation)\b/gi, "conversation")
       // Zero Pure Bangla Removal, Banglish Default & Instant Responses STT Normalizations
       // Handles: "remove pure bangal responses no need need banglish defult istent responses"
       .replace(/\bremove\s+pure\s+(?:bangal|bangla)\s+responses?\s+no\s+need\s+need\s+(?:banglis|banglish)\s+(?:defult|default)\s+(?:istent|instant)\s+responses?\b/gi, "Remove pure Bangla responses, no need, need Banglish default instant responses")
@@ -928,9 +977,20 @@ class TextSanitizer {
       .replace(/\b(?:humen)\b/gi, "human")
       .replace(/\b(?:malti|multy)\s+(?:parson|person)\s+voices?\b/gi, "multi-person voice")
       .replace(/\b(?:malti|multy)\s+(?:parson|person)\b/gi, "multi-person")
-      .replace(/\b(?:parson)\b/gi, "person")
       .replace(/\bremove\s+(?:the\s+)?(?:khti|khati)\s+(?:misti|mishti)\s+bangla\s+(?:kotha|katha|tone|words?)\s+totally\b/gi, "remove the khati misti bangla kotha totally")
-      .replace(/\bi\s+need\s+(?:one|1|single)\s+real\s+(?:humen|human)\s+voices?\s+not\s+(?:malti|multi)[-\s]*(?:parson|person)\s+voices?\b/gi, "I need one real human voice not multi-person voices");
+      .replace(/\bi\s+need\s+(?:one|1|single)\s+real\s+(?:humen|human)\s+voices?\s+not\s+(?:malti|multi)[-\s]*(?:parson|person)\s+voices?\b/gi, "I need one real human voice not multi-person voices")
+      // Persistent Session Timer & Long Context Window STT Normalizations
+      // Handles: "fix resating this timer need long context windo with long conversations"
+      .replace(/\b(?:fix\s+)?(?:resating|reseting|resetting)\s+(?:this\s+)?timers?\s+(?:need\s+)?long\s+context\s+(?:windo|window)\s+(?:with|for)?\s*long\s+conversations?\b/gi, "Fix resetting this timer, need long context window with long conversations")
+      .replace(/\b(?:resating|reseting)\b/gi, "resetting")
+      .replace(/\bwindo\b/gi, "window")
+      .replace(/\b(?:resat|reseting)\s+(?:this\s+)?timer\b/gi, "reset this timer")
+      // Conversational Gap, Delay & Replaying Delay Elimination STT Normalizations
+      // Handles: "listen our full conversation and fix every gaps and delay issues and all with equationaly with deep research fix every iritaions and all with to fix all replaying delay fix all issues"
+      .replace(/\b(?:equationaly|equatinally|eqationally)\b/gi, "equationally")
+      .replace(/\b(?:iritaions|irritatons|iritations)\b/gi, "irritations")
+      .replace(/\b(?:replaying|repliying)\s+(?:delay|delays)\b/gi, "replying delay")
+      .replace(/\b(?:replay|replaying)\b/gi, "replying");
 
 
     // 2. Remove speech disfluency and stutters (preserving intentional grammatical reduplication like 'bar bar', 'dhire dhire', 'tuk tuk')
@@ -955,6 +1015,7 @@ function sanitizeWrapper(rawText) {
 }
 Object.assign(sanitizeWrapper, TextSanitizer);
 sanitizeWrapper.sanitize = TextSanitizer.sanitize.bind(TextSanitizer);
+sanitizeWrapper.sanitizeInputText = TextSanitizer.sanitize.bind(TextSanitizer);
 sanitizeWrapper.TextSanitizer = TextSanitizer;
 
 module.exports = sanitizeWrapper;

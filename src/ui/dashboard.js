@@ -273,162 +273,404 @@ setInterval(() => {
 }, 60000);
 
 
-// History Management
+// ==========================================================================
+// Agent Talk & Working Conversation History Hub Management
+// ==========================================================================
 let historyData = [];
+let currentHistoryFilter = 'all';
+let currentHistorySearch = '';
 
-function loadHistory() {
-  ipcRenderer.send('get-history');
-}
-
-// PERFORMANCE BOOST: Optimized history rendering with virtual scrolling concepts
-function displayHistory(history = historyData, searchTerm = '') {
-  const historyList = document.getElementById('historyList');
-  const emptyHistory = document.getElementById('emptyHistory');
-
-  console.log('Displaying history:', history.length, 'items, search:', searchTerm);
-
-  // PERFORMANCE BOOST: Use DocumentFragment for batch DOM updates
-  const fragment = document.createDocumentFragment();
-
-  // Filter by search term
-  let filtered = history;
-  if (searchTerm) {
-    // PERFORMANCE BOOST: Use more efficient filtering
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    filtered = history.filter(item =>
-      item.text.toLowerCase().includes(lowerSearchTerm) ||
-      (item.originalText && item.originalText.toLowerCase().includes(lowerSearchTerm))
-    );
+// Modern Toast Notification Utility
+function showHistoryToast(message, type = 'info', duration = 3500) {
+  let container = document.getElementById('historyToastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'historyToastContainer';
+    container.className = 'history-toast-container';
+    document.body.appendChild(container);
   }
 
-  console.log('Filtered history:', filtered.length, 'items');
+  const toast = document.createElement('div');
+  toast.className = `history-toast ${type === 'success' ? 'toast-success' : (type === 'error' ? 'toast-error' : '')}`;
+  const icon = type === 'success' ? '✨' : (type === 'error' ? '❌' : 'ℹ️');
+  toast.innerHTML = `<span>${icon}</span><span>${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
 
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px) scale(0.95)';
+    toast.style.transition = 'all 0.25s ease';
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+  }, duration);
+}
+
+// Request latest history and telemetry stats
+function loadHistory() {
+  ipcRenderer.send('get-history');
+  ipcRenderer.invoke('get-history-stats').then(stats => {
+    if (stats) updateHistoryTelemetryStats(stats);
+  }).catch(() => {});
+}
+
+// Helper: Format voice name for UI chip
+function formatVoiceName(voice) {
+  if (!voice) return 'AvaMultilingual';
+  if (voice.includes('Ava')) return 'Ava (Partner)';
+  if (voice.includes('Andrew')) return 'Andrew (Vision)';
+  if (voice.includes('Emma')) return 'Emma (Friday)';
+  if (voice.includes('Brian')) return 'Brian (DevOps)';
+  return voice.replace('en-US-', '').replace('Neural', '');
+}
+
+// Helper: Format agent reply text (preserves line breaks and basic formatting)
+function formatAgentReplyText(text) {
+  if (!text) return '<span style="opacity: 0.5; font-style: italic;">No speech output</span>';
+  return escapeHtml(text).replace(/\n/g, '<br>');
+}
+
+// Update telemetry bar counters and health meter
+function updateHistoryTelemetryStats(stats) {
+  if (!stats) return;
+  const totalEl = document.getElementById('statTotalTurns');
+  const tuktukEl = document.getElementById('statCountTuktuk');
+  const visionEl = document.getElementById('statCountVision');
+  const fridayEl = document.getElementById('statCountFriday');
+  const brianEl = document.getElementById('statCountBrian');
+  const squadEl = document.getElementById('statCountSquad');
+  const healthPill = document.getElementById('statHealthPill');
+  const healthScoreEl = document.getElementById('statHealthScore');
+  const issuesBadge = document.getElementById('issuesCountBadge');
+
+  if (totalEl) totalEl.textContent = stats.totalTurns || 0;
+  if (tuktukEl) tuktukEl.textContent = (stats.agents && stats.agents.tuktuk) || 0;
+  if (visionEl) visionEl.textContent = (stats.agents && stats.agents.vision) || 0;
+  if (fridayEl) fridayEl.textContent = (stats.agents && stats.agents.friday) || 0;
+  if (brianEl) brianEl.textContent = (stats.agents && stats.agents.brian) || 0;
+  if (squadEl) squadEl.textContent = (stats.agents && stats.agents.squad) || 0;
+
+  const score = stats.healthScore !== undefined ? stats.healthScore : 100;
+  if (healthScoreEl) healthScoreEl.textContent = `${score}%`;
+
+  const openIssues = (stats.issuesDetected || 0) - (stats.issuesFixed || 0);
+  if (issuesBadge) {
+    if (openIssues > 0) {
+      issuesBadge.textContent = openIssues;
+      issuesBadge.style.display = 'inline-block';
+    } else {
+      issuesBadge.style.display = 'none';
+    }
+  }
+
+  if (healthPill) {
+    if (openIssues > 0) {
+      healthPill.className = 'stat-pill stat-health has-issues';
+      healthPill.innerHTML = `⚠️ <b id="statHealthScore">${score}%</b> (${openIssues} Issues Detected)`;
+    } else {
+      healthPill.className = 'stat-pill stat-health';
+      healthPill.innerHTML = `🩺 Health Score: <b id="statHealthScore">${score}%</b> (Operational)`;
+    }
+  }
+}
+
+// Display history feed with multi-agent cards and turn IDs
+function displayHistory(history = historyData, searchTerm = currentHistorySearch) {
+  const historyList = document.getElementById('historyList');
+  const emptyHistory = document.getElementById('emptyHistory');
+  if (!historyList || !emptyHistory) return;
+
+  currentHistorySearch = searchTerm;
+  let filtered = Array.isArray(history) ? [...history] : [];
+
+  // 1. Filter by Agent or Issues Status
+  if (currentHistoryFilter !== 'all') {
+    if (currentHistoryFilter === 'issues') {
+      filtered = filtered.filter(item => item.hasIssue || (item.issues && item.issues.some(i => !i.fixed)));
+    } else {
+      filtered = filtered.filter(item => {
+        const itemAgent = (item.agentKey || (item.agent ? item.agent.toLowerCase().replace(/\s+/g, '') : 'tuktuk')).toLowerCase();
+        if (currentHistoryFilter === 'brian') return itemAgent === 'brian' || itemAgent === 'dd';
+        if (currentHistoryFilter === 'squad') return itemAgent === 'squad' || itemAgent === 'team';
+        return itemAgent === currentHistoryFilter;
+      });
+    }
+  }
+
+  // 2. Filter by Search Query
+  if (searchTerm && searchTerm.trim().length > 0) {
+    const q = searchTerm.toLowerCase().trim();
+    filtered = filtered.filter(item => {
+      const idMatch = item.id && item.id.toLowerCase().includes(q);
+      const textMatch = item.text && item.text.toLowerCase().includes(q);
+      const promptMatch = (item.userPrompt || item.originalText || '').toLowerCase().includes(q);
+      const replyMatch = (item.agentReply || item.text || '').toLowerCase().includes(q);
+      const agentMatch = (item.agent || '').toLowerCase().includes(q);
+      const voiceMatch = (item.voice || '').toLowerCase().includes(q);
+      const stateMatch = (item.workingState || '').toLowerCase().includes(q);
+      const issueMatch = item.issues && item.issues.some(i => (i.title + ' ' + i.message).toLowerCase().includes(q));
+      return idMatch || textMatch || promptMatch || replyMatch || agentMatch || voiceMatch || stateMatch || issueMatch;
+    });
+  }
+
+  // 3. Handle Empty State
   if (filtered.length === 0) {
     historyList.innerHTML = '';
-    emptyHistory.style.display = 'block';
+    emptyHistory.style.display = 'flex';
     return;
   }
 
   emptyHistory.style.display = 'none';
-  
-  // PERFORMANCE BOOST: Limit rendering to first 50 items for speed
-  const itemsToRender = filtered.slice(0, 50);
-  
-  historyList.innerHTML = itemsToRender.map(item => {
-    const date = new Date(item.timestamp);
+
+  // 4. Render Turn Cards (capped at 60 for 60fps glassmorphic scrolling)
+  const itemsToRender = filtered.slice(0, 60);
+
+  historyList.innerHTML = itemsToRender.map(turn => {
+    const date = new Date(turn.timestamp || Date.now());
     const timeAgo = getTimeAgo(date);
     const fullDate = date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
     });
 
-    const isAI = item.mode === 'rewrite';
-    const modeBadge = isAI
-      ? '<span class="mode-badge ai-badge">✨ AI Enhanced</span>'
-      : '<span class="mode-badge standard-badge">🎤 Standard</span>';
+    const agentKey = (turn.agentKey || (turn.agent ? turn.agent.toLowerCase().replace(/\s+/g, '') : 'tuktuk')).toLowerCase();
+    let agentCss = 'tuktuk';
+    let agentName = turn.agent || 'Tuk Tuk';
+    let agentAvatar = turn.avatar || '🌸';
+    let agentRole = turn.role || 'Co-Founder & Partner';
+    let agentColor = '#fda4af';
+
+    if (agentKey === 'vision' || agentKey === 'andrew') {
+      agentCss = 'vision'; agentName = 'Vision'; agentAvatar = '⚡'; agentRole = 'Lead Systems Architect'; agentColor = '#67e8f9';
+    } else if (agentKey === 'friday') {
+      agentCss = 'friday'; agentName = 'Friday'; agentAvatar = '🧠'; agentRole = 'Head of Product Intelligence'; agentColor = '#6ee7b7';
+    } else if (agentKey === 'brian' || agentKey === 'dd') {
+      agentCss = 'brian'; agentName = 'Brian'; agentAvatar = '🛡️'; agentRole = 'Head of DevOps & Reliability'; agentColor = '#fcd34d';
+    } else if (agentKey === 'team' || agentKey === 'squad') {
+      agentCss = 'squad'; agentName = 'Squad'; agentAvatar = '👥'; agentRole = 'Multi-Agent Collective'; agentColor = '#c4b5fd';
+    } else if (turn.mode === 'standard' || turn.mode === 'rewrite') {
+      agentCss = 'standard'; agentName = 'Standard'; agentAvatar = '🎤'; agentRole = 'Voice Dictation'; agentColor = '#93c5fd';
+    }
+
+    const hasOpenIssues = turn.issues && turn.issues.some(i => !i.fixed);
+    const cardClass = `turn-card agent-card-${agentCss} ${hasOpenIssues ? 'has-issues-card' : ''}`;
+
+    const turnId = turn.id || `turn_${date.getTime()}_${agentCss}`;
+    const userPrompt = turn.userPrompt || turn.originalText || '';
+    const agentReply = turn.agentReply || turn.text || '';
+    const voiceDisplay = formatVoiceName(turn.voice);
 
     return `
-      <div class="history-item" data-item-id="${item.id}">
-        <div class="history-header">
-          <div class="history-meta">
-            ${modeBadge}
-            <span class="history-time" title="${fullDate}">${timeAgo}</span>
-            ${item.duration ? `<span class="history-duration">${item.duration}s</span>` : ''}
-          </div>
-          <div class="history-actions">
-            <button class="history-btn copy-btn" data-item-id="${item.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <div class="${cardClass}" data-turn-id="${turnId}">
+        <!-- Header Row -->
+        <div class="turn-header">
+          <div class="turn-header-left">
+            <span class="turn-agent-badge turn-agent-${agentCss}">
+              <span>${agentAvatar}</span>
+              <span>${agentName}</span>
+              <span class="turn-role-tag">• ${agentRole}</span>
+            </span>
+
+            <span class="turn-id-chip copy-id-btn" data-id="${turnId}" title="Click to copy Turn ID">
+              🔑 ${turnId}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
-              Copy
+            </span>
+
+            <span class="turn-voice-badge" title="Voice profile used for synthesis">
+              🎙️ ${voiceDisplay}
+            </span>
+
+            <span class="turn-meta-time" title="${fullDate}">
+              🕒 ${timeAgo}
+            </span>
+
+            ${turn.latencyMs ? `<span class="turn-voice-badge" style="color: #60a5fa;" title="Response generation latency">⚡ ${turn.latencyMs}ms</span>` : ''}
+            ${turn.duration ? `<span class="turn-voice-badge" style="color: #94a3b8;" title="Audio duration">⏱️ ${turn.duration}s</span>` : ''}
+          </div>
+
+          <div class="turn-header-actions">
+            <button class="turn-btn turn-btn-replay replay-speech-btn" data-turn-id="${turnId}" title="Replay spoken neural voice speech">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+              Replay
             </button>
-            <button class="history-btn delete-btn" data-item-id="${item.id}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+            <button class="turn-btn turn-btn-copy copy-turn-btn" data-turn-id="${turnId}" title="Copy full conversation turn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy Turn
+            </button>
+
+            <button class="turn-btn turn-btn-delete delete-btn" data-turn-id="${turnId}" title="Delete turn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
               </svg>
-              Delete
             </button>
           </div>
         </div>
-        <div class="history-text">${escapeHtml(item.text)}</div>
-        ${isAI && item.originalText && item.originalText !== item.text ? `
-          <details class="original-text-details">
-            <summary class="original-text-summary">📝 Show original transcription</summary>
-            <div class="original-text-content">${escapeHtml(item.originalText)}</div>
-          </details>
-        ` : ''}
+
+        <!-- Conversation Content: Both Prompt & Agent Working Reply -->
+        <div class="turn-content-box">
+          ${userPrompt ? `
+            <div class="turn-bubble turn-bubble-user">
+              <div class="turn-bubble-label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                You (Prompt / Voice)
+              </div>
+              <div style="font-size: 14.5px; line-height: 1.6; color: #f1f5f9;">${escapeHtml(userPrompt)}</div>
+            </div>
+          ` : ''}
+
+          <div class="turn-bubble turn-bubble-agent bubble-${agentCss}">
+            <div class="turn-bubble-label" style="color: ${agentColor};">
+              <span>${agentAvatar}</span>
+              <span>${agentName} (${agentRole})</span>
+            </div>
+            <div style="font-size: 14.5px; line-height: 1.65;">${formatAgentReplyText(agentReply)}</div>
+          </div>
+
+          <!-- Working Action / Standup Execution details if present -->
+          ${turn.workingState || turn.actionResult ? `
+            <div class="turn-working-drawer">
+              <span class="turn-working-badge">⚙️ WORKING EXECUTION</span>
+              <span>${escapeHtml(turn.workingState || (turn.actionResult ? `Action: ${turn.actionResult.action} (Status: ${turn.actionResult.status || 'OK'})` : 'Executed successfully'))}</span>
+            </div>
+          ` : ''}
+
+          <!-- Issue Diagnostics Drawer -->
+          ${turn.issues && turn.issues.length > 0 ? turn.issues.map(iss => `
+            <div class="turn-issue-banner ${iss.fixed ? 'issue-fixed' : ''}">
+              <div class="turn-issue-info">
+                <div class="turn-issue-title">
+                  ${iss.fixed ? '✅ ISSUE RESOLVED' : (iss.severity === 'high' ? '🚨 HIGH SEVERITY ISSUE' : '⚠️ ISSUE DETECTED')}: ${escapeHtml(iss.title)}
+                </div>
+                <div class="turn-issue-desc">${escapeHtml(iss.message)}</div>
+              </div>
+              ${!iss.fixed ? `
+                <button class="btn-fix-single fix-single-issue-btn" data-turn-id="${turnId}" title="Auto-heal this specific issue">
+                  🩺 Fix Issue
+                </button>
+              ` : `
+                <span style="color: #86efac; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                  ✨ Sanitized &amp; Healed
+                </span>
+              `}
+            </div>
+          `).join('') : ''}
+        </div>
       </div>
     `;
   }).join('');
-  
-  // Add event listeners for history buttons
+
+  // 5. Attach event listeners
   setTimeout(() => {
-    // Copy buttons
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const itemId = this.getAttribute('data-item-id');
-        copyToClipboard(itemId);
-      });
-      
-      // Add hover effects
-      btn.addEventListener('mouseenter', function() {
-        this.style.background = 'rgba(59, 130, 246, 0.25)';
-        this.style.borderColor = 'rgba(59, 130, 246, 0.5)';
-        this.style.transform = 'scale(1.05)';
-      });
-      btn.addEventListener('mouseleave', function() {
-        this.style.background = 'rgba(59, 130, 246, 0.15)';
-        this.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-        this.style.transform = 'scale(1)';
+    // Copy Turn ID button
+    document.querySelectorAll('.copy-id-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const id = this.getAttribute('data-id');
+        if (id) {
+          navigator.clipboard.writeText(id).then(() => {
+            showHistoryToast(`Turn ID copied: ${id}`, 'success', 2000);
+          }).catch(() => {
+            showHistoryToast('Failed to copy Turn ID', 'error');
+          });
+        }
       });
     });
-    
-    // Delete buttons
+
+    // Copy full conversation turn button
+    document.querySelectorAll('.copy-turn-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-turn-id');
+        const item = historyData.find(h => (h.id || '') === id);
+        if (item) {
+          const userP = item.userPrompt || item.originalText || '';
+          const agentR = item.agentReply || item.text || '';
+          const copyStr = `[Turn ID: ${item.id}]\nUser: ${userP}\n${item.agent || 'Agent'}: ${agentR}`;
+          navigator.clipboard.writeText(copyStr).then(() => {
+            showHistoryToast('Full turn copied to clipboard!', 'success', 2000);
+          }).catch(() => {
+            showHistoryToast('Failed to copy turn', 'error');
+          });
+        }
+      });
+    });
+
+    // Replay neural speech button
+    document.querySelectorAll('.replay-speech-btn').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const id = this.getAttribute('data-turn-id');
+        const item = historyData.find(h => (h.id || '') === id);
+        if (!item) return;
+
+        const textToSpeak = item.agentReply || item.text;
+        if (!textToSpeak) {
+          showHistoryToast('No speech text to replay', 'error');
+          return;
+        }
+
+        this.disabled = true;
+        this.style.opacity = '0.6';
+        showHistoryToast(`🔊 Replaying ${item.agent || 'Agent'} speech...`, 'info', 2000);
+
+        try {
+          await ipcRenderer.invoke('replay-agent-speech', {
+            text: textToSpeak,
+            voice: item.voice,
+            agentKey: item.agentKey
+          });
+        } catch (err) {
+          console.error('Replay failed:', err);
+          showHistoryToast('Speech replay failed', 'error');
+        } finally {
+          this.disabled = false;
+          this.style.opacity = '1';
+        }
+      });
+    });
+
+    // Delete turn button
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', function() {
-        const itemId = this.getAttribute('data-item-id');
-        deleteHistoryItem(itemId);
-      });
-      
-      // Add hover effects
-      btn.addEventListener('mouseenter', function() {
-        this.style.background = 'rgba(255, 59, 48, 0.25)';
-        this.style.borderColor = 'rgba(255, 59, 48, 0.5)';
-        this.style.transform = 'scale(1.05)';
-      });
-      btn.addEventListener('mouseleave', function() {
-        this.style.background = 'rgba(255, 59, 48, 0.15)';
-        this.style.borderColor = 'rgba(255, 59, 48, 0.3)';
-        this.style.transform = 'scale(1)';
+        const id = this.getAttribute('data-turn-id');
+        deleteHistoryItem(id);
       });
     });
-    
-    // History card hover effects
-    document.querySelectorAll('.history-card').forEach(card => {
-      card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-2px)';
-        this.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.2)';
-        this.style.borderColor = 'rgba(255, 255, 255, 0.25)';
-      });
-      card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-        this.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
-        this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-      });
-    });
-    
-    // Original text summary hover effects
-    document.querySelectorAll('.original-text-summary').forEach(summary => {
-      summary.addEventListener('mouseenter', function() {
-        this.style.color = '#333';
-      });
-      summary.addEventListener('mouseleave', function() {
-        this.style.color = '#666';
+
+    // Fix single issue button
+    document.querySelectorAll('.fix-single-issue-btn').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const turnId = this.getAttribute('data-turn-id');
+        if (!turnId) return;
+
+        this.disabled = true;
+        this.textContent = '⏳ Healing...';
+
+        try {
+          const res = await ipcRenderer.invoke('fix-single-agent-issue', turnId);
+          if (res && res.success) {
+            showHistoryToast(`🩺 Issue on turn ${turnId} fixed & sanitized!`, 'success');
+            loadHistory();
+          } else {
+            showHistoryToast('Issue healing completed.', 'info');
+            loadHistory();
+          }
+        } catch (err) {
+          console.error('Fix single issue failed:', err);
+          showHistoryToast('Healing error: ' + err.message, 'error');
+        }
       });
     });
   }, 0);
@@ -446,40 +688,23 @@ function getTimeAgo(date) {
 }
 
 function escapeHtml(text) {
+  if (!text) return '';
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-function copyToClipboard(id) {
-  const item = historyData.find(h => h.id == id);
-  if (item) {
-    navigator.clipboard.writeText(item.text).then(() => {
-      // Find the specific button by data attribute
-      const copyBtn = document.querySelector(`button[data-item-id="${id}"]`);
-      if (copyBtn) {
-        const originalText = copyBtn.innerHTML;
-        copyBtn.innerHTML = '✅ Copied!';
-        setTimeout(() => {
-          copyBtn.innerHTML = originalText;
-        }, 1500);
-      }
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-      alert('Failed to copy text to clipboard');
-    });
-  }
-}
-
 function deleteHistoryItem(id) {
-  if (confirm('Delete this transcription?')) {
+  if (confirm('Delete this conversation turn?')) {
     ipcRenderer.send('delete-history-item', id);
+    showHistoryToast('Turn deleted', 'info', 1500);
   }
 }
 
 function clearAllHistory() {
-  if (confirm('Clear all history? This cannot be undone.')) {
+  if (confirm('Clear all conversation history? This cannot be undone.')) {
     ipcRenderer.send('clear-history');
+    showHistoryToast('All conversation history cleared', 'info', 2000);
   }
 }
 
@@ -491,24 +716,85 @@ if (searchInput) {
   });
 }
 
+// Filter pills listener
+document.querySelectorAll('#historyFilterPills .history-filter-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    document.querySelectorAll('#historyFilterPills .history-filter-pill').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    currentHistoryFilter = this.getAttribute('data-filter') || 'all';
+    displayHistory(historyData, currentHistorySearch);
+  });
+});
+
+// Fix All Issues / Self-Heal button listener
+const fixAllBtn = document.getElementById('fixAllIssuesBtn');
+if (fixAllBtn) {
+  fixAllBtn.addEventListener('click', async function() {
+    const originalContent = this.innerHTML;
+    this.disabled = true;
+    this.innerHTML = `<span class="spin-animation">⚡</span> Healing Systems &amp; History...`;
+
+    try {
+      const report = await ipcRenderer.invoke('fix-all-agent-issues');
+      const fixedCount = (report && report.issuesFixedCount) || 0;
+      const turnsCount = (report && report.turnsHealedCount) || 0;
+      showHistoryToast(`⚡ Autonomous self-healing complete! Resolved ${fixedCount} issue(s) across ${turnsCount} turn(s).`, 'success', 4000);
+      loadHistory();
+    } catch (err) {
+      console.error('Self-healing failed:', err);
+      showHistoryToast('Self-healing error: ' + err.message, 'error');
+    } finally {
+      this.disabled = false;
+      this.innerHTML = originalContent;
+    }
+  });
+}
+
+// Export History button listener
+const exportBtn = document.getElementById('exportHistoryBtn');
+if (exportBtn) {
+  exportBtn.addEventListener('click', async function() {
+    try {
+      const markdown = await ipcRenderer.invoke('export-history', 'markdown');
+      if (markdown) {
+        await navigator.clipboard.writeText(markdown);
+        showHistoryToast('📥 Complete conversation history exported & copied as Markdown!', 'success', 3500);
+      } else {
+        showHistoryToast('No history records to export.', 'info');
+      }
+    } catch (err) {
+      console.error('Export failed:', err);
+      showHistoryToast('Export failed: ' + err.message, 'error');
+    }
+  });
+}
+
+// Clear All History button listener
+const clearAllBtn = document.getElementById('clearAllHistoryBtn');
+if (clearAllBtn) {
+  clearAllBtn.addEventListener('click', clearAllHistory);
+}
+
 // Listen for history updates
 ipcRenderer.on('history-data', (_, history) => {
   console.log('Received history data:', history ? history.length : 0, 'items');
-  historyData = history || []; // Ensure history is always an array
-  displayHistory(historyData);
-
-  // Update the most recent transcription display
+  historyData = Array.isArray(history) ? history : [];
+  displayHistory(historyData, currentHistorySearch);
   updateLastTranscriptionDisplay(historyData);
+  ipcRenderer.invoke('get-history-stats').then(stats => {
+    if (stats) updateHistoryTelemetryStats(stats);
+  }).catch(() => {});
 });
 
 // Also listen for history-updated event for real-time updates
 ipcRenderer.on('history-updated', (_, history) => {
   console.log('Received history-updated event:', history ? history.length : 0, 'items');
-  historyData = history || []; // Ensure history is always an array
-  displayHistory(historyData);
-
-  // Update the most recent transcription display
+  historyData = Array.isArray(history) ? history : [];
+  displayHistory(historyData, currentHistorySearch);
   updateLastTranscriptionDisplay(historyData);
+  ipcRenderer.invoke('get-history-stats').then(stats => {
+    if (stats) updateHistoryTelemetryStats(stats);
+  }).catch(() => {});
 });
 
 // Update the most recent transcription display
@@ -519,10 +805,9 @@ function updateLastTranscriptionDisplay(history) {
     const timeElement = document.getElementById('lastTranscriptionTime');
     const copyButton = document.getElementById('copyLastTranscription');
 
-    if (textElement && latest.text) {
-      textElement.innerHTML = escapeHtml(latest.text);
-      // Store the raw text for copying
-      textElement.setAttribute('data-raw-text', latest.text);
+    if (textElement && (latest.agentReply || latest.text)) {
+      textElement.innerHTML = escapeHtml(latest.agentReply || latest.text);
+      textElement.setAttribute('data-raw-text', latest.agentReply || latest.text);
     }
 
     if (timeElement && latest.timestamp) {
@@ -550,7 +835,7 @@ function copyLastTranscriptionText() {
       }, 2000);
     }).catch(err => {
       console.error('Failed to copy text: ', err);
-      alert('Failed to copy text to clipboard');
+      showHistoryToast('Failed to copy text to clipboard', 'error');
     });
   }
 }

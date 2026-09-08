@@ -74,6 +74,8 @@ jarvisManager.onSpeechEnd = (agentKey) => {
   }
 };
 const actionRunner = require('./utils/action-runner');
+const { getAgentTalkRecorder } = require('./utils/agent-talk-recorder');
+let agentTalkRecorder = null;
 const screenShareManager = require('./utils/screen-share-manager');
 const { registerLibboardIpcHandlers } = require('./main/ipcHandlers');
 const { registerClipboardHandlers, registerOptimizedIpcHandlers, windowStateManager } = require('./main/index');
@@ -1210,11 +1212,11 @@ function handleShortcut(action, mode = 'standard') {
   
   if (action === 'start') {
     isSessionAborted = false;
+    if (!conversationSessionStartTime) {
+      conversationSessionStartTime = Date.now();
+    }
     if (mode === 'jarvis') {
       isJarvisLoopActive = true;
-      if (!conversationSessionStartTime) {
-        conversationSessionStartTime = Date.now();
-      }
       playSound('start'); // Alexa-style activation chime
       // Ambient Screen Perception: capture fresh frame in background immediately
       try { screenShareManager.captureInstantFrame(); } catch (e) {}
@@ -1507,11 +1509,11 @@ function initOverlayWindow() {
 function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
   currentMode = mode;
   isSessionAborted = false;
+  if (!conversationSessionStartTime) {
+    conversationSessionStartTime = Date.now();
+  }
   if (mode === 'jarvis') {
     isJarvisLoopActive = true;
-    if (!conversationSessionStartTime) {
-      conversationSessionStartTime = Date.now();
-    }
   }
 
   // Seamlessly re-arm ocular camera eyes if previously stopped via ESC
@@ -1542,7 +1544,7 @@ function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
   win.setBounds(targetPos);
 
   const displayAndRecord = () => {
-    const sessionStart = (mode === 'jarvis' && conversationSessionStartTime) ? conversationSessionStartTime : null;
+    const sessionStart = conversationSessionStartTime || Date.now();
     win.webContents.send('set-mode', mode, sessionStart);
     win.showInactive(); // Shows instantly without stealing active window focus
     if (autoRecord && !jarvisManager.isSpeaking) {
@@ -1560,12 +1562,9 @@ function showOverlayUltraFast(mode = 'standard', autoRecord = true) {
 
 // Hide overlay with instant dismissal and renderer teardown
 function hideOverlayInstant() {
-  if (!isJarvisLoopActive) {
-    conversationSessionStartTime = 0;
-  }
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     try {
-      overlayWindow.webContents.send('session-aborted');
+      overlayWindow.webContents.send('close-with-animation');
     } catch (e) {}
     try {
       overlayWindow.hide();
@@ -2279,7 +2278,7 @@ function startRecording() {
 
   // Send the recording start time and persistent meeting session start time to the overlay for accurate timer
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    const sessionStart = (currentMode === 'jarvis' && conversationSessionStartTime) ? conversationSessionStartTime : null;
+    const sessionStart = conversationSessionStartTime || Date.now();
     overlayWindow.webContents.send('recording-started', recordingStartTime, sessionStart);
   }
 
@@ -2965,6 +2964,21 @@ async function stopRecording() {
                   overlayWindow.webContents.send('jarvis-speaking', { agent: step.agent });
                 }
                 showNotification(`💼 ${step.agent} (${step.role})`, step.speech);
+
+                // Record every squad agent's turn in conversation history with unique ID
+                saveToHistory({
+                  id: `turn_${Date.now()}_${(step.agent || 'squad').toLowerCase().replace(/\s+/g, '')}`,
+                  text: step.speech,
+                  originalText: originalText,
+                  mode: 'squad',
+                  agent: step.agent,
+                  agentKey: (step.agent || 'squad').toLowerCase().replace(/\s+/g, ''),
+                  voice: step.voice,
+                  timestamp: new Date().toISOString(),
+                  duration: 2,
+                  workingState: `${step.role}: Standup Briefing`
+                });
+
                 await jarvisManager.speak(step.speech, step.voice);
                 await new Promise(r => setTimeout(r, 200));
               }
@@ -3673,8 +3687,37 @@ function parseMultiAgentTurns(text) {
   return turns;
 }
 
+// Sequential Turn-Taking Lock & Queue
+let sequentialTurnQueue = Promise.resolve();
+function executeTurnSequentially(turnTask) {
+  const previousTurn = sequentialTurnQueue;
+  let taskResolve, taskReject;
+  sequentialTurnQueue = new Promise((resolve, reject) => {
+    taskResolve = resolve;
+    taskReject = reject;
+  });
+
+  return previousTurn
+    .catch(() => {})
+    .then(() => turnTask())
+    .then(
+      result => {
+        taskResolve(result);
+        return result;
+      },
+      err => {
+        taskReject(err);
+        throw err;
+      }
+    );
+}
+
 // Conversational 4-Agent Team Executive Brain with Multi-Turn Memory
 async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, handoffContext = null, languageMode = null) {
+  return executeTurnSequentially(() => _askJarvisInternal(userSpeech, activeAgent, displaySpeech, handoffContext, languageMode));
+}
+
+async function _askJarvisInternal(userSpeech, activeAgent = null, displaySpeech = null, handoffContext = null, languageMode = null) {
   const startTime = Date.now();
   const isSingleRealVoice = Boolean(
     jarvisManager && (
@@ -3715,10 +3758,13 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     console.log(`🧠 Querying ${agent.name} (${agent.role}) brain with multi-turn memory (Lang: ${activeLang.toUpperCase()})...`);
     const historyText = displaySpeech || userSpeech;
     jarvisManager.addTurn('user', historyText, 'user', activeLang);
+    if (typeof jarvisManager.setConversationPhase === 'function') {
+      jarvisManager.setConversationPhase('thinking', 'user');
+    }
 
-    // Interactive working memory window: dynamically expands to 24 turns (48 messages) to eliminate conversational amnesia
-    const configuredDepth = (jarvisManager && typeof jarvisManager.getPreference === 'function' && jarvisManager.getPreference('working_memory_turns_depth')) || 24;
-    const memoryDepth = Math.max(configuredDepth, 16);
+    // Interactive working memory window: dynamically expands to 128 turns (256 messages) to eliminate conversational amnesia
+    const configuredDepth = (jarvisManager && typeof jarvisManager.getPreference === 'function' && jarvisManager.getPreference('working_memory_turns_depth')) || 128;
+    const memoryDepth = Math.max(configuredDepth, 128);
     const historyMessages = jarvisManager.getHistory(memoryDepth, agent.key, activeLang);
     // Sanitize message sequence: enforce strict role alternation (user -> assistant -> user)
     const rawHistory = historyMessages.slice(0, -1);
@@ -3783,7 +3829,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     if (!content) {
       try {
         let targetModel = 'qwen/qwen3.8-27b';
-        let targetMaxTokens = agent.key === 'team' ? 240 : 200;
+        let targetMaxTokens = agent.key === 'team' ? 1200 : 1000;
 
         // Tuk Tuk Omni-Situational Awareness & Deep Intellectual Cognition Escalation
         if (agent.key === 'tuktuk' || agent.key === 'ava') {
@@ -3804,19 +3850,54 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
           }
         }
 
-        const gatewayRes = await callGroqChatCompletion(messages, {
-          model: targetModel,
-          temperature: dynamicTemperature,
-          max_tokens: targetMaxTokens,
-          timeout: 5000
-        });
-        if (gatewayRes && gatewayRes.content) {
-          content = gatewayRes.content;
-          usage = gatewayRes.usage;
-          model = gatewayRes.model;
-        }
+        // ── PRE-FLIGHT THROTTLE GUARD ─────────────────────────────────────────────
+        // If JarvisManager has already recorded a rate-limit event and isThrottled() is
+        // true, skip the Groq call entirely (avoids wasting a 5-second timeout) and go
+        // directly to LocalCognitiveBrain for an instant offline response.
+        if (jarvisManager && typeof jarvisManager.isThrottled === 'function' && jarvisManager.isThrottled()) {
+          console.warn(`⚡ [Pre-flight Throttle Guard] Groq skipped — rate-limited. Routing instantly to LocalCognitiveBrain fallback.`);
+          // Persist throttled state to disk so it survives app restarts
+          if (persistentStateManager && typeof persistentStateManager.updateRateLimitInfo === 'function') {
+            persistentStateManager.updateRateLimitInfo({ isThrottled: true, backoffMs: jarvisManager.rateLimitTelemetry?.backoffMs || 2000 });
+          }
+          // Skip Groq — content remains empty, will fall through to LocalCognitiveBrain below
+        } else {
+          const isLongContextActive = Boolean(
+            jarvisManager && (
+              (typeof jarvisManager.getPreference === 'function' && (jarvisManager.getPreference('long_context_window_active') || jarvisManager.getPreference('office_meeting_long_memory_active'))) ||
+              jarvisManager.preferences?.long_context_window_active ||
+              jarvisManager.preferences?.office_meeting_long_memory_active
+            )
+          );
+          const maxInputTokens = isLongContextActive ? 16384 : 4096;
+          const gatewayRes = await callGroqChatCompletion(messages, {
+            model: targetModel,
+            temperature: dynamicTemperature,
+            max_tokens: targetMaxTokens,
+            maxInputTokens: maxInputTokens,
+            timeout: 5000
+          });
+          if (gatewayRes && gatewayRes.content) {
+            content = gatewayRes.content;
+            usage = gatewayRes.usage;
+            model = gatewayRes.model;
+          }
+        } // end else (not throttled)
       } catch (gatewayErr) {
         console.warn(`⚠️ [Gateway Failover] Groq primary pass failed (${gatewayErr.message}), falling back to Gemini...`);
+        const isRateLimit = gatewayErr.message && (gatewayErr.message.includes("429") || gatewayErr.message.includes("rate_limit") || gatewayErr.message.includes("tokens per minute"));
+        if (isRateLimit && jarvisManager && typeof jarvisManager.recordRateLimitEvent === 'function') {
+          jarvisManager.recordRateLimitEvent({
+            provider: 'groq',
+            isThrottled: true,
+            backoffMs: 2000,
+            requestsRemaining: 0
+          });
+          // Persist rate-limit event to disk for cross-restart fault tolerance
+          if (persistentStateManager && typeof persistentStateManager.updateRateLimitInfo === 'function') {
+            persistentStateManager.updateRateLimitInfo({ isThrottled: true, backoffMs: 2000, requestsRemaining: 0 });
+          }
+        }
         // Direct Gemini client fallback pass if gateway was bypassed or unconfigured
         if (!content && geminiClient && geminiClient.isConfigured()) {
           try {
@@ -3824,7 +3905,7 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
             const geminiRes = await geminiClient.callChatCompletion(messages, {
               model: 'gemini-3.6-flash',
               temperature: dynamicTemperature,
-              max_tokens: agent.key === 'team' ? 450 : 200,
+              max_tokens: agent.key === 'team' ? 1200 : 1000,
               timeout: 6000,
               imagePath: framePath
             });
@@ -3835,6 +3916,15 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
             }
           } catch (geminiFallbackErr) {
             console.warn('⚠️ [Gateway Failover] Gemini client fallback failed:', geminiFallbackErr.message);
+            const isRateLimit = geminiFallbackErr.message && (geminiFallbackErr.message.includes("429") || geminiFallbackErr.message.includes("RESOURCE_EXHAUSTED"));
+            if (isRateLimit && jarvisManager && typeof jarvisManager.recordRateLimitEvent === 'function') {
+              jarvisManager.recordRateLimitEvent({
+                provider: 'gemini',
+                isThrottled: true,
+                backoffMs: 3000,
+                requestsRemaining: 0
+              });
+            }
           }
         }
       }
@@ -3850,6 +3940,9 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
       }, activeLang);
 
       jarvisManager.addTurn('assistant', fallbackReply, agent.name, activeLang);
+      if (typeof jarvisManager.setConversationPhase === 'function') {
+        jarvisManager.setConversationPhase('idle', 'user');
+      }
       console.log(`⚡ [${agent.name}] Local cognitive intelligence response in ${Date.now() - startTime}ms (Lang: ${activeLang})`);
       return fallbackReply;
     }
@@ -3952,20 +4045,34 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     }
     reply = reply.replace(/[,\s—–:-]+\./g, '.').replace(/\.\.+/g, '.').replace(/\s+/g, ' ').trim();
 
-    // 4. Natural spoken word pacing — crisp, snappy, but adaptively expanded for intellectual depth
-    // (Team gets 45 words; single agents get 28 words standard, up to 45 words if intellectual/philosophical)
+    // 4. Natural spoken word pacing — crisp, snappy, but adaptively expanded for intellectual depth & complete thoughts
+    // (Team gets 85 words; single agents get 55 words standard, up to 85 words if intellectual/philosophical)
     const isIntellectualDialogue =
       /\b(?:intellectual|philosophy|architecture|concurrency|reasoning|hallucination|why|how|analyze|trade-off|first principles)\b/i.test(userSpeech);
-    const wordCap = agent.key === 'team' ? 45 : (isIntellectualDialogue ? 45 : 28);
-    const words = reply.split(/\s+/);
+    const wordCap = agent.key === 'team' ? 85 : (isIntellectualDialogue ? 85 : 55);
+    const words = reply.split(/\s+/).filter(Boolean);
     if (words.length > wordCap) {
-      reply = words.slice(0, wordCap).join(' ');
-      const lastPunct = Math.max(reply.lastIndexOf('.'), reply.lastIndexOf('?'), reply.lastIndexOf('!'), reply.lastIndexOf('।'));
-      if (lastPunct > reply.length * 0.55) {
-        reply = reply.slice(0, lastPunct + 1);
+      const candidate = words.slice(0, wordCap).join(' ');
+      const lastPunct = Math.max(candidate.lastIndexOf('.'), candidate.lastIndexOf('?'), candidate.lastIndexOf('!'), candidate.lastIndexOf('।'));
+      if (lastPunct > candidate.length * 0.35) {
+        reply = candidate.slice(0, lastPunct + 1);
+      } else {
+        reply = candidate + '.';
       }
     }
     reply = reply.trim();
+
+    // 4a. Anti-Truncation & Sentence Completeness Guard (L_loss = 0.00)
+    // Guarantees zero dangling clauses, zero mid-word truncation, and complete grammatical closure
+    const sentenceTerminators = ['.', '!', '?', '।', '"', "'", '”', '’', ')'];
+    if (reply.length > 0 && !sentenceTerminators.some(t => reply.endsWith(t))) {
+      const lastCleanPunct = Math.max(reply.lastIndexOf('.'), reply.lastIndexOf('!'), reply.lastIndexOf('?'), reply.lastIndexOf('।'));
+      if (lastCleanPunct > reply.length * 0.40) {
+        reply = reply.slice(0, lastCleanPunct + 1).trim();
+      } else {
+        reply = reply.trim() + '.';
+      }
+    }
 
     // Guaranteed non-empty fallback per agent persona (Dynamic, Language-Aware, Non-Repetitive)
     if (!reply || reply.length < 2) {
@@ -4047,6 +4154,9 @@ async function askJarvis(userSpeech, activeAgent = null, displaySpeech = null, h
     // ────────────────────────────────────────────────────────────────────────
 
     jarvisManager.addTurn('assistant', reply, agent.name, activeLang);
+    if (typeof jarvisManager.setConversationPhase === 'function') {
+      jarvisManager.setConversationPhase('idle', 'user');
+    }
 
     // Autonomous Self-Updating & Ebbinghaus Learning from Everyday Tasks and Talks
     try {
@@ -4350,78 +4460,46 @@ function loadConfigFromFile() {
 loadConfigFromFile();
 loadAdminConfigFromFile();
 
-// Ultra-fast memory-cached & non-blocking history management
-let cachedHistoryMemory = null;
-function saveToHistory(entry) {
-  if (!entry || !entry.text || !entry.id) return;
-  const historyFile = path.join(app.getPath('userData'), 'history.json');
-
-  if (!cachedHistoryMemory) {
+// Ultra-fast memory-cached & non-blocking history management powered by AgentTalkRecorder
+function getRecorder() {
+  if (!agentTalkRecorder) {
     try {
-      if (fs.existsSync(historyFile)) {
-        cachedHistoryMemory = JSON.parse(fs.readFileSync(historyFile, 'utf8')) || [];
-      } else {
-        cachedHistoryMemory = [];
-      }
+      agentTalkRecorder = getAgentTalkRecorder(app.getPath('userData'));
     } catch (e) {
-      cachedHistoryMemory = [];
+      agentTalkRecorder = getAgentTalkRecorder(path.join(__dirname, '..', 'userData'));
     }
   }
+  return agentTalkRecorder;
+}
 
-  cachedHistoryMemory.unshift(entry);
-  if (cachedHistoryMemory.length > 1000) {
-    cachedHistoryMemory = cachedHistoryMemory.slice(0, 1000);
-  }
+function saveToHistory(entry) {
+  if (!entry || (!entry.text && !entry.originalText)) return;
+  const recorder = getRecorder();
+  const recordedTurn = recorder.recordTurn(entry);
+  const fullHistory = recorder.loadHistory();
 
-  // Non-blocking async write to disk
-  fs.writeFile(historyFile, JSON.stringify(cachedHistoryMemory, null, 2), (err) => {
-    if (err) console.error('❌ Async history save warning:', err.message);
-  });
-    
   // Notify dashboard immediately
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-    dashboardWindow.webContents.send('history-updated', cachedHistoryMemory);
-    dashboardWindow.webContents.send('history-data', cachedHistoryMemory);
+    dashboardWindow.webContents.send('history-updated', fullHistory);
+    dashboardWindow.webContents.send('history-data', fullHistory);
   }
+  return recordedTurn;
 }
 
 function getHistory() {
-  try {
-    const historyFile = path.join(app.getPath('userData'), 'history.json');
-    console.log('📁 History file path:', historyFile);
-
-    if (fs.existsSync(historyFile)) {
-      const data = fs.readFileSync(historyFile, 'utf8');
-      const history = JSON.parse(data);
-      console.log(`📋 Loaded ${history.length} history items`);
-      return history;
-    } else {
-      console.log('📋 No history file found, returning empty array');
-      return [];
-    }
-  } catch (error) {
-    console.error('Error loading history:', error);
-    return [];
-  }
+  const recorder = getRecorder();
+  return recorder.loadHistory();
 }
 
 function clearHistory() {
-  try {
-    const historyFile = path.join(app.getPath('userData'), 'history.json');
-    if (fs.existsSync(historyFile)) {
-      fs.unlinkSync(historyFile);
-    }
+  const recorder = getRecorder();
+  recorder.clearAllHistory();
 
-    // Notify dashboard that history was cleared with empty array
-    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-      dashboardWindow.webContents.send('history-data', []);
-      dashboardWindow.webContents.send('history-updated', []); // Consistent event
-    }
-
-    console.log('✅ History cleared');
-  } catch (error) {
-    console.error('Error clearing history:', error);
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.webContents.send('history-data', []);
+    dashboardWindow.webContents.send('history-updated', []);
   }
+  console.log('✅ History cleared');
 }
 
 // IPC handlers
@@ -5524,38 +5602,81 @@ ipcMain.on('update-dictionary', (event, dictionary) => {
   console.log('Dictionary updated:', dictionary);
 });
 
-ipcMain.on('get-history', (event) => {
-  const history = getHistory();
+ipcMain.on('get-history', (event, options = {}) => {
+  const recorder = getRecorder();
+  const history = recorder.loadHistory();
   console.log(`📋 Sending ${history.length} history items to dashboard`);
   event.reply('history-data', history);
+});
+
+ipcMain.handle('get-history-stats', async () => {
+  const recorder = getRecorder();
+  return recorder.getStats();
+});
+
+ipcMain.handle('fix-all-agent-issues', async () => {
+  console.log('🩺 [Self-Healing Engine] Initiating comprehensive system & history healing across all agents...');
+  const recorder = getRecorder();
+  const report = await recorder.selfHealHistory(jarvisManager);
+  const updatedHistory = recorder.loadHistory();
+
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.webContents.send('history-updated', updatedHistory);
+    dashboardWindow.webContents.send('history-data', updatedHistory);
+  }
+  return report;
+});
+
+ipcMain.handle('fix-single-agent-issue', async (event, turnId) => {
+  console.log(`🩺 [Self-Healing Engine] Fixing single turn issue: ${turnId}`);
+  const recorder = getRecorder();
+  const res = recorder.fixSingleTurnIssue(turnId, jarvisManager);
+  const updatedHistory = recorder.loadHistory();
+
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.webContents.send('history-updated', updatedHistory);
+    dashboardWindow.webContents.send('history-data', updatedHistory);
+  }
+  return res;
+});
+
+ipcMain.handle('replay-agent-speech', async (event, payload = {}) => {
+  const { text, voice, agentKey } = payload;
+  console.log(`🔊 [Audio Playback] Replaying speech for ${agentKey || 'agent'}: "${(text || '').slice(0, 50)}..."`);
+  try {
+    if (text) {
+      await jarvisManager.speak(text, voice, agentKey);
+      return { success: true };
+    }
+    return { success: false, error: 'No text provided' };
+  } catch (err) {
+    console.error('❌ [Audio Playback] Replay error:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('export-history', async (event, format = 'json') => {
+  const recorder = getRecorder();
+  return recorder.exportHistory(format);
 });
 
 ipcMain.on('clear-history', (event) => {
   console.log('🗑️ Clearing all history');
   clearHistory();
-  // The clearHistory function already sends the events, but let's ensure consistency
   event.reply('history-data', []);
 });
 
 ipcMain.on('delete-history-item', (event, id) => {
   try {
-    const historyFile = path.join(app.getPath('userData'), 'history.json');
-    let history = getHistory();
-    const beforeCount = history.length;
-    history = history.filter(item => item.id !== id);
-    const afterCount = history.length;
-
-    // Write the updated history back to file
-    fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
-
-    console.log(`🗑️ Deleted history item (${beforeCount} → ${afterCount} items)`);
+    const recorder = getRecorder();
+    const updated = recorder.deleteTurn(id);
+    console.log(`🗑️ Deleted history item ${id}`);
 
     // Notify dashboard of updated history
-    event.reply('history-data', history);
+    event.reply('history-data', updated);
 
-    // Also notify via history-updated channel for consistency
     if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-      dashboardWindow.webContents.send('history-updated', history);
+      dashboardWindow.webContents.send('history-updated', updated);
     }
   } catch (error) {
     console.error('Error deleting history item:', error);
@@ -6133,6 +6254,11 @@ try {
     return { success: true, state: persistentStateManager.currentState };
   });
 
+  if (persistentStateManager && jarvisManager && typeof jarvisManager.setStateManager === 'function') {
+    jarvisManager.setStateManager(persistentStateManager);
+    console.log('✅ [StateManager] Synchronized persistent conversational state manager with JarvisManager');
+  }
+
   console.log('✅ [StateManager] Registered state-request and state-commit IPC handlers');
 } catch (stateErr) {
   console.warn('⚠️ Could not register StateManager IPC handlers:', stateErr.message);
@@ -6356,6 +6482,14 @@ app.on('before-quit', async (e) => {
   isTerminatingApp = true;
   try {
     globalShortcut.unregisterAll();
+  } catch (_) {}
+  try {
+    if (persistentStateManager && typeof persistentStateManager.saveState === 'function') {
+      persistentStateManager.saveState();
+    }
+    if (jarvisManager && typeof jarvisManager.saveRecentSessionHistory === 'function') {
+      jarvisManager.saveRecentSessionHistory();
+    }
   } catch (_) {}
   try {
     const { shutdownSequence } = require('./main/index');

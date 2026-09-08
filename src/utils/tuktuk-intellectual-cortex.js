@@ -171,25 +171,25 @@ class TukTukIntellectualCortex {
     this.situationHistory.push({ situation, timestamp: Date.now() });
     if (this.situationHistory.length > 20) this.situationHistory.shift();
 
-    // Default configuration for standard rapid voice chatter
+    // Default configuration for standard rapid voice chatter with zero mid-sentence truncation
     let recommendedModel = "qwen/qwen3.8-27b";
-    let maxTokens = 200;
-    let wordCap = 35;
+    let maxTokens = 1000;
+    let wordCap = 55;
 
     if (isTukTuk && this.intellectualBoostEnabled) {
       if (isIntellectual) {
         // High-Intelligence Cognitive Escalation: reliable 20B parameter model with expanded cognitive budget
         recommendedModel = "openai/gpt-oss-20b";
-        maxTokens = 420;
-        wordCap = 65;
+        maxTokens = 1200;
+        wordCap = 85;
       } else if (situation === "EMOTIONAL_GROUNDING") {
         recommendedModel = "qwen/qwen3.8-27b";
-        maxTokens = 240;
-        wordCap = 40;
+        maxTokens = 1000;
+        wordCap = 60;
       } else if (situation === "MEDIA_REEL_CO_WATCHING" || situation === "MUSIC_VIBING") {
         recommendedModel = "qwen/qwen3.8-27b";
-        maxTokens = 180;
-        wordCap = 30;
+        maxTokens = 800;
+        wordCap = 50;
       }
     }
 

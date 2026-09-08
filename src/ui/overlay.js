@@ -295,11 +295,11 @@ function drawBars() {
   }
 }
 
-// Update Timer Display (Continuous Zoom Meeting timer across turns in Jarvis mode)
+// Update Timer Display (Continuous conversation session timer across turns and modes)
 function updateTimer() {
   if (!timer) return;
 
-  const currentStart = (mode === 'jarvis' && sessionStartTime) ? sessionStartTime : startTime;
+  const currentStart = sessionStartTime || startTime;
   if (!currentStart) {
     timer.textContent = '0:00';
     return;
@@ -318,19 +318,17 @@ function updateTimer() {
 // Mode Selection Handler
 ipcRenderer.on('set-mode', (_, m, sessionStart) => {
   mode = m;
-  if (m === 'jarvis') {
-    if (sessionStart) {
+  if (sessionStart) {
+    if (!sessionStartTime || sessionStart <= sessionStartTime) {
       sessionStartTime = sessionStart;
-    } else if (!sessionStartTime) {
-      sessionStartTime = Date.now();
     }
-    if (!window.timerInterval) {
-      window.timerInterval = setInterval(() => {
-        updateTimer();
-      }, 500);
-    }
-  } else {
-    sessionStartTime = null;
+  } else if (!sessionStartTime) {
+    sessionStartTime = Date.now();
+  }
+  if (!window.timerInterval) {
+    window.timerInterval = setInterval(() => {
+      updateTimer();
+    }, 500);
   }
 
   if (overlay) {
@@ -486,8 +484,10 @@ ipcRenderer.on('recording-started', (_, recordingStartTime, sessionStart) => {
   console.log('🎙️ Recording started event received:', recordingStartTime, 'sessionStart:', sessionStart);
   startTime = recordingStartTime;
   if (sessionStart) {
-    sessionStartTime = sessionStart;
-  } else if (mode === 'jarvis' && !sessionStartTime) {
+    if (!sessionStartTime || sessionStart <= sessionStartTime) {
+      sessionStartTime = sessionStart;
+    }
+  } else if (!sessionStartTime) {
     sessionStartTime = recordingStartTime || Date.now();
   }
   currentState = mode === 'jarvis' ? 'listening' : 'recording';
@@ -555,7 +555,7 @@ ipcRenderer.on('error', (_, errorMsg) => {
 });
 
 // Renderer-side cleanup (stop tracks, audioContext, animations, and hide DOM)
-function cleanupRenderer() {
+function cleanupRenderer(hardAbort = false) {
   // 1. Immediately stop all mic tracks in renderer
   if (micStream) {
     try {
@@ -579,11 +579,13 @@ function cleanupRenderer() {
     cancelAnimationFrame(animationId);
     animationId = null;
   }
-  if (window.timerInterval) {
-    clearInterval(window.timerInterval);
-    window.timerInterval = null;
+  if (hardAbort) {
+    if (window.timerInterval) {
+      clearInterval(window.timerInterval);
+      window.timerInterval = null;
+    }
+    sessionStartTime = null;
   }
-  sessionStartTime = null;
 
   // 4. Instantly vanish the overlay visually
   if (overlay) {
@@ -595,7 +597,7 @@ function cleanupRenderer() {
 // User-initiated ESC abort (sends signal to main process once)
 function userAbortSession() {
   console.log('⚡ ESC pressed - user hard abort (0ms latency)');
-  cleanupRenderer();
+  cleanupRenderer(true);
   try {
     ipcRenderer.send('abort-session');
   } catch (e) {}
@@ -613,11 +615,24 @@ document.addEventListener('keydown', (e) => {
 
 // One-way signals from main process (clean up renderer only, NEVER re-emit abort-session)
 ipcRenderer.on('close-with-animation', () => {
-  cleanupRenderer();
+  cleanupRenderer(false);
 });
 
 ipcRenderer.on('session-aborted', () => {
-  cleanupRenderer();
+  cleanupRenderer(true);
+});
+
+ipcRenderer.on('sync-session-timer', (_, timestamp) => {
+  if (timestamp) {
+    sessionStartTime = timestamp;
+    updateTimer();
+  }
+});
+
+ipcRenderer.on('reset-session-timer', () => {
+  sessionStartTime = null;
+  startTime = Date.now();
+  updateTimer();
 });
 
 // Initialization
