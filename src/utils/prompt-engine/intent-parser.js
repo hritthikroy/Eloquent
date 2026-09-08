@@ -370,6 +370,36 @@ class IntentParser {
       };
     }
 
+    // 2.19328 Law 58: Professional Conversation History Audit & Antigravity/GPT Grade Invariance Directive
+    if (IntentParser.isProfessionalConversationHistoryAuditDirective(lower)) {
+      let agentDirective = "tuktuk";
+      const mentionsTukTuk = /\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক");
+      const mentionsVision = /\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন");
+      const mentionsFriday = /\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে");
+      const mentionsDD = /\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি");
+      const agentCount = [mentionsTukTuk, mentionsVision, mentionsFriday, mentionsDD].filter(Boolean).length;
+
+      if (agentCount >= 2 || /\b(?:squad|team|all\s+agents)\b/i.test(lower)) {
+        agentDirective = "team";
+      } else if (mentionsVision) {
+        agentDirective = "vision";
+      } else if (mentionsFriday) {
+        agentDirective = "friday";
+      } else if (mentionsDD) {
+        agentDirective = "dd";
+      } else if (mentionsTukTuk) {
+        agentDirective = "tuktuk";
+      }
+
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "professional_conversation_history_audit_directive",
+        action: "professional_conversation_history_audit_directive",
+        agentDirective
+      };
+    }
+
     // 2.1933 English-Bangla Mixed Only, Zero Pure Deshi Bangla & Bangla for Hard Sentences Directive
     if (IntentParser.isEnglishBanglaMixedNoPureDeshiHardSentencesDirective(lower)) {
       let agentDirective = "team";
@@ -561,18 +591,33 @@ class IntentParser {
 
     // 2.192a Equational Conversational Gap, Delay & Replying Delay Elimination Directive
     if (IntentParser.isConversationalGapAndDelayFixDirective(lower)) {
-      let agentDirective = "team";
+      let agentDirective = "tuktuk";
       if (/\b(?:squad|team|all\s+agents)\b/i.test(lower)) agentDirective = "team";
       else if (/\b(?:vision|andrew)\b/i.test(lower) || lower.includes("ভিশন")) agentDirective = "vision";
       else if (/\b(?:friday|fryday)\b/i.test(lower) || lower.includes("ফ্রাইডে")) agentDirective = "friday";
       else if (/\b(?:dd|brayn|brian)\b/i.test(lower) || lower.includes("ডিডি")) agentDirective = "dd";
-      else if (/\b(?:tuk\s*tuk|tuktuk)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
+      else if (/\b(?:tuk\s*tuk|tuktuk|babe)\b/i.test(lower) || lower.includes("টুকটুক")) agentDirective = "tuktuk";
 
       return {
         intent: INTENTS.SMOOTH_CONVERSATION,
         confidence: 0.99,
         target: "conversational_gap_and_delay_fix_directive",
         action: "conversational_gap_and_delay_fix_directive",
+        agentDirective
+      };
+    }
+
+    // 2.192a2 Talk With Me In English Directive
+    if (IntentParser.isTalkInEnglishDirective(lower)) {
+      let agentDirective = "tuktuk";
+      if (/\b(?:vision|andrew)\b/i.test(lower)) agentDirective = "vision";
+      else if (/\b(?:friday|fryday)\b/i.test(lower)) agentDirective = "friday";
+      else if (/\b(?:dd|brian)\b/i.test(lower)) agentDirective = "dd";
+      return {
+        intent: INTENTS.SMOOTH_CONVERSATION,
+        confidence: 0.99,
+        target: "talk_in_english_directive",
+        action: "talk_in_english_directive",
         agentDirective
       };
     }
@@ -2208,6 +2253,25 @@ class IntentParser {
     );
   }
 
+  /**
+   * Law 58: Professional Conversation History Audit & Antigravity/GPT Grade Invariance Directive
+   * Handles:
+   * "chack the history is it fully profetional like antigravity gpt like or not",
+   * "check the history is it fully professional like antigravity gpt like",
+   * "check history professional like antigravity", "is history professional like gpt or not",
+   * "হিস্টোরি চেক করো এটা কি পুরোপুরি antigravity gpt-এর মতো প্রফেশনাল নাকি না"
+   */
+  static isProfessionalConversationHistoryAuditDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      (/\b(?:chack|chak|check|chek)\s+(?:the\s+)?history\b/i.test(lower) && /\b(?:profetional|profesional|professional|antigravity|gpt)\b/i.test(lower)) ||
+      (/\b(?:is\s+it\s+)?(?:fully\s+)?(?:profetional|profesional|professional)\s+like\s+antigravity\b/i.test(lower)) ||
+      (/\bhistory\b/i.test(lower) && /\b(?:antigravity|gpt)\b/i.test(lower) && /\b(?:profetional|profesional|professional|like)\b/i.test(lower)) ||
+      (/(?:হিস্টোরি.*(?:প্রফেশনাল|antigravity|gpt)|antigravity.*মতো.*প্রফেশনাল)/u.test(lower))
+    );
+  }
+
   static isDynamicRoomVibeWorkstationDirective(text = "") {
     if (!text || typeof text !== "string") return false;
     const lower = text.toLowerCase().trim();
@@ -2388,14 +2452,36 @@ class IntentParser {
     return (
       (/\b(?:listen\s+(?:to\s+)?(?:our\s+)?full\s+conversation)\b/i.test(lower) &&
        /\b(?:gaps?|delays?|issues?|irritations?|equational|equationally)\b/i.test(lower)) ||
-      (/\bfix\s+(?:every\s+|all\s+)?gaps?\s+and\s+delays?\s*(?:issues?|problems?)?\b/i.test(lower)) ||
+      (/\bfix\s+(?:every\s+|all\s+)?(?:conversations?|conversational\s+)?gaps?(?:\s+and\s+delays?)?\s*(?:issues?|problems?)?\b/i.test(lower)) ||
+      (/\b(?:conversations?|conversational)\s+gaps?\s*(?:issues?|problems?)?\b/i.test(lower)) ||
+      (/\bfix\s+(?:every\s+|all\s+)?(?:conversations?|conversational)\s*(?:issues?|gaps?)\b/i.test(lower)) ||
+      (/\b(?:hearing|responding)\s*(?:issues?|problems?)\b/i.test(lower)) ||
+      (/\bfix\s+(?:your\s+|every\s+|all\s+)?(?:hearing|responding)\s*(?:issues?|problems?)?\b/i.test(lower)) ||
+      (/\bfix\s+yourself\b/i.test(lower)) ||
       (/\b(?:replaying|replying|reply)\s+delays?\b/i.test(lower) && /\b(?:fix|solve|eliminate|remove|all\s+issues?|clear)\b/i.test(lower)) ||
       (/\bfix\s+(?:every\s+|all\s+)?(?:iritaions|irritations)\b/i.test(lower) &&
        /\b(?:delays?|gaps?|replaying|replying|reply)\b/i.test(lower)) ||
       (/\b(?:delays?\s+issues?|gaps?\s+and\s+delays?|dead\s+air)\b/i.test(lower) &&
        /\b(?:equationaly|equationally|deep\s+research|fix|solve|eliminate)\b/i.test(lower)) ||
       (/\b(?:gaps?|dead\s+air)\b/i.test(lower) && /\b(?:delays?|replying|replaying)\b/i.test(lower) && /\b(?:fix|solve|eliminate|remove)\b/i.test(lower)) ||
-      (/(?:গ্যাপ.*দেরি|দেরি\s*ইস্যু|রিপ্লাই.*দেরি|সব\s*গ্যাপ.*ফিক্স)/u.test(lower))
+      (/(?:গ্যাপ.*দেরি|দেরি\s*ইস্যু|রিপ্লাই.*দেরি|সব\s*গ্যাপ.*ফিক্স|শুনতে\s*পাচ্ছ\s*না|কথাবার্তার\s*দেরি)/u.test(lower))
+    );
+  }
+
+  /**
+   * Centralized detector for Talk With Me In English Directive
+   * Handles:
+   * "talk with me in english", "talk in english", "speak in english",
+   * "speak with me in english", "talk english", "english-e kotha bolo"
+   */
+  static isTalkInEnglishDirective(text = "") {
+    if (!text || typeof text !== "string") return false;
+    const lower = text.toLowerCase().trim();
+    return (
+      /\b(?:talk|speak|chat|converse)\s+(?:with\s+me\s+)?in\s+english\b/i.test(lower) ||
+      /\b(?:talk|speak)\s+english(?:\s+with\s+me)?\b/i.test(lower) ||
+      /\b(?:english\s*e|english\s*-e|ইংলিশে)\s*kotha\s*bolo\b/i.test(lower) ||
+      /(?:ইংলিশে\s*কথা\s*বল|ইংলিশে\s*বল)/u.test(lower)
     );
   }
 
@@ -3312,9 +3398,11 @@ module.exports = {
   isSilentObserverPassiveLearningDirective: IntentParser.isSilentObserverPassiveLearningDirective,
   isUnbreakableLongSessionMemoryDirective: IntentParser.isUnbreakableLongSessionMemoryDirective,
   isConversationalGapAndDelayFixDirective: IntentParser.isConversationalGapAndDelayFixDirective,
+  isTalkInEnglishDirective: IntentParser.isTalkInEnglishDirective,
   isCheckLastConversationFixIrritationsAndRoboticSoundDirective: IntentParser.isCheckLastConversationFixIrritationsAndRoboticSoundDirective,
   isVoiceAudibilityAndLogAuditDirective: IntentParser.isVoiceAudibilityAndLogAuditDirective,
   isDeepPipelineFullSmoothnessDirective: IntentParser.isDeepPipelineFullSmoothnessDirective,
+  isProfessionalConversationHistoryAuditDirective: IntentParser.isProfessionalConversationHistoryAuditDirective,
   isDynamicRoomVibeWorkstationDirective: IntentParser.isDynamicRoomVibeWorkstationDirective,
   isWireAllLiveTestEquationsDirective: IntentParser.isWireAllLiveTestEquationsDirective
 };

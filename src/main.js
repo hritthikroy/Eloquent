@@ -207,6 +207,7 @@ let jarvisLastBackchannelTime = 0;
 let jarvisBargeInCounter = 0;
 let jarvisNoiseFloorRms = 0.005;
 let jarvisNoiseFloorPeak = 800;
+let jarvisAmbientNoiseFloor = 0.08;
 let lastAudioRecorderAmplitudeTime = 0;
 
 // Helper function to find sox/rec binary

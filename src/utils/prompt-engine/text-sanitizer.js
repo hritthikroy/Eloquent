@@ -279,6 +279,9 @@ class TextSanitizer {
       .replace(/\bmovile\b/gi, "mobile")
       .replace(/\b(?:nt\s*lisent|nt\s*listen)\b/gi, "not listen")
       .replace(/\b(?:not\s*responds?|nt\s*responds?)\b/gi, "not responding")
+      .replace(/\bconversations\s+gaps?\b/gi, "conversational gap")
+      .replace(/\b(?:hering|hearin|hearring)\s+issues?\b/gi, "hearing issue")
+      .replace(/\b(?:respponding|responing|responnding)\s+issues?\b/gi, "responding issue")
       .replace(/\blisent\s*music\b/gi, "listen to music")
       .replace(/\blisent\b/gi, "listen")
       .replace(/\bwatching\s+need\s+like\s+a\s+human\b/gi, "watch like a human")
@@ -1037,7 +1040,15 @@ class TextSanitizer {
       .replace(/\bfix\s+(?:the\s+)?full\s+(?:pipe\s*line|pipeline)\b/gi, "fix the full pipeline")
       .replace(/\bneed\s+(?:fully|fullly)\s+(?:smouth|smuth|smooth)\s+and\s+all\b/gi, "need fully smooth and all")
       .replace(/\b(?:smouth|smuth)\s+and\s+all\b/gi, "smooth and all")
-      .replace(/\b(?:fully|fullly)\s+(?:smouth|smuth)\b/gi, "fully smooth");
+      .replace(/\b(?:fully|fullly)\s+(?:smouth|smuth)\b/gi, "fully smooth")
+      // Law 58: Professional Conversation History Audit & Antigravity/GPT Grade Invariance STT Normalizations
+      // Handles: "chack the history is it fully profetional like antigravity gpt like or not"
+      .replace(/\b(?:chack|chak|chek|check)\s+(?:the\s+)?history\s+(?:is\s+it\s+)?(?:fully\s+)?(?:profetional|profesional|professional)\s+like\s+antigravity\s+(?:gpt\s*like|gpt|ai)\s*(?:or\s+not)?\b/gi, "Check the history, is it fully professional like Antigravity GPT-like or not")
+      .replace(/\b(?:chack|chak|chek|check)\s+(?:the\s+)?history\b/gi, "check the history")
+      .replace(/\b(?:is\s+it\s+)?(?:fully\s+)?(?:profetional|profesional|professional)\s+like\s+antigravity\b/gi, "is it fully professional like Antigravity")
+      .replace(/\b(?:profetional|profesional)\b/gi, "professional")
+      .replace(/\b(?:antigravity\s+gpt\s*like|antigravity\s+gpt)\b/gi, "Antigravity GPT-like");
+
 
 
 
